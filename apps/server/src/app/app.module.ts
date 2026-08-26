@@ -1,10 +1,59 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { CURATED_PLUGINS } from '../plugins';
+import { ChatModule } from './business/chat';
+import { ConfigurationModule } from './business/config';
+import { EventSeriesModule } from './business/event-series/event-series.module';
+import { EventsModule } from './business/events/events.module';
+import { LoginModule } from './business/login/login.module';
+import { MailModule } from './business/mail/mail.module';
+import { MediaLinksModule } from './business/media-links/media-links.module';
+import { ParticipantsModule } from './business/participants/participants.module';
+import { PluginManagerModule } from './business/plugin-manager';
+import { ProfileSearchModule } from './business/profile-search/profile-search.module';
+import { ProfilesModule } from './business/profiles/profiles.module';
+import { ProgramModule } from './business/program/program.module';
+import { PushModule } from './business/push';
+import { RegistrationModule } from './business/registration/registration.module';
+import { CoreModule } from './core/core.module';
+import { HealthController } from './core/health/health.controller';
+import { DataAccessModule } from './data-access/data-access.module';
 
+/**
+ * Composition root.
+ *
+ * The only place where the three layers meet: it mounts the plug-ins, binds the
+ * business layer's repository ports to the data access layer's implementations,
+ * and assembles the core modules. Every module below compiles without knowing
+ * which database is in use — that knowledge lives in `DataAccessModule` alone.
+ *
+ * `PluginManagerModule` is listed before `DataAccessModule` because the data
+ * source needs the mounted plug-ins' entities and migrations.
+ */
 @Module({
-  imports: [],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [
+    CoreModule,
+    PluginManagerModule.forPlugins(CURATED_PLUGINS),
+    DataAccessModule.forRoot(),
+
+    // Configuration first: it is what both clients fetch before rendering.
+    ConfigurationModule,
+
+    // Event management — the survey put it ahead of community features.
+    LoginModule,
+    EventSeriesModule,
+    EventsModule,
+    ProgramModule,
+    RegistrationModule,
+    ParticipantsModule,
+    MediaLinksModule,
+    MailModule,
+
+    // Community features.
+    ProfilesModule,
+    ProfileSearchModule,
+    ChatModule,
+    PushModule,
+  ],
+  controllers: [HealthController],
 })
 export class AppModule {}
