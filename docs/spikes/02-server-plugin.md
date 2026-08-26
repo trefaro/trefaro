@@ -114,12 +114,70 @@ authority over the schema.
 
 ## Open items
 
-- **Who owns `program_item.room_id`?** The requirements document has the core
-  `program_item` table referencing a room, while the architecture rules forbid a
-  plug-in from touching core tables. Both cannot hold. The options are a
-  plug-in-owned join table, or an unconstrained `room_id` column in the core
-  table that only the plug-in interprets. **This needs a decision before phase 1
-  designs the programme schema.**
+Tracked in [`todo.md`](../../todo.md), which records the phase that makes each of
+them checkable.
+
+### Who owns the link between a programme item and a room?
+
+`Anforderungsanalyse_und_Umsetzungsplan.md` §5.3 gives the core `program_item`
+table a `room_id`, and notes that it references the room planning plug-in's
+`room` table. Architecture rule 2 says a plug-in never touches core tables. Both
+cannot be true, and the answer changes the core migration — so it has to be
+settled before phase 1 designs the programme schema.
+
+**Option A — a join table owned by the plug-in.**
+`plugin_room_planning_assignment (program_item_id, room_id)`, with the plug-in
+declaring a foreign key to each side. The core schema says nothing about rooms.
+
+**Option B — an unconstrained `room_id` column in the core table.** As the schema
+draft has it: a nullable `uuid` on `program_item` that the core stores but never
+interprets, and only the plug-in gives meaning to.
+
+**Option C — a generic `plugin_data JSONB` column on `program_item`.** An
+extension point for any plug-in, not just this one.
+
+**Recommendation: option A.**
+
+- It keeps rule 2 literally true, which is what makes the whole plug-in claim
+  credible. Option B puts a column in the core that exactly one plug-in
+  understands, and every later plug-in will cite it to ask for its own.
+- **Referential integrity is the thesis' stated reason for choosing a relational
+  database** — every series → event → programme item → registration link is
+  meant to be secured by the schema. Option B's column would be an
+  unconstrained `uuid`: integrity dropped precisely where the argument was made.
+- **The plug-in stays removable.** Disable or drop it and the core schema is
+  untouched. Under option B the column survives forever in every instance that
+  never enabled room planning.
+- A join table also expresses cardinalities the column cannot: one room across
+  many programme items today, and a session spanning two rooms later, without
+  another core migration.
+- Option C trades one leak for a worse one: JSONB on a core table gives up
+  integrity _and_ queryability, and it is a much larger commitment than this
+  single relationship justifies.
+
+Three consequences to accept deliberately:
+
+1. **The plug-in's table gets a foreign key to `program_item(id)`, with
+   `ON DELETE CASCADE`.** That is the plug-in declaring a constraint on _its own_
+   table — it alters nothing in the core — and it means deleting a programme item
+   cleans up its room assignment for free. It does make the dependency explicit
+   and real, which it is: room planning is meaningless without programme items.
+2. **A plug-in migration must be timestamped after any core migration it depends
+   on.** Both migration streams are ordered together by timestamp, so this is a
+   rule for the plug-in contract, not something the code can infer.
+3. **The core programme view cannot show a room without asking the plug-in.**
+   That is the correct behaviour rather than a cost: with the plug-in off, there
+   is no room to show.
+
+The overbooking check needs the same treatment in reverse. It compares sign-ups
+per programme item (core, FR 3.10) against room capacity (plug-in), so the
+plug-in has to _read_ core data — and it must not query `program_item_signup`
+directly. That calls for a read capability in `business/plugin-api`, which is a
+versioned addition to the contract and belongs in phase 1, alongside the sign-ups
+themselves.
+
+### Remaining
+
 - The overbooking check (FR 3.10 against room capacity) needs programme item
   sign-ups, which arrive in phase 1. The capacity it will read is already stored.
 - `apps/server/src/plugins/{forum,program-proposals,qr-checkin}` hold only a

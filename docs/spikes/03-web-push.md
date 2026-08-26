@@ -109,6 +109,9 @@ to wire it to actual event changes.
 
 ## Open items
 
+Tracked in [`todo.md`](../../todo.md), which records the phase that makes each
+of them checkable.
+
 - **Rate limiting before an instance goes public.** The subscribe endpoint is
   anonymous until phase 3 ties subscriptions to accounts.
 - **Notification permission is asked for on a button press**, which is correct —

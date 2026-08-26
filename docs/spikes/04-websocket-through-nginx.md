@@ -96,6 +96,9 @@ still anonymous.
 
 ## Open items
 
+Tracked in [`todo.md`](../../todo.md), which records the phase that makes each
+of them checkable.
+
 - **Sockets are unauthenticated.** The gateway accepts any connection from an
   allowed origin. Phase 3 has to tie a socket to a logged-in participant before
   chat carries anything real.

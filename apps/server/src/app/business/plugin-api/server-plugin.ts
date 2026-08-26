@@ -18,7 +18,10 @@ export type PluginMountPoint = 'navigation' | 'event-detail';
  * that is the single place where the ORM types appear.
  *
  * Plug-in migrations must never touch core tables; a plug-in owns its own
- * tables and nothing else.
+ * tables and nothing else. A plug-in's own table *may* reference a core table —
+ * that constrains the plug-in, not the core — but then its migration has to be
+ * timestamped after the core migration that creates the referenced table, since
+ * both migration streams are ordered together by timestamp.
  */
 export interface PluginPersistenceContribution {
   readonly entities: readonly unknown[];

@@ -11,6 +11,13 @@ Angular, NestJS and NGINX before phase 1 starts building features on top of it.
 | [3](03-web-push.md)                | Self-hosted Web Push end to end                                                     | works on the server; browser and device delivery still to be checked by hand |
 | [4](04-websocket-through-nginx.md) | socket.io through the NGINX reverse proxy                                           | works                                                                        |
 
+## Open items
+
+Everything phase 0 deliberately left for later is collected in
+[`todo.md`](../../todo.md), grouped by the phase that makes it checkable, with
+links back to the protocol each item came from. Review it at the end of every
+phase.
+
 ## Reproducing the results
 
 The checks are scripts, not prose, so they can be re-run after any change:

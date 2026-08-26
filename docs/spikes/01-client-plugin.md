@@ -79,6 +79,9 @@ concluding the product is broken.
 
 ## Open items
 
+Tracked in [`todo.md`](../../todo.md), which records the phase that makes each
+of them checkable.
+
 - Plug-in bundles are loaded from the same origin. A third-party plug-in would
   run with full access to the page, so plug-in review stays a human step — worth
   restating in the plug-in developer documentation (phase 5).

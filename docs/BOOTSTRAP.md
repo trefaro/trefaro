@@ -133,6 +133,12 @@ Punkte in [`docs/spikes/`](spikes/README.md):
 - **Der TypeORM-Treiber wird explizit übergeben** (`driver: pg`), sonst fehlt er
   in der generierten Abhängigkeitsliste des Server-Images.
 
+## Offene Punkte
+
+Alles, was Phase 0 bewusst offen gelassen hat, steht in
+[`todo.md`](../todo.md) — nach der Phase sortiert, ab der es prüfbar wird, mit
+Rückverweis auf das jeweilige Spike-Protokoll. Nach jeder Phase durchgehen.
+
 ## Offene Entscheidung für Phase 1
 
 **Wem gehört `program_item.room_id`?** Der Schemaentwurf in
