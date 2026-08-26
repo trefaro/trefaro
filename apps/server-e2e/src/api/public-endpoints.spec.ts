@@ -140,12 +140,14 @@ describe('a disabled plug-in', () => {
   const rooms =
     '/api/admin/plugins/room-planning/events/11111111-1111-4111-8111-111111111111/rooms';
 
-  it('looks absent rather than forbidden', async () => {
+  it('demands a session before it says anything at all', async () => {
     const { status } = await api(rooms);
 
-    // 404, not 403: a disabled plug-in should reveal nothing about itself, and
-    // this matches what a client sees, since it is missing from /api/config.
-    expect(status).toBe(404);
+    // Since phase 1 the administrative guard runs before the plug-in's own
+    // guard, so an anonymous caller learns nothing about which plug-ins this
+    // instance has switched on. That a *disabled* plug-in then answers 404
+    // rather than 403 is asserted with a session in `admin-access.spec.ts`.
+    expect(status).toBe(401);
   });
 
   it('is absent from the configuration too', async () => {

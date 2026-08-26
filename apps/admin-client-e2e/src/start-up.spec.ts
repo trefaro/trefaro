@@ -1,11 +1,17 @@
 import { expect, test } from '@playwright/test';
+import { ADMIN_STORAGE_STATE } from './support/admin-session';
 
 /**
  * The organizer client's start sequence.
  *
  * The point worth proving here is that both clients read the same configuration
  * endpoint, so one theme change reaches both (FR 1.4).
+ *
+ * Since phase 1 the workspace is behind the login, so these tests reuse the
+ * session the global setup established once. The login itself is exercised in
+ * `login.spec.ts`, from a fresh context.
  */
+test.use({ storageState: ADMIN_STORAGE_STATE });
 test.describe('organizer client startup', () => {
   test('renders the shell with its side navigation', async ({ page }) => {
     await page.goto('/');
@@ -56,6 +62,14 @@ test.describe('organizer client startup', () => {
     );
     await expect(slot).toBeAttached();
     expect(await slot.locator('> *').count()).toBe(0);
+  });
+
+  test('names the signed-in organizer and offers a way out', async ({
+    page,
+  }) => {
+    await page.goto('/');
+
+    await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
   });
 
   test('starts without console errors', async ({ page }) => {

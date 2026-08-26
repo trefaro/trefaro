@@ -56,6 +56,42 @@
   );
 }
 
+/* Pushed to the bottom of the menu: who is signed in, and the way out. */
+.sidebar__account {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-block-start: auto;
+  padding-block-start: 1rem;
+  border-block-start: 1px solid
+    color-mix(in oklab, var(--trefaro-color-on-primary) 25%, transparent);
+  font-size: 0.9rem;
+}
+
+.sidebar__account-name {
+  font-weight: 600;
+}
+
+.sidebar__signout {
+  align-self: start;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid
+    color-mix(in oklab, var(--trefaro-color-on-primary) 45%, transparent);
+  border-radius: 0.4rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.sidebar__signout:hover {
+  background: color-mix(
+    in oklab,
+    var(--trefaro-color-on-primary) 18%,
+    transparent
+  );
+}
+
 .content {
   padding: 1.5rem 2rem;
   min-inline-size: 0;
@@ -69,6 +105,10 @@
   .sidebar__nav {
     flex-direction: row;
     flex-wrap: wrap;
+  }
+
+  .sidebar__account {
+    margin-block-start: 0;
   }
 
   .content {

@@ -34,6 +34,21 @@ export interface SmtpEnv {
   readonly from: string;
 }
 
+/** Administrative access to the instance (FR 1.2, FR 1.3). */
+export interface AdminAuthEnv {
+  /** How long an administrative session survives without being used. */
+  readonly sessionTtlHours: number;
+  /**
+   * The first administrator, created only while `admin_user` is still empty
+   * (F22). `null` once the organization maintains its own accounts — which is
+   * the normal state; phase 2 replaces this with a guided first-run setup.
+   */
+  readonly bootstrap: {
+    readonly email: string;
+    readonly password: string;
+  } | null;
+}
+
 /** VAPID key pair for self-hosted Web Push (F7 — no third-party push service). */
 export interface WebPushEnv {
   readonly publicKey: string;
@@ -60,6 +75,7 @@ export interface TrefaroEnv {
   readonly publicAdminClientUrl: string;
   /** Signing secret for auth tokens and double opt-in confirmation links. */
   readonly authSecret: string;
+  readonly adminAuth: AdminAuthEnv;
   readonly database: DatabaseEnv;
   readonly smtp: SmtpEnv;
   /** `null` until the organization has generated a VAPID key pair. */
@@ -161,6 +177,14 @@ export function loadEnv(
     );
   }
 
+  const bootstrapEmail = source['ADMIN_BOOTSTRAP_EMAIL']?.trim() ?? '';
+  const bootstrapPassword = source['ADMIN_BOOTSTRAP_PASSWORD']?.trim() ?? '';
+  if (Boolean(bootstrapEmail) !== Boolean(bootstrapPassword)) {
+    read.problems.push(
+      'ADMIN_BOOTSTRAP_EMAIL and ADMIN_BOOTSTRAP_PASSWORD must be set together (or both left empty once an administrator exists)',
+    );
+  }
+
   const vapidPublicKey = source['VAPID_PUBLIC_KEY']?.trim() ?? '';
   const vapidPrivateKey = source['VAPID_PRIVATE_KEY']?.trim() ?? '';
   if (Boolean(vapidPublicKey) !== Boolean(vapidPrivateKey)) {
@@ -186,6 +210,15 @@ export function loadEnv(
       'http://localhost:4300',
     ),
     authSecret,
+    adminAuth: {
+      sessionTtlHours: read.integer('ADMIN_SESSION_TTL_HOURS', 12),
+      // The password policy itself lives with the login module, which is the
+      // only place that may decide what a usable password is.
+      bootstrap:
+        bootstrapEmail && bootstrapPassword
+          ? { email: bootstrapEmail, password: bootstrapPassword }
+          : null,
+    },
     database: {
       host: read.optional('DATABASE_HOST', 'localhost'),
       port: read.integer('DATABASE_PORT', 5432),

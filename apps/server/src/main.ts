@@ -2,6 +2,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app/app.module';
 import type { TrefaroEnv } from './app/core/config/env';
 import { ENV } from './app/core/config/env.module';
@@ -18,6 +19,14 @@ async function bootstrap(): Promise<void> {
   const env = app.get<TrefaroEnv>(ENV);
 
   app.setGlobalPrefix(GLOBAL_PREFIX);
+
+  // The administrative session travels in an HttpOnly cookie (F22).
+  app.use(cookieParser());
+
+  // Only the reverse proxy publishes a port, and it sets X-Forwarded-For — so
+  // trusting exactly one hop gives the rate limiter the real client address
+  // instead of the proxy's, without letting a caller forge it.
+  app.set('trust proxy', 1);
 
   app.enableCors({
     origin: [env.publicUserClientUrl, env.publicAdminClientUrl],

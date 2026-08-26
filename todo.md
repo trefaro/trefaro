@@ -19,15 +19,17 @@ attached to the task.
 Not deferred verification — things that are genuinely missing and would matter if
 an instance were exposed today.
 
-- [ ] **Nothing is authenticated.** There is no login yet, so `/api/admin/**` has
-      no guard: while the room planning plug-in is enabled, anyone who can reach
-      the API can create rooms. Phase 1 brings the admin login (FR 1.3); the
-      admin routes need a guard in the same step, not after it.
-      → _checkable after phase 1_
-- [ ] **`POST /api/user/push/subscriptions` is anonymous and unthrottled.** Fine
-      while the endpoint is unreachable from outside — only the reverse proxy
-      publishes a port — but it needs rate limiting before a public instance.
-      → _checkable after phase 3_, see [`03-web-push.md`](docs/spikes/03-web-push.md#open-items)
+- [x] **Nothing is authenticated.** ~~There is no login yet, so `/api/admin/**`
+      has no guard.~~ Closed in phase 1, AP 1: every route below `/api/admin` —
+      plug-in controllers included — needs an administrative session. The guard
+      is keyed on the route path rather than on a decorator, so a plug-in author
+      cannot forget it. Asserted in `apps/server-e2e/src/api/admin-access.spec.ts`.
+- [x] **`POST /api/user/push/subscriptions` is anonymous and unthrottled.**
+      Rate limiting arrived early: AP 1 needed it for the login and registered
+      `ThrottlerGuard` globally (300 requests per minute per address by
+      default), so every endpoint including this one is covered. It stays
+      anonymous by design until phase 3 ties a subscription to a profile.
+      → see [`03-web-push.md`](docs/spikes/03-web-push.md#open-items)
 
 ---
 
@@ -36,9 +38,11 @@ an instance were exposed today.
 The plan for that phase is [`docs/PHASE1.md`](docs/PHASE1.md); every entry below
 is assigned to one of its work packages.
 
-- [ ] **Guard the admin API.** Every `/api/admin/**` route, including plug-in
-      controllers, behind the admin login. Verify: an unauthenticated request to
-      the room planning endpoints answers 401, not 201.
+- [x] **Guard the admin API.** Done in AP 1. An unauthenticated request to the
+      room planning endpoints answers 401; a _disabled_ plug-in answers 404 only
+      once a session proves the caller may know that much. Deleting an
+      administrator ends their sessions through the foreign key, which is why
+      sessions are rows rather than signed tokens (F22).
 - [ ] **Overbooking check gets its data.** FR 3.10 programme item sign-ups exist
       from this phase on; the room planning plug-in needs to read their counts.
       The plug-in must not query core tables directly — this needs a read
@@ -93,6 +97,11 @@ is assigned to one of its work packages.
       Fonts CDN (NFR 9).
 
 ## Checkable after phase 3 — profiles, messaging, chat, push
+
+- [ ] **The participant overview gains its profile-status column.** FR 3.3 asks
+      for it, and phase 1 left it out rather than shipping a column that always
+      says "no profile" (E13 of [`docs/PHASE1.md`](docs/PHASE1.md)). Verify: a
+      participant who created a profile is marked as such in the table.
 
 - [ ] **Web Push on real devices.** The one part of spike 3 that could not be
       verified. Needs a production build, because Angular only registers the
@@ -160,6 +169,14 @@ is assigned to one of its work packages.
 - [ ] **Decide the fate of `tools/spike-verification/`.** The scripts test a
       _deployment_ and are useful against a live instance; `*-e2e` covers CI. If
       they stay, they belong in the operations documentation.
+- [ ] **Confirm the login rate limit.** Twenty attempts per five minutes per
+      address, then a fifteen-minute block (`LOGIN_ATTEMPTS_PER_WINDOW` in
+      `auth.controller.ts`). Chosen so the whole test suite, which logs in from
+      one address, can survive it — the alternative was a limit that gets
+      relaxed for tests and therefore never tested. The block itself is only
+      verified by hand, via
+      `tools/spike-verification/verify-admin-access.mjs`, because exercising it
+      locks the route for fifteen minutes.
 - [ ] **Security review.** Auth, upload validation, plug-in isolation, and
       whether the OpenAPI description should keep being served publicly (it is
       today, on the grounds that the source is AGPL anyway).

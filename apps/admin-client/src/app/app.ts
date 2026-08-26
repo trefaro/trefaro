@@ -1,7 +1,13 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import {
+  Router,
+  RouterLink,
+  RouterLinkActive,
+  RouterOutlet,
+} from '@angular/router';
 import { PluginSlot } from '@trefaro/shared-plugins';
 import { ThemeService } from '@trefaro/shared-theming';
+import { AuthService } from './features/auth/auth.service';
 
 /**
  * Shell of the organizer client.
@@ -9,6 +15,9 @@ import { ThemeService } from '@trefaro/shared-theming';
  * A side menu with context-dependent entries, as the mockups show. It carries
  * the navigation hook point, so a plug-in registers itself here — the same
  * mechanism and the same bundles as in the participant client.
+ *
+ * The menu appears only once someone is logged in: the login form is a page
+ * without a workspace around it.
  */
 @Component({
   selector: 'trefaro-root',
@@ -19,4 +28,11 @@ import { ThemeService } from '@trefaro/shared-theming';
 })
 export class App {
   protected readonly theme = inject(ThemeService);
+  protected readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+
+  protected async signOut(): Promise<void> {
+    await this.auth.logout();
+    await this.router.navigate(['/login']);
+  }
 }

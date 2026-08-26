@@ -4,7 +4,7 @@ import { ChatModule } from './business/chat';
 import { ConfigurationModule } from './business/config';
 import { EventSeriesModule } from './business/event-series/event-series.module';
 import { EventsModule } from './business/events/events.module';
-import { LoginModule } from './business/login/login.module';
+import { LoginModule } from './business/login';
 import { MailModule } from './business/mail/mail.module';
 import { MediaLinksModule } from './business/media-links/media-links.module';
 import { ParticipantsModule } from './business/participants/participants.module';

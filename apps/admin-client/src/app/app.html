@@ -1,3 +1,4 @@
+@if (auth.isLoggedIn()) {
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar__brand">
@@ -19,13 +20,26 @@
       >
         Event series
       </a>
+      <a routerLink="/administrators" routerLinkActive="is-active">
+        Administrators
+      </a>
       <a routerLink="/modules" routerLinkActive="is-active">Modules</a>
       <!-- Plug-in hook point one: the navigation bar. -->
       <trefaro-plugin-slot mountPoint="navigation" />
     </nav>
+
+    <div class="sidebar__account">
+      <span class="sidebar__account-name">{{ auth.admin()?.name }}</span>
+      <button type="button" class="sidebar__signout" (click)="signOut()">
+        Sign out
+      </button>
+    </div>
   </aside>
 
   <main class="content">
     <router-outlet />
   </main>
 </div>
+} @else {
+<router-outlet />
+}

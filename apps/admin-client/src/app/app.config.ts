@@ -2,11 +2,17 @@ import {
   ApplicationConfig,
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
-import { provideHttpClient, withFetch } from '@angular/common/http';
+import {
+  provideHttpClient,
+  withFetch,
+  withInterceptors,
+} from '@angular/common/http';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideTrefaroConfig } from '@trefaro/shared-config';
 import { provideTrefaroPlugins } from '@trefaro/shared-plugins';
 import { appRoutes } from './app.routes';
+import { provideAdminSession } from './features/auth/provide-admin-session';
+import { unauthorizedInterceptor } from './features/auth/unauthorized.interceptor';
 
 /**
  * Organizer client (desktop-first, but usable on a phone — NFR 6).
@@ -19,9 +25,15 @@ import { appRoutes } from './app.routes';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideHttpClient(withFetch()),
+    provideHttpClient(
+      withFetch(),
+      // An expired session becomes a trip to the login form rather than a page
+      // full of failed requests.
+      withInterceptors([unauthorizedInterceptor]),
+    ),
     provideRouter(appRoutes, withComponentInputBinding()),
     provideTrefaroConfig(),
+    provideAdminSession(),
     provideTrefaroPlugins(),
   ],
 };

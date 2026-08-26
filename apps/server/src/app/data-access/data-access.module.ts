@@ -1,6 +1,8 @@
 import { DynamicModule, Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_CONFIG_REPOSITORY } from '../business/config/ports/app-config.repository';
+import { ADMIN_SESSION_REPOSITORY } from '../business/login/ports/admin-session.repository';
+import { ADMIN_USER_REPOSITORY } from '../business/login/ports/admin-user.repository';
 import { MODULE_CONFIG_REPOSITORY } from '../business/config/ports/module-config.repository';
 import { PUSH_SUBSCRIPTION_REPOSITORY } from '../business/push/ports/push-subscription.repository';
 import {
@@ -12,6 +14,8 @@ import type { TrefaroEnv } from '../core/config/env';
 import { buildDataSourceOptions } from './data-source';
 import { CORE_ENTITIES } from './entities';
 import { collectPluginPersistence } from './plugin-data-access/plugin-persistence.registry';
+import { TypeormAdminSessionRepository } from './repositories/typeorm-admin-session.repository';
+import { TypeormAdminUserRepository } from './repositories/typeorm-admin-user.repository';
 import { TypeormAppConfigRepository } from './repositories/typeorm-app-config.repository';
 import { TypeormModuleConfigRepository } from './repositories/typeorm-module-config.repository';
 import { TypeormPushSubscriptionRepository } from './repositories/typeorm-push-subscription.repository';
@@ -46,9 +50,19 @@ export class DataAccessModule {
         TypeOrmModule.forFeature(CORE_ENTITIES),
       ],
       providers: [
+        TypeormAdminUserRepository,
+        TypeormAdminSessionRepository,
         TypeormAppConfigRepository,
         TypeormModuleConfigRepository,
         TypeormPushSubscriptionRepository,
+        {
+          provide: ADMIN_USER_REPOSITORY,
+          useExisting: TypeormAdminUserRepository,
+        },
+        {
+          provide: ADMIN_SESSION_REPOSITORY,
+          useExisting: TypeormAdminSessionRepository,
+        },
         {
           provide: APP_CONFIG_REPOSITORY,
           useExisting: TypeormAppConfigRepository,
@@ -63,6 +77,8 @@ export class DataAccessModule {
         },
       ],
       exports: [
+        ADMIN_USER_REPOSITORY,
+        ADMIN_SESSION_REPOSITORY,
         APP_CONFIG_REPOSITORY,
         MODULE_CONFIG_REPOSITORY,
         PUSH_SUBSCRIPTION_REPOSITORY,

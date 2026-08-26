@@ -6,6 +6,11 @@
  * contract breaks the build instead of a request at runtime.
  */
 export type {
+  AdminAccount,
+  AdminLoginRequest,
+  AdminSessionInfo,
+} from './lib/auth';
+export type {
   AppConfig,
   PluginDescriptor,
   PluginMountPoint,

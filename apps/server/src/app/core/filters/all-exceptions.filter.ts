@@ -8,6 +8,17 @@ import {
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 
+/**
+ * Client errors that occur in normal operation and say nothing about a fault.
+ *
+ * 429 is deliberately *not* here: someone hitting the rate limit is worth
+ * seeing.
+ */
+const EXPECTED_STATUSES: ReadonlySet<number> = new Set([
+  HttpStatus.UNAUTHORIZED,
+  HttpStatus.NOT_FOUND,
+]);
+
 interface ErrorBody {
   statusCode: number;
   message: string;
@@ -55,6 +66,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
         `${status} ${body.path}`,
         exception instanceof Error ? exception.stack : String(exception),
       );
+    } else if (EXPECTED_STATUSES.has(status)) {
+      // Not warnings: every client that is not logged in asks who it is, and
+      // every disabled plug-in answers 404. Logging those at warning level
+      // fills an operator's log with normal traffic and buries the real ones.
+      this.logger.debug(`${status} ${body.path} — ${body.message}`);
     } else {
       this.logger.warn(`${status} ${body.path} — ${body.message}`);
     }

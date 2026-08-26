@@ -86,6 +86,31 @@ describe('loadEnv', () => {
     );
   });
 
+  it('leaves the bootstrap administrator unset by default', () => {
+    const env = loadEnv({});
+
+    expect(env.adminAuth.bootstrap).toBeNull();
+    expect(env.adminAuth.sessionTtlHours).toBe(12);
+  });
+
+  it('reads the bootstrap administrator when both values are given', () => {
+    const env = loadEnv({
+      ADMIN_BOOTSTRAP_EMAIL: 'first@example.org',
+      ADMIN_BOOTSTRAP_PASSWORD: 'correct horse battery',
+    });
+
+    expect(env.adminAuth.bootstrap).toEqual({
+      email: 'first@example.org',
+      password: 'correct horse battery',
+    });
+  });
+
+  it('refuses a bootstrap administrator without a password', () => {
+    expect(() =>
+      loadEnv({ ADMIN_BOOTSTRAP_EMAIL: 'first@example.org' }),
+    ).toThrow(/ADMIN_BOOTSTRAP_EMAIL and ADMIN_BOOTSTRAP_PASSWORD/);
+  });
+
   it('accepts a fully configured production environment', () => {
     const env = loadEnv({
       ...productionBase,

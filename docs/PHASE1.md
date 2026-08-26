@@ -522,6 +522,45 @@ signierten Link, keine Schemafolge). Die übrigen Entscheidungen E2–E4, E6–E
 E12–E14 und E16 sind Umsetzungsdetails innerhalb des bereits Entschiedenen und
 bleiben in diesem Dokument.
 
+## Fortschritt
+
+Wird pro Arbeitspaket ergänzt; Abweichungen vom Plan stehen hier, damit AP 13 sie
+nicht rekonstruieren muss.
+
+### AP 1 — Administrativer Zugang (erledigt)
+
+Umgesetzt: `admin_user` und `admin_session` mit Migration, argon2id,
+Sitzungscookie nach E2, `AdminGuard` nach E16 global am URL-Präfix,
+Bootstrap-Admin aus der Umgebung, Login/Logout/„wer bin ich", Admin-Verwaltung
+(FR 1.2) inklusive Oberfläche, Login-Seite mit `returnTo`, Router-Guard,
+401-Interceptor und Abmelden im Admin-Client. 45 neue Unit-Tests, 31 API-Vertrags-
+und 27 Browser-Tests grün.
+
+Abweichungen und ihre Gründe:
+
+- **Der `TokenSigner` (E5) entsteht erst in AP 4.** Der Plan hatte ihn in AP 1
+  vorgesehen, aber die Sitzungen brauchen ihn nicht — sie sind opake Zufallstokens
+  (E1). Ein Baustein ohne Verwendung ist unbelegt; er kommt dort, wo der
+  Double-Opt-In-Link ihn tatsächlich benutzt.
+- **Das Login-Limit ist 20 Versuche pro 5 Minuten statt 5**, weiterhin mit
+  15 Minuten Sperre. Grund steht im Kommentar am Controller: die gesamte
+  Testsuite meldet sich von einer Adresse aus an, und ein Limit, das sie nicht
+  überlebt, wird für Tests gelockert — womit es gar nicht mehr geprüft wird.
+  Bei 20 Versuchen und anschließender Sperre bleiben ~1 900 Versuche pro Tag
+  gegen einen argon2id-Hash einer mindestens zwölfstelligen Passphrase; das ist
+  kein Angriff.
+- **Die Sperre selbst prüft kein automatischer Test**, sondern
+  `tools/spike-verification/verify-admin-access.mjs` gegen eine laufende Instanz
+  — ein automatischer Test würde die Route 15 Minuten blockieren und die Suite
+  unwiederholbar machen. Vermerkt in `todo.md` unter Phase 5.
+- **Erwartete Client-Fehler werden nicht mehr als Warnung protokolliert.** Jeder
+  nicht angemeldete Client fragt beim Start „wer bin ich" und bekommt 401; das
+  füllte das Log mit normalem Verkehr. 401 und 404 laufen jetzt auf `debug`,
+  429 bleibt bewusst eine Warnung.
+- **Der Admin-Client meldet sich in der E2E-Suite einmal zentral an** und teilt
+  den Sitzungszustand; nur `login.spec.ts` startet aus einem frischen Kontext.
+  Sonst hätten drei Browser × mehrere Tests das Limit gesprengt.
+
 ## Definition of Done für Phase 1
 
 1. Alle P1-Anforderungen aus der Scope-Tabelle sind umgesetzt und durch Tests

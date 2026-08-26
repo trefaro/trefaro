@@ -74,6 +74,10 @@ jobs:
       # Where the plug-in web component bundles are served from, so the
       # participant client can load them.
       PLUGIN_BUNDLE_DIR: ./dist/apps/plugins
+      # A known first administrator, created on boot while no account exists, so
+      # the API contract suite can exercise the login it is asserting.
+      ADMIN_BOOTSTRAP_EMAIL: e2e-admin@example.org
+      ADMIN_BOOTSTRAP_PASSWORD: e2e-bootstrap-password
     steps:
       - uses: actions/checkout@v4
         with:
