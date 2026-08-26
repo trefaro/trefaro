@@ -1,0 +1,302 @@
+# Trefaro — Whitelabel-Anwendung für Eventmanagement & Community-Bildung in NGOs
+## Anforderungsanalyse und Umsetzungsplan (abgeleitet aus der Masterthesis von Marius Schulze)
+
+**Projektname:** **Trefaro** (Kunstwort: deutsch „Treff" + Esperanto-Sammelsuffix „-aro" = „Sammlung von Treffen" ≙ Veranstaltungsreihe)
+**Version:** 1.2 (alle offenen Fragen entschieden, siehe Kapitel 7) · **Datum:** 26.08.2026
+**Grundlage:** Masterthesis „Konzeption einer Whitelabel-Anwendung für effizientes Eventmanagement und Community-Bildung in gemeinnützigen Organisationen" (WBH, 2024) inkl. aller Drawio-Diagramme (Bausteinsicht, Laufzeitsicht, Verteilungssicht, Use-Case-Diagramm) und Design-Mockups.
+
+---
+
+## 1 Zielsetzung und Rahmen
+
+Ziel ist die Umsetzung des in der Thesis konzipierten Systems: eine **Open-Source-Whitelabel-Anwendung**, mit der gemeinnützige Organisationen (i. d. R. < 20 Mitarbeitende, sehr begrenztes Budget) **Veranstaltungsreihen** effizient planen und durchführen und gleichzeitig **langfristige Community-Strukturen** aufbauen können.
+
+Zentrale, in der Thesis empirisch belegte Leitplanken (Experteninterviews Democracy International e.V. + Online-Umfrage, n = 42, alle vier Hypothesen bestätigt):
+
+| Leitplanke | Beleg aus der Thesis |
+|---|---|
+| Bedarf an kostengünstiger Lösung vorhanden | 85,7 % nutzen keine Eventmanagement-Software; 85,7 % bestätigen Bedarf (H1) |
+| Fokus stärker auf Eventmanagement als auf Community | 65,9 % Schwerpunkt Eventmanagement vs. 34,1 % Community (H2); Ø-Bewertung 3,39 vs. 2,89 |
+| Open Source ist Pflicht | Ø 3,48/4; einstimmig in Interviews (H3) → GNU GPL |
+| Webbasierte Clients | 76,2 % pro webbasiert (H4); App-Store-Zugang für Teile der Zielgruppe nicht gegeben |
+| Datenschutz über DSGVO hinaus | Ø 3,45/4; keine Google-Dienste (z. B. OpenStreetMap statt Google Maps); sensible Aktivisten-Daten nur nach Login |
+| Nachhaltigkeit & intuitive Bedienung | höchstbewertete übergreifende Anforderungen (3,83 bzw. 3,76) |
+| Ein-Instanz-pro-Organisation | Aus Datenschutzgründen wird eine Instanz **nie** von zwei Organisationen geteilt (kein Multi-Tenant) |
+
+**Technologie-Entscheidungen (Marius, nicht Teil der Thesis):** Frontend mit der neuesten Angular-Version (aktuell Angular 22) in TypeScript, zwei getrennte Client-Apps im **Nx-Monorepo**; Server mit **NestJS** (TypeScript); Datenbank **PostgreSQL** mit **TypeORM**; Lizenz **AGPLv3**; Entwicklung auf GitHub; Democracy International e.V. als Pilotorganisation; Nutzer-Client ab v1 als **PWA** mit **Web-Push**. Vollständiges Entscheidungsprotokoll in Kapitel 7.
+
+---
+
+## 2 Akteure und Use Cases (aus Kapitel 4.1 der Thesis)
+
+**Akteure:** *Interessierte Person* (nicht eingeloggt), *Nutzer* (registriert, Spezialisierung der interessierten Person), *Veranstalter* (Admin der Organisation).
+
+| UC | Name | Akteur | Kernergebnis | Wichtige Erweiterungen |
+|---|---|---|---|---|
+| 01 | Administrativer Login | Veranstalter | Admin ist angemeldet | Fehleranzeige bei falschen Daten |
+| 02 | Veranstaltungsreihe erstellen | Veranstalter | Reihe angelegt, Weiterleitung zur Verwaltung | – |
+| 03 | Veranstaltungsreihe verwalten | Veranstalter | Angaben editierbar, Event-Übersicht | Ehemalige Teilnehmende kontaktieren/einladen |
+| 04 | Event erstellen | Veranstalter | Event angelegt | Raumplan anlegen; Programm planen; Push bei Änderungen; Sprachen pflegen |
+| 05 | Event verwalten | Veranstalter | Event-Detailansicht | Bearbeiten; Teilnehmerübersicht; Direktkontakt; Programmvorschläge verwalten |
+| 06 | Anwendung konfigurieren | Veranstalter | Einstellungen gespeichert | Whitelabel-Design (Farbe, Schriftart, Logo); Module/Plug-ins (de)aktivieren |
+| 07 | An Event registrieren | Interessierte Person | Double-Opt-In-Mail mit Bestätigungslink + Aufforderung zur Profilerstellung | Profil erstellen; Newsletter-Anmeldung; Erinnerungen vor Eventbeginn |
+| 08 | Nutzer Login | Nutzer | Startseite mit allen Veranstaltungsreihen | Fehleranzeige |
+| 09 | Profil verwalten | Nutzer | Profilübersicht | Angaben bearbeiten; eigene Event-Registrierungen verwalten/stornieren |
+| 10 | Event anzeigen | Nutzer | Alle Eventinformationen | Follow-Up-Informationen nach Eventende |
+| 11 | Programmplan anzeigen | Nutzer | Aktueller Programmplan | Eigener Programmplan; Anmeldung zu Programmpunkten; Session-Notizen |
+| 12 | Suche nach anderen Profilen | Nutzer | Suchergebnisliste (Teilnehmende & Sprecher) | Kontaktaufnahme / Vernetzung |
+| 13 | Programmvorschläge einsehen | Nutzer, Veranstalter | Liste der Vorschläge | Eigene Vorschläge einreichen (Freigabe durch Veranstalter nötig) |
+| 14 | In direkten Kontakt mit Veranstalter treten | Nutzer, Veranstalter | Nachricht wird zugestellt, Antwort in der App | Themenkategorisierung (siehe Mockup) |
+| 15 | Im Diskussionsforum Beiträge verfassen | Nutzer, Veranstalter | Beitrag erstellt, aber **nicht freigegeben** | Veranstalter prüft, gibt frei oder lehnt ab |
+| 16 | QR-Code Check-In vor Ort | Nutzer | Check-In registriert | Kamera-Zugriff erforderlich; QR-Code per Mail nach Registrierung |
+
+Wichtige Detail-Erkenntnisse aus dem Use-Case-Diagramm und den Laufzeitsichten, die in der Umsetzung nicht verloren gehen dürfen:
+
+- Kontaktaufnahme mit dem Veranstalter muss **auch ohne Registrierung** möglich sein (belegt durch Usability-Aufgabe 4: Interessent ohne Teilnehmerstatus kontaktiert Veranstalter).
+- Die Startseite des Nutzer-Clients (Veranstaltungsreihen-Übersicht) und die Event-Landingpage sind **ohne Login** erreichbar (niedrige Einstiegshürde); detaillierte Teilnehmerinformationen und Interaktionen erst **nach Login**.
+- Beim Start jedes Clients wird zuerst die **Konfiguration** (Design + aktivierte Module) geladen; erst danach lädt der Plug-in-Manager die Webkomponenten der aktivierten Plug-ins.
+- Registrierung: Formulardaten → Validierung → Persistierung → ID → personalisierter Bestätigungslink → E-Mail-Versand → Linkaufruf bestätigt Registrierung und leitet zur Profilerstellung. Besitzt der Nutzer bereits ein Profil, ist nur die Registrierung zu bestätigen.
+
+---
+
+## 3 Funktionale Anforderungen (Tabelle 20 der Thesis, vollständig)
+
+Priorisierung laut Thesis: **P1** = muss (Umfragewert > 3,23), **P2** = soll (3,23–2,80), **P3** = kann (< 2,80 bzw. Freitext-Vorschläge). P1 + P2 bilden den Kern; als Plug-ins konzipierte Funktionen sind markiert.
+
+### 3.1 Administrative Tätigkeiten
+| Nr. | Anforderung | Prio | Beschreibung |
+|---|---|---|---|
+| 1.1 | Installation | P1 | Instanz muss für Organisationen möglichst einfach aufsetzbar sein (Docker) |
+| 1.2 | Administrativer Zugang | P1 | Admin-Zugänge erstellen und löschen |
+| 1.3 | Administrativer Login | P1 | Login für administrative Funktionen |
+| 1.4 | Whitelabel-Design anpassen | P1 | Primärfarbe + Akzentfarbe (mit berechneten Abstufungen), Logo-Upload, Schriftart; wirkt sofort auf **beide** Clients |
+| 1.5 | Module verwalten | P1 | Funktionale Module/Plug-ins aktivieren/deaktivieren |
+| 1.6 | Externe Anbindungen | P3 | Anbindung an bestehende Datenbanken, Integration in bestehende Webseiten |
+
+### 3.2 Veranstaltungsreihen
+| Nr. | Anforderung | Prio | Beschreibung |
+|---|---|---|---|
+| 2.1 | Veranstaltungsreihe erstellen | P1 | Pflicht: Name, Beschreibung, Logo; weitere optionale Felder |
+| 2.2 | Veranstaltungsreihen verwalten | P1 | Beliebig viele Reihen, alle Angaben editierbar |
+| 2.3 | Übersicht über einzelne Events | P1 | Events einer Reihe (bevorstehend/vergangen) |
+| 2.4 | Registrierungserinnerungen | P1 | Ehemalige Teilnehmende kontaktieren und zu neuen Events einladen |
+| 2.5 | Zentrale Informationsplattform | P2 | App als zentrale Plattform für Planung & Durchführung |
+
+### 3.3 Events
+| Nr. | Anforderung | Prio | Beschreibung |
+|---|---|---|---|
+| 3.1 | Event erstellen | P1 | Name, Beschreibung, Logo, Datum, Ort, Veranstaltungstyp, Sprachen |
+| 3.2 | Event bearbeiten | P1 | Alle Angaben aus 3.1 änderbar |
+| 3.3 | Teilnehmerübersicht | P1 | **Höchstbewertete Funktion (3,86)**; tabellarisch inkl. Newsletter-/Profilstatus, Details, Anmeldestatistik. **Korrektur aus Usability-Test: E-Mail-Adresse muss direkt in der Tabelle sichtbar sein** |
+| 3.4 | Direkte Kontaktmöglichkeit | P1 | Zweiseitige Kommunikation Veranstalter ↔ Nutzer in der App (E-Mail-Programm-ähnliche Nachrichtenübersicht) |
+| 3.5 | Registrierung an Events | P1 | Zweitbewertete Funktion (3,69); Pflichtfelder Name, Vorname, E-Mail + konfigurierbare Felder; Double-Opt-In-Mail |
+| 3.6 | Darstellung relevanter Informationen | P1 | Höchstbewertete Teilnehmerfunktion (3,74): generelle Infos, Programmplan, Raumplan, Follow-Up |
+| 3.7 | Programm planen | P1 | Programmpunkte mit Thema, Beschreibung, Sprecher, Raum, Zeitplan |
+| 3.8 | Event verwalten | P1 | Dashboard mit Kacheln (registrierte Teilnehmer, neue Nachrichten, Programmvorschläge, Forumsbeiträge) |
+| 3.9 | Verschiedene Veranstaltungstypen | P1 | Präsenz, Online, Hybrid |
+| 3.10 | Anmeldung für einzelne Programmpunkte | P1 | Auslastung pro Programmpunkt für Veranstalter sichtbar (Raumplanung/Überbuchung) |
+| 3.11 | Raumplan anlegen | P2 · **Plug-in** | Raumplan der Veranstaltungsräumlichkeiten |
+| 3.12 | Übersetzungen pflegen | P2 | Sprachen pro Event konfigurieren, Inhalte feldweise übersetzen |
+| 3.13 | Programmvorschläge einreichen | P2 · **Plug-in** | Nutzer beteiligen sich an Programmgestaltung |
+| 3.14 | Programmvorschläge verwalten | P2 · **Plug-in** | Moderation/Freigabe; Status für Nutzer transparent |
+| 3.15 | Push-Benachrichtigungen | P2 | Bei Änderungen an registrierten Events (Bewertung 3,10) |
+| 3.16 | QR-Code Check-In | P3 · **Plug-in** | QR-Code per Mail bei Registrierung; Scan vor Ort (niedrigste EM-Bewertung 2,74) |
+| 3.17 | Individueller Programmplan | P3 | Eigene Programm-Zusammenstellung (2,48; für Democracy International wichtig → Plug-in-Kandidat) |
+| 3.18 | Notizen für Sessions | P3 | Persönliche Notizen während des Events |
+| 3.19 | Erinnerungen an bevorstehende Events | P3 | Per E-Mail oder Push |
+
+### 3.4 Nutzerprofile und Interaktionen
+| Nr. | Anforderung | Prio | Beschreibung |
+|---|---|---|---|
+| 4.1 | Profilerstellung | P2 | Im Zuge der Event-Registrierung |
+| 4.2 | Nutzer Login | P2 | Validierung, Fehleranzeige |
+| 4.3 | Nutzerprofil verwalten | P2 | Name, Profilbild, Passwort, Sprache, Tätigkeitsbereich, konfigurierbare Felder |
+| 4.4 | Profilsuche | P2 | Suche nach Name und weiteren Kriterien |
+| 4.5 | Chat | P2 | Nutzer-zu-Nutzer-Kontakt und Vernetzung (Bewertung 2,88) |
+| 4.6 | Diskussionsforum | P2 · **Plug-in** | Pro Event; Beiträge mit Freigabe-Workflow (2,83); Moderationsaufwand minimal halten (Umfrage-Feedback) |
+| 4.7 | Event-Registrierung verwalten | P3 | Eigene Registrierung einsehen und stornieren |
+| 4.8 | Newsletter | P3 | Double-Opt-In-Anmeldung in der App |
+| 4.9 | Gamification | P3 | Bewusst niedrig priorisiert (2,26); falls später: seriöse Umsetzung |
+
+**Server-Modulübersicht laut Bausteinsicht** — Kernmodule: Login, Konfiguration, Veranstaltungsreihen, Event, Programm, Chat, Registrierung, Teilnehmer, E-Mail, Push-Benachrichtigungen, Profil, Streaming, Profil-Suche. Plug-ins: Raumplanung, Diskussionsforum, Programmvorschläge, QR-Code Check-In.
+*(Hinweis: „Streaming" taucht im Diagramm als Kernmodul auf, ist aber in den funktionalen Anforderungen nicht spezifiziert — siehe offene Frage F10.)*
+
+---
+
+## 4 Nicht funktionale Anforderungen (Tabelle 21, alle relevant)
+
+1. **Angemessenheit** – nur benötigte Funktionalitäten anbieten (→ Modularität).
+2. **Erweiterbarkeit** – neue Funktionen einfach integrierbar (→ Plug-in-Architektur, stabile Schnittstellen).
+3. **Nachhaltigkeit** – langfristige Wartbarkeit (LTS-Technologien, breite Community).
+4. **Nutzerfreundlichkeit** – intuitiv, auch für Personen mit rudimentären IT-Kenntnissen, „für Jung und Alt".
+5. **Transparenz** – Open Source (GNU GPL), Quellcode offen, Modifikationsrecht.
+6. **Zugänglichkeit** – geräte- und betriebssystemunabhängig, responsiv (Admin: Desktop-first, aber auch mobil bedienbar; Teilnehmer: Mobile-first, aber auch Desktop).
+7. **Datenschutz** – Daten nur für den eigenen Betrieb; sensible Daten (Teilnehmerinfos) nur nach Login sichtbar.
+8. **Dokumentation** – umfangreich (Installation, Betrieb, Plug-in-Entwicklung).
+9. **Drittanbieter-Software** – keine Dienste mit Datenschutzrisiko (kein Google Maps/Analytics; OpenStreetMap als Kartenalternative).
+10. **Stabilität** – Fehler dürfen das System nicht zum Absturz bringen (Plug-in-Isolation!).
+11. **Fehlerhandling** – Fehler korrekt abfangen und protokollieren.
+12. **Performance** – auch unter Last gute Antwortzeiten.
+13. **Einsatzgebiet** – für NGOs unterschiedlichster Tätigkeitsbereiche nutzbar.
+14. **Kosteneffizienz** – geringe Betriebskosten (ressourcenschonende Container).
+15. **Installierbarkeit** – minimaler Installations- und Einrichtungsaufwand (z. B. ein `docker compose up`).
+
+**Mehrsprachigkeit:** Englisch + jeweilige Landessprache Pflicht; neue Sprachen müssen durch die Organisation selbst pflegbar sein (UI-Sprachen und Inhalts-Übersetzungen sind zu unterscheiden).
+
+---
+
+## 5 Zielarchitektur und Technologie-Mapping
+
+### 5.1 Architekturentscheidungen der Thesis (gesetzt)
+
+- **Schichtenarchitektur** (Strict Layering) im Server: Geschäftslogik-Schicht (API-Komponente, Geschäftslogik, Plug-in-Manager + Schnittstellendefinitionen) über Datenzugriff-Schicht (Datenzugriff, Datenzugriff-Plug-in-Manager). Nur die Datenzugriff-Schicht spricht mit der Datenbank; ein DB-Wechsel oder eine externe DB-Anbindung erfordert nur Änderungen dort.
+- **Plug-in-Muster** in Server **und** Clients: Ein Server-Plug-in liefert drei Teile (API-Implementierung, Geschäftslogik-Implementierung, Datenzugriff-Implementierung) gegen definierte Interfaces; Plug-in-Manager aggregieren sie zur Laufzeit. Client-Plug-ins werden als **Webkomponenten** (framework-unabhängig) geladen und in Navigationsleiste bzw. Event-Detailansicht eingehängt; sie bringen **kein eigenes CSS** mit, sondern erhalten das Whitelabel-Design über die Schnittstelle.
+- **Zwei getrennte webbasierte Clients**: Nutzer-Client (Mobile-first) und Veranstalter-Client (Desktop-first), beide gegen denselben Server; geteilte Module: HTTP-Kommunikation, Umgebungskonfiguration, Design-Abfrage, Aktive-Module-Abfrage. Client-interne Struktur nach **MVC** mit wiederverwendbaren Models.
+- **Verteilung:** 5 Docker-Container pro Instanz — Nutzer-Client, Veranstalter-Client, Server, Datenbank, NGINX-Reverse-Proxy. Betrieb wahlweise auf eigener Infrastruktur oder bei einem Cloud-Anbieter. Skalierung durch mehrere Container-Instanzen möglich. **Eine Instanz pro Organisation.**
+- **Relationale Datenbank**; die Thesis wählte MySQL (Verbreitung, einfache Administration) — Schema bewusst offen gelassen.
+- **Lizenz:** GNU GPL. **Später möglich:** Bereitstellung als PWA oder hybride App auf derselben Codebasis.
+
+### 5.2 Konkretes Technologie-Mapping (entschieden)
+
+| Baustein (Thesis) | Entscheidung | Begründung |
+|---|---|---|
+| Nutzer-Client & Veranstalter-Client | **Angular 22** (Standalone Components, Signals, SSR optional für Landingpages), TypeScript, als **zwei getrennte Apps** in einem **Nx-Monorepo** mit geteilten Libraries (`shared/http`, `shared/config`, `shared/theming`, `shared/models`) | Bildet „Client-spezifische Module + geteilte Logik" 1:1 ab; Angular-Module/Libraries ≈ MVC-Module der Bausteinsicht (Component = View, Component-Class/Signals-Store = Controller, Services/Models = Model) |
+| PWA | Nutzer-Client wird **ab v1 als installierbare PWA** ausgeliefert (`@angular/pwa`: Service Worker, Manifest, Offline-Grundfunktionen) | Vor-Ort-Nutzung bei Events; Voraussetzung für Web-Push auf iOS |
+| Client-Plug-ins (Webkomponenten) | **Angular Elements** (`@angular/elements`) für eigene Plug-ins; Ladepfad über dynamisches Script-Loading durch den Plug-in-Manager-Service; Design-Weitergabe über **CSS Custom Properties** | Erfüllt die Thesis-Vorgabe „framework-unabhängige Webkomponenten ohne eigenes CSS"; Fremdentwickler können Plug-ins auch ohne Angular schreiben |
+| Whitelabel-Theming | CSS Custom Properties (`--primary`, `--accent` + berechnete Abstufungen z. B. über `color-mix()`/HSL-Ableitung), Logo & Font per Konfigurations-API; Font-Hosting lokal (kein Google-Fonts-CDN wegen NFR 9) | Direkte Wirkung auf beide Clients und alle Plug-ins |
+| Server | **NestJS** (TypeScript, Node.js LTS) | Modul-System bildet die Server-Module (Login, Event, Registrierung, …) direkt ab; `DynamicModule`-Mechanismus eignet sich als Plug-in-Manager; Dependency Injection erlaubt saubere Schnittstellendefinitionen (Interfaces + Injection Tokens) zwischen Geschäftslogik- und Datenzugriff-Schicht; größte TS-Server-Community → Nachhaltigkeit |
+| API | REST (HTTP/JSON), dokumentiert mit **OpenAPI** (NestJS-Swagger); getrennte Endpunkt-Namespaces `/api/user/…` und `/api/admin/…` | Entspricht „API-Komponente stellt HTTP-Endpunkte für beide Clients bereit" |
+| Datenzugriff-Schicht | **TypeORM** mit Repository-Pattern; Plug-ins registrieren eigene Entities + Migrationen dynamisch | Nahtlose NestJS-Integration; Datenzugriff-Plug-in-Manager = dynamisch registrierte Repositories/Entities |
+| Datenbank | **PostgreSQL** (aktuelle LTS-Major-Version) via Docker | Abweichung von der Thesis (MySQL) bewusst entschieden: DB läuft ausschließlich als vorkonfigurierter Container → Administrations-Argument der Thesis entfällt; `JSONB` für konfigurierbare Felder (FR 3.5/4.3), integrierte Volltextsuche für Profilsuche (FR 4.4), echtes Community-Projekt (NFR 5); Schichtentrennung hält DB-Wechsel weiterhin möglich |
+| Chat / Echtzeit | **WebSockets** über NestJS Gateways (socket.io) für **Echtzeit-1:1- und Gruppenchats** inkl. Bildaustausch (Interview-Wunsch Schnee); Fallback-Zustellung als In-App-Nachricht + optional Push | FR 4.5 in erweitertem Scope (Entscheidung F9) |
+| Push-Benachrichtigungen | **Web Push API** (VAPID, Service Worker), selbst gehostet — **entschieden als alleiniger Push-Kanal für v1**; iOS erfordert PWA-Installation (akzeptiert) | Erfüllt NFR 9 (kein Firebase/Drittanbieter) |
+| E-Mail-Versand | **Eigener SMTP-Server der Organisation** (konfigurierbar), Templates mit Mehrsprachigkeit; Double-Opt-In-Links signiert (JWT o. ä.). **Kein integriertes Newsletter-Versand-Modul in v1** — FR 4.8 beschränkt sich auf die Opt-In-Verwaltung (Export/Anbindung an bestehendes Newsletter-Tool) | Entscheidungen F8/F11; Organisationen haben i. d. R. bereits ein Mail-Postfach |
+| Datei-Uploads | Lokaler Storage im Docker-Volume (Logos, Profilbilder, Chat-Bilder, Registrierungs-Anhänge wie Visa-Dokumente); Validierung von Typ/Größe, Zugriff nur autorisiert | Entscheidung F12 (Feldtyp Datei-Upload); NFR 7/9: keine externen Storage-Dienste |
+| Auth | Session- oder JWT-basiert (Access/Refresh), Passwort-Hashing mit argon2/bcrypt; strikte Rollentrennung Veranstalter/Nutzer | UC 01/08; NFR 7 |
+| Reverse Proxy / TLS | NGINX-Container (Thesis-Entscheidung), TLS z. B. via Let's Encrypt; muss auch WebSocket-Verbindungen proxien | Verteilungssicht |
+| Karten (Ort/Raumplan) | OpenStreetMap (Leaflet) — **als Ausbaustufe nach v1** (Entscheidung F14); Raumverwaltung in v1 strukturiert ohne Karte | Explizite Thesis-Vorgabe statt Google Maps |
+| Streaming-Modul | **Nur Einbetten externer Streams und Mediathek-Links** (pro Event/Programmpunkt hinterlegbare URLs, z. B. PeerTube/YouTube-Alternativen); kein eigener Upload/Transcoding | Entscheidung F10, Variante (a); klärt das bislang unspezifizierte Kernmodul „Streaming" der Bausteinsicht |
+| Lizenz | **AGPLv3** | Entscheidung F17: schützt den Open-Source-Charakter auch bei SaaS-Betrieb durch Dritte; verschärft die GPL-Vorgabe der Thesis im Sinne von NFR 5 |
+| Repository / Naming | **GitHub-Organisation `trefaro`** (Monorepo), npm-Scope **`@trefaro`**, Domain-Empfehlung **trefaro.org**; GitHub Actions als CI | Entscheidung F18; Namensprüfung 26.08.2026: keine Firmen-/Produkt-/Software-Treffer, GitHub- und npm-Name frei; vor Registrierung noch Domain- und Markenregister-Check (DPMA/EUIPO) |
+| i18n | UI-Texte: `@angular/localize` oder **Transloco** (Laufzeitwechsel + durch Organisationen pflegbare Sprachdateien → Transloco empfohlen); Inhalte: Übersetzungstabellen im Datenmodell (feldweise pro Sprache, siehe Mockup „Neues Event erstellen") | Anforderung „neue Sprachen pflegbar" spricht gegen reine Compile-Time-i18n |
+| CI/CD & Qualität | GitHub/GitLab CI: Lint, Unit-Tests (Jest/Vitest, Karma-Ersatz), E2E (Playwright), Docker-Builds, Release-Images auf Registry | NFR 8, 10, 11; Open-Source-Community-Aufbau |
+
+### 5.3 Datenbankschema — Erstentwurf (in der Thesis bewusst offen gelassen)
+
+Kernentitäten (relational, **PostgreSQL**; `*_json`-Felder als `JSONB`):
+
+```
+admin_user        (id, email, password_hash, name, created_at, …)
+app_config        (id, primary_color, accent_color, logo_path, font, default_locale, active_locales)
+module_config     (id, module_key, enabled, settings_json)
+event_series      (id, name*, description*, logo_path*, …optionale Felder, created_at)
+event             (id, series_id → event_series, name, description, logo_path,
+                   start_date, end_date, venue, event_type [praesenz|online|hybrid], status)
+event_translation (event_id, locale, name, description, …)   ← feldweise Übersetzungen
+program_item      (id, event_id, title, description, speaker, room_id?, starts_at, ends_at,
+                   registration_enabled, capacity?)
+program_item_translation (program_item_id, locale, …)
+registration_field_def (id, event_id, key, label, type [text|select|checkbox|file|…],
+                   options_json, required, sort)                  ← Feld-Baukasten (F12)
+registration      (id, event_id, email, first_name, last_name, phone?, origin?,
+                   custom_fields_json [JSONB], status [pending|confirmed|cancelled],
+                   confirmation_token, newsletter_opt_in, user_id?, created_at)
+attachment        (id, owner_type [registration|message|profile|…], owner_id,
+                   file_path, mime_type, size, uploaded_by, created_at)   ← Datei-Uploads (F12)
+user_profile      (id, email, password_hash, first_name, last_name, avatar_path,
+                   preferred_locale, activity_areas, custom_fields_json [JSONB],
+                   searchable [bool, default false])              ← Sichtbarkeits-Opt-in (F13)
+program_item_signup (registration_id/user_id, program_item_id)     ← FR 3.10
+conversation      (id, event_id?, type [direct|group|organizer_contact], topic,
+                   guest_email?)   ← Gruppenchats (F9); Interessenten ohne Account
+                                     antworten per E-Mail (F11)
+conversation_member (conversation_id, member_type [admin|user], member_id)
+message           (id, conversation_id, sender_type, sender_id, body,
+                   attachment_id?, read_at, created_at)
+media_link        (id, event_id, program_item_id?, title, url, kind [stream|recording|material])
+                                    ← Streaming-Modul, nur externe Links (F10)
+notification      (id, user_id, type, payload_json, sent_at)  + push_subscription (user_id, endpoint, keys)
+newsletter_subscription (email, event_series_id?, double_opt_in_confirmed_at)
+                                    ← nur Opt-In-Verwaltung, kein Versand in v1 (F8)
+-- Plug-in-eigene Tabellen (per Migration des jeweiligen Plug-ins):
+room              (id, event_id, name, capacity, floor?, description)    [Raumplanung, strukturiert (F14)]
+                   → program_item.room_id referenziert room; Überbuchungsprüfung =
+                     Anmeldungen (program_item_signup) vs. room.capacity; OSM-Karte Ausbaustufe
+forum_thread / forum_post (…, approved_by?, status)                      [Diskussionsforum]
+program_proposal  (id, event_id, user_id, title, description, status)    [Programmvorschläge]
+checkin           (id, registration_id, checked_in_at, qr_token)         [QR-Check-In]
+```
+
+Grundsätze: Jede Zuordnung Reihe→Event→Programmpunkt→Registrierung ist referenziell abgesichert (Begründung der Thesis für relationale DB); Plug-ins liefern eigene Migrationen und berühren Kerntabellen nicht; personenbezogene Felder minimiert und löschbar (DSGVO: Auskunft/Löschung einplanen).
+
+### 5.4 Design-Umsetzung (aus den Mockups, Kapitel 5.2 der Thesis)
+
+**Veranstalter-Client (Desktop-first):** Seitliche Menüleiste mit kontextabhängigen Punkten; Startseite = Liste aller Veranstaltungsreihen + „Neue Veranstaltungsreihe"; Reihen-Detailseite mit bevorstehenden/vergangenen Events + „Ehemalige Teilnehmer kontaktieren"; Event-Dashboard mit KPI-Kacheln (registrierte Teilnehmer, neue Nachrichten, Programmvorschläge, Forumsbeiträge) als Verlinkungen + Tabellen der letzten Anmeldungen/Nachrichten; Event-Formular mit Mehrsprachen-Feldern; Teilnehmerübersicht als große Tabelle (inkl. **E-Mail-Spalte** — Usability-Korrektur!, Newsletter-/Profilstatus, Details-Link, Wochen-Anmeldegrafik); Nachrichtenübersicht im E-Mail-Programm-Stil; Einstellungsseite (Farben, Logo, Schriftart, Admin-Zugänge, Plug-ins, Sprachen); Sprachumschalter und Benachrichtigungsanzeige in der Kopfzeile; Plug-ins registrieren sich in der Navigationsleiste.
+
+**Nutzer-Client (Mobile-first):** Startseite mit Organisationslogo + Liste aller Veranstaltungsreihen (ohne Login); Event-Landingpage mit „Jetzt registrieren", Infoblock (Wo/Wann/Typ) und Programm; Registrierungsformular (Name*, Vorname*, E-Mail*, Telefon, Herkunft, Newsletter-Checkbox); Profilseite (inkl. „Meine Event-Registrierungen", Sprachauswahl, Passwort); Event-Detailansicht mit „Kontaktiere Uns"-Button und Funktions-Kacheln (Programmplan, Raumplan, Mit Teilnehmern vernetzen, Programmvorschläge, Diskussionsforum — Kacheln erscheinen nur bei aktiviertem Modul, Plug-ins können sich hier einhängen); Burger-Menü-Navigation (Veranstaltungsreihen, je registriertes Event ein Eintrag, Meine Nachrichten, Mein Profil, Einstellungen); Veranstalter-Kontaktformular mit Themenauswahl (z. B. „Visa Informationen"); Programmplan als Timeline mit „Anmelden"-Buttons pro Programmpunkt; Teilnehmersuche mit Suchfeld und alphabetischer Liste.
+
+Die interaktiven Mockups wurden im Usability-Test (3 Experten, 7 Aufgaben, Skala 1–4) überwiegend mit 4/4 bewertet; einzige nötige Änderung: E-Mail-Adressen in der Teilnehmerübersicht anzeigen.
+
+---
+
+## 6 Umsetzungsplan
+
+### Phase 0 — Projekt-Setup & Architektur-Spikes (~2–3 Wochen)
+GitHub-Organisation `trefaro` + Repo `trefaro/trefaro` als **Nx-Monorepo** mit `apps/user-client`, `apps/admin-client`, `apps/server`, `libs/shared-*` (npm-Scope `@trefaro`); Docker-Compose-Basissetup (5 Container: 2 Clients, NestJS-Server, **PostgreSQL**, NGINX); CI-Pipeline (GitHub Actions); Lizenz (**AGPLv3**), README, Contribution-Guidelines. **Entwicklungsumgebung:** lokal unter **WSL2** (Ubuntu, Node LTS, Nx) mit Docker (Desktop-WSL2-Backend oder docker-ce in WSL) — identische Container wie auf dem Ziel-Linux-Server, dadurch volle Prod-Parität (Entscheidung F16). **Spikes:** (a) Angular-Elements-Plug-in dynamisch laden + Theming via CSS Custom Properties durchreichen, (b) NestJS-DynamicModule-Plug-in mit eigener TypeORM-Entity/Migration, (c) Web-Push Ende-zu-Ende (inkl. iOS-PWA), (d) WebSocket-Chat durch NGINX-Proxy. → Die Spikes validieren die riskantesten Architekturideen der Thesis (Plug-in-Mechanik client- und serverseitig), was die Thesis selbst als offenen Punkt benennt.
+
+### Phase 1 — Kern-MVP „Eventmanagement" (alle P1) (~6–8 Wochen)
+Admin-Login & Admin-Verwaltung (1.2, 1.3); Veranstaltungsreihen-CRUD (2.1–2.3); Event-CRUD inkl. Veranstaltungstypen (3.1, 3.2, 3.8, 3.9); Programmplanung (3.7); öffentliche Nutzer-Startseite + Event-Landingpage; Registrierung mit Double-Opt-In-Mail über den SMTP-Server der Organisation (3.5) inkl. **konfigurierbarem Feld-Baukasten mit Feldtypen Text/Auswahl/Checkbox/Datei-Upload** (F12); Teilnehmerübersicht **mit E-Mail-Spalte** (3.3); Programmpunkt-Anmeldung (3.10); Informationsdarstellung inkl. Follow-Up und externer Stream-/Mediathek-Links (3.6, F10); Einladung ehemaliger Teilnehmender (2.4). Ergebnis: erste produktiv nutzbare Version für reine Event-Orga — früh an Democracy International e.V. zum Feedback geben (F19).
+
+### Phase 2 — Whitelabel & Konfiguration (~3–4 Wochen)
+Design-Einstellungen (1.4) mit Live-Anwendung auf beide Clients; Modul-/Plug-in-Verwaltung (1.5) inkl. Konfigurations-API, die beide Clients beim Start abfragen; Mehrsprachigkeit: UI-Sprachwechsel + Inhaltsübersetzungen (3.12); **PWA-Ausbau des Nutzer-Clients** (Manifest, Service Worker, Installierbarkeit — F20); Installations-Story polieren (`docker compose up`, geführtes Ersteinrichtungs-Setup, Doku) (1.1 / NFR 15).
+
+### Phase 3 — Profile, Kommunikation & Community-Kern (P2) (~6–8 Wochen)
+Nutzerprofile + Login + Profilverwaltung (4.1–4.3) inkl. **Sichtbarkeits-Opt-in für die Profilsuche** (F13); Organisator-Kontakt inkl. Kontakt ohne Registrierung — Antwort an Interessenten ohne Account geht **per E-Mail** raus (3.4 / UC 14 / F11); Nachrichtenübersicht im Admin-Client; Profilsuche (4.4, PostgreSQL-Volltextsuche); **Echtzeit-Chat über WebSockets inkl. Gruppenchats und Bildaustausch** (4.5 / F9 — größter Scope-Zuwachs dieser Phase, daher +2 Wochen); Web-Push-Benachrichtigungen bei Event-Änderungen (3.15); Registrierung verwalten/stornieren (4.7); Newsletter-Opt-In-Verwaltung ohne Versandmodul (4.8 / F8).
+
+### Phase 4 — Plug-ins (~4–6 Wochen, parallelisierbar)
+Referenz-Plug-ins in Priorisierungsreihenfolge: **Programmvorschläge** (3.13/3.14, mit Freigabe-Workflow), **Diskussionsforum** (4.6, moderationsarm), **Raumplanung** (3.11 / F14: strukturierte Raumverwaltung mit Kapazitäten, Verknüpfung Raum ↔ Programmpunkt, Überbuchungserkennung gegen Anmeldezahlen aus 3.10; OSM-Karte als Ausbaustufe), **QR-Code Check-In** (3.16), optional **Individueller Programmplan** (3.17) + Session-Notizen (3.18) + Event-Erinnerungen (3.19). Jedes Plug-in dient zugleich als Nachweis und Doku-Beispiel für die Plug-in-Schnittstellen (Server + Client).
+
+### Phase 5 — Härtung & Release (~3–4 Wochen)
+Usability-Test mit Democracy International (Wiederholung der 7 Aufgaben + bislang ungetestete Use Cases, wie in Kapitel 6 der Thesis empfohlen); Lasttests (NFR 12), Security-Review (Auth, Uploads, Plug-in-Isolation), DSGVO-Funktionen (Datenexport/-löschung), Fehlerprotokollierung/Monitoring (NFR 10/11), vollständige Doku (Installation, Betrieb, Plug-in-SDK), Release v1.0 + Vorstellung in Open-Source-Netzwerken (Ausblick der Thesis: Entwicklercommunity aufbauen).
+
+**Durchgängig:** iterative Entwicklung mit frühem Feedback (explizite Empfehlung der Thesis), Unit-/E2E-Tests je Feature, Conventional Commits + semantische Releases, Änderungen an Plug-in-Schnittstellen nur versioniert.
+
+---
+
+## 7 Entscheidungsprotokoll (alle offenen Fragen geklärt am 26.08.2026)
+
+| # | Frage | Entscheidung |
+|---|---|---|
+| F1 | Server-Framework | **NestJS** |
+| F2 | ORM | **TypeORM** |
+| F3 | Client-Zuschnitt | **Zwei getrennte Angular-Apps** (thesiskonform, eigene Container) |
+| F4 | Monorepo-Tooling | **Nx** |
+| F5 | Datenbank | **PostgreSQL** (bewusste Abweichung von der Thesis-Wahl MySQL; Begründung siehe 5.2 — DB läuft nur als Container, JSONB, Volltextsuche, Community) |
+| F6 | Plug-in-Distribution | **Kuratierte Plug-ins im Image, Aktivierung/Deaktivierung zur Laufzeit** per Konfiguration; keine Fremdinstallation zur Laufzeit in v1 |
+| F7 | Push-Kanal | **Web Push reicht für v1** (iOS via installierter PWA akzeptiert) |
+| F8 | E-Mail | **Eigener SMTP-Server der Organisation**; **kein integriertes Newsletter-Versand-Modul** in v1 (nur Opt-In-Verwaltung) |
+| F9 | Chat-Umfang | **Echtzeit-Chats inkl. Gruppenchats** einplanen (WebSockets) |
+| F10 | Streaming-Modul | **Variante (a): nur Einbetten externer Streams / Mediathek-Links** |
+| F11 | Interessenten ohne Account | Veranstalter-Antwort geht **per E-Mail** an den Interessenten |
+| F12 | Registrierungsfelder | Feld-Baukasten **inkl. Feldtypen Auswahl und Datei-Upload** (z. B. Visa-Dokumente) |
+| F13 | Profil-Sichtbarkeit | **Ja, Opt-in**: Nutzer entscheiden, ob sie in der Teilnehmersuche auffindbar sind |
+| F14 | Raumplan | **Strukturierte Raumverwaltung mit Kapazitäten + Verknüpfung zu Programmpunkten** (Überbuchungserkennung); **OSM-Karte als Ausbaustufe** |
+| F15 | Externe Anbindungen (FR 1.6) | **Für v1 zurückgestellt** |
+| F16 | Entwicklungs-/Zielumgebung | Entwicklung **lokal unter WSL2 mit Docker**, Zielbetrieb **eigener Linux-Server** — durch identische Container volle Parität (siehe Phase 0) |
+| F17 | Lizenz | **AGPLv3** |
+| F18 | Projektname / Plattform | **Trefaro**; Entwicklung auf **GitHub** (Org `trefaro`, npm-Scope `@trefaro`, Domain-Empfehlung trefaro.org). Geprüft am 26.08.2026: keine Firmen-/Produkt-Treffer (nur seltener Familienname), GitHub- und npm-Name frei. Verworfene Kandidaten: Kunveno, Convena, Conventio, Okazo, Agoro, Renkonto, Versamo, Synvenio, Eventaro (belegt bzw. nicht gefallen) |
+| F19 | Pilotpartner | **Ja, Democracy International e.V.** wird eingebunden |
+| F20 | PWA ab v1 | **Ja** |
+
+---
+
+## 8 Anhang: Abweichungen & bewusste Konkretisierungen gegenüber der Thesis
+
+1. **E-Mail-Spalte in der Teilnehmerübersicht** ergänzt (einzige konkrete Korrektur aus dem Usability-Test, Kapitel 6).
+2. **Technologiewahl** (Angular 22, NestJS, TypeORM, Web Push, Transloco …) — in der Thesis bewusst offen gelassen; gemäß Präferenz TypeScript-Ende-zu-Ende konkretisiert und am 26.08.2026 vollständig entschieden (Kapitel 5.2 und 7).
+3. **Datenbank: PostgreSQL statt MySQL** — bewusste, begründete Abweichung von der Thesis-Entscheidung (Kapitel 5.2 / F5). Das Administrations-Argument der Thesis entfällt beim reinen Container-Betrieb; JSONB und Volltextsuche stützen FR 3.5/4.3/4.4. Die Schichtenarchitektur hält einen späteren Wechsel offen.
+4. **Datenbankschema-Erstentwurf** (Kapitel 5.3) — in der Thesis explizit ausgeklammert; Vorschlag zur Diskussion.
+5. **Lizenz AGPLv3 statt GPL** — Verschärfung im Sinne der Thesis-Intention (Open-Source-Charakter auch bei SaaS-Betrieb Dritter geschützt).
+6. **Chat-Scope erweitert** (Echtzeit + Gruppenchats, F9) — geht über die Umfrage-Priorität (2,88) hinaus, greift aber den expliziten Interview-Wunsch (Schnee: Gruppenchats, Bildaustausch) auf.
+7. **Individueller Programmplan als Plug-in** — die Thesis nennt ihn als Plug-in-Beispiel (für Democracy International relevant, Umfrage 2,48); so übernommen.
+8. Keine inhaltlichen Anforderungen wurden entfernt oder umpriorisiert; die Prioritäten P1–P3 entsprechen exakt Tabelle 20 der Thesis.

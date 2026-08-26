@@ -1,0 +1,30 @@
+# Trefaro CI (Entwurf — aktiv, sobald der Nx-Workspace generiert ist)
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx nx format:check
+      - run: npx nx affected -t lint --parallel=3
+      - run: npx nx affected -t test --parallel=3
+      - run: npx nx affected -t build --parallel=3
+      # E2E (Playwright) aktivieren, sobald die Apps generiert sind:
+      # - run: npx playwright install --with-deps chromium
+      # - run: npx nx affected -t e2e

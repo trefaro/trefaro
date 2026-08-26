@@ -1,0 +1,38 @@
+# Trefaro — Entwicklungs-Stack (Entwurf, Phase 0)
+# Start:  docker compose -f infra/docker-compose.dev.yml up -d
+# In Dev laufen die Angular-Dev-Server und NestJS i. d. R. direkt via `nx serve`;
+# dieser Stack liefert die Infrastruktur (Postgres, später NGINX) dazu.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: trefaro-postgres
+    environment:
+      POSTGRES_DB: trefaro
+      POSTGRES_USER: trefaro
+      POSTGRES_PASSWORD: trefaro_dev # nur Entwicklung!
+    ports:
+      - "5432:5432"
+    volumes:
+      - trefaro-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trefaro -d trefaro"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Für Mail-Tests in der Entwicklung (fängt alle Mails ab, UI auf :8025)
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: trefaro-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  # Produktions-Stack (Referenz, wird in Phase 2 vervollständigt):
+  # 5 Container gemäß Verteilungssicht der Thesis —
+  # user-client, admin-client, server, postgres, nginx (Reverse Proxy).
+  # Siehe infra/nginx/trefaro.conf für den Proxy-Entwurf.
+
+volumes:
+  trefaro-pgdata:
