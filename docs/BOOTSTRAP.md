@@ -139,15 +139,18 @@ Alles, was Phase 0 bewusst offen gelassen hat, steht in
 [`todo.md`](../todo.md) — nach der Phase sortiert, ab der es prüfbar wird, mit
 Rückverweis auf das jeweilige Spike-Protokoll. Nach jeder Phase durchgehen.
 
-## Offene Entscheidung für Phase 1
+## Entschieden nach Phase 0
 
-**Wem gehört `program_item.room_id`?** Der Schemaentwurf in
-`Anforderungsanalyse_und_Umsetzungsplan.md` lässt die Kerntabelle
-`program_item` auf einen Raum verweisen, während die Architekturregeln Plug-ins
-verbieten, Kerntabellen anzufassen. Beides gleichzeitig geht nicht. Details und
-Optionen in [`docs/spikes/02-server-plugin.md`](spikes/02-server-plugin.md).
+**Die Raumzuordnung von Programmpunkten liegt in einer plug-in-eigenen
+Join-Tabelle** (F21, entschieden am 26.08.2026) — `program_item` bekommt kein
+`room_id`. Der Widerspruch zwischen Schemaentwurf 5.3 und Architekturregel 2 ist
+damit aufgelöst; der Entwurf im Anforderungsdokument ist korrigiert. Begründung,
+verworfene Alternativen und die bewusst akzeptierten Konsequenzen in
+[`docs/spikes/02-server-plugin.md`](spikes/02-server-plugin.md). Umgesetzt ist
+noch nichts — das steht in [`todo.md`](../todo.md) unter Phase 1.
 
 ## Nächster Schritt
 
 Phase 1 — Kern-MVP Eventmanagement (alle P1), siehe Kapitel 6 in
-`Anforderungsanalyse_und_Umsetzungsplan.md`.
+`Anforderungsanalyse_und_Umsetzungsplan.md`. **Beginnt erst auf ausdrückliches Go
+von Marius**; Stand 26.08.2026 liegt es noch nicht vor.

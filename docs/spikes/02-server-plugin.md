@@ -117,17 +117,25 @@ authority over the schema.
 Tracked in [`todo.md`](../../todo.md), which records the phase that makes each of
 them checkable.
 
-### Who owns the link between a programme item and a room?
+### Who owns the link between a programme item and a room? — decided
 
-`Anforderungsanalyse_und_Umsetzungsplan.md` §5.3 gives the core `program_item`
-table a `room_id`, and notes that it references the room planning plug-in's
-`room` table. Architecture rule 2 says a plug-in never touches core tables. Both
-cannot be true, and the answer changes the core migration — so it has to be
-settled before phase 1 designs the programme schema.
+**Decision (26.08.2026): option A, the plug-in-owned join table.** Recorded as
+F21 in `Anforderungsanalyse_und_Umsetzungsplan.md`, whose §5.3 schema draft has
+been corrected accordingly. The table is named `program_item_room` there; the
+plug-in creates it as `plugin_room_planning_program_item_room`, following the
+`plugin_<key>_` prefix every plug-in table carries. Nothing is implemented yet —
+that is phase 1 work.
+
+The question, for the record: §5.3 originally gave the core `program_item` table
+a `room_id` referencing the room planning plug-in's `room` table, while
+architecture rule 2 says a plug-in never touches core tables. Both could not be
+true, and the answer changes the core migration — so it had to be settled before
+phase 1 designed the programme schema.
 
 **Option A — a join table owned by the plug-in.**
-`plugin_room_planning_assignment (program_item_id, room_id)`, with the plug-in
-declaring a foreign key to each side. The core schema says nothing about rooms.
+`plugin_room_planning_program_item_room (program_item_id, room_id)`, with the
+plug-in declaring a foreign key to each side. The core schema says nothing about
+rooms.
 
 **Option B — an unconstrained `room_id` column in the core table.** As the schema
 draft has it: a nullable `uuid` on `program_item` that the core stores but never
@@ -136,7 +144,7 @@ interprets, and only the plug-in gives meaning to.
 **Option C — a generic `plugin_data JSONB` column on `program_item`.** An
 extension point for any plug-in, not just this one.
 
-**Recommendation: option A.**
+**Why option A won.**
 
 - It keeps rule 2 literally true, which is what makes the whole plug-in claim
   credible. Option B puts a column in the core that exactly one plug-in

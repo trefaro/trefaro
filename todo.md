@@ -14,17 +14,6 @@ attached to the task.
 
 ---
 
-## Blocking decision — before the phase 1 schema work
-
-- [ ] **Who owns the link between a programme item and a room?**
-      `Anforderungsanalyse_und_Umsetzungsplan.md` §5.3 has the core
-      `program_item` table carrying `room_id`, while architecture rule 2 forbids
-      a plug-in from touching core tables. Both cannot hold.
-      **Recommendation: a plug-in-owned join table** — see
-      [`docs/spikes/02-server-plugin.md`](docs/spikes/02-server-plugin.md#open-items)
-      for the options and the reasoning. Decide before `program_item` is
-      designed, because the answer changes the core migration.
-
 ## Known gaps in the current state
 
 Not deferred verification — things that are genuinely missing and would matter if
@@ -55,8 +44,15 @@ an instance were exposed today.
 - [ ] **The uploads volume is finally used.** The registration field kit (F12)
       introduces file uploads. Verify: type and size validation, and that a
       stored file is only reachable by an authorized request.
-- [ ] **`docs/spikes/02-server-plugin.md` room-planning note is resolved** once
-      the decision above is implemented.
+- [ ] **Implement F21 — the room link as a plug-in-owned join table.** Decided
+      26.08.2026; nothing is built yet. `program_item` gets **no** `room_id`
+      column; the room planning plug-in creates
+      `plugin_room_planning_program_item_room (program_item_id, room_id)` with a
+      foreign key to each side and `ON DELETE CASCADE` on the programme item.
+      Its migration has to be timestamped after the core migration that creates
+      `program_item`. Verify: deleting a programme item removes its room
+      assignment, and dropping the plug-in leaves the core schema untouched.
+      → [`02-server-plugin.md`](docs/spikes/02-server-plugin.md#who-owns-the-link-between-a-programme-item-and-a-room--decided)
 
 ## Checkable after phase 2 — whitelabel, module administration, i18n, PWA
 
@@ -167,8 +163,16 @@ an instance were exposed today.
 
 ---
 
-## Done
+## Decided
 
+Decisions only — the work they imply stays in the phase sections above.
+
+- [x] **F21, the room link** — decided 2026-08-26: a plug-in-owned join table,
+      not a `room_id` column in `program_item`. Recorded as F21 in the
+      requirements document, whose §5.3 schema draft is corrected; reasoning and
+      the rejected alternatives in
+      [`02-server-plugin.md`](docs/spikes/02-server-plugin.md#who-owns-the-link-between-a-programme-item-and-a-room--decided).
+      Implementation is listed under phase 1.
 - [x] **Thesis material in a public repository** — decided 2026-08-26: diagrams
       and mockups stay (they document where the architecture comes from), the
       full thesis PDF does not.

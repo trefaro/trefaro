@@ -94,10 +94,16 @@ Entscheidungen aus Phase 0, die nicht erneut aufgerollt werden sollten:
 - **`tools/spike-verification/`** prüft eine _laufende_ Instanz; `*-e2e` prüft im
   CI. Beides bewusst getrennt.
 
-**Offene Entscheidung vor Phase 1:** Wem gehört `program_item.room_id`? Der
-Schemaentwurf lässt die Kerntabelle auf einen Raum verweisen, die
-Architekturregeln verbieten Plug-ins den Zugriff auf Kerntabellen. Optionen in
-`docs/spikes/02-server-plugin.md`.
+- **Raumzuordnung von Programmpunkten = plug-in-eigene Join-Tabelle** (F21,
+  entschieden 26.08.2026). `program_item` bekommt **kein** `room_id`. Noch nicht
+  implementiert — steht in `todo.md` unter Phase 1. Begründung in
+  `docs/spikes/02-server-plugin.md`.
+
+**Offene Punkte** stehen in `todo.md`, nach der Phase gruppiert, ab der sie
+prüfbar werden — nach jeder Phase durchgehen.
+
+**Phase 1 startet nur auf ausdrückliches Go von Marius.** Stand 26.08.2026 ist
+das Go noch nicht erteilt; bis dahin keine fachliche Implementierung beginnen.
 
 ## Betriebskontext
 
