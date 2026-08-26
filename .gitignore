@@ -36,3 +36,7 @@ npm-debug.log*
 .angular
 
 __screenshots__/
+
+# Thesis full text — the diagrams and mockups in docs/thesis/ are the reference
+# the implementation needs; the complete document stays out of the public repo.
+docs/thesis/*.pdf
