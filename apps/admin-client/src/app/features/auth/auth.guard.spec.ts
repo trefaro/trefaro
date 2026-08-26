@@ -1,11 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import {
-  Router,
   UrlTree,
+  provideRouter,
   type ActivatedRouteSnapshot,
   type RouterStateSnapshot,
 } from '@angular/router';
-import { provideRouter } from '@angular/router';
 import { adminAuthGuard, notLoggedInGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 

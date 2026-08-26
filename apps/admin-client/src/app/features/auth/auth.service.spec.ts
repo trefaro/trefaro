@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
+import { STARTUP_TIMEOUT_MS } from '@trefaro/shared-config';
 import { ApiClient } from '@trefaro/shared-http';
 import type { AdminSessionInfo } from '@trefaro/shared-models';
-import { Observable, of, throwError } from 'rxjs';
+import { NEVER, Observable, of, throwError } from 'rxjs';
 import { AuthService, isSessionProbe } from './auth.service';
 
 const session: AdminSessionInfo = {
@@ -20,9 +21,13 @@ interface FakeApi {
   post: (path: string, body: unknown) => Observable<unknown>;
 }
 
-function serviceWith(api: Partial<FakeApi>): AuthService {
+function serviceWith(
+  api: Partial<FakeApi>,
+  startupTimeoutMs = 5_000,
+): AuthService {
   TestBed.configureTestingModule({
     providers: [
+      { provide: STARTUP_TIMEOUT_MS, useValue: startupTimeoutMs },
       {
         provide: ApiClient,
         useValue: {
@@ -58,6 +63,15 @@ describe('AuthService', () => {
     const auth = serviceWith({
       get: () => throwError(() => ({ status: 401 })),
     });
+
+    await expect(auth.restore()).resolves.toBe(false);
+    expect(auth.isLoggedIn()).toBe(false);
+  });
+
+  it('stops waiting for a server that never answers, so the login form renders', async () => {
+    // Otherwise the startup initializer never settles and the page stays blank
+    // — which is exactly what a stopped API behind the dev-server proxy did.
+    const auth = serviceWith({ get: () => NEVER }, 10);
 
     await expect(auth.restore()).resolves.toBe(false);
     expect(auth.isLoggedIn()).toBe(false);

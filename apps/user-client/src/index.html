@@ -10,9 +10,24 @@
     <meta name="theme-color" content="#1f6f5c" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <link rel="apple-touch-icon" href="icons/icon-192x192.png" />
+    <style>
+      /* Inline, so it needs no stylesheet of its own to be visible. */
+      .trefaro-booting {
+        display: grid;
+        place-items: center;
+        min-block-size: 100vh;
+        font-family: system-ui, sans-serif;
+        color: #444;
+      }
+    </style>
   </head>
   <body>
-    <trefaro-root></trefaro-root>
+    <trefaro-root>
+      <!-- Replaced as soon as Angular bootstraps. It is here because startup
+           waits for the server's configuration, and a slow or unreachable
+           instance would otherwise show an empty page for seconds (NFR 10). -->
+      <div class="trefaro-booting" role="status">Loading Trefaro…</div>
+    </trefaro-root>
     <noscript
       >Please enable JavaScript to continue using this application.</noscript
     >

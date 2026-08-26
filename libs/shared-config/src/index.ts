@@ -6,3 +6,4 @@
  */
 export { AppConfigService } from './lib/app-config.service';
 export { provideTrefaroConfig } from './lib/provide-trefaro-config';
+export { STARTUP_TIMEOUT_MS } from './lib/startup-timeout';

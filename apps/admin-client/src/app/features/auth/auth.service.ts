@@ -1,7 +1,8 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { STARTUP_TIMEOUT_MS } from '@trefaro/shared-config';
 import { ApiClient } from '@trefaro/shared-http';
 import type { AdminAccount, AdminSessionInfo } from '@trefaro/shared-models';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, timeout } from 'rxjs';
 
 /** Paths whose 401 is an answer rather than an expired session. */
 export const AUTH_PROBE_PATHS = ['admin/auth/me', 'admin/auth/login'] as const;
@@ -17,6 +18,7 @@ export const AUTH_PROBE_PATHS = ['admin/auth/me', 'admin/auth/login'] as const;
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly api = inject(ApiClient);
+  private readonly startupTimeoutMs = inject(STARTUP_TIMEOUT_MS);
   private readonly session = signal<AdminSessionInfo | null>(null);
 
   readonly admin = computed<AdminAccount | null>(
@@ -40,7 +42,14 @@ export class AuthService {
   async restore(): Promise<boolean> {
     try {
       this.session.set(
-        await firstValueFrom(this.api.get<AdminSessionInfo>('admin/auth/me')),
+        await firstValueFrom(
+          // Bounded like the configuration fetch: a server that accepts the
+          // connection and then never answers must not leave the organizer
+          // looking at a blank page instead of the login form.
+          this.api
+            .get<AdminSessionInfo>('admin/auth/me')
+            .pipe(timeout(this.startupTimeoutMs)),
+        ),
       );
       return true;
     } catch {

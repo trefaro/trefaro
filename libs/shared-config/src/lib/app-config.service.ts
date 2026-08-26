@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, timeout } from 'rxjs';
 import { ApiClient } from '@trefaro/shared-http';
+import { STARTUP_TIMEOUT_MS } from './startup-timeout';
 import type {
   AppConfig,
   PluginDescriptor,
@@ -21,6 +22,7 @@ import type {
 @Injectable({ providedIn: 'root' })
 export class AppConfigService {
   private readonly api = inject(ApiClient);
+  private readonly startupTimeoutMs = inject(STARTUP_TIMEOUT_MS);
   private readonly state = signal<AppConfig | null>(null);
   private pending: Promise<AppConfig> | null = null;
 
@@ -59,7 +61,11 @@ export class AppConfigService {
 
   /** Fetches the configuration once; later calls await the same request. */
   ensureLoaded(): Promise<AppConfig> {
-    this.pending ??= firstValueFrom(this.api.get<AppConfig>('config')).then(
+    this.pending ??= firstValueFrom(
+      // Bounded: a server that never answers must not leave the client
+      // rendering nothing. The timeout also aborts the request.
+      this.api.get<AppConfig>('config').pipe(timeout(this.startupTimeoutMs)),
+    ).then(
       (config) => {
         this.state.set(config);
         return config;
