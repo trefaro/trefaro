@@ -2,7 +2,8 @@
   "name": "@trefaro/shared-theming",
   "version": "0.0.1",
   "peerDependencies": {
-    "@angular/core": "^22.0.0"
+    "@angular/core": "^22.0.0",
+    "@trefaro/shared-models": "0.0.1"
   },
   "sideEffects": false
 }

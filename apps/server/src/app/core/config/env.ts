@@ -47,6 +47,14 @@ export interface TrefaroEnv {
   readonly port: number;
   /** Directory for uploaded files — logos, avatars, registration attachments (F12). */
   readonly uploadDir: string;
+  /**
+   * Directory holding the curated plug-ins' web component bundles.
+   *
+   * The server serves these under `/api/plugins`, so a bundle URL is same-origin
+   * for both clients in development (through the dev-server proxy) and in
+   * production (through the NGINX reverse proxy) without any extra routing.
+   */
+  readonly pluginBundleDir: string;
   /** Public origins of both clients: CORS allow-list and link base for e-mails. */
   readonly publicUserClientUrl: string;
   readonly publicAdminClientUrl: string;
@@ -165,6 +173,7 @@ export function loadEnv(
     nodeEnv,
     port: read.integer('PORT', 3000),
     uploadDir: read.optional('UPLOAD_DIR', './tmp/uploads'),
+    pluginBundleDir: read.optional('PLUGIN_BUNDLE_DIR', './dist/apps/plugins'),
     publicUserClientUrl: read.optional(
       'PUBLIC_USER_CLIENT_URL',
       'http://localhost:4200',

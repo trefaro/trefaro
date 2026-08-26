@@ -1,2 +1,31 @@
-<trefaro-nx-welcome></trefaro-nx-welcome>
-<router-outlet></router-outlet>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      @if (theme.hasLogo()) {
+      <span
+        class="sidebar__logo"
+        role="img"
+        aria-label="Organization logo"
+      ></span>
+      }
+      <span class="sidebar__title">Trefaro</span>
+    </div>
+
+    <nav class="sidebar__nav" aria-label="Main navigation">
+      <a
+        routerLink="/"
+        routerLinkActive="is-active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Event series
+      </a>
+      <a routerLink="/modules" routerLinkActive="is-active">Modules</a>
+      <!-- Plug-in hook point one: the navigation bar. -->
+      <trefaro-plugin-slot mountPoint="navigation" />
+    </nav>
+  </aside>
+
+  <main class="content">
+    <router-outlet />
+  </main>
+</div>

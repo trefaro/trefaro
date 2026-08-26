@@ -26,7 +26,7 @@ export const roomPlanningPlugin: ServerPlugin = {
   },
   client: {
     elementName: 'trefaro-plugin-room-planning',
-    bundleUrl: '/plugins/room-planning/bundle.js',
+    bundleUrl: '/api/plugins/room-planning/main.js',
     // Rooms are something a participant looks up while at the event, so the
     // tile belongs on the event detail view rather than in the main navigation.
     mountPoints: ['event-detail'],

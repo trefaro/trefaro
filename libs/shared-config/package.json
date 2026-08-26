@@ -2,7 +2,11 @@
   "name": "@trefaro/shared-config",
   "version": "0.0.1",
   "peerDependencies": {
-    "@angular/core": "^22.0.0"
+    "@angular/core": "^22.0.0",
+    "rxjs": "~7.8.0",
+    "@trefaro/shared-http": "0.0.1",
+    "@trefaro/shared-models": "0.0.1",
+    "@trefaro/shared-theming": "0.0.1"
   },
   "sideEffects": false
 }

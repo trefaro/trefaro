@@ -1,2 +1,20 @@
-<trefaro-nx-welcome></trefaro-nx-welcome>
-<router-outlet></router-outlet>
+<header class="app-header">
+  @if (theme.hasLogo()) {
+  <span
+    class="app-header__logo"
+    role="img"
+    aria-label="Organization logo"
+  ></span>
+  }
+  <a class="app-header__title" routerLink="/">Trefaro</a>
+</header>
+
+<main class="app-main">
+  <router-outlet />
+</main>
+
+<nav class="app-nav" aria-label="Main navigation">
+  <a class="app-nav__link" routerLink="/">Event series</a>
+  <!-- Plug-in hook point one: the navigation bar. -->
+  <trefaro-plugin-slot mountPoint="navigation" />
+</nav>

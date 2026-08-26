@@ -14,6 +14,11 @@
         "tsConfig": "libs/shared-models/tsconfig.lib.json",
         "assets": ["libs/shared-models/*.md"]
       }
+    },
+    "test": {
+      "options": {
+        "passWithNoTests": true
+      }
     }
   }
 }

@@ -1,1 +1,35 @@
-/* You can add global styles to this file, and also import other style files */
+/* Global baseline for the organizer client. Colours and font come from the
+   theme's custom properties, set on the document root before the first render. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--trefaro-font-family, system-ui, sans-serif);
+  line-height: 1.5;
+  color: #1a1a1a;
+  background: #f7f8f8;
+}
+
+h1,
+h2 {
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+a {
+  color: var(--trefaro-color-primary-strong, #14352c);
+}
+
+table {
+  border-collapse: collapse;
+}
+
+:focus-visible {
+  outline: 2px solid var(--trefaro-color-accent, #e8a33d);
+  outline-offset: 2px;
+}

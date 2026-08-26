@@ -1,0 +1,77 @@
+/* Desktop-first: side menu next to the content, collapsing above the content on
+   narrow screens so the client stays usable on a phone (NFR 6). */
+
+.layout {
+  display: grid;
+  grid-template-columns: 16rem 1fr;
+  min-block-size: 100vh;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.25rem 1rem;
+  background: var(--trefaro-color-primary);
+  color: var(--trefaro-color-on-primary);
+}
+
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.sidebar__logo {
+  display: block;
+  inline-size: 1.9rem;
+  block-size: 1.9rem;
+  background-image: var(--trefaro-logo-url);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.sidebar__nav a {
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.4rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.sidebar__nav a:hover,
+.sidebar__nav a.is-active {
+  background: color-mix(
+    in oklab,
+    var(--trefaro-color-on-primary) 18%,
+    transparent
+  );
+}
+
+.content {
+  padding: 1.5rem 2rem;
+  min-inline-size: 0;
+}
+
+@media (max-width: 60rem) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar__nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .content {
+    padding: 1.25rem 1rem;
+  }
+}

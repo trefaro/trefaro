@@ -1,5 +1,6 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app/app.module';
 import type { TrefaroEnv } from './app/core/config/env';
@@ -13,7 +14,7 @@ const GLOBAL_PREFIX = 'api';
 async function bootstrap(): Promise<void> {
   // The ENV provider validates the environment while the modules initialise, so
   // a misconfigured instance fails before this ever reaches `listen`.
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const env = app.get<TrefaroEnv>(ENV);
 
   app.setGlobalPrefix(GLOBAL_PREFIX);
@@ -38,6 +39,18 @@ async function bootstrap(): Promise<void> {
   );
 
   app.useGlobalFilters(new AllExceptionsFilter(app.get(HttpAdapterHost)));
+
+  // Plug-in web component bundles. Serving them from the server, rather than
+  // from each client container, means one URL works in development (through the
+  // dev-server proxy) and in production (through the reverse proxy) — and the
+  // curated bundles travel with the image that already contains the plug-ins.
+  // The global prefix does not apply to static assets, so it is spelled out.
+  app.useStaticAssets(env.pluginBundleDir, {
+    prefix: `/${GLOBAL_PREFIX}/plugins/`,
+    // Bundle file names are stable, so revalidation rather than long caching.
+    setHeaders: (response) =>
+      response.setHeader('Cache-Control', 'no-cache, must-revalidate'),
+  });
 
   // The OpenAPI description is served in every environment on purpose: the
   // source is public anyway (AGPL), and NFR 8 asks for thorough documentation.

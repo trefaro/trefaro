@@ -17,7 +17,8 @@
       "@trefaro/shared-models": ["./libs/shared-models/src/index.ts"],
       "@trefaro/shared-http": ["./libs/shared-http/src/index.ts"],
       "@trefaro/shared-config": ["./libs/shared-config/src/index.ts"],
-      "@trefaro/shared-theming": ["./libs/shared-theming/src/index.ts"]
+      "@trefaro/shared-theming": ["./libs/shared-theming/src/index.ts"],
+      "@trefaro/shared-plugins": ["./libs/shared-plugins/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
