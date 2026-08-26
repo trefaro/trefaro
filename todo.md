@@ -33,6 +33,9 @@ an instance were exposed today.
 
 ## Checkable after phase 1 — core event management
 
+The plan for that phase is [`docs/PHASE1.md`](docs/PHASE1.md); every entry below
+is assigned to one of its work packages.
+
 - [ ] **Guard the admin API.** Every `/api/admin/**` route, including plug-in
       controllers, behind the admin login. Verify: an unauthenticated request to
       the room planning endpoints answers 401, not 201.
@@ -44,6 +47,13 @@ an instance were exposed today.
 - [ ] **The uploads volume is finally used.** The registration field kit (F12)
       introduces file uploads. Verify: type and size validation, and that a
       stored file is only reachable by an authorized request.
+- [ ] **Constrain `plugin_room_planning_room.event_id`.** It has been an
+      unconstrained `uuid` since phase 0, because the core `event` table did not
+      exist yet — the very integrity gap that decided F21 against a `room_id`
+      column. Once `event` exists, a plug-in migration adds the foreign key with
+      `ON DELETE CASCADE`, timestamped after the core migration. Verify:
+      inserting a room for an unknown event fails, and deleting an event removes
+      its rooms.
 - [ ] **Implement F21 — the room link as a plug-in-owned join table.** Decided
       26.08.2026; nothing is built yet. `program_item` gets **no** `room_id`
       column; the room planning plug-in creates

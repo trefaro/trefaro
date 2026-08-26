@@ -188,6 +188,12 @@ themselves.
 
 - The overbooking check (FR 3.10 against room capacity) needs programme item
   sign-ups, which arrive in phase 1. The capacity it will read is already stored.
+- **`plugin_room_planning_room.event_id` carries no foreign key yet.** The core
+  `event` table does not exist, so the column is a bare `uuid` — which is the
+  same integrity gap that decided F21 against a core `room_id` column, only on
+  the plug-in's side of the line. The constraint is added by a plug-in migration
+  in phase 1, timestamped after the core migration that creates `event`. Until
+  then a room can reference an event that never existed.
 - `apps/server/src/plugins/{forum,program-proposals,qr-checkin}` hold only a
   README. They are deliberately not registered as no-op plug-ins — an empty
   plug-in offered in the administration would be a lie.

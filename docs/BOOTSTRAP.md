@@ -151,6 +151,8 @@ noch nichts — das steht in [`todo.md`](../todo.md) unter Phase 1.
 
 ## Nächster Schritt
 
-Phase 1 — Kern-MVP Eventmanagement (alle P1), siehe Kapitel 6 in
-`Anforderungsanalyse_und_Umsetzungsplan.md`. **Beginnt erst auf ausdrückliches Go
-von Marius**; Stand 26.08.2026 liegt es noch nicht vor.
+Phase 1 — Kern-MVP Eventmanagement (alle P1). Der Plan dafür steht in
+[`PHASE1.md`](PHASE1.md): dreizehn Arbeitspakete in Abhängigkeitsreihenfolge, die
+Entscheidungen E1–E16, das Schema der Phase und die Abnahmekriterien. Herleitung
+in Kapitel 6 von `Anforderungsanalyse_und_Umsetzungsplan.md`. **Beginnt erst auf
+ausdrückliches Go von Marius**; Stand 26.08.2026 liegt es noch nicht vor.

@@ -64,7 +64,7 @@ Wichtigste Funktionen laut Empirie: Teilnehmerübersicht (3,86/4) > Nachhaltigke
 ## Phasenplan (Kurzform — Details in docs/)
 
 0. Setup + Spikes (Plug-in Client/Server, Web-Push, WebSocket-durch-NGINX) → `docs/BOOTSTRAP.md`
-1. Kern-MVP Eventmanagement (alle P1)
+1. Kern-MVP Eventmanagement (alle P1) → `docs/PHASE1.md`
 2. Whitelabel-Theming, Modul-Verwaltung, i18n, PWA, Installations-Story
 3. Profile, Nachrichten, Echtzeit-/Gruppenchat, Push, Profilsuche
 4. Plug-ins: Programmvorschläge, Forum, Raumplanung, QR-Check-In
@@ -104,6 +104,8 @@ prüfbar werden — nach jeder Phase durchgehen.
 
 **Phase 1 startet nur auf ausdrückliches Go von Marius.** Stand 26.08.2026 ist
 das Go noch nicht erteilt; bis dahin keine fachliche Implementierung beginnen.
+Der Plan liegt vor (`docs/PHASE1.md`, Arbeitspakete AP 1–13 und die
+Entscheidungen E1–E16); er ist Planung, keine Freigabe.
 
 ## Betriebskontext
 
