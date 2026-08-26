@@ -1,0 +1,107 @@
+# Trefaro — production stack, five containers as in the thesis' distribution view.
+#
+# One instance serves one organization; there is no multi-tenancy, by design.
+#
+#   cp .env.example .env      # then fill in the secrets
+#   docker compose --env-file .env -f infra/docker-compose.yml up -d --build
+#
+# Run it from the repository root and pass --env-file explicitly: Compose
+# otherwise looks for the .env file next to the compose file, in infra/.
+#
+# Only the reverse proxy publishes a port. The server and the database are
+# reachable on the internal network alone, so an unauthenticated endpoint can
+# never be hit from outside.
+
+name: trefaro
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-trefaro}
+      POSTGRES_USER: ${DATABASE_USER:-trefaro}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD must be set}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${DATABASE_USER:-trefaro} -d ${DATABASE_NAME:-trefaro}',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  server:
+    build:
+      context: ..
+      dockerfile: infra/docker/server.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        # The server runs its migrations on boot, so it must not start before
+        # the database accepts connections.
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      SERVER_PORT: 3000
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${DATABASE_NAME:-trefaro}
+      DATABASE_USER: ${DATABASE_USER:-trefaro}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD must be set}
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET must be set}
+      PUBLIC_USER_CLIENT_URL: ${PUBLIC_USER_CLIENT_URL:?PUBLIC_USER_CLIENT_URL must be set}
+      PUBLIC_ADMIN_CLIENT_URL: ${PUBLIC_ADMIN_CLIENT_URL:?PUBLIC_ADMIN_CLIENT_URL must be set}
+      # The organization's own mail server (no third-party mail service).
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-true}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      # Self-hosted Web Push. Leave both empty to run without push.
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
+    volumes:
+      # Uploaded files: logos, avatars, registration attachments. Backing this
+      # volume up is part of backing up the instance.
+      - uploads:/app/uploads
+
+  user-client:
+    build:
+      context: ..
+      dockerfile: infra/docker/client.Dockerfile
+      args:
+        APP: user-client
+        BASE_HREF: /
+    restart: unless-stopped
+
+  admin-client:
+    build:
+      context: ..
+      dockerfile: infra/docker/client.Dockerfile
+      args:
+        APP: admin-client
+        # Served under /admin/, which Angular needs at build time.
+        BASE_HREF: /admin/
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.29-alpine
+    restart: unless-stopped
+    depends_on:
+      - server
+      - user-client
+      - admin-client
+    ports:
+      - '${HTTP_PORT:-8080}:80'
+    volumes:
+      - ./nginx/trefaro.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  pgdata:
+  uploads:

@@ -2,8 +2,9 @@ export default {
   displayName: 'server-e2e',
   preset: '../../jest.preset.js',
   globalSetup: '<rootDir>/src/support/global-setup.ts',
-  globalTeardown: '<rootDir>/src/support/global-teardown.ts',
-  setupFiles: ['<rootDir>/src/support/test-setup.ts'],
+  // No global teardown: Nx owns the server process, and killing the port here
+  // would pull it out from under the client e2e suites in the same run.
+  testMatch: ['<rootDir>/src/**/*.spec.ts'],
   testEnvironment: 'node',
   transform: {
     '^.+\\.[tj]s$': [

@@ -6,5 +6,21 @@
   "sourceRoot": "apps/user-client-e2e/src",
   "implicitDependencies": ["user-client"],
   "// targets": "to see all targets run: nx show project user-client-e2e --web",
-  "targets": {}
+  "targets": {
+    "e2e": {
+      "dependsOn": [
+        {
+          "projects": ["server", "user-client"],
+          "target": "serve"
+        }
+      ],
+      "options": {
+        "env": {
+          "BASE_URL": "http://localhost:4200",
+          "API_HEALTH_URL": "http://127.0.0.1:3000/api/health"
+        }
+      },
+      "parallelism": true
+    }
+  }
 }

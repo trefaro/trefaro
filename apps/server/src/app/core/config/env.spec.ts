@@ -26,7 +26,7 @@ describe('loadEnv', () => {
   it('reports every problem at once instead of only the first', () => {
     let problems: readonly string[] = [];
     try {
-      loadEnv({ NODE_ENV: 'production', PORT: 'not-a-number' });
+      loadEnv({ NODE_ENV: 'production', SERVER_PORT: 'not-a-number' });
     } catch (error) {
       problems = (error as EnvValidationError).problems;
     }
@@ -35,7 +35,7 @@ describe('loadEnv', () => {
       expect.arrayContaining([
         expect.stringContaining('AUTH_SECRET'),
         expect.stringContaining('DATABASE_PASSWORD'),
-        expect.stringContaining('PORT'),
+        expect.stringContaining('SERVER_PORT'),
       ]),
     );
   });
@@ -89,7 +89,7 @@ describe('loadEnv', () => {
   it('accepts a fully configured production environment', () => {
     const env = loadEnv({
       ...productionBase,
-      PORT: '8080',
+      SERVER_PORT: '8080',
       DATABASE_HOST: 'postgres',
       DATABASE_SSL: 'yes',
       SMTP_HOST: 'mail.example.org',

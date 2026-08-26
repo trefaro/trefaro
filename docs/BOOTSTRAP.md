@@ -1,117 +1,147 @@
-# BOOTSTRAP — Phase 0 Schritt für Schritt
+# BOOTSTRAP — Phase 0
 
-Diese Anleitung führt durch das Aufsetzen des Nx-Monorepos in diesem Ordner (`~/repos/trefaro`, WSL2). Sie ist für die Ausführung durch/mit Claude Code gedacht. Nach Abschluss existieren beide Angular-Apps, der NestJS-Server, die geteilten Libs, der Docker-Compose-Stack und die CI.
+**Status: abgeschlossen.** Die Erkenntnisprotokolle der vier Spikes stehen in
+[`docs/spikes/`](spikes/README.md); die Abweichungen von der ursprünglichen
+Anleitung sind unten unter _Was anders lief_ aufgeführt.
 
-## 0. Voraussetzungen prüfen
+Diese Anleitung beschreibt, wie der Zustand des Repositorys entstanden ist, und
+dient ab jetzt als Referenz für das Aufsetzen einer Entwicklungsumgebung.
+
+## 0. Voraussetzungen
 
 ```bash
-node -v          # Node LTS (>= 22)
+node -v          # Node LTS (>= 22; entwickelt und getestet mit 24)
 npm -v
 docker --version && docker compose version
 git --version
 ```
 
-## 1. Git-Anbindung
-
-Repo `trefaro/trefaro` auf GitHub anlegen (leer, ohne README — die Dateien kommen von hier). Dann:
+## 1. Entwicklungsumgebung starten
 
 ```bash
-cd ~/repos/trefaro
-git init -b main
-git remote add origin git@github.com:trefaro/trefaro.git
-```
-
-## 2. Nx-Workspace im bestehenden Ordner anlegen
-
-`create-nx-workspace` legt normalerweise einen neuen Ordner an. Vorgehen: Workspace in einem Unterordner erzeugen und Inhalte hochziehen — oder direkt `nx init`-Pfad nutzen. Empfohlener Weg:
-
-```bash
-cd ~/repos
-npx create-nx-workspace@latest trefaro-tmp --preset=apps --ci=skip --pm=npm
-rsync -a trefaro-tmp/ trefaro/ && rm -rf trefaro-tmp
+git clone git@github.com:trefaro/trefaro.git
 cd trefaro
+npm ci
+cp .env.example .env          # Die Vorgaben passen zum Dev-Stack
+
+# Infrastruktur: PostgreSQL und Mailpit (fängt alle Mails ab, UI auf :8025)
+docker compose -f infra/docker-compose.dev.yml up -d
+
+# Plug-in-Bundles bauen — der Server liefert sie unter /api/plugins aus
+npx nx build plugin-room-planning
+
+# Server (Port 3000), Nutzer-Client (4200), Veranstalter-Client (4300)
+npx nx run server:serve
+npx nx run user-client:serve
+npx nx run admin-client:serve
 ```
 
-(Die vorbereiteten Dateien — CLAUDE.md, docs/, infra/, LICENSE, .github/ — bleiben dabei erhalten; bei Konflikten mit .gitignore/README die vorbereiteten Versionen zusammenführen.)
+Der Server wendet seine Migrationen beim Start selbst an und legt die
+Standardkonfiguration an. Die Dev-Server der Clients proxien `/api` und
+`/socket.io` auf Port 3000 (siehe `apps/*/proxy.conf.json`), deshalb funktionieren
+dieselben relativen URLs in Entwicklung und hinter dem Produktions-Proxy.
 
-## 3. Angular-Apps + NestJS-Server generieren
+## 2. Struktur des Workspace
+
+```
+apps/
+  user-client/          Nutzer-Client (mobile-first, installierbare PWA)
+  admin-client/         Veranstalter-Client (desktop-first)
+  server/               NestJS-Server
+    src/app/core/               Konfiguration, Fehlerbehandlung, Health, WebSocket-Adapter
+    src/app/business/           GESCHÄFTSLOGIK-SCHICHT
+      plugin-api/               Plug-in-Vertrag (versioniert)
+      plugin-manager/           aggregiert die kuratierten Plug-ins
+      config/ login/ events/ …  Kernmodule
+    src/app/data-access/        DATENZUGRIFF-SCHICHT (einzige Schicht mit DB-Zugriff)
+    src/plugins/                kuratierte Server-Plug-ins
+  plugins/room-planning/  Web-Component-Bundle des Raumplanungs-Plug-ins
+  *-e2e/                  Playwright (Clients) bzw. Jest (API-Vertrag)
+libs/
+  shared-models/        Modelle, die Server und beide Clients teilen
+  shared-http/          HTTP- und socket.io-Kommunikation
+  shared-config/        Konfigurationsabfrage + Theming-Start
+  shared-theming/       Whitelabel-Design über CSS Custom Properties
+  shared-plugins/       Client-Plug-in-Manager und Einhängepunkt-Komponente
+infra/                  Docker Compose, Dockerfiles, NGINX
+tools/spike-verification/  ausführbare Prüfungen gegen eine laufende Instanz
+```
+
+Die Schichtentrennung im Server wird von ESLint erzwungen, nicht durch
+Konvention: `business/**` darf `typeorm`, `@nestjs/typeorm` und `pg` nicht
+importieren und nicht in `data-access/` greifen; `data-access/**` darf nur die
+Ports der Geschäftslogik und den Plug-in-Vertrag sehen. Die Regeln stehen in
+`apps/server/eslint.config.mjs`.
+
+## 3. Qualitätssicherung
 
 ```bash
-npx nx add @nx/angular
-npx nx g @nx/angular:application apps/user-client   --style=scss --routing --standalone --e2eTestRunner=playwright
-npx nx g @nx/angular:application apps/admin-client  --style=scss --routing --standalone --e2eTestRunner=playwright
-npx nx add @nx/nest
-npx nx g @nx/nest:application apps/server
+npx nx run-many -t lint test build     # 12 Projekte
+npx nx run-many -t e2e --parallel=1    # Playwright (Chromium, Firefox, WebKit) + API-Vertrag
 ```
 
-Geteilte Libraries:
+E2E braucht ein laufendes PostgreSQL; Server und Client-Dev-Server startet Nx
+selbst als kontinuierliche Task-Abhängigkeiten.
+
+## 4. Produktions-Stack (5 Container)
 
 ```bash
-npx nx g @nx/js:library libs/shared-models   --bundler=tsc
-npx nx g @nx/angular:library libs/shared-http
-npx nx g @nx/angular:library libs/shared-config    # Konfigurations-/Modul-Abfrage
-npx nx g @nx/angular:library libs/shared-theming   # CSS-Custom-Properties-Theming
+cp .env.example .env      # Secrets ausfüllen; PUBLIC_*_URL auf den Proxy zeigen
+docker compose --env-file .env -f infra/docker-compose.yml up -d --build
+node tools/spike-verification/verify-proxy.mjs
 ```
 
-Server-Grundpakete:
+Nur der Reverse Proxy veröffentlicht einen Port (Standard 8080). Nutzer-Client
+unter `/`, Veranstalter-Client unter `/admin/`, API unter `/api/`, WebSockets
+unter `/socket.io/`.
 
-```bash
-npm i @nestjs/typeorm typeorm pg @nestjs/config @nestjs/websockets @nestjs/platform-socket.io socket.io web-push nodemailer argon2 class-validator class-transformer
-npm i -D @types/web-push @types/nodemailer
-```
+## 5. Die vier Architektur-Spikes
 
-PWA für den Nutzer-Client:
+Alle vier sind umgesetzt und verifiziert — Details, Erkenntnisse und offene
+Punkte in [`docs/spikes/`](spikes/README.md):
 
-```bash
-npx nx g @angular/pwa:ng-add --project=user-client
-```
+1. **Client-Plug-in** — Angular-Elements-Bundle (34 kB übertragen), zur Laufzeit
+   geladen, ohne eigenes CSS, Theming über geerbte CSS Custom Properties.
+2. **Server-Plug-in** — NestJS-DynamicModule mit eigener Entity und eigener
+   Migration, per Konfiguration ohne Neustart aktivierbar (7 s gemessen).
+3. **Web Push** — VAPID selbst gehostet; Serverseite verifiziert, Gerätetest auf
+   Android und installierter iOS-PWA steht noch aus.
+4. **WebSocket durch NGINX** — echter Upgrade (kein Long-Polling-Fallback) durch
+   den Reverse Proxy, aus beiden Clients.
 
-## 4. Server-Struktur gemäß Architektur anlegen
+## Was anders lief als in der ursprünglichen Anleitung
 
-Innerhalb `apps/server/src`:
+- **Nx-Preset.** `create-nx-workspace --preset=apps` erzeugt ein
+  TypeScript-Solution-Setup mit Project References, das `@nx/angular` nicht
+  unterstützt (angular/angular#37276). Stattdessen wurde das klassische,
+  `paths`-basierte Setup verwendet.
+- **Kein Nx Cloud.** Das Template trägt trotz `--nxCloud=skip` eine
+  `nxCloudId` ein. Sie wurde entfernt: Task-Metadaten sollen die Infrastruktur
+  der Organisation nicht verlassen.
+- **Eine fünfte geteilte Lib.** `libs/shared-plugins` für den Client-Plug-in-
+  Manager und die Einhängepunkt-Komponente — die passten in keine der vier
+  geplanten Libs.
+- **`@angular/pwa` musste erst installiert werden**, dann funktionierte das
+  Schematic im Nx-Workspace (es schreibt in `project.json`, nicht in eine
+  `angular.json`).
+- **`SERVER_PORT` statt `PORT`.** Vite und damit der Angular-Dev-Server lesen
+  `PORT` ebenfalls; ein gemeinsames `PORT` verschob einen Client auf den
+  Server-Port.
+- **Ein PR pro Spike wurde nicht umgesetzt.** Die vier Spikes teilen den
+  Plug-in-Vertrag und mussten gemeinsam existieren, um beurteilbar zu sein. Die
+  Protokolle liegen trotzdem pro Spike vor.
+- **Der TypeORM-Treiber wird explizit übergeben** (`driver: pg`), sonst fehlt er
+  in der generierten Abhängigkeitsliste des Server-Images.
 
-```
-app/
-  core/                      # Querschnitt: Config-Laden, Logger, Fehler-Filter
-  business/                  # GESCHÄFTSLOGIK-SCHICHT
-    login/  config/  event-series/  events/  program/  registration/
-    participants/  profiles/  profile-search/  chat/  mail/  push/  media-links/
-    plugin-manager/          # aggregiert Server-Plug-ins (DynamicModules)
-    plugin-api/              # Schnittstellen-Definitionen (Interfaces + Injection Tokens)
-  data-access/               # DATENZUGRIFF-SCHICHT (einzige Schicht mit DB-Zugriff)
-    entities/  repositories/  migrations/
-    plugin-data-access/      # Manager für Plug-in-Entities/-Migrationen
-plugins/                     # kuratierte Plug-ins (je ein DynamicModule)
-  room-planning/  forum/  program-proposals/  qr-checkin/
-```
+## Offene Entscheidung für Phase 1
 
-Regeln: `business/*` importiert nie `typeorm`/`pg` direkt — nur Repository-Interfaces aus `plugin-api`/`data-access`-Abstraktionen. ESLint-Boundary-Regeln (Nx `enforce-module-boundaries`) entsprechend konfigurieren.
+**Wem gehört `program_item.room_id`?** Der Schemaentwurf in
+`Anforderungsanalyse_und_Umsetzungsplan.md` lässt die Kerntabelle
+`program_item` auf einen Raum verweisen, während die Architekturregeln Plug-ins
+verbieten, Kerntabellen anzufassen. Beides gleichzeitig geht nicht. Details und
+Optionen in [`docs/spikes/02-server-plugin.md`](spikes/02-server-plugin.md).
 
-## 5. Docker-Stack
+## Nächster Schritt
 
-Entwürfe liegen bereit: `infra/docker-compose.dev.yml` (Postgres + Server + Clients im Dev-Modus) und `infra/nginx/trefaro.conf` (Reverse Proxy inkl. WebSocket-Upgrade). Produktions-Compose (`infra/docker-compose.yml`) mit 5 Containern folgt, sobald erste Builds stehen.
-
-```bash
-docker compose -f infra/docker-compose.dev.yml up -d postgres
-```
-
-## 6. CI
-
-`.github/workflows/ci.yml` (Entwurf liegt bei): Lint → Unit-Tests → Builds → E2E (Playwright) auf PRs und main.
-
-## 7. Die vier Architektur-Spikes (vor Feature-Arbeit!)
-
-1. **Client-Plug-in:** Minimale Angular-Elements-Webkomponente bauen, vom Plug-in-Manager-Service zur Laufzeit laden, Theming per CSS Custom Properties durchreichen, in Navigationsleiste + Event-Detailansicht einhängen.
-2. **Server-Plug-in:** NestJS-DynamicModule mit eigener TypeORM-Entity + eigener Migration, registriert über plugin-manager; aktivierbar/deaktivierbar per Konfiguration.
-3. **Web-Push Ende-zu-Ende:** VAPID-Keys, Subscription im Service Worker des Nutzer-Clients, Versand vom Server; auf Android-Browser und iOS (installierte PWA) testen.
-4. **WebSocket durch NGINX:** socket.io-Chat-Echo durch den Reverse Proxy (Upgrade-Header), aus beiden Clients.
-
-Jeden Spike als kleiner PR mit kurzem Erkenntnis-Protokoll in `docs/spikes/`.
-
-## 8. Erster Push
-
-```bash
-git add -A
-git commit -m "chore: bootstrap nx workspace with apps, libs, infra and docs"
-git push -u origin main
-```
+Phase 1 — Kern-MVP Eventmanagement (alle P1), siehe Kapitel 6 in
+`Anforderungsanalyse_und_Umsetzungsplan.md`.

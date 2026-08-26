@@ -18,20 +18,20 @@ Zielgruppe: kleine NGOs (meist < 20 Mitarbeitende, sehr begrenztes Budget), die 
 
 ## Festgelegter Tech-Stack (nicht ohne Rücksprache ändern)
 
-| Bereich | Entscheidung |
-|---|---|
-| Monorepo | **Nx** — `apps/user-client`, `apps/admin-client`, `apps/server`, `libs/shared-*` |
-| Frontend | **Angular (neueste Major-Version, aktuell 22)**, Standalone Components, Signals, SCSS; **zwei getrennte Apps** (Nutzer-Client mobile-first, Veranstalter-Client desktop-first) |
-| PWA | Nutzer-Client ab v1 installierbare PWA (`@angular/pwa`) |
-| Server | **NestJS** (Node LTS, TypeScript) |
-| ORM / DB | **TypeORM** auf **PostgreSQL**; Migrationen versioniert; `JSONB` für konfigurierbare Felder |
-| Echtzeit | **socket.io** über NestJS Gateways (Chat: 1:1 + Gruppen, inkl. Bildaustausch) |
-| Push | **Web Push API** (VAPID, Service Worker), selbst gehostet — kein Firebase |
-| E-Mail | SMTP-Server der Organisation (konfigurierbar), mehrsprachige Templates, signierte Double-Opt-In-Links |
-| i18n | UI: **Transloco** (Laufzeitwechsel, von Organisationen pflegbare Sprachdateien); Inhalte: Übersetzungstabellen (`*_translation`) |
-| Karten | **OpenStreetMap/Leaflet** — niemals Google-Dienste (Datenschutz-NFR!) |
-| Deployment | **Docker Compose, 5 Container**: user-client, admin-client, server, postgres, **NGINX** (Reverse Proxy, muss WebSockets proxien) |
-| CI | GitHub Actions: Lint, Unit, E2E, Docker-Builds |
+| Bereich    | Entscheidung                                                                                                                                                                   |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Monorepo   | **Nx** — `apps/user-client`, `apps/admin-client`, `apps/server`, `libs/shared-*`                                                                                               |
+| Frontend   | **Angular (neueste Major-Version, aktuell 22)**, Standalone Components, Signals, SCSS; **zwei getrennte Apps** (Nutzer-Client mobile-first, Veranstalter-Client desktop-first) |
+| PWA        | Nutzer-Client ab v1 installierbare PWA (`@angular/pwa`)                                                                                                                        |
+| Server     | **NestJS** (Node LTS, TypeScript)                                                                                                                                              |
+| ORM / DB   | **TypeORM** auf **PostgreSQL**; Migrationen versioniert; `JSONB` für konfigurierbare Felder                                                                                    |
+| Echtzeit   | **socket.io** über NestJS Gateways (Chat: 1:1 + Gruppen, inkl. Bildaustausch)                                                                                                  |
+| Push       | **Web Push API** (VAPID, Service Worker), selbst gehostet — kein Firebase                                                                                                      |
+| E-Mail     | SMTP-Server der Organisation (konfigurierbar), mehrsprachige Templates, signierte Double-Opt-In-Links                                                                          |
+| i18n       | UI: **Transloco** (Laufzeitwechsel, von Organisationen pflegbare Sprachdateien); Inhalte: Übersetzungstabellen (`*_translation`)                                               |
+| Karten     | **OpenStreetMap/Leaflet** — niemals Google-Dienste (Datenschutz-NFR!)                                                                                                          |
+| Deployment | **Docker Compose, 5 Container**: user-client, admin-client, server, postgres, **NGINX** (Reverse Proxy, muss WebSockets proxien)                                               |
+| CI         | GitHub Actions: Lint, Unit, E2E, Docker-Builds                                                                                                                                 |
 
 ## Architektur-Regeln (aus der Thesis, verbindlich)
 
@@ -70,6 +70,35 @@ Wichtigste Funktionen laut Empirie: Teilnehmerübersicht (3,86/4) > Nachhaltigke
 4. Plug-ins: Programmvorschläge, Forum, Raumplanung, QR-Check-In
 5. Härtung, Usability-Test mit Democracy International (Pilotpartner), Doku, Release v1.0
 
+## Stand nach Phase 0 (abgeschlossen)
+
+Monorepo, Server mit erzwungener Schichtentrennung, Plug-in-Mechanik auf beiden
+Seiten, 5-Container-Stack und CI stehen; alle vier Spikes sind verifiziert
+(`docs/spikes/`). Fachlich existiert noch nichts — das ist Phase 1.
+
+Entscheidungen aus Phase 0, die nicht erneut aufgerollt werden sollten:
+
+- **`SERVER_PORT`, nicht `PORT`** — Vite/Angular-Dev-Server lesen `PORT` auch mit
+  und würden auf den Serverport wandern.
+- **Kein Nx Cloud.** Task-Metadaten verlassen die Infrastruktur der Organisation
+  nicht.
+- **Plug-in-Aktivierung zur Laufzeit** heißt: alle kuratierten Plug-ins sind
+  gemountet und ihre Tabellen existieren immer; das `module_config`-Flag steuert,
+  ob die API antwortet (sonst 404) und ob die Clients davon erfahren. Der
+  Registry-Cache wird alle 15 s neu gelesen.
+- **Layer-Grenzen sind ESLint-Regeln** in `apps/server/eslint.config.mjs`, keine
+  Konvention. Bei Verstoß nicht die Regel lockern, sondern einen Port einziehen.
+- **Deaktivieren löscht nie Daten.** Nur `down`-Migrationen entfernen Tabellen.
+- **`libs/shared-plugins`** ist eine fünfte geteilte Lib über die vier im
+  Ursprungsplan hinaus (Client-Plug-in-Manager + Einhängepunkt-Komponente).
+- **`tools/spike-verification/`** prüft eine _laufende_ Instanz; `*-e2e` prüft im
+  CI. Beides bewusst getrennt.
+
+**Offene Entscheidung vor Phase 1:** Wem gehört `program_item.room_id`? Der
+Schemaentwurf lässt die Kerntabelle auf einen Raum verweisen, die
+Architekturregeln verbieten Plug-ins den Zugriff auf Kerntabellen. Optionen in
+`docs/spikes/02-server-plugin.md`.
+
 ## Betriebskontext
 
-Entwicklung: lokal in WSL2 (dieser Ordner), Docker via Docker Desktop (WSL2-Backend) oder docker-ce. Zielbetrieb: eigener Linux-Server der Organisation, identische Container. Compose-Entwürfe unter `infra/`, CI-Entwurf unter `.github/workflows/`.
+Entwicklung: lokal in WSL2 (dieser Ordner), Docker via Docker Desktop (WSL2-Backend) oder docker-ce. Zielbetrieb: eigener Linux-Server der Organisation, identische Container. Compose-Dateien und Dockerfiles unter `infra/`, CI unter `.github/workflows/ci.yml` (Qualität, E2E gegen echte DB und Browser, Image-Builds).

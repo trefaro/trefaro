@@ -198,3 +198,55 @@ describe('selectCompatiblePlugins', () => {
     );
   });
 });
+
+describe('PluginRegistryService enabled-state refresh', () => {
+  let repository: FakeModuleConfigRepository;
+  let service: PluginRegistryService;
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    repository = new FakeModuleConfigRepository();
+    service = new PluginRegistryService([withClient('forum')], repository);
+  });
+
+  afterEach(() => {
+    service.onApplicationShutdown();
+    jest.useRealTimers();
+  });
+
+  it('picks up a change made outside the application, without a restart', async () => {
+    await service.onApplicationBootstrap();
+    expect(service.isEnabled('forum')).toBe(false);
+
+    // Stands in for an operator flipping the flag in module_config while the
+    // server keeps running.
+    await repository.setEnabled('forum', true);
+    await jest.advanceTimersByTimeAsync(15_000);
+
+    expect(service.isEnabled('forum')).toBe(true);
+  });
+
+  it('stops refreshing once the application shuts down', async () => {
+    await service.onApplicationBootstrap();
+    service.onApplicationShutdown();
+
+    await repository.setEnabled('forum', true);
+    await jest.advanceTimersByTimeAsync(60_000);
+
+    expect(service.isEnabled('forum')).toBe(false);
+  });
+
+  it('keeps the last known state when a refresh fails', async () => {
+    await repository.setEnabled('forum', true);
+    await service.onApplicationBootstrap();
+    expect(service.isEnabled('forum')).toBe(true);
+
+    jest
+      .spyOn(repository, 'findAll')
+      .mockRejectedValueOnce(new Error('database unreachable'));
+    await jest.advanceTimersByTimeAsync(15_000);
+
+    // A blip in the database must not silently disable every plug-in.
+    expect(service.isEnabled('forum')).toBe(true);
+  });
+});

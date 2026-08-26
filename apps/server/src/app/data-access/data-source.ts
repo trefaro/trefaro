@@ -1,3 +1,4 @@
+import * as pg from 'pg';
 import type { DataSourceOptions } from 'typeorm';
 import type { TrefaroEnv } from '../core/config/env';
 import { CORE_ENTITIES } from './entities';
@@ -17,6 +18,11 @@ export function buildDataSourceOptions(
 ): DataSourceOptions {
   return {
     type: 'postgres',
+    // Passed explicitly rather than left to TypeORM's `require('pg')`. A dynamic
+    // require is invisible to the bundler, so the driver would be missing from
+    // the server image's generated dependency list and the container would fail
+    // on its first connection.
+    driver: pg,
     host: env.database.host,
     port: env.database.port,
     username: env.database.user,

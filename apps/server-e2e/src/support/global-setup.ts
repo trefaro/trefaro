@@ -1,16 +1,36 @@
-import { waitForPortOpen } from '@nx/node/utils';
+/**
+ * Waits for the server to be ready before the API contract tests run.
+ *
+ * Nx starts `server:serve` as a continuous dependency of this target. An open
+ * port is not enough to start asserting: the server applies its migrations on
+ * boot, so the readiness signal has to be a response from `/api/health` with the
+ * database reachable.
+ */
+const BASE_URL = `http://127.0.0.1:${process.env['SERVER_PORT'] ?? '3000'}`;
+const TIMEOUT_MS = 150_000;
 
-/* eslint-disable */
-var __TEARDOWN_MESSAGE__: string;
+module.exports = async function globalSetup(): Promise<void> {
+  const deadline = Date.now() + TIMEOUT_MS;
+  let lastError = 'never attempted';
 
-module.exports = async function () {
-  // Start services that that the app needs to run (e.g. database, docker-compose, etc.).
-  console.log('\nSetting up...\n');
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(`${BASE_URL}/api/health`);
+      if (response.ok) {
+        const body = (await response.json()) as { database?: string };
+        if (body.database === 'up') return;
+        lastError = `database is ${body.database}`;
+      } else {
+        lastError = `status ${response.status}`;
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
 
-  const host = process.env.HOST ?? 'localhost';
-  const port = process.env.PORT ? Number(process.env.PORT) : 3000;
-  await waitForPortOpen(port, { host });
-
-  // Hint: Use `globalThis` to pass variables to global teardown.
-  globalThis.__TEARDOWN_MESSAGE__ = '\nTearing down...\n';
+  throw new Error(
+    `${BASE_URL} was not ready within ${TIMEOUT_MS / 1000}s (last: ${lastError}). ` +
+      'Is PostgreSQL running? `docker compose -f infra/docker-compose.dev.yml up -d postgres`',
+  );
 };

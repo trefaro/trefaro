@@ -1,0 +1,16 @@
+# Everything the image builds for itself, or must never enter it.
+node_modules
+dist
+tmp
+.nx
+.git
+.github
+.angular
+coverage
+playwright-report
+test-results
+docs
+*.log
+.env
+.env.*
+!.env.example

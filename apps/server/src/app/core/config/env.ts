@@ -171,7 +171,10 @@ export function loadEnv(
 
   const env: TrefaroEnv = {
     nodeEnv,
-    port: read.integer('PORT', 3000),
+    // Deliberately not `PORT`: Vite, and therefore the Angular dev server,
+    // reads `PORT` too and would silently move a client off its configured
+    // port onto the server's.
+    port: read.integer('SERVER_PORT', 3000),
     uploadDir: read.optional('UPLOAD_DIR', './tmp/uploads'),
     pluginBundleDir: read.optional('PLUGIN_BUNDLE_DIR', './dist/apps/plugins'),
     publicUserClientUrl: read.optional(
