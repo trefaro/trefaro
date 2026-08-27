@@ -610,7 +610,7 @@ Entscheidungen und Abweichungen:
   damit sich die Entwicklungsinstanz nicht mit Testdaten füllt.
 - **Beide Browser-Suites räumen jetzt auf, und die Namen sind pro Lauf
   eindeutig.** Der erste fehlgeschlagene Lauf hinterließ eine Reihe, woraufhin
-  der nächste Lauf aus einem *anderen* Grund scheiterte (zwei passende
+  der nächste Lauf aus einem _anderen_ Grund scheiterte (zwei passende
   Tabellenzeilen). Genau so verschwindet ein echter Fehler unter Rauschen —
   deshalb Zeitstempel im Namen und ein Teardown, der nach Präfix löscht.
 
