@@ -1,4 +1,11 @@
-import { Controller, Delete, HttpCode, HttpStatus, Param, ParseUUIDPipe } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import {
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -29,7 +36,7 @@ export class AdminRegistrationsController {
   @ApiOperation({
     summary: 'Delete a registration for good',
     description:
-      'Allowed whatever the registration\'s status — unlike deleting an event ' +
+      "Allowed whatever the registration's status — unlike deleting an event " +
       'or a series, which a confirmed registration blocks (E14). Cancelling ' +
       'without deleting arrives with the participant overview in AP 5.',
   })

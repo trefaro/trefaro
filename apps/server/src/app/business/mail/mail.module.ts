@@ -15,7 +15,11 @@ import { SmtpMailer } from './smtp-mailer';
  * newsletter sending in v1, only opt-in management (F8).
  */
 @Module({
-  providers: [MailService, SmtpMailer, { provide: MAILER, useExisting: SmtpMailer }],
+  providers: [
+    MailService,
+    SmtpMailer,
+    { provide: MAILER, useExisting: SmtpMailer },
+  ],
   exports: [MailService],
 })
 export class MailModule {}

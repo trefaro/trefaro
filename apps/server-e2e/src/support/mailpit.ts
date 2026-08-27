@@ -110,8 +110,7 @@ async function list(): Promise<readonly MailpitSummary[]> {
 
 function addressed(mail: MailpitSummary, address: string): boolean {
   return mail.To.some(
-    (recipient) =>
-      recipient.Address.toLowerCase() === address.toLowerCase(),
+    (recipient) => recipient.Address.toLowerCase() === address.toLowerCase(),
   );
 }
 

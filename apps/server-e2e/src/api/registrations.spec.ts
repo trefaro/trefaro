@@ -118,7 +118,9 @@ describe('registrations API', () => {
    * again. The participant overview of AP 5 replaces this with a list endpoint.
    */
   const idFromToken = (token: string): string =>
-    Buffer.from(token.split('.')[0], 'base64url').toString('utf8').split('|')[1];
+    Buffer.from(token.split('.')[0], 'base64url')
+      .toString('utf8')
+      .split('|')[1];
 
   /** Registers, reads the mail, and returns the token the link carried. */
   const registerAndCollectToken = async (email: string): Promise<string> => {
@@ -180,10 +182,16 @@ describe('registrations API', () => {
     // Registrations first: a confirmed one blocks deleting the series (E14),
     // which is the rule this suite also asserts.
     for (const id of registrations) {
-      await api(`/api/admin/registrations/${id}`, asAdmin({ method: 'DELETE' }));
+      await api(
+        `/api/admin/registrations/${id}`,
+        asAdmin({ method: 'DELETE' }),
+      );
     }
     if (series?.id) {
-      await api(`/api/admin/series/${series.id}`, asAdmin({ method: 'DELETE' }));
+      await api(
+        `/api/admin/series/${series.id}`,
+        asAdmin({ method: 'DELETE' }),
+      );
     }
     await clearMailbox();
   });
@@ -273,7 +281,10 @@ describe('registrations API', () => {
     const token = await registerAndCollectToken(email);
     await postJson('/api/user/registrations/confirm', { token });
 
-    const again = await register(email, { firstName: 'Someone', lastName: 'Else' });
+    const again = await register(email, {
+      firstName: 'Someone',
+      lastName: 'Else',
+    });
 
     // Same answer as the first attempt (E10) — nothing about the address leaks.
     expect(again.status).toBe(202);
@@ -303,9 +314,7 @@ describe('registrations API', () => {
     expect(deleteSeries.status).toBe(409);
     // The count is the only place AP 4 makes the registrations visible; the
     // overview that shows them arrives in AP 5.
-    expect(JSON.stringify(deleteEvent.body)).toMatch(
-      /confirmed registration/,
-    );
+    expect(JSON.stringify(deleteEvent.body)).toMatch(/confirmed registration/);
   });
 
   it('does not let anyone delete a registration without a session', async () => {
@@ -318,19 +327,27 @@ describe('registrations API', () => {
   });
 
   it('answers 404 for an event that is not published', async () => {
-    const response = await register(address('draft'), {}, {
-      series: series.slug,
-      event: draftEvent.slug,
-    });
+    const response = await register(
+      address('draft'),
+      {},
+      {
+        series: series.slug,
+        event: draftEvent.slug,
+      },
+    );
 
     expect(response.status).toBe(404);
   });
 
   it('refuses an event that has already taken place', async () => {
-    const response = await register(address('past'), {}, {
-      series: series.slug,
-      event: pastEvent.slug,
-    });
+    const response = await register(
+      address('past'),
+      {},
+      {
+        series: series.slug,
+        event: pastEvent.slug,
+      },
+    );
 
     expect(response.status).toBe(409);
   });

@@ -88,4 +88,6 @@ export interface RegistrationRepository {
   delete(id: string): Promise<boolean>;
 }
 
-export const REGISTRATION_REPOSITORY = Symbol('TREFARO_REGISTRATION_REPOSITORY');
+export const REGISTRATION_REPOSITORY = Symbol(
+  'TREFARO_REGISTRATION_REPOSITORY',
+);

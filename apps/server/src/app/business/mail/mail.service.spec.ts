@@ -46,7 +46,10 @@ describe('MailService', () => {
   };
 
   it('writes in the language the instance is configured in', async () => {
-    await serviceFor('de').sendRegistrationConfirmation('a@example.org', CONTEXT);
+    await serviceFor('de').sendRegistrationConfirmation(
+      'a@example.org',
+      CONTEXT,
+    );
 
     const [mail] = mailer.sent;
     expect(mail.to).toBe('a@example.org');
@@ -56,7 +59,10 @@ describe('MailService', () => {
   });
 
   it('falls back to English for a language it has no templates for', async () => {
-    await serviceFor('sw').sendRegistrationConfirmation('a@example.org', CONTEXT);
+    await serviceFor('sw').sendRegistrationConfirmation(
+      'a@example.org',
+      CONTEXT,
+    );
 
     expect(mailer.sent[0].subject).toContain('confirm your registration');
   });

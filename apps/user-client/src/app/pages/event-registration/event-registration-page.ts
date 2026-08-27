@@ -39,8 +39,8 @@ import { RegistrationsService } from '../../features/registrations/registration.
       <section class="done">
         <h1>Almost done</h1>
         <p>
-          We have sent a confirmation link to <strong>{{ address }}</strong>.
-          Open it to complete your registration — until then nothing is
+          We have sent a confirmation link to <strong>{{ address }}</strong
+          >. Open it to complete your registration — until then nothing is
           reserved.
         </p>
         <p class="hint">
@@ -105,8 +105,8 @@ import { RegistrationsService } from '../../features/registrations/registration.
           {{ busy() ? 'Sending…' : 'Register' }}
         </button>
         <p class="hint">
-          We will send you a confirmation link. Your registration counts once you
-          have opened it.
+          We will send you a confirmation link. Your registration counts once
+          you have opened it.
         </p>
       </form>
     }

@@ -34,11 +34,12 @@ export async function waitForMailTo(
   while (Date.now() < deadline) {
     // A refused connection counts as "not there yet": in CI the service
     // container and the browsers start at the same time.
-    const response = await fetch(`${MAILPIT_URL}/api/v1/messages?limit=200`)
-      .catch((error: unknown) => {
-        lastError = error instanceof Error ? error.message : String(error);
-        return null;
-      });
+    const response = await fetch(
+      `${MAILPIT_URL}/api/v1/messages?limit=200`,
+    ).catch((error: unknown) => {
+      lastError = error instanceof Error ? error.message : String(error);
+      return null;
+    });
     if (!response?.ok) {
       lastError = lastError || `status ${response?.status}`;
       await new Promise((resolve) => setTimeout(resolve, 250));
@@ -49,7 +50,8 @@ export async function waitForMailTo(
     };
     const summary = messages.find((mail) =>
       mail.To.some(
-        (recipient) => recipient.Address.toLowerCase() === address.toLowerCase(),
+        (recipient) =>
+          recipient.Address.toLowerCase() === address.toLowerCase(),
       ),
     );
 

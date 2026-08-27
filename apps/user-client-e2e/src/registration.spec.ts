@@ -23,7 +23,9 @@ import {
  * against one instance, and one address registers once per event (E10).
  */
 const CLIENT_URL =
-  process.env['BASE_URL'] ?? process.env['CLIENT_URL'] ?? 'http://localhost:4200';
+  process.env['BASE_URL'] ??
+  process.env['CLIENT_URL'] ??
+  'http://localhost:4200';
 
 const LANDING_PAGE = `/series/${PUBLISHED_SERIES.slug}/events/${UPCOMING_EVENT.slug}`;
 
@@ -53,7 +55,9 @@ test.describe('registering for an event', () => {
     await page.getByRole('button', { name: 'Register' }).click();
 
     // Nothing is registered yet, and the page says so rather than congratulating.
-    await expect(page.getByRole('heading', { name: 'Almost done' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Almost done' }),
+    ).toBeVisible();
     await expect(page.getByText(email)).toBeVisible();
 
     const mail = await waitForMailTo(email);
@@ -104,7 +108,9 @@ test.describe('registering for an event', () => {
   });
 
   test('offers no registration on an event that is over', async ({ page }) => {
-    await page.goto(`/series/${PUBLISHED_SERIES.slug}/events/${PAST_EVENT.slug}`);
+    await page.goto(
+      `/series/${PUBLISHED_SERIES.slug}/events/${PAST_EVENT.slug}`,
+    );
 
     await expect(page.getByText('This event has ended')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Register now' })).toBeHidden();

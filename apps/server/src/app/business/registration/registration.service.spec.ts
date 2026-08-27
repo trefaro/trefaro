@@ -8,10 +8,7 @@ import type { PublicEvent, RegistrationInput } from '@trefaro/shared-models';
 import type { TrefaroEnv } from '../../core/config/env';
 import type { EventLocation, EventsService } from '../events';
 import { MailDeliveryError, MailService } from '../mail';
-import type {
-  ConfirmationMailContext,
-  RegistrationMailContext,
-} from '../mail';
+import type { ConfirmationMailContext, RegistrationMailContext } from '../mail';
 import { TokenSigner } from '../security';
 import {
   type NewRegistration,

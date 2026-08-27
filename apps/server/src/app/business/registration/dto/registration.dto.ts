@@ -11,9 +11,7 @@ import type {
  * Each class `implements` the interface from `@trefaro/shared-models`, so the
  * documented API and the types the client compiles against cannot drift apart.
  */
-export class RegistrationAcknowledgementDto
-  implements RegistrationAcknowledgement
-{
+export class RegistrationAcknowledgementDto implements RegistrationAcknowledgement {
   @ApiProperty({
     example: 'amina@example.org',
     description:
@@ -35,7 +33,9 @@ export class RegistrationConfirmationDto implements RegistrationConfirmation {
   @ApiProperty({ example: 'Kickoff in Cologne' })
   eventName!: string;
 
-  @ApiProperty({ description: 'Both slugs, so the page can link to the event.' })
+  @ApiProperty({
+    description: 'Both slugs, so the page can link to the event.',
+  })
   seriesSlug!: string;
 
   @ApiProperty()

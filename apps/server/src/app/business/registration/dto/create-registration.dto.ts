@@ -48,7 +48,8 @@ export class CreateRegistrationDto implements RegistrationInput {
   @ApiProperty({
     required: false,
     nullable: true,
-    description: 'Optional — organizers ask for it for travel and visa letters.',
+    description:
+      'Optional — organizers ask for it for travel and visa letters.',
   })
   @IsOptional()
   @IsString()
@@ -79,7 +80,9 @@ export class CreateRegistrationDto implements RegistrationInput {
 
 /** The token from the confirmation link, posted by the page it points at (E5b). */
 export class ConfirmRegistrationDto {
-  @ApiProperty({ description: 'The `token` query parameter of the mailed link.' })
+  @ApiProperty({
+    description: 'The `token` query parameter of the mailed link.',
+  })
   @IsString()
   @Length(1, 1024)
   token!: string;

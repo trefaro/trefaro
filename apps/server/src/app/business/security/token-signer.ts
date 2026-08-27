@@ -82,7 +82,9 @@ export class TokenSigner {
   }
 
   private signature(payload: string): string {
-    return createHmac('sha256', this.secret).update(payload).digest('base64url');
+    return createHmac('sha256', this.secret)
+      .update(payload)
+      .digest('base64url');
   }
 
   /** Constant-time comparison, so a signature cannot be guessed byte by byte. */
@@ -91,7 +93,9 @@ export class TokenSigner {
     const actual = Buffer.from(provided, 'utf8');
     // `timingSafeEqual` throws on differing lengths; a length mismatch is a
     // mismatch, and the length of a hash of a known input is not a secret.
-    return expected.length === actual.length && timingSafeEqual(expected, actual);
+    return (
+      expected.length === actual.length && timingSafeEqual(expected, actual)
+    );
   }
 }
 
