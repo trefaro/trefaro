@@ -2,6 +2,7 @@ export { EventsModule } from './events.module';
 export {
   EventsService,
   type CreateEventInput,
+  type EventLocation,
   type UpdateEventInput,
 } from './events.service';
 export {

@@ -64,6 +64,16 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
+      # The organization's SMTP server, stood in for by the same image the
+      # development stack uses. Both e2e suites read the double opt-in mail back
+      # out of it: a confirmation flow asserted only inside the server has not
+      # been shown to work. No health check — the image ships no shell utility to
+      # probe with, so the suites wait for its API themselves.
+      mailpit:
+        image: axllent/mailpit:latest
+        ports:
+          - 1025:1025
+          - 8025:8025
     env:
       # The server applies its migrations on startup against this database.
       DATABASE_HOST: localhost
@@ -78,6 +88,12 @@ jobs:
       # the API contract suite can exercise the login it is asserting.
       ADMIN_BOOTSTRAP_EMAIL: e2e-admin@example.org
       ADMIN_BOOTSTRAP_PASSWORD: e2e-bootstrap-password
+      # Mail goes to the Mailpit service container above, and the suites read it
+      # back through its API on 8025.
+      SMTP_HOST: localhost
+      SMTP_PORT: '1025'
+      SMTP_SECURE: 'false'
+      SMTP_FROM: Trefaro CI <no-reply@ci.example.org>
     steps:
       - uses: actions/checkout@v4
         with:

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import type { EventSeries, PublicEventSeries } from '@trefaro/shared-models';
 import type { EventSeriesService } from '../event-series/event-series.service';
+import type { RegistrationTally } from '../registration/ports/registration-tally';
 import { EventsService, type CreateEventInput } from './events.service';
 import {
   EventSlugTakenError,
@@ -13,6 +14,25 @@ import {
   type EventRepository,
   type NewEvent,
 } from './ports/event.repository';
+
+/**
+ * The counts the delete rule asks for (E14).
+ *
+ * A fake rather than a stub with a fixed answer: the tests set the number the
+ * way the world sets it — somebody confirmed, or nobody did.
+ */
+class FakeRegistrationTally implements RegistrationTally {
+  confirmedPerEvent = 0;
+  confirmedPerSeries = 0;
+
+  async confirmedForEvent(): Promise<number> {
+    return this.confirmedPerEvent;
+  }
+
+  async confirmedForSeries(): Promise<number> {
+    return this.confirmedPerSeries;
+  }
+}
 
 class FakeEventRepository implements EventRepository {
   readonly rows: EventRecord[] = [];
@@ -91,7 +111,8 @@ class FakeEventSeriesService {
     if (!this.known.has(id)) {
       throw new NotFoundException(`No event series with id "${id}"`);
     }
-    return { id } as EventSeries;
+    const slug = [...this.published].find(([, known]) => known === id)?.[0];
+    return { id, slug: slug ?? `series-${id}` } as EventSeries;
   }
 
   async getPublicBySlug(slug: string): Promise<PublicEventSeries> {
@@ -104,6 +125,7 @@ class FakeEventSeriesService {
 describe('EventsService', () => {
   let repository: FakeEventRepository;
   let series: FakeEventSeriesService;
+  let tally: FakeRegistrationTally;
   let service: EventsService;
 
   const onsite: CreateEventInput = {
@@ -120,9 +142,11 @@ describe('EventsService', () => {
   beforeEach(() => {
     repository = new FakeEventRepository();
     series = new FakeEventSeriesService();
+    tally = new FakeRegistrationTally();
     service = new EventsService(
       repository,
       series as unknown as EventSeriesService,
+      tally,
     );
   });
 
@@ -427,6 +451,51 @@ describe('EventsService', () => {
       await expect(service.delete('event-9')).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    it('refuses an event people have confirmed they are coming to', async () => {
+      const created = await service.create('series-1', onsite);
+      tally.confirmedPerEvent = 3;
+
+      // E14: archiving is the way to take it off the public pages. Deleting
+      // would take three people's confirmed intent with it.
+      await expect(service.delete(created.id)).rejects.toThrow(
+        ConflictException,
+      );
+      await expect(service.getForOrganizer(created.id)).resolves.toBeTruthy();
+    });
+
+    it('names how many registrations block the deletion', async () => {
+      const created = await service.create('series-1', onsite);
+      tally.confirmedPerEvent = 1;
+
+      // Singular, because "1 confirmed registrations" is the kind of detail that
+      // makes an organizer distrust the number.
+      await expect(service.delete(created.id)).rejects.toThrow(
+        /1 confirmed registration —/,
+      );
+    });
+  });
+
+  describe('locate', () => {
+    it('finds an event by id together with its series address', async () => {
+      const created = await service.create('series-1', onsite);
+
+      const located = await service.locate(created.id);
+
+      expect(located.seriesSlug).toBe('climate-2027');
+      expect(located.event.slug).toBe(created.slug);
+    });
+
+    it('still finds an event that has been unpublished', async () => {
+      const created = await service.create('series-1', {
+        ...onsite,
+        status: 'draft',
+      });
+
+      // A confirmation link in somebody's inbox must not stop working because
+      // the organizer pulled the event back to a draft.
+      await expect(service.locate(created.id)).resolves.toBeTruthy();
     });
   });
 });

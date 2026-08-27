@@ -14,6 +14,10 @@ import type {
 import { isTimeZone } from '@trefaro/shared-models';
 import { isSlug, slugify } from '../common/slug';
 import { EventSeriesService } from '../event-series/event-series.service';
+import {
+  REGISTRATION_TALLY,
+  type RegistrationTally,
+} from '../registration/ports/registration-tally';
 import { toMediaUrl } from '../media/media-url';
 import {
   EVENT_REPOSITORY,
@@ -57,6 +61,12 @@ export interface CreateEventInput {
 
 export type UpdateEventInput = Partial<CreateEventInput>;
 
+/** An event together with the public address of its series. */
+export interface EventLocation {
+  readonly event: PublicEvent;
+  readonly seriesSlug: string;
+}
+
 /**
  * Events within a series (UC 04, UC 05, FR 3.1, FR 3.2, FR 3.9).
  *
@@ -76,6 +86,11 @@ export class EventsService {
     @Inject(EVENT_REPOSITORY)
     private readonly events: EventRepository,
     private readonly series: EventSeriesService,
+    // Counts only: how many confirmed registrations an event has decides
+    // whether it may be deleted (E14). Reading the registrations themselves is
+    // not this module's business, and the port does not offer it.
+    @Inject(REGISTRATION_TALLY)
+    private readonly registrations: RegistrationTally,
   ) {}
 
   /** Every event of a series, drafts included (FR 2.3, organizer side). */
@@ -106,6 +121,21 @@ export class EventsService {
       throw new NotFoundException(`No event at "${seriesSlug}/${eventSlug}"`);
     }
     return toPublicEvent(found);
+  }
+
+  /**
+   * An event by id, with its series' address, whatever either one's status is.
+   *
+   * For flows a signed link already authorizes — confirming a registration, and
+   * the participant self-service of AP 9. Deliberately without a visibility
+   * check: an organizer who unpublishes an event while confirmations are still
+   * in people's inboxes must not turn those links into errors. The token is what
+   * grants access here, not the event's status.
+   */
+  async locate(id: string): Promise<EventLocation> {
+    const record = await this.require(id);
+    const series = await this.series.getForOrganizer(record.seriesId);
+    return { event: toPublicEvent(record), seriesSlug: series.slug };
   }
 
   async create(
@@ -218,7 +248,20 @@ export class EventsService {
     }
   }
 
+  /**
+   * Deletes an event — unless people have confirmed they are coming (E14).
+   *
+   * A confirmed registration is somebody's statement of intent, and an event
+   * row is what holds it. Archiving keeps both and takes the event off the
+   * public pages, which is what "we are not running this" actually means.
+   */
   async delete(id: string): Promise<void> {
+    const confirmed = await this.registrations.confirmedForEvent(id);
+    if (confirmed > 0) {
+      throw new ConflictException(
+        `This event has ${confirmed} confirmed registration${confirmed === 1 ? '' : 's'} — archive it instead of deleting it.`,
+      );
+    }
     if (!(await this.events.delete(id))) {
       throw new NotFoundException(`No event with id "${id}"`);
     }

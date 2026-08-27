@@ -12,6 +12,10 @@ import type {
 import { isSlug, slugify } from '../common/slug';
 import { toMediaUrl } from '../media/media-url';
 import {
+  REGISTRATION_TALLY,
+  type RegistrationTally,
+} from '../registration/ports/registration-tally';
+import {
   EVENT_SERIES_REPOSITORY,
   EventSeriesSlugTakenError,
   type EventSeriesRecord,
@@ -43,16 +47,19 @@ export type UpdateEventSeriesInput = Partial<CreateEventSeriesInput>;
  * only what has been published. A draft answering 404 rather than 403 on the
  * public side keeps an unannounced series unannounced.
  *
- * Deleting is possible while a series has no events. The rule that a series
- * carrying registrations may only be archived (E14) is enforced from AP 3, when
- * there are events to check for — a check against a table that does not exist
- * yet would be a comment pretending to be code.
+ * Deleting takes the series' events with it, and is refused once anybody has
+ * confirmed a registration for one of them (E14) — archiving is the way to take
+ * a finished series off the public pages.
  */
 @Injectable()
 export class EventSeriesService {
   constructor(
     @Inject(EVENT_SERIES_REPOSITORY)
     private readonly series: EventSeriesRepository,
+    // Counts only, across every event of the series — see the same injection in
+    // `EventsService` for why it is a narrow port rather than the repository.
+    @Inject(REGISTRATION_TALLY)
+    private readonly registrations: RegistrationTally,
   ) {}
 
   async listForOrganizer(): Promise<readonly EventSeries[]> {
@@ -145,7 +152,21 @@ export class EventSeriesService {
     }
   }
 
+  /**
+   * Deletes a series — unless one of its events has confirmed registrations.
+   *
+   * The foreign key would happily cascade through events and registrations
+   * alike. That is exactly why the rule lives here: nothing in the schema knows
+   * the difference between tidying up a series that never happened and throwing
+   * away the record of one that did (E14).
+   */
   async delete(id: string): Promise<void> {
+    const confirmed = await this.registrations.confirmedForSeries(id);
+    if (confirmed > 0) {
+      throw new ConflictException(
+        `This series has ${confirmed} confirmed registration${confirmed === 1 ? '' : 's'} across its events — archive it instead of deleting it.`,
+      );
+    }
     if (!(await this.series.delete(id))) {
       throw new NotFoundException(`No event series with id "${id}"`);
     }

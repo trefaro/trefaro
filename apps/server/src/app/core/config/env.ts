@@ -229,12 +229,16 @@ export function loadEnv(
       synchronize,
     },
     smtp: {
-      host: read.optional('SMTP_HOST', 'localhost'),
+      // Required in production since registration exists: double opt-in is the
+      // only way to become a participant, so an instance without a mail server
+      // is broken — and it would only show that when the first person registers.
+      // The development default is Mailpit from the development compose file.
+      host: read.required('SMTP_HOST', 'localhost'),
       port: read.integer('SMTP_PORT', 1025),
       secure: read.boolean('SMTP_SECURE', false),
       user: source['SMTP_USER']?.trim() || null,
       password: source['SMTP_PASSWORD']?.trim() || null,
-      from: read.optional('SMTP_FROM', 'Trefaro <no-reply@localhost>'),
+      from: read.required('SMTP_FROM', 'Trefaro <no-reply@localhost>'),
     },
     webPush:
       vapidPublicKey && vapidPrivateKey

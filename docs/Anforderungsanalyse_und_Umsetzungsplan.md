@@ -3,7 +3,7 @@
 ## Anforderungsanalyse und Umsetzungsplan (abgeleitet aus der Masterthesis von Marius Schulze)
 
 **Projektname:** **Trefaro** (Kunstwort: deutsch „Treff" + Esperanto-Sammelsuffix „-aro" = „Sammlung von Treffen" ≙ Veranstaltungsreihe)
-**Version:** 1.5 (Entscheidungen F21–F27 ergänzt: F21 nach den Phase-0-Spikes, F22–F24 bei der Planung von Phase 1, F25–F27 bei der Umsetzung der Events in AP 3, siehe Kapitel 7; Schemaentwurf 5.3 bei den bereits umgesetzten Tabellen an den Ist-Stand angeglichen) · **Datum:** 27.08.2026
+**Version:** 1.6 (Entscheidungen F21–F30 ergänzt: F21 nach den Phase-0-Spikes, F22–F24 bei der Planung von Phase 1, F25–F27 bei der Umsetzung der Events in AP 3, F28–F30 bei der Registrierung in AP 4, siehe Kapitel 7; Schemaentwurf 5.3 bei den bereits umgesetzten Tabellen an den Ist-Stand angeglichen) · **Datum:** 27.08.2026
 **Grundlage:** Masterthesis „Konzeption einer Whitelabel-Anwendung für effizientes Eventmanagement und Community-Bildung in gemeinnützigen Organisationen" (WBH, 2024) inkl. aller Drawio-Diagramme (Bausteinsicht, Laufzeitsicht, Verteilungssicht, Use-Case-Diagramm) und Design-Mockups.
 
 ---
@@ -221,13 +221,26 @@ program_item      (id, event_id, title, description, speaker, starts_at, ends_at
 program_item_translation (program_item_id, locale, …)
 registration_field_def (id, event_id, key, label, type [text|select|checkbox|file|…],
                    options_json, required, sort)                  ← Feld-Baukasten (F12)
-registration      (id, event_id, email, first_name, last_name, phone?, origin?,
-                   custom_fields_json [JSONB], status [pending|confirmed|cancelled],
-                   newsletter_opt_in, contact_opt_out, confirmed_at?, user_id?, created_at)
+registration      (id, event_id → event [ON DELETE CASCADE], email, first_name,
+                   last_name, phone?, origin?, custom_fields_json [JSONB],
+                   status [pending|confirmed|cancelled], newsletter_opt_in,
+                   contact_opt_out, confirmed_at?, created_at, updated_at)
+                   unique (event_id, lower(email))
                    ← bewusst ohne confirmation_token: der Double-Opt-In-Link ist
                      HMAC-signiert und trägt seine Nutzlast selbst (F23)
                    ← contact_opt_out: Widerspruch gegen Einladungen zu weiteren
                      Events derselben Reihe (FR 2.4 / F24)
+                   ← eine Adresse meldet sich je Event einmal an (E10); die Eindeutigkeit
+                     liegt als Index über `lower(email)` in der DB, weil nur sie zwei
+                     gleichzeitige Formularabsendungen entscheidet
+                   ← `email` wird normalisiert (trim + lowercase) gespeichert; zwei Zeilen
+                     für dieselbe Person wären genau der Fehler, den die Teilnehmerübersicht
+                     nicht machen darf (FR 3.3)
+                   ← `CHK_registration_confirmed_at`: `confirmed` ohne Zeitpunkt gibt es
+                     nicht — der Zeitpunkt ist der Beleg der Einwilligung; eine spätere
+                     Stornierung löscht ihn nicht
+                   ← `user_id` entfällt in Phase 1 (kein Nutzer-Login); die Selbstbedienung
+                     läuft über einen signierten Link (E11), Phase 3 stellt den Login davor
 attachment        (id, owner_type [registration|message|profile|…], owner_id,
                    file_path, mime_type, size, uploaded_by, created_at)   ← Datei-Uploads (F12)
 user_profile      (id, email, password_hash, first_name, last_name, avatar_path,
@@ -344,6 +357,9 @@ Usability-Test mit Democracy International (Wiederholung der 7 Aufgaben + bislan
 | F25 | Sprache der Aufzählungswerte in der Datenbank                                             | **Englisch** (`onsite\|online\|hybrid`), nicht `praesenz` wie im Schemaentwurf 5.3. Grund: die Projektkonvention „Code, Bezeichner, Kommentare englisch" gilt auch für Spaltenwerte, und ein gemischtsprachiges Schema ist genau die Inkonsistenz, die später jemand falsch abtippt. Betrifft nur `event.event_type`; die restlichen Statuswerte waren schon englisch                                                                                                           |
 | F26 | Sichtbarkeit eines Events gegenüber seiner Reihe                                          | **Ein Event ist öffentlich nur, wenn seine Reihe veröffentlicht ist.** Ein veröffentlichtes Event in einer Entwurfsreihe antwortet öffentlich 404, nicht 403 — sonst leckt die Existenz einer unangekündigten Reihe über ihre Events. Umsetzung: jeder öffentliche Lesezugriff geht zuerst über die Reihe und erbt deren 404; die Regel liegt einmal im `EventsService`, nicht zweimal                                                                                          |
 | F27 | Vollständigkeit von Events: Pflicht ab wann?                                              | **Ort bzw. Link sind zum Veröffentlichen Pflicht, im Entwurf nicht.** Ein Veranstalter legt den Termin fest, bevor Raum oder Konferenzsoftware gebucht sind; verlangt man die Angabe sofort, entsteht ein Platzhalter — und der sieht aus wie eine Antwort. Präsenz braucht `venue_name`, Online braucht `online_url`, Hybrid beides. Doppelt gesichert: Geschäftsregel im Service, `CHECK`-Constraint in der DB                                                                |
+| F28 | Adresse des Registrierungs-Endpunkts                                                      | **`POST /api/user/series/:reihe/events/:event/registrations`**, nicht der flache Pfad `/api/user/events/:slug/registrations` aus dem API-Entwurf 6/Phase 1. Folge aus E7: der Event-Slug ist nur **je Reihe** eindeutig, ein flacher Pfad wäre also nicht eindeutig auflösbar. Gilt sinngemäß für alle weiteren event-bezogenen öffentlichen Endpunkte (Programm, Formularfelder) |
+| F29 | Wiederholte Anmeldung derselben Adresse                                                   | **Eine bestätigte Anmeldung ist über das öffentliche Formular unveränderlich.** Bei `pending`/`cancelled` werden Korrekturen übernommen (und die Anmeldung kehrt auf `pending` zurück), bei `confirmed` bleibt der Datensatz unangetastet und es geht nur die Bestätigungsquittung erneut raus. Grund: der Endpunkt ist unauthentifiziert — wer eine Adresse kennt, könnte sonst Namen und Telefonnummer einer bestätigten Teilnehmerin überschreiben. Die Antwort ist in allen Fällen identisch (E10) |
+| F30 | Verhalten bei nicht zustellbarer Mail                                                     | **Asymmetrisch, nach Bedeutung der Mail.** Scheitert die _Bestätigungsmail_, scheitert der Request (503) — ohne sie kann die Anmeldung nicht abgeschlossen werden, und Schweigen wäre eine Lüge; die Zeile bleibt `pending`, ein zweiter Versuch schickt erneut. Scheitert die _Quittung_, bleibt die Bestätigung gültig und der Fehlschlag wird nur protokolliert: der Zustandswechsel ist bereits passiert. Konsequenz für den Betrieb: `SMTP_HOST` und `SMTP_FROM` sind ab Phase 1 in `production` Pflicht — eine Instanz ohne Mailserver kann keine Teilnehmenden aufnehmen und soll das beim Start sagen, nicht bei der ersten Anmeldung |
 
 ---
 

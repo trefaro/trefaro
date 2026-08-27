@@ -5,6 +5,7 @@ import { EventSeriesEntity } from './event-series.entity';
 import { EventEntity } from './event.entity';
 import { ModuleConfigEntity } from './module-config.entity';
 import { PushSubscriptionEntity } from './push-subscription.entity';
+import { RegistrationEntity } from './registration.entity';
 
 export { AdminSessionEntity } from './admin-session.entity';
 export { AdminUserEntity } from './admin-user.entity';
@@ -13,6 +14,7 @@ export { EventSeriesEntity } from './event-series.entity';
 export { EventEntity } from './event.entity';
 export { ModuleConfigEntity } from './module-config.entity';
 export { PushSubscriptionEntity } from './push-subscription.entity';
+export { RegistrationEntity } from './registration.entity';
 
 /**
  * Core entities. Plug-in entities are added separately by the plug-in data
@@ -26,4 +28,5 @@ export const CORE_ENTITIES = [
   EventEntity,
   ModuleConfigEntity,
   PushSubscriptionEntity,
+  RegistrationEntity,
 ];

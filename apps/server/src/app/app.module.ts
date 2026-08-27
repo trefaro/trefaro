@@ -5,7 +5,7 @@ import { ConfigurationModule } from './business/config';
 import { EventSeriesModule } from './business/event-series';
 import { EventsModule } from './business/events';
 import { LoginModule } from './business/login';
-import { MailModule } from './business/mail/mail.module';
+import { MailModule } from './business/mail';
 import { MediaLinksModule } from './business/media-links/media-links.module';
 import { ParticipantsModule } from './business/participants/participants.module';
 import { PluginManagerModule } from './business/plugin-manager';
@@ -13,7 +13,7 @@ import { ProfileSearchModule } from './business/profile-search/profile-search.mo
 import { ProfilesModule } from './business/profiles/profiles.module';
 import { ProgramModule } from './business/program/program.module';
 import { PushModule } from './business/push';
-import { RegistrationModule } from './business/registration/registration.module';
+import { RegistrationModule } from './business/registration';
 import { CoreModule } from './core/core.module';
 import { HealthController } from './core/health/health.controller';
 import { DataAccessModule } from './data-access/data-access.module';

@@ -683,6 +683,92 @@ und Nx hob `content-type@2.1.0` eine Ebene zu hoch. Behoben durch eine explizite
 Abhängigkeit auf express 5.2.1 — was zugleich einen stilleren Defekt beseitigt:
 geprüft wurde gegen express-4-Typen, ausgeführt express 5.
 
+### AP 4 — Registrierung mit Double-Opt-In (erledigt)
+
+Stand 27.08.2026. Eine Anmeldung geht über das Formular im Nutzer-Client ein,
+erzeugt eine Mail über den SMTP-Server der Organisation, und der Link darin
+bestätigt sie. Neu: `registration` mit Migration und zwei Ports, der
+`TokenSigner` (E5), das Mail-Modul mit englischen und deutschen Vorlagen, zwei
+öffentliche Endpunkte und die beiden Seiten dazu.
+
+Belegt: 231 Unit-Tests (+54: 218 im Server, 13 unverändert in `shared-models`),
+74 API-Vertragstests (+13), 72 Nutzer-Browsertests (+12), 45
+Veranstalter-Browsertests (unverändert). Das Abnahmekriterium ist vollständig geprüft, die Mail dabei
+_gelesen_ und nicht nur behauptet: die API-Vertragssuite und die Browsersuite
+holen sie aus Mailpit zurück, das jetzt auch ein Service-Container in der CI ist.
+Im Einzelnen — eine Anmeldung erzeugt eine Mail, der Link setzt die Registrierung
+auf `confirmed`, ein zweiter Klick meldet „bereits bestätigt" statt zu scheitern,
+ein manipuliertes Token wird abgelehnt, und eine doppelte Anmeldung derselben
+Adresse erzeugt keine zweite Zeile.
+
+Entscheidungen und Abweichungen:
+
+- **Der Endpunkt liegt unter der Adresse des Events** (F28):
+  `POST /api/user/series/:reihe/events/:event/registrations`, nicht der flache
+  Pfad aus der API-Tabelle. Der Event-Slug ist nur je Reihe eindeutig (E7), ein
+  flacher Pfad wäre nicht auflösbar. Gilt sinngemäß für AP 6 und AP 8.
+- **Eine bestätigte Anmeldung ist über das öffentliche Formular unveränderlich**
+  (F29). Bei `pending` werden Korrekturen übernommen, eine `cancelled`
+  Anmeldung kehrt auf `pending` zurück — wer das Formular erneut abschickt, sagt
+  damit, dass er es sich anders überlegt hat. Bei `confirmed` bleibt der
+  Datensatz unangetastet und nur die Quittung geht erneut raus. Grund: der
+  Endpunkt ist unauthentifiziert; wer eine Adresse kennt, könnte sonst den Namen
+  einer bestätigten Teilnehmerin überschreiben. Die Antwort ist in **jedem** Fall
+  dieselbe (E10) — geprüft, weil das Formular sonst eine Abfrage über die
+  Teilnehmerliste wäre.
+- **Nicht zustellbare Mail wird unterschiedlich behandelt** (F30). Scheitert die
+  Bestätigungsmail, scheitert der Request mit 503: ohne sie ist die Anmeldung
+  nicht abschließbar. Scheitert die Quittung, bleibt die Bestätigung gültig und
+  der Fehlschlag wird protokolliert — der Zustandswechsel ist schon passiert, und
+  ihn zurückzunehmen wäre die schlechtere Lüge.
+- **`SMTP_HOST` und `SMTP_FROM` sind in `production` jetzt Pflicht.** Seit es
+  Registrierung gibt, ist eine Instanz ohne Mailserver kaputt — und zwar sichtbar
+  erst bei der ersten Anmeldung. NFR 11 sagt: dann beim Start fehlschlagen.
+- **`DELETE /api/admin/registrations/:id` ist von AP 5 nach AP 4 gewandert.**
+  AP 4 ist das erste Paket, das Zeilen erzeugt, die nichts wieder entfernen kann,
+  und E14 nennt das Löschen einer einzelnen Anmeldung ausdrücklich (Vorarbeit für
+  die DSGVO-Funktionen). Stornieren, Liste, Suche und Statistik bleiben AP 5.
+- **Die E14-Löschregel greift jetzt wirklich.** Eine Reihe oder ein Event mit
+  bestätigten Anmeldungen antwortet auf `DELETE` mit 409 und nennt die Anzahl.
+  Die Zählung kommt über einen **eigenen, schmalen Port**
+  (`RegistrationTally`) statt über das Registrierungs-Repository: Events und
+  Reihen dürfen wissen, _wie viele_ Anmeldungen es gibt, aber nicht _wer_ — und
+  ein Port, der nur Zahlen anbietet, ist die ehrliche Beschreibung davon. Beide
+  Ports zeigen auf dieselbe TypeORM-Klasse.
+- **Bestätigt wird per POST von einer Seite aus** (E5b), und die Seite hat eine
+  Schaltfläche statt sofort zu bestätigen. Ein Link-vorladender Mail-Scanner
+  bestätigt so nichts, und der Teilnehmende sieht überhaupt eine Rückmeldung.
+- **Der Signierer prüft den Zweck mit.** `purpose` steht in der Nutzlast, damit
+  ein Bestätigungslink nicht als Selbstbedienungslink (E11, AP 9) durchgeht — die
+  beiden haben verschiedene Laufzeiten und verschiedene Rechte. Getestet, bevor
+  es den zweiten Zweck gibt.
+- **Die Vorlagen liegen als eine Datei je Sprache** hinter einem Interface, das
+  jede Sprache vollständig erfüllen muss. Eine fehlende Übersetzung ist damit ein
+  Compile-Fehler und nicht eine Mail, die klammheimlich englisch rausgeht. Die
+  Sprache ist die der Instanz (`app_config.default_locale`), Rückfall über die
+  Basissprache (`de-AT` → `de`) auf Englisch. Phase 2 ergänzt Sprachen mit einer
+  Datei und einer Zeile; Phase 3 verschiebt die Wahl auf die Person (`todo.md`).
+- **Keine gestaltete Schaltfläche in der Mail, und nichts, was nachgeladen wird.**
+  Kein Bild, kein Stylesheet, keine Schrift: eine Mail, die beim Öffnen etwas
+  abruft, verrät einem Dritten, wer sie wann gelesen hat (NFR 9). Ein Test prüft
+  das, ein zweiter prüft das Escaping von allem, was Veranstalter oder
+  Teilnehmende getippt haben.
+- **Eine Anmeldung für ein vergangenes Event wird abgelehnt** (409). Der Client
+  zeigt die Schaltfläche dann gar nicht; der Server verlässt sich nicht darauf.
+- **Registrierungsfenster und Kapazität am Event gibt es weiter nicht.** Der
+  Schemaentwurf 5.3 nannte `registration_opens_at`, `registration_closes_at` und
+  `capacity`; AP 3 hat sie nicht angelegt und AP 4 braucht sie nicht — FR 3.5
+  verlangt sie nicht. Wenn sie kommen, dann mit einem Paket, das sie auch bedient.
+- **Die beiden E2E-Suiten lesen die Registrierungs-ID aus der Token-Nutzlast.**
+  Das Token ist signiert, nicht verschlüsselt (E5), die Nutzlast also absichtlich
+  lesbar — aber es ist ein Behelf, bis AP 5 die Liste bringt. Steht mit dieser
+  Begründung in `todo.md`.
+- **Nicht erledigt: der Test gegen den echten SMTP-Server des Pilotpartners.**
+  Die Risikotabelle dieses Plans weist ihn AP 4 zu. Mailpit nimmt alles an und
+  beweist deshalb nichts über Authentifizierung, TLS, SPF/DKIM und den
+  Spam-Ordner. Dafür fehlen Zugangsdaten; verschoben auf die M1-Feedbackrunde und
+  in `todo.md` vermerkt.
+
 ## Definition of Done für Phase 1
 
 1. Alle P1-Anforderungen aus der Scope-Tabelle sind umgesetzt und durch Tests

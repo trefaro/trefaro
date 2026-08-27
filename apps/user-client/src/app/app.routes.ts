@@ -16,6 +16,26 @@ export const appRoutes: Route[] = [
     title: 'Trefaro',
   },
   {
+    // Before the landing page, for the same reason the landing page comes
+    // before `series/:slug`: the longer path has to be matched first.
+    path: 'series/:seriesSlug/events/:eventSlug/register',
+    loadComponent: () =>
+      import('./pages/event-registration/event-registration-page').then(
+        (m) => m.EventRegistrationPage,
+      ),
+    title: 'Register',
+  },
+  {
+    // The confirmation link in the double opt-in mail points here; the token
+    // arrives as a query parameter and is bound to the page's input (E5b).
+    path: 'registrations/confirm',
+    loadComponent: () =>
+      import('./pages/registration-confirm/registration-confirm-page').then(
+        (m) => m.RegistrationConfirmPage,
+      ),
+    title: 'Confirm registration',
+  },
+  {
     // Before `series/:slug`, so the more specific route wins rather than
     // relying on the router to backtrack out of a partial match.
     path: 'series/:seriesSlug/events/:eventSlug',

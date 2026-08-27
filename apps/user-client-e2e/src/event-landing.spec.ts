@@ -88,18 +88,20 @@ test.describe('the event landing page', () => {
     await page.goto(landingPage(PUBLISHED_SERIES.slug, PAST_EVENT.slug));
 
     await expect(page.getByText('This event has ended')).toBeVisible();
-    await expect(
-      page.getByRole('button', { name: 'Register now' }),
-    ).toBeHidden();
+    await expect(page.getByRole('link', { name: 'Register now' })).toBeHidden();
   });
 
-  test('announces registration on an upcoming event', async ({ page }) => {
+  test('leads to the registration form on an upcoming event', async ({
+    page,
+  }) => {
     await page.goto(landingPage(PUBLISHED_SERIES.slug, UPCOMING_EVENT.slug));
 
-    // The form arrives in AP 4; the button must not pretend to work before then.
-    const register = page.getByRole('button', { name: 'Register now' });
-    await expect(register).toBeVisible();
-    await expect(register).toBeDisabled();
+    await page.getByRole('link', { name: 'Register now' }).click();
+
+    // The form itself is covered by `registration.spec.ts`; what matters here is
+    // that the landing page's call to action reaches it.
+    await expect(page).toHaveURL(/\/register$/);
+    await expect(page.getByRole('heading', { name: 'Register' })).toBeVisible();
   });
 
   test('says a draft event does not exist rather than showing it', async ({

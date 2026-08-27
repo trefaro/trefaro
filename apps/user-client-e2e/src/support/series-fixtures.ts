@@ -113,7 +113,7 @@ function credentials(): { email: string; password: string } {
  * The login is rate limited per address and the whole suite shares one, so this
  * happens once per run.
  */
-async function asAdmin(clientUrl: string) {
+export async function asAdmin(clientUrl: string) {
   const context = await request.newContext({ baseURL: clientUrl });
   const login = await context.post('/api/admin/auth/login', {
     data: credentials(),

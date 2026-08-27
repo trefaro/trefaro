@@ -85,12 +85,20 @@ import { PublicEventsService } from '../../features/events/public-events.service
         <p class="description">{{ item.description }}</p>
 
         @if (!isOver()) {
-          <!-- The form behind this arrives in AP 4, together with the
-               double-opt-in mail. Announcing the step already is honest; a
-               button that silently does nothing would not be. -->
           <p class="cta">
-            <button type="button" disabled>Register now</button>
-            <small>Registration opens with the next release.</small>
+            <a
+              class="cta__button"
+              [routerLink]="[
+                '/series',
+                seriesSlug(),
+                'events',
+                eventSlug(),
+                'register',
+              ]"
+            >
+              Register now
+            </a>
+            <small>You will be asked to confirm your e-mail address.</small>
           </p>
         }
 
@@ -164,18 +172,13 @@ import { PublicEventsService } from '../../features/events/public-events.service
       margin-block: 1.5rem;
     }
 
-    .cta button {
+    .cta__button {
       padding: 0.6rem 1.1rem;
-      border: 0;
       border-radius: 0.4rem;
       background: var(--trefaro-color-primary);
       color: var(--trefaro-color-on-primary);
-      font: inherit;
       font-weight: 600;
-    }
-
-    .cta button:disabled {
-      opacity: 0.55;
+      text-decoration: none;
     }
 
     .notice {

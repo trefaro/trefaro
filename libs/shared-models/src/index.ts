@@ -32,6 +32,14 @@ export {
   type PublicEvent,
   type PublicEventSeries,
 } from './lib/events';
+export {
+  REGISTRATION_STATUSES,
+  type ConfirmationState,
+  type RegistrationAcknowledgement,
+  type RegistrationConfirmation,
+  type RegistrationInput,
+  type RegistrationStatus,
+} from './lib/registrations';
 export type {
   AppConfig,
   PluginDescriptor,

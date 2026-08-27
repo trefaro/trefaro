@@ -7,6 +7,8 @@ import { ADMIN_SESSION_REPOSITORY } from '../business/login/ports/admin-session.
 import { ADMIN_USER_REPOSITORY } from '../business/login/ports/admin-user.repository';
 import { MODULE_CONFIG_REPOSITORY } from '../business/config/ports/module-config.repository';
 import { PUSH_SUBSCRIPTION_REPOSITORY } from '../business/push/ports/push-subscription.repository';
+import { REGISTRATION_TALLY } from '../business/registration/ports/registration-tally';
+import { REGISTRATION_REPOSITORY } from '../business/registration/ports/registration.repository';
 import {
   PLUGIN_PERSISTENCE_REGISTRY,
   type PluginPersistenceContribution,
@@ -23,6 +25,7 @@ import { TypeormEventSeriesRepository } from './repositories/typeorm-event-serie
 import { TypeormEventRepository } from './repositories/typeorm-event.repository';
 import { TypeormModuleConfigRepository } from './repositories/typeorm-module-config.repository';
 import { TypeormPushSubscriptionRepository } from './repositories/typeorm-push-subscription.repository';
+import { TypeormRegistrationRepository } from './repositories/typeorm-registration.repository';
 
 /**
  * The data access layer — the only layer that talks to PostgreSQL.
@@ -61,6 +64,7 @@ export class DataAccessModule {
         TypeormEventRepository,
         TypeormModuleConfigRepository,
         TypeormPushSubscriptionRepository,
+        TypeormRegistrationRepository,
         {
           provide: ADMIN_USER_REPOSITORY,
           useExisting: TypeormAdminUserRepository,
@@ -89,6 +93,16 @@ export class DataAccessModule {
           provide: PUSH_SUBSCRIPTION_REPOSITORY,
           useExisting: TypeormPushSubscriptionRepository,
         },
+        {
+          provide: REGISTRATION_REPOSITORY,
+          useExisting: TypeormRegistrationRepository,
+        },
+        // Same class, second port: the counts the events and series modules are
+        // allowed to see, without the rows they are not (E14).
+        {
+          provide: REGISTRATION_TALLY,
+          useExisting: TypeormRegistrationRepository,
+        },
       ],
       exports: [
         ADMIN_USER_REPOSITORY,
@@ -98,6 +112,8 @@ export class DataAccessModule {
         EVENT_REPOSITORY,
         MODULE_CONFIG_REPOSITORY,
         PUSH_SUBSCRIPTION_REPOSITORY,
+        REGISTRATION_REPOSITORY,
+        REGISTRATION_TALLY,
         TypeOrmModule,
       ],
     };

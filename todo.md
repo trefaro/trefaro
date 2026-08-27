@@ -48,6 +48,22 @@ is assigned to one of its work packages.
       The plug-in must not query core tables directly — this needs a read
       capability in `business/plugin-api`, which is a versioned contract change.
       → implement the check itself in phase 4
+- [ ] **Look a registration up without decoding its token.** AP 4 creates rows
+      that the API can delete (`DELETE /api/admin/registrations/:id`) but not
+      list. Both e2e suites therefore read the registration id out of the
+      confirmation token's payload — which is signed, not encrypted (E5), so it
+      is legitimate but temporary. AP 5's participant overview
+      (`GET /api/admin/events/:id/registrations`) replaces the helpers
+      `registrationIdFromPath` and `idFromToken` in the two suites.
+- [ ] **Mail against the pilot partner's real SMTP server.** AP 4 proves the
+      double opt-in against Mailpit, in unit tests, in the API contract suite and
+      in three browsers — but Mailpit accepts everything. What it cannot show:
+      authentication, TLS, SPF/DKIM alignment and whether the mail lands in an
+      inbox rather than in spam. The phase plan assigned this to AP 4; it needs
+      credentials for a server this project does not have, so it moves to the
+      M1 feedback round with Democracy International (AP 5). Verify there:
+      `SMTP_SECURE=true` with real credentials, and a confirmation mail that
+      arrives without being filed as junk.
 - [ ] **The uploads volume is finally used.** The registration field kit (F12)
       introduces file uploads. Verify: type and size validation, and that a
       stored file is only reachable by an authorized request.
@@ -100,6 +116,13 @@ is assigned to one of its work packages.
       Fonts CDN (NFR 9).
 
 ## Checkable after phase 3 — profiles, messaging, chat, push
+
+- [ ] **Mail in the participant's own language.** AP 4 sends every mail in the
+      locale the instance is configured with (`app_config.default_locale`),
+      because phase 1 has nowhere to ask a participant for a preference. Once
+      profiles exist, the choice belongs to the person; the template registry in
+      `business/mail/templates` already resolves per locale, so this is a lookup
+      change and not a rebuild.
 
 - [ ] **The participant overview gains its profile-status column.** FR 3.3 asks
       for it, and phase 1 left it out rather than shipping a column that always
@@ -180,6 +203,14 @@ is assigned to one of its work packages.
       verified by hand, via
       `tools/spike-verification/verify-admin-access.mjs`, because exercising it
       locks the route for fifteen minutes.
+- [ ] **Confirm the registration rate limit.** Thirty attempts per five minutes
+      per address (`REGISTRATIONS_PER_WINDOW` in
+      `public-registrations.controller.ts`), and the same for the confirmation
+      endpoint. Deliberately without a block period, unlike the login: this
+      endpoint sends mail to an address the caller chooses, but a participant who
+      mistypes their own address a few times has to be able to fix it. Not
+      covered by an automatic test for the same reason as the login block — the
+      window is five minutes, and a suite that trips it cannot repeat.
 - [ ] **Security review.** Auth, upload validation, plug-in isolation, and
       whether the OpenAPI description should keep being served publicly (it is
       today, on the grounds that the source is AGPL anyway).

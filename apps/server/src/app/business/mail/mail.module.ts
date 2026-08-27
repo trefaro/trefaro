@@ -1,16 +1,21 @@
 import { Module } from '@nestjs/common';
+import { MailService } from './mail.service';
+import { MAILER } from './ports/mailer';
+import { SmtpMailer } from './smtp-mailer';
 
 /**
  * Outgoing e-mail through the organization's own SMTP server (F8).
  *
- * Multilingual templates and signed double opt-in links — phase 1.
- * Also the channel for replying to interested people who have no account:
- * the organizer answers in the app, the visitor receives an e-mail (F11).
- * No newsletter sending in v1 — only opt-in management (FR 4.8).
+ * Multilingual templates in `templates/`, one file per language, and the SMTP
+ * transport bound to the {@link MAILER} port so tests — and a later transport,
+ * should an organization need one — replace it in one place.
  *
- * Structure only at this point: phase 0 validates the architecture, it does not
- * implement features. Controllers, services and repository ports arrive with
- * the phase named above.
+ * Still to come: the reply to an interested person without an account (F11,
+ * phase 1 AP 12) and the invitation of former participants (FR 2.4). No
+ * newsletter sending in v1, only opt-in management (F8).
  */
-@Module({})
+@Module({
+  providers: [MailService, SmtpMailer, { provide: MAILER, useExisting: SmtpMailer }],
+  exports: [MailService],
+})
 export class MailModule {}

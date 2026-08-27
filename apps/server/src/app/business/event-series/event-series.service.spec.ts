@@ -1,4 +1,5 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
+import type { RegistrationTally } from '../registration/ports/registration-tally';
 import { EventSeriesService } from './event-series.service';
 import {
   EventSeriesSlugTakenError,
@@ -7,6 +8,25 @@ import {
   type EventSeriesRepository,
   type NewEventSeries,
 } from './ports/event-series.repository';
+
+/**
+ * The counts the delete rule asks for (E14).
+ *
+ * A fake rather than a stub with a fixed answer: the tests set the number the
+ * way the world sets it — somebody confirmed, or nobody did.
+ */
+class FakeRegistrationTally implements RegistrationTally {
+  confirmedPerEvent = 0;
+  confirmedPerSeries = 0;
+
+  async confirmedForEvent(): Promise<number> {
+    return this.confirmedPerEvent;
+  }
+
+  async confirmedForSeries(): Promise<number> {
+    return this.confirmedPerSeries;
+  }
+}
 
 class FakeEventSeriesRepository implements EventSeriesRepository {
   readonly rows: EventSeriesRecord[] = [];
@@ -69,6 +89,7 @@ class FakeEventSeriesRepository implements EventSeriesRepository {
 
 describe('EventSeriesService', () => {
   let repository: FakeEventSeriesRepository;
+  let tally: FakeRegistrationTally;
   let service: EventSeriesService;
 
   const minimal = {
@@ -78,7 +99,8 @@ describe('EventSeriesService', () => {
 
   beforeEach(() => {
     repository = new FakeEventSeriesRepository();
-    service = new EventSeriesService(repository);
+    tally = new FakeRegistrationTally();
+    service = new EventSeriesService(repository, tally);
   });
 
   describe('create', () => {
@@ -287,6 +309,18 @@ describe('EventSeriesService', () => {
       await expect(service.delete('series-99')).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    it('refuses a series whose events carry confirmed registrations', async () => {
+      const created = await service.create(minimal);
+      tally.confirmedPerSeries = 12;
+
+      // The foreign key would cascade through events and registrations alike;
+      // that is precisely why the rule is here and not in the schema (E14).
+      await expect(service.delete(created.id)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(repository.rows).toHaveLength(1);
     });
   });
 });
