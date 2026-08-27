@@ -784,7 +784,8 @@ Belegt: 343 Unit-Tests (+44: Server 244, `admin-client` 37, `shared-models` 15,
 
 Das Abnahmekriterium ist gemessen, nicht behauptet. Mit **2 000 Anmeldungen** auf
 einem Event (per SQL in einem Statement gesät) antwortet der Endpunkt — ein
-lokaler Lauf, über mehrere Läufe lagen alle Werte zwischen 9 und 17 ms:
+lokaler Lauf; über mehrere Läufe lokal und in der CI lagen alle Werte zwischen
+7 und 17 ms, der geteilte GitHub-Runner war dabei nicht langsamer:
 
 | Abfrage                                           |  Zeit |
 | ------------------------------------------------- | ----: |
