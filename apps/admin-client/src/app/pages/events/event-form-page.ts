@@ -62,6 +62,17 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
               seriesId(),
               'events',
               eventId(),
+              'program',
+            ]"
+          >
+            Programme
+          </a>
+          <a
+            [routerLink]="[
+              '/series',
+              seriesId(),
+              'events',
+              eventId(),
               'registration-form',
             ]"
           >

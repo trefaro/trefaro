@@ -66,6 +66,13 @@ export const appRoutes: Route[] = [
       {
         // Before `series/:seriesId/events/:eventId` for the same reason as the
         // participants route above.
+        path: 'series/:seriesId/events/:eventId/program',
+        loadComponent: () =>
+          import('./pages/program/program-page').then((m) => m.ProgramPage),
+        title: 'Programme — Trefaro',
+      },
+      {
+        // Same reason again.
         path: 'series/:seriesId/events/:eventId/registration-form',
         loadComponent: () =>
           import('./pages/registration-fields/registration-fields-page').then(

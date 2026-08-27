@@ -10,10 +10,20 @@ import {
 import { RouterLink } from '@angular/router';
 import { AppConfigService } from '@trefaro/shared-config';
 import type { ApiError } from '@trefaro/shared-http';
-import type { PublicEvent } from '@trefaro/shared-models';
-import { formatEventPeriod, hasEnded } from '@trefaro/shared-models';
+import type {
+  ProgramDay,
+  PublicEvent,
+  PublicProgramItem,
+} from '@trefaro/shared-models';
+import {
+  formatEventPeriod,
+  formatProgramTime,
+  groupProgramByDay,
+  hasEnded,
+} from '@trefaro/shared-models';
 import { PluginSlot } from '@trefaro/shared-plugins';
 import { PublicEventsService } from '../../features/events/public-events.service';
+import { PublicProgramService } from '../../features/program/public-program.service';
 
 /**
  * The public event landing page (FR 3.6) — the highest-rated participant
@@ -26,7 +36,13 @@ import { PublicEventsService } from '../../features/events/public-events.service
  *
  * Times are rendered in the event's own zone, never the reader's (E8), and the
  * zone is named — a participant three time zones away must not have to guess
- * whose 09:00 this is.
+ * whose 09:00 this is. That holds for the programme below as much as for the
+ * event itself: the timeline groups sessions into the days they fall on *at the
+ * venue*, and each day heading names the zone once.
+ *
+ * The programme is fetched separately from the event (FR 3.7). What the page
+ * has to answer first is "what is this, when, where" — a conference with two
+ * hundred sessions must not delay that.
  *
  * Carries the second plug-in hook point: the programme, the room plan and the
  * forum mount here as web components once their modules are enabled.
@@ -83,6 +99,33 @@ import { PublicEventsService } from '../../features/events/public-events.service
         </dl>
 
         <p class="description">{{ item.description }}</p>
+
+        @if (days().length > 0) {
+          <section class="program" aria-labelledby="program-heading">
+            <h2 id="program-heading">Programme</h2>
+            @for (day of days(); track day.key) {
+              <h3 class="program__day">{{ day.label }}</h3>
+              <ol class="program__items">
+                <!-- Named session, not item: the event is already bound to
+                     item above, and shadowing it here would be a trap. -->
+                @for (session of day.items; track session.id) {
+                  <li class="session">
+                    <p class="session__clock">{{ clock(session) }}</p>
+                    <div>
+                      <h4 class="session__title">{{ session.title }}</h4>
+                      @if (session.speaker) {
+                        <p class="session__speaker">{{ session.speaker }}</p>
+                      }
+                      @if (session.description) {
+                        <p class="session__text">{{ session.description }}</p>
+                      }
+                    </div>
+                  </li>
+                }
+              </ol>
+            }
+          </section>
+        }
 
         @if (!isOver()) {
           <p class="cta">
@@ -164,6 +207,63 @@ import { PublicEventsService } from '../../features/events/public-events.service
       white-space: pre-line;
     }
 
+    .program {
+      max-inline-size: 40rem;
+      margin-block: 1.75rem;
+    }
+
+    .program__day {
+      margin-block: 1.25rem 0.5rem;
+      font-size: 1rem;
+      color: color-mix(in oklab, currentColor 70%, transparent);
+    }
+
+    .program__items {
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    /* Mobile-first: the clock sits above the session and moves beside it as
+       soon as there is room for a column of times. */
+    .session {
+      display: grid;
+      gap: 0.15rem 0.9rem;
+      padding-inline-start: 0.75rem;
+      border-inline-start: 2px solid
+        color-mix(in oklab, var(--trefaro-color-accent) 60%, transparent);
+    }
+
+    @media (min-width: 30rem) {
+      .session {
+        grid-template-columns: 7.5rem 1fr;
+      }
+    }
+
+    .session__clock {
+      margin: 0;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .session__title {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .session__speaker {
+      margin: 0.1rem 0 0;
+      color: color-mix(in oklab, currentColor 75%, transparent);
+    }
+
+    .session__text {
+      margin: 0.35rem 0 0;
+      white-space: pre-line;
+    }
+
     .cta {
       display: flex;
       flex-direction: column;
@@ -192,14 +292,30 @@ export class EventLandingPage {
   readonly eventSlug = input.required<string>();
 
   private readonly events = inject(PublicEventsService);
+  private readonly program = inject(PublicProgramService);
   private readonly config = inject(AppConfigService);
 
   protected readonly event = signal<PublicEvent | null>(null);
+  protected readonly items = signal<readonly PublicProgramItem[]>([]);
   protected readonly error = signal<string | null>(null);
 
   protected readonly isOver = computed(() => {
     const event = this.event();
     return event ? hasEnded(event) : false;
+  });
+
+  /**
+   * The programme grouped into days as they are counted at the venue (E8).
+   *
+   * Empty until the event is known: the zone the days are counted in comes from
+   * the event, and grouping in the reader's zone first would move a session
+   * across midnight and then move it back.
+   */
+  protected readonly days = computed<readonly ProgramDay[]>(() => {
+    const event = this.event();
+    return event
+      ? groupProgramByDay(this.items(), event.timezone, this.locale())
+      : [];
   });
 
   protected readonly pluginContext = computed(() => ({
@@ -215,9 +331,13 @@ export class EventLandingPage {
 
   protected when(): string {
     const event = this.event();
-    return event
-      ? formatEventPeriod(event, this.config.config()?.defaultLocale ?? 'en')
-      : '';
+    return event ? formatEventPeriod(event, this.locale()) : '';
+  }
+
+  /** The session's clock range, in the event's zone — never the reader's (E8). */
+  protected clock(item: PublicProgramItem): string {
+    const event = this.event();
+    return event ? formatProgramTime(item, event.timezone, this.locale()) : '';
   }
 
   /** Spelled out rather than shown as a raw enum value. */
@@ -232,8 +352,13 @@ export class EventLandingPage {
     }
   }
 
+  private locale(): string {
+    return this.config.config()?.defaultLocale ?? 'en';
+  }
+
   private async load(seriesSlug: string, eventSlug: string): Promise<void> {
     this.error.set(null);
+    this.items.set([]);
     try {
       this.event.set(await this.events.get(seriesSlug, eventSlug));
     } catch (error: unknown) {
@@ -242,6 +367,16 @@ export class EventLandingPage {
           ? 'This event does not exist, or is not public yet.'
           : ((error as ApiError)?.message ?? 'The event could not be loaded.'),
       );
+      return;
+    }
+
+    // After the event and never before it: the days are counted in the event's
+    // zone. A programme that cannot be loaded leaves the page standing — the
+    // event's own facts are the part somebody came for.
+    try {
+      this.items.set(await this.program.list(seriesSlug, eventSlug));
+    } catch {
+      this.items.set([]);
     }
   }
 }

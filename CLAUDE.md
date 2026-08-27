@@ -115,7 +115,9 @@ Registrierung mit Double-Opt-In und Mail-Modul · **AP 5** Teilnehmerübersicht
 → damit ist **M1** erreicht (Kernschleife lauffähig, erste Feedbackrunde mit
 Democracy International fällig) · **AP 6** Feld-Baukasten (Text, Auswahl,
 Ankreuzfeld) · **AP 7** Feldtyp Datei-Upload, `attachment`, Download nur für
-Admins. Als nächstes AP 8 (Programmplanung).
+Admins · **AP 8** Programmplanung, `program_item`, Timeline auf der Landingpage.
+Als nächstes AP 9 (Programmpunkt-Anmeldung, Lese-Schnittstelle im
+Plug-in-Vertrag, F21).
 
 Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
 
@@ -177,6 +179,35 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
 - **Eine Anmeldung mit Datei ist eine Anfrage** (F39): `multipart/form-data`,
   Felder als JSON im Teil `payload`, jede Datei in einem Teil mit dem Namen ihres
   Feldschlüssels. Geschrieben wird erst, wenn alles geprüft ist.
+- **Ein Programm ist nach der Uhr sortiert, nicht nach einer Spalte** (F40).
+  `program_item` hat kein `sort`; Gleichstand bricht `(starts_at, ends_at, id)`.
+  Es gibt deshalb kein „nach oben" im Editor — eine Session verschiebt man, indem
+  man ihre Zeit ändert.
+- **Überschneidungen werden angezeigt, nicht abgelehnt** (F41). Zwei Sessions zur
+  gleichen Zeit sind ein zweigleisiger Kongress. Abgelehnt (400) wird nur, was
+  außerhalb des Eventzeitraums liegt.
+- **Ein verschobenes Event lässt sein Programm stehen.** Der Zeitraum eines
+  Programmpunkts wird nur geprüft, wenn er _geschrieben_ wird — sonst könnte ein
+  Veranstalter, der das Event verschoben hat, die Punkte nicht mehr nachziehen.
+  Der Editor markiert die außerhalb liegenden.
+- **Ein Programmpunkt braucht eine Dauer** (`ends_at > starts_at`, strikt in der
+  DB), ein Event nicht: das darf als einzelner Zeitpunkt gebucht werden, solange
+  die Details offen sind.
+- **Ein Programmpunkt hat keine eigene Zeitzone** — sie hängt am Event (E8).
+  Timeline-Tage werden mit `groupProgramByDay` gebildet, Uhrzeiten mit
+  `formatProgramTime`; beides in `shared-models`, damit „welcher Tag ist das"
+  nicht an zwei Stellen zwei Dinge heißt.
+- **Kein Feld ohne Bedeutung.** `registration_enabled`/`capacity` kommen erst mit
+  `program_item_signup` in AP 9. Ein Flag, das nichts liest, sieht aus wie eine
+  Funktion, die es gibt — dieselbe Linie wie bei der `type`-Constraint in AP 6.
+- **Ein Formular, das sich selbst leert, wird währenddessen geschlossen.** Wer
+  nach dem Absenden weitertippt, verlöre das Getippte beim Reset. Der
+  Programm-Editor legt das Hinzufügen-Formular in ein `<fieldset [disabled]>`,
+  solange eine Anfrage läuft — und solange das Event fehlt, ohne dessen Zone die
+  Zeiten nicht lesbar sind.
+- **Keine Backticks in Angular-Template-Kommentaren.** Sie beenden das
+  Template-Literal, und der Compiler meldet die Folgefehler an ganz anderen
+  Stellen.
 
 ## Betriebskontext
 

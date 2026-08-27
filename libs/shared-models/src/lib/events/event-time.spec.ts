@@ -1,4 +1,7 @@
 import {
+  dayInZone,
+  formatClockRange,
+  formatDayInZone,
   formatEventPeriod,
   formatInstant,
   hasEnded,
@@ -118,6 +121,69 @@ describe('event time', () => {
       expect(formatInstant('2026-08-24T09:30:00.000Z', 'UTC')).toBe(
         'Aug 24, 2026, 09:30',
       );
+    });
+  });
+
+  describe('dayInZone', () => {
+    it('gives a sortable key in the venue’s reckoning', () => {
+      expect(dayInZone('2027-06-14T21:30:00.000Z', 'Europe/Berlin')).toBe(
+        '2027-06-14',
+      );
+    });
+
+    it('is the next day already where the venue is far enough east', () => {
+      // 23:30 UTC is half past eight the following morning in Tokyo — the day a
+      // programme item is grouped under has to be the venue’s (E8).
+      expect(dayInZone('2027-06-14T23:30:00.000Z', 'Asia/Tokyo')).toBe(
+        '2027-06-15',
+      );
+    });
+
+    it('pads the parts, so the key sorts as a string', () => {
+      expect(dayInZone('2027-01-05T12:00:00.000Z', 'UTC')).toBe('2027-01-05');
+    });
+  });
+
+  describe('formatDayInZone', () => {
+    it('spells the day out for a heading', () => {
+      expect(formatDayInZone('2027-06-14T07:00:00.000Z', 'Europe/Berlin')).toBe(
+        'June 14, 2027',
+      );
+    });
+  });
+
+  describe('formatClockRange', () => {
+    it('reads both ends in the given zone', () => {
+      expect(
+        formatClockRange(
+          '2027-06-14T07:00:00.000Z',
+          '2027-06-14T08:30:00.000Z',
+          'Europe/Berlin',
+        ),
+      ).toBe('09:00–10:30');
+    });
+
+    it('stays on a 24-hour clock, whatever the locale prefers', () => {
+      expect(
+        formatClockRange(
+          '2027-06-14T12:00:00.000Z',
+          '2027-06-14T13:00:00.000Z',
+          'UTC',
+          'en-US',
+        ),
+      ).toBe('12:00–13:00');
+    });
+
+    it('crosses midnight without pretending it did not', () => {
+      // A session running into the small hours reads 23:00–01:30; the day it
+      // belongs to is decided by `dayInZone`, not by this.
+      expect(
+        formatClockRange(
+          '2027-06-14T21:00:00.000Z',
+          '2027-06-14T23:30:00.000Z',
+          'Europe/Berlin',
+        ),
+      ).toBe('23:00–01:30');
     });
   });
 

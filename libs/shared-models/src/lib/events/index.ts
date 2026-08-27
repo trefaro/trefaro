@@ -15,6 +15,9 @@ export {
   type PublicEvent,
 } from './event';
 export {
+  dayInZone,
+  formatClockRange,
+  formatDayInZone,
   formatEventPeriod,
   formatInstant,
   hasEnded,

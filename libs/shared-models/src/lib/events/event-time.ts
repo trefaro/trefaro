@@ -138,6 +138,65 @@ export function hasEnded(
   return Date.parse(period.endsAt) < now;
 }
 
+/**
+ * The calendar day an instant falls on in a given zone, as `YYYY-MM-DD`.
+ *
+ * A sortable key rather than something to read: the programme timeline groups
+ * items by the day they happen on *at the venue*, and two sessions eight hours
+ * apart can be the same day there and two different days for the reader.
+ *
+ * Built from the formatted parts rather than from a locale whose short date
+ * happens to look like ISO — an assumption about `en-CA` is not something a
+ * grouping key should rest on.
+ */
+export function dayInZone(iso: string, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date(iso));
+
+  const value = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((part) => part.type === type)?.value ?? '';
+
+  return `${value('year')}-${value('month')}-${value('day')}`;
+}
+
+/** The same day, spelled out for a heading: `14 June 2027`. */
+export function formatDayInZone(
+  iso: string,
+  timeZone: string,
+  locale = 'en',
+): string {
+  return new Intl.DateTimeFormat(locale, {
+    timeZone,
+    dateStyle: 'long',
+  }).format(new Date(iso));
+}
+
+/**
+ * Two instants as a clock range in one zone: `09:00–10:30`.
+ *
+ * Without the date and without the zone name, because this is for something
+ * already grouped under both — a programme item under its day. The day heading
+ * names the zone once instead of every row repeating it.
+ */
+export function formatClockRange(
+  startsAt: string,
+  endsAt: string,
+  timeZone: string,
+  locale = 'en',
+): string {
+  const clock = new Intl.DateTimeFormat(locale, {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  });
+  return `${clock.format(new Date(startsAt))}–${clock.format(new Date(endsAt))}`;
+}
+
 /** Offset of the zone from UTC at that instant, in milliseconds. */
 function offsetMs(instant: number, timeZone: string): number {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -166,9 +225,10 @@ function offsetMs(instant: number, timeZone: string): number {
 }
 
 function isSameDay(first: Date, second: Date, timeZone: string): boolean {
-  const format = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    dateStyle: 'short',
-  });
-  return format.format(first) === format.format(second);
+  // Through the same key the programme groups by, so "one day" cannot mean two
+  // different things in two places.
+  return (
+    dayInZone(first.toISOString(), timeZone) ===
+    dayInZone(second.toISOString(), timeZone)
+  );
 }

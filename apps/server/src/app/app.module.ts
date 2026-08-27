@@ -12,7 +12,7 @@ import { ParticipantsModule } from './business/participants/participants.module'
 import { PluginManagerModule } from './business/plugin-manager';
 import { ProfileSearchModule } from './business/profile-search/profile-search.module';
 import { ProfilesModule } from './business/profiles/profiles.module';
-import { ProgramModule } from './business/program/program.module';
+import { ProgramModule } from './business/program';
 import { PushModule } from './business/push';
 import { RegistrationModule } from './business/registration';
 import { CoreModule } from './core/core.module';

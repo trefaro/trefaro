@@ -141,12 +141,25 @@ is assigned to one of its work packages.
       `plugin_room_planning_program_item_room (program_item_id, room_id)` with a
       foreign key to each side and `ON DELETE CASCADE` on the programme item.
       Its migration has to be timestamped after the core migration that creates
-      `program_item`. Verify: deleting a programme item removes its room
+      `program_item` — which exists since AP 8 as `1787789600000-ProgramItems`,
+      so the plug-in's has to carry a higher stamp than that. Verify: deleting a programme item removes its room
       assignment, and dropping the plug-in leaves the core schema untouched.
       → [`02-server-plugin.md`](docs/spikes/02-server-plugin.md#who-owns-the-link-between-a-programme-item-and-a-room--decided)
 
 ## Checkable after phase 2 — whitelabel, module administration, i18n, PWA
 
+- [ ] **A programme tile in the participant's event detail view.** The mockups
+      (chapter 5.2) put "Programmplan" on a tile beside the room plan, the forum
+      and the proposals, and the tiles appear only for modules that are enabled.
+      AP 8 renders the timeline on the landing page instead, which is where the
+      criterion asked for it. The tiles belong to the module and plug-in hook
+      point, so this is phase 2 — and once they exist, the timeline is what the
+      tile links to rather than a second rendering of it.
+- [ ] **No content translations for programme items.** `program_item_translation`
+      is in the schema draft and not built: FR 3.12 is phase 2, and AP 8 would
+      have had to invent the translation mechanism for one table. Whatever
+      phase 2 decides for `event_translation` applies here unchanged — the shape
+      of the two tables is the same.
 - [ ] **Module toggling from the admin UI must be instant.** The plug-in registry
       re-reads its flags every 15 s; the admin endpoint that flips a flag has to
       call `PluginRegistryService.refresh()` so its own change takes effect

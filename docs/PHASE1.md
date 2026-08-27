@@ -221,8 +221,12 @@ attachment             (id uuid pk, owner_type [registration|…], owner_id, fil
 
 program_item           (id uuid pk, event_id fk→event ON DELETE CASCADE, title,
                         description?, speaker?, starts_at, ends_at,
-                        registration_enabled, capacity?, sort, created_at, updated_at)
-                        ← ohne room_id (F21)
+                        created_at, updated_at)
+                        ← ohne room_id (F21) und ohne sort (F40): die Uhr ist die
+                          Reihenfolge, Gleichstand bricht (starts_at, ends_at, id)
+                        ← registration_enabled und capacity kommen mit AP 9, zusammen
+                          mit program_item_signup, das ihnen eine Bedeutung gibt
+                        ← CHK_program_item_period: ends_at > starts_at, strikt
 program_item_signup    (id uuid pk, program_item_id fk→program_item ON DELETE CASCADE,
                         registration_id fk→registration ON DELETE CASCADE, created_at)
                         unique (program_item_id, registration_id)
@@ -270,7 +274,8 @@ unauthentifiziert; `/api/admin/**` verlangt eine Sitzung (E16).
 | `GET /api/admin/events/:id/registrations/statistics`    | Wochen-Anmeldegrafik                                         | 5   |
 | `GET/PATCH/DELETE /api/admin/registrations/:id`         | Detail, Stornieren, Löschen (E14)                            | 5   |
 | `GET /api/admin/attachments/:id`                        | Anhang herunterladen (E9)                                    | 7   |
-| `… /api/admin/events/:id/program-items`                 | FR 3.7                                                       | 8   |
+| `GET/POST /api/admin/events/:id/program-items`          | FR 3.7, Programm je Event                                    | 8   |
+| `PATCH/DELETE /api/admin/program-items/:id`             | Session ändern, entfernen (F40)                              | 8   |
 | `GET /api/admin/program-items/:id/signups`              | Auslastung, FR 3.10                                          | 9   |
 | `… /api/admin/events/:id/media-links`                   | FR 3.6, F10                                                  | 11  |
 | `GET /api/admin/series/:id/former-participants`         | FR 2.4                                                       | 12  |
@@ -1154,6 +1159,110 @@ Was anders lief:
   Pfad (E9), und Logos gibt es erst in Phase 2. Der Kommentar zeigt jetzt
   dorthin, statt ein Versprechen zu tragen, das dieses Paket nicht einlösen
   wollte.
+
+### AP 8 — Programmplanung (erledigt)
+
+Stand 27.08.2026. Ein Event hat ein **Programm**: Sessions mit Thema,
+Beschreibung, Sprecher und Zeitraum (FR 3.7), vom Veranstalter geplant und auf
+der öffentlichen Landingpage als Timeline gerendert (FR 3.6). Damit hat die
+Landingpage — die höchstbewertete Teilnehmerfunktion der Umfrage (3,74) — den
+Teil, um den es dort eigentlich geht: nicht nur „was und wann ist das", sondern
+„was passiert da".
+
+Belegt: 498 Unit-Tests (Server 351, `admin-client` 44, `shared-models` 40,
+`shared-http` 14, `shared-theming` 14, `shared-plugins` 13, `user-client` 11,
+`shared-config` 8, `plugin-room-planning` 3), 176 API-Vertragstests (+30), 111
+Veranstalter-Browsertests (+24), 90 Nutzer-Browsertests (+12). Beide Richtungen
+der neuen Migration wurden gegen die echte Datenbank gefahren: `down`, dann `up`
+verbatim erneut, danach Constraints und Index identisch — und beide `CHECK`s
+tatsächlich mit den Fällen geprüft, die sie ablehnen sollen (leerer Titel,
+Programmpunkt ohne Dauer), plus die Kaskade über zwei Ebenen (Reihe → Event →
+Programmpunkt).
+
+**Das Abnahmekriterium, beide Hälften.** Sie liegen in verschiedenen Schichten,
+und deshalb wird jede da geprüft, wo sie durchgesetzt ist:
+
+| Kriterium                                           | Wo durchgesetzt                                                  | Wo belegt                                                                                                                                                                              |
+| --------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Programmpunkt außerhalb des Eventzeitraums → 400    | `ProgramService.assertWithinEvent`                               | `api/program.spec.ts`, `program.service.spec.ts` (vier Fälle: früher, später, anderer Tag, exakt passend)                                                                              |
+| Die Meldung nennt den gemeinten Zeitraum            | `formatEventPeriod` in der Meldung — in der Zone des Events (E8) | `api/program.spec.ts`, `admin-client-e2e/program.spec.ts`                                                                                                                              |
+| Timeline rendert in der Eventzeitzone               | `groupProgramByDay` + `formatProgramTime` in `shared-models`     | `program.spec.ts` (Zonen-Einheitstests), `user-client-e2e/event-landing.spec.ts` (Runner läuft in UTC, Venue in Europe/Berlin — eine Seite, die die Leserzone rendert, fällt dort auf) |
+| Tag und Zone stehen im Timeline-Kopf, einmal je Tag | `ProgramDay.label`                                               | beide Browsersuiten                                                                                                                                                                    |
+
+**Was dieses Paket entschieden hat** (beides im Referenzdokument, F40/F41):
+
+- **Ein Programm hat kein `sort`** (F40). Der Schemaentwurf 5.3 gab
+  `program_item` eine Positionsspalte. Die Reihenfolge eines Programms ist die
+  Uhr; eine zweite Ordnung daneben kann der ersten widersprechen, und dann
+  müsste ein Veranstalter beim Verschieben einer Session zwei Dinge ändern.
+  Gleichstand entsteht real — Parallel-Sessions zur selben Minute — und wird mit
+  `(starts_at, ends_at, id)` gebrochen, derselben Regel wie in jeder anderen
+  Liste. Folge: es gibt kein „nach oben" im Editor, und das ist keine fehlende
+  Funktion, sondern die einzige Bedeutung, die „verschieben" hier haben kann.
+- **Überschneidung ist keine Ablehnung, „außerhalb des Events" schon** (F41).
+  Zwei Sessions zur gleichen Zeit sind das normale Bild eines zweigleisigen
+  Kongresses; eine Regel gegen sie machte Parallel-Tracks unmöglich. Nur ein
+  Mensch unterscheidet einen Track von „Keynote und Workshop stehen beide
+  versehentlich um 09:00", also markiert der Veranstalter-Client sie. Daraus
+  folgt zwingend die dritte Regel: wird der **Eventzeitraum** verschoben, bleiben
+  die Programmpunkte stehen. Die Verschiebung zu verweigern wäre eine Sackgasse
+  — der Weg heraus führt über das Verschieben der Punkte. Deshalb wird der
+  Zeitraum eines Programmpunkts nur geprüft, wenn er _geschrieben_ wird, und der
+  Editor zeigt die außerhalb liegenden Punkte mit einem eigenen Hinweis an,
+  statt sie zu sperren.
+
+**Was gebaut wurde.** `libs/shared-models/src/lib/program/` trägt die Typen und
+die vier Helfer, die beide Clients teilen (`groupProgramByDay`,
+`formatProgramTime`, `overlappingProgramItems`, `isWithinPeriod`, dazu
+`sortProgram`) — eine zweite Antwort auf „an welchem Tag ist diese Session" wäre
+ein Defekt, der auf eine Abendveranstaltung und einen Leser eine Zone weiter
+östlich wartet. `event-time.ts` hat dafür drei neue Bausteine bekommen
+(`dayInZone`, `formatDayInZone`, `formatClockRange`); `isSameDay` benutzt jetzt
+denselben Tagesschlüssel, damit „ein Tag" nicht an zwei Stellen zwei Dinge heißt.
+
+Server: `business/program/` ist aus dem Phase-0-Stub ein Modul geworden — Port,
+Service, drei Controller (`admin/events/:id/program-items`,
+`admin/program-items/:id`, `user/series/:reihe/events/:event/program`), DTOs.
+Datenzugriff: Entity, Migration `1787789600000-ProgramItems`, Repository,
+Bindung im Kompositionswurzel-Modul. Clients: eine Programmseite im
+Veranstalter-Client (Karten mit `datetime-local`-Feldern in der Eventzone,
+Tagesüberschriften, Markierung für Überschneidungen und für Punkte außerhalb des
+Events) und die Timeline auf der Landingpage.
+
+**Was anders lief:**
+
+- **Die Browsersuite hat einen echten Defekt gefunden**, keinen Timing-Artefakt:
+  das Hinzufügen-Formular leert sich, wenn der Server geantwortet hat. Wer in
+  diesem Fenster — eine Netzwerkrunde lang — die nächste Session eintippt,
+  verliert das Getippte, ohne dass etwas dazu gesagt wird. Der Test fiel darüber,
+  weil er genau das tat. Behoben nicht im Test, sondern auf der Seite: das
+  Formular liegt jetzt in einem `<fieldset>`, das geschlossen ist, solange eine
+  Anfrage läuft (und solange das Event noch nicht geladen ist — die Zeiten sind
+  ohne seine Zone nicht lesbar). Der Test wartet darauf, dass es wieder aufgeht.
+- **Ein bestehender Test wurde durch die neue Funktion unscharf.** „states the
+  time in the zone of the event" suchte seitenweit nach `GMT+1|2` — seit die
+  Tagesüberschriften die Zone ebenfalls nennen, sind das drei Treffer und
+  Playwrights Strict Mode schlägt zu. Der Test greift jetzt die erste Definition
+  der Faktenliste, also die Zeitangabe des Events selbst; die Ursache steht im
+  Kommentar, damit die nächste Erweiterung sie nicht wieder sucht.
+- **Backticks in einem Template-Kommentar beenden das Template.** Ein
+  HTML-Kommentar in der Landingpage sollte erklären, warum die Laufvariable
+  `session` und nicht `item` heißt — die Backticks darin schlossen das
+  Template-Literal, und der Angular-Compiler meldete zwölf Folgefehler an ganz
+  anderen Stellen. Kommentare in Angular-Templates bleiben backtickfrei.
+- **`ProgramDay` ist generisch.** Die Gruppierung sollte zuerst
+  `PublicProgramItem` liefern; im Veranstalter-Client waren die Karten damit um
+  ihre eigenen Felder erschienen. Ein Typparameter mit Default löst das an einer
+  Stelle statt mit einer zweiten Gruppierfunktion.
+- **`registration_enabled` und `capacity` wurden nicht gebaut**, obwohl der
+  Schemaentwurf sie neben den anderen Spalten nennt. Sie bekommen ihre Bedeutung
+  erst durch `program_item_signup` in AP 9; ein Flag, das kein Endpunkt liest und
+  keine Oberfläche zeigt, sieht aus wie eine Funktion, die es gibt. Dieselbe
+  Linie wie bei der `type`-Constraint in AP 6, die AP 7 dann erweitert hat.
+- **Nicht gebaut: eine Ansicht des Programms für Teilnehmende außerhalb der
+  Landingpage.** Die Mockups nennen eine Kachel „Programmplan" in der
+  Event-Detailansicht; die Kacheln gehören zum Modul-/Plug-in-Einhängepunkt und
+  damit zu Phase 2. Steht in `todo.md`.
 
 ## Definition of Done für Phase 1
 

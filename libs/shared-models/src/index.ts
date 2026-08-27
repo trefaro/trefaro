@@ -14,6 +14,9 @@ export {
   EVENT_SERIES_STATUSES,
   EVENT_STATUSES,
   EVENT_TYPES,
+  dayInZone,
+  formatClockRange,
+  formatDayInZone,
   formatEventPeriod,
   formatInstant,
   hasEnded,
@@ -88,6 +91,22 @@ export {
   type SortDirection,
   type UploadType,
 } from './lib/registrations';
+export {
+  MAX_PROGRAM_DESCRIPTION_LENGTH,
+  MAX_PROGRAM_ITEMS,
+  MAX_PROGRAM_SPEAKER_LENGTH,
+  MAX_PROGRAM_TITLE_LENGTH,
+  formatProgramTime,
+  groupProgramByDay,
+  isWithinPeriod,
+  overlappingProgramItems,
+  sortProgram,
+  type ProgramDay,
+  type ProgramItem,
+  type ProgramItemChange,
+  type ProgramItemInput,
+  type PublicProgramItem,
+} from './lib/program';
 export type {
   AppConfig,
   PluginDescriptor,

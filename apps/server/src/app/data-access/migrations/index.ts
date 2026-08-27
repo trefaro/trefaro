@@ -7,6 +7,7 @@ import { ParticipantOverview1787789200000 } from './1787789200000-ParticipantOve
 import { RegistrationFields1787789300000 } from './1787789300000-RegistrationFields';
 import { Attachments1787789400000 } from './1787789400000-Attachments';
 import { FileRegistrationFields1787789500000 } from './1787789500000-FileRegistrationFields';
+import { ProgramItems1787789600000 } from './1787789600000-ProgramItems';
 
 /**
  * Core migrations, in the order they must run.
@@ -24,4 +25,5 @@ export const CORE_MIGRATIONS = [
   RegistrationFields1787789300000,
   Attachments1787789400000,
   FileRegistrationFields1787789500000,
+  ProgramItems1787789600000,
 ];

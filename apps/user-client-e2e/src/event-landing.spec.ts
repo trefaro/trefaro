@@ -3,6 +3,7 @@ import {
   DRAFT_EVENT,
   DRAFT_SERIES,
   PAST_EVENT,
+  PROGRAM_ITEMS,
   PUBLISHED_SERIES,
   UPCOMING_EVENT,
 } from './support/series-fixtures';
@@ -14,6 +15,12 @@ import {
  * These are the acceptance criteria of AP 3: a hybrid event shows its venue
  * *and* its online link, a draft event answers as absent, and the times appear
  * in the event's own zone rather than the browser's (E8).
+ *
+ * The programme block at the end is the second half of AP 8's criterion: the
+ * timeline renders in the event's zone. It belongs in a browser rather than in
+ * the API contract suite because the conversion happens in the client — the
+ * server sends absolute instants, and the runner's own zone is UTC, so a page
+ * that read the reader's clock would be visibly an hour or two out here.
  */
 const landingPage = (seriesSlug: string, eventSlug: string) =>
   `/series/${seriesSlug}/events/${eventSlug}`;
@@ -77,8 +84,12 @@ test.describe('the event landing page', () => {
     // The fixture starts at 08:00 UTC in Europe/Berlin, so 09:00 or 10:00 local
     // depending on the season — the zone label is what makes it unambiguous, and
     // it must never be the browser's zone (the runner's is UTC).
-    const when = page.getByText(/GMT\+[12]/);
-    await expect(when).toBeVisible();
+    //
+    // Scoped to the event's own facts, whose first entry is "When": since AP 8
+    // the programme's day headings name the zone as well, and a page-wide match
+    // for it is no longer unique.
+    const when = page.getByRole('definition').first();
+    await expect(when).toContainText(/GMT\+[12]/);
     await expect(when).toContainText(/\b(09|10):00\b/);
   });
 
@@ -118,5 +129,65 @@ test.describe('the event landing page', () => {
     await page.goto(landingPage(DRAFT_SERIES.slug, UPCOMING_EVENT.slug));
 
     await expect(page.getByRole('alert')).toContainText('does not exist');
+  });
+});
+
+test.describe('the programme on the landing page', () => {
+  test('lists the sessions with the clock of the venue, not the reader', async ({
+    page,
+  }) => {
+    await page.goto(landingPage(PUBLISHED_SERIES.slug, UPCOMING_EVENT.slug));
+
+    const program = page.getByRole('region', { name: 'Programme' });
+    await expect(program).toBeVisible();
+    await expect(
+      program.getByRole('heading', { name: PROGRAM_ITEMS[0].title }),
+    ).toBeVisible();
+
+    // The fixture starts at 08:00 UTC in Europe/Berlin, so 09:00 or 10:00 at the
+    // venue depending on the season. The runner's zone is UTC: a timeline that
+    // rendered the reader's clock would show 08:00 here (E8).
+    await expect(
+      program.getByText(/\b(09|10):00–(10|11):00\b/).first(),
+    ).toBeVisible();
+    await expect(program.getByText(/\b08:00\b/)).toBeHidden();
+  });
+
+  test('names the day and its zone once per day', async ({ page }) => {
+    await page.goto(landingPage(PUBLISHED_SERIES.slug, UPCOMING_EVENT.slug));
+
+    const program = page.getByRole('region', { name: 'Programme' });
+    // Two of the three fixture sessions are on the event's first day and one on
+    // its last, so the timeline has exactly two day headings — and each names
+    // the zone, so nobody has to guess whose 09:00 this is.
+    const days = program.getByRole('heading', { level: 3 });
+    await expect(days).toHaveCount(2);
+    await expect(days.first()).toContainText(/GMT\+[12]/);
+  });
+
+  test('shows the speaker and the abstract where there is one', async ({
+    page,
+  }) => {
+    await page.goto(landingPage(PUBLISHED_SERIES.slug, UPCOMING_EVENT.slug));
+
+    const program = page.getByRole('region', { name: 'Programme' });
+    await expect(program.getByText('Dr. Amara Nwosu')).toBeVisible();
+    await expect(
+      program.getByText(PROGRAM_ITEMS[0].description as string),
+    ).toBeVisible();
+    // The session without either shows neither, rather than an empty line.
+    await expect(
+      program.getByRole('heading', { name: PROGRAM_ITEMS[1].title }),
+    ).toBeVisible();
+  });
+
+  test('is absent altogether for an event with no programme', async ({
+    page,
+  }) => {
+    await page.goto(landingPage(PUBLISHED_SERIES.slug, PAST_EVENT.slug));
+
+    // No empty heading over nothing: a past event with no sessions planned says
+    // nothing about a programme at all.
+    await expect(page.getByRole('heading', { name: 'Programme' })).toBeHidden();
   });
 });

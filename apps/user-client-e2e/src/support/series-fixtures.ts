@@ -124,6 +124,41 @@ export const REGISTRATION_FIELDS = [
   },
 ] as const;
 
+/**
+ * The programme of the upcoming event (FR 3.7).
+ *
+ * Placed at instants whose UTC reading differs from the venue's clock, which is
+ * the whole point of the timeline assertions: the runner's zone is UTC, so a
+ * page that rendered the reader's clock would show 08:00 where 09:00 or 10:00 is
+ * correct (E8).
+ *
+ * Spread over the first and the last day of the event, so the day grouping has
+ * more than one group to make.
+ */
+export const PROGRAM_ITEMS = [
+  {
+    title: 'E2E Opening keynote',
+    description: 'Where direct democracy stands, and what comes next.',
+    speaker: 'Dr. Amara Nwosu',
+    startsAt: at(90, 8),
+    endsAt: at(90, 9),
+  },
+  {
+    title: 'E2E Workshop on citizens’ initiatives',
+    description: null,
+    speaker: null,
+    startsAt: at(90, 12),
+    endsAt: at(90, 13),
+  },
+  {
+    title: 'E2E Closing plenary',
+    description: null,
+    speaker: null,
+    startsAt: at(92, 8),
+    endsAt: at(92, 9),
+  },
+] as const;
+
 interface AdminSeries {
   id: string;
   slug: string;
@@ -191,10 +226,9 @@ export async function seedSeries(clientUrl: string): Promise<void> {
       if (fixture.slug === PUBLISHED_SERIES.slug) publishedSeriesId = saved.id;
     }
 
-    await seedRegistrationFields(
-      context,
-      await seedEvents(context, publishedSeriesId),
-    );
+    const upcomingEventId = await seedEvents(context, publishedSeriesId);
+    await seedRegistrationFields(context, upcomingEventId);
+    await seedProgram(context, upcomingEventId);
   } finally {
     await context.dispose();
   }
@@ -272,6 +306,39 @@ async function seedRegistrationFields(
     if (!response.ok()) {
       throw new Error(
         `Seeding the registration field "${fixture.key}" failed with status ` +
+          `${response.status()}: ${await response.text()}`,
+      );
+    }
+  }
+}
+
+/**
+ * The programme of the upcoming event (FR 3.7).
+ *
+ * Matched by title, because a programme item has no key of its own — it needs
+ * none, since nothing refers to it the way an answer refers to a field key
+ * (F40). Removed with the event by the foreign key, so no teardown of its own.
+ */
+async function seedProgram(
+  context: Awaited<ReturnType<typeof asAdmin>>,
+  eventId: string,
+): Promise<void> {
+  const path = `/api/admin/events/${eventId}/program-items`;
+  const existing: { id: string; title: string }[] = await (
+    await context.get(path)
+  ).json();
+
+  for (const fixture of PROGRAM_ITEMS) {
+    const match = existing.find((item) => item.title === fixture.title);
+    const response = match
+      ? await context.patch(`/api/admin/program-items/${match.id}`, {
+          data: fixture,
+        })
+      : await context.post(path, { data: fixture });
+
+    if (!response.ok()) {
+      throw new Error(
+        `Seeding the programme item "${fixture.title}" failed with status ` +
           `${response.status()}: ${await response.text()}`,
       );
     }
