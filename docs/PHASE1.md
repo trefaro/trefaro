@@ -561,6 +561,59 @@ Abweichungen und ihre Gründe:
   den Sitzungszustand; nur `login.spec.ts` startet aus einem frischen Kontext.
   Sonst hätten drei Browser × mehrere Tests das Limit gesprengt.
 
+### AP 2 — Veranstaltungsreihen (erledigt)
+
+Umgesetzt: `event_series` mit Migration, Port und Repository; zwei Controller
+(`/api/admin/series` hinter dem Guard, `/api/user/series` öffentlich);
+Slug-Ableitung mit deutscher Transliteration; Admin-Client mit Reihenliste,
+Formular für Anlegen und Bearbeiten sowie Veröffentlichen/Zurückziehen;
+Nutzer-Client mit echter Startseite und Reihen-Detailseite. 39 neue Unit-Tests,
+12 neue API-Vertragstests, neue Browser-Tests in beiden Clients.
+
+Das Abnahmekriterium ist erfüllt und in drei Browsern belegt: eine
+veröffentlichte Reihe erscheint ohne Login auf der Startseite, eine als `draft`
+markierte nicht — und ihre Adresse antwortet öffentlich mit 404, nicht 403.
+
+Entscheidungen und Abweichungen:
+
+- **Zwei Controller statt einem mit Flag.** Der öffentliche Endpunkt liefert eine
+  _andere_ Nutzlast (ohne Status und Zeitstempel), nicht dieselbe mit geleerten
+  Feldern. Ein Test prüft die Feldmenge, damit die Trennung nicht später
+  aufweicht.
+- **Der Slug wird beim Umbenennen nicht neu berechnet.** Ein geteilter Link muss
+  eine Korrektur im Titel überleben; die Adresse ändert sich nur, wenn sie
+  ausdrücklich mitgeschickt wird.
+- **Deutsche Umlaute werden transliteriert, nicht entfernt.** „Bürgerräte" wird
+  `buergerraete`, nicht `brgerrte`. Für Namen in nicht-lateinischer Schrift gibt
+  es einen generischen Rückfall — die Anwendung erfindet keinen Namen.
+- **Das Logo fehlt im Formular.** FR 2.1 nennt es Pflicht, aber Uploads entstehen
+  erst in AP 7 (E9); die Spalte liegt schon. Bis dahin ist es optional — eine
+  Pflicht, die man nicht erfüllen kann, wäre schlimmer.
+- **Die Löschregel aus E14 greift erst ab AP 3.** Eine Reihe mit bestätigten
+  Anmeldungen darf nur archiviert werden; geprüft werden kann das erst, wenn es
+  Events gibt. Eine Prüfung gegen eine Tabelle, die es nicht gibt, wäre ein
+  Kommentar, der sich als Code verkleidet.
+- **Die Phase-0-Platzhalterseite des Admin-Clients ist entfallen.** Die
+  Reihenliste _ist_ die Startseite; das Event-Dashboard (FR 3.8, AP 10) ist eine
+  andere Seite pro Event.
+- **Eine Reihen-Detailseite im Nutzer-Client** ist dazugekommen, obwohl AP 2 nur
+  die Startseite verlangt: eine Liste von Links braucht ein Ziel. Ihr
+  Abschnitt „Events" wird in AP 3 gefüllt.
+- **Ein Wettrennen im Bearbeiten-Formular, gefunden von Firefox.** Der
+  E2E-Test tippte in das Formular, bevor die geladene Reihe darin stand — und
+  die späte Antwort überschrieb die Eingabe. Das kann auch einem Menschen auf
+  einer langsamen Leitung passieren, deshalb ist nicht nur der Test korrigiert:
+  das Formular überschreibt nichts mehr, was bereits verändert wurde.
+- **Die E2E-Suite des Nutzer-Clients sät ihre Reihen über die Administrations-API**
+  und räumt sie in einem Teardown wieder ab. Über die API statt über SQL, damit
+  die Saat denselben Regeln unterliegt wie ein echter Veranstalter; mit Teardown,
+  damit sich die Entwicklungsinstanz nicht mit Testdaten füllt.
+- **Beide Browser-Suites räumen jetzt auf, und die Namen sind pro Lauf
+  eindeutig.** Der erste fehlgeschlagene Lauf hinterließ eine Reihe, woraufhin
+  der nächste Lauf aus einem *anderen* Grund scheiterte (zwei passende
+  Tabellenzeilen). Genau so verschwindet ein echter Fehler unter Rauschen —
+  deshalb Zeitstempel im Namen und ein Teardown, der nach Präfix löscht.
+
 ## Definition of Done für Phase 1
 
 1. Alle P1-Anforderungen aus der Scope-Tabelle sind umgesetzt und durch Tests

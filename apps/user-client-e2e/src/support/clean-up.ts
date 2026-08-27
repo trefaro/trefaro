@@ -1,0 +1,16 @@
+import { removeSeededSeries } from './series-fixtures';
+
+const CLIENT_URL =
+  process.env['BASE_URL'] ??
+  process.env['CLIENT_URL'] ??
+  'http://localhost:4200';
+
+/**
+ * Removes the seeded event series again.
+ *
+ * Test data that survives the run would slowly fill a developer's instance, and
+ * the public start page is exactly where it would show up.
+ */
+export default async function globalTeardown(): Promise<void> {
+  await removeSeededSeries(CLIENT_URL);
+}

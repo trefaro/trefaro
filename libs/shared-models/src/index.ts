@@ -10,6 +10,13 @@ export type {
   AdminLoginRequest,
   AdminSessionInfo,
 } from './lib/auth';
+export {
+  EVENT_SERIES_STATUSES,
+  type EventSeries,
+  type EventSeriesInput,
+  type EventSeriesStatus,
+  type PublicEventSeries,
+} from './lib/events';
 export type {
   AppConfig,
   PluginDescriptor,

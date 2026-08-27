@@ -1,14 +1,22 @@
+import { seedSeries } from './series-fixtures';
+
 /**
- * Waits for the server and the client to answer before any test runs.
+ * Waits for the server and the client to answer, then seeds the event series
+ * the tests assert on.
  *
  * Nx starts both as continuous task dependencies of the `e2e` target — see this
  * project's `project.json`. Playwright's own `webServer` is deliberately not
  * used: Nx infers its dependencies from that field and would then start the same
  * processes a second time, which collides on the port.
  */
+const CLIENT_URL =
+  process.env['BASE_URL'] ??
+  process.env['CLIENT_URL'] ??
+  'http://localhost:4200';
+
 const TARGETS = [
   process.env['API_HEALTH_URL'] ?? 'http://127.0.0.1:3000/api/health',
-  process.env['BASE_URL'] ?? process.env['CLIENT_URL'] ?? '',
+  CLIENT_URL,
 ].filter(Boolean);
 
 const TIMEOUT_MS = 150_000;
@@ -36,4 +44,5 @@ async function waitFor(url: string): Promise<void> {
 
 export default async function globalSetup(): Promise<void> {
   await Promise.all(TARGETS.map(waitFor));
+  await seedSeries(CLIENT_URL);
 }

@@ -24,10 +24,27 @@ export const appRoutes: Route[] = [
         path: '',
         pathMatch: 'full',
         loadComponent: () =>
-          import('./pages/dashboard/dashboard-page').then(
-            (m) => m.DashboardPage,
+          import('./pages/series/series-list-page').then(
+            (m) => m.SeriesListPage,
           ),
-        title: 'Trefaro Admin',
+        title: 'Event series — Trefaro',
+      },
+      {
+        // Before `series/:id`, or "new" would be read as an id.
+        path: 'series/new',
+        loadComponent: () =>
+          import('./pages/series/series-form-page').then(
+            (m) => m.SeriesFormPage,
+          ),
+        title: 'New event series — Trefaro',
+      },
+      {
+        path: 'series/:id',
+        loadComponent: () =>
+          import('./pages/series/series-form-page').then(
+            (m) => m.SeriesFormPage,
+          ),
+        title: 'Event series — Trefaro',
       },
       {
         path: 'administrators',

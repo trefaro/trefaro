@@ -14,6 +14,14 @@ export const ADMIN_STORAGE_STATE = join(
   'trefaro-admin-e2e-state.json',
 );
 
+/**
+ * Prefix of every event series this suite creates.
+ *
+ * The teardown deletes by it, so a run that fails midway cannot leave rows that
+ * make the next run fail for an unrelated reason.
+ */
+export const SERIES_SLUG_PREFIX = 'e2e-series-';
+
 export const ADMIN_CREDENTIALS = {
   email: process.env['ADMIN_BOOTSTRAP_EMAIL'] ?? '',
   password: process.env['ADMIN_BOOTSTRAP_PASSWORD'] ?? '',

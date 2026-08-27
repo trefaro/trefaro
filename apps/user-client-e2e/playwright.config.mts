@@ -34,6 +34,9 @@ export default defineConfig({
    * then start the same processes a second time, colliding on the port. This
    * setup only waits for them to answer. */
   globalSetup: './src/support/wait-for-servers.ts',
+  /* Removes the seeded event series again, so a developer's instance does not
+   * fill up with test data. */
+  globalTeardown: './src/support/clean-up.ts',
   projects: [
     {
       name: 'chromium',

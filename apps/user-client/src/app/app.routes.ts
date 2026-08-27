@@ -16,6 +16,13 @@ export const appRoutes: Route[] = [
     title: 'Trefaro',
   },
   {
+    path: 'series/:slug',
+    loadComponent: () =>
+      import('./pages/series-detail/series-detail-page').then(
+        (m) => m.SeriesDetailPage,
+      ),
+  },
+  {
     // Phase 0 diagnostics: makes the architecture spikes verifiable in a browser.
     // Kept out of the navigation; phase 5 decides whether it stays as an
     // operator tool or goes.

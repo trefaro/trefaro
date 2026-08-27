@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { CURATED_PLUGINS } from '../plugins';
 import { ChatModule } from './business/chat';
 import { ConfigurationModule } from './business/config';
-import { EventSeriesModule } from './business/event-series/event-series.module';
+import { EventSeriesModule } from './business/event-series';
 import { EventsModule } from './business/events/events.module';
 import { LoginModule } from './business/login';
 import { MailModule } from './business/mail/mail.module';

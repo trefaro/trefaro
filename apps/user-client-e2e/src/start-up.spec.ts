@@ -19,8 +19,9 @@ test.describe('participant client startup', () => {
     await expect(
       page.getByRole('heading', { name: 'Event series' }),
     ).toBeVisible();
-    // Nothing on this page may require credentials.
-    await expect(page.getByText('could not be reached')).toBeHidden();
+    // Nothing on this page may require credentials, and nothing may report a
+    // failure — the series it lists are seeded through the API in the setup.
+    await expect(page.getByRole('alert')).toBeHidden();
   });
 
   test('applies the theme it fetched from the server', async ({ page }) => {
