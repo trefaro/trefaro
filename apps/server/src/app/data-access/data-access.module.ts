@@ -10,6 +10,7 @@ import { ADMIN_USER_REPOSITORY } from '../business/login/ports/admin-user.reposi
 import { MODULE_CONFIG_REPOSITORY } from '../business/config/ports/module-config.repository';
 import { PROGRAM_ITEM_SIGNUP_REPOSITORY } from '../business/program/ports/program-item-signup.repository';
 import { PROGRAM_ITEM_REPOSITORY } from '../business/program/ports/program-item.repository';
+import { PROGRAM_TALLY } from '../business/program/ports/program-tally';
 import { PUSH_SUBSCRIPTION_REPOSITORY } from '../business/push/ports/push-subscription.repository';
 import { REGISTRATION_TALLY } from '../business/registration/ports/registration-tally';
 import { REGISTRATION_FIELD_REPOSITORY } from '../business/registration/ports/registration-field.repository';
@@ -122,6 +123,12 @@ export class DataAccessModule {
           provide: PROGRAM_ITEM_SIGNUP_REPOSITORY,
           useExisting: TypeormProgramItemSignupRepository,
         },
+        // Same class as the programme port, second port: the dashboard's three
+        // numbers, without the ability to read a session (FR 3.8).
+        {
+          provide: PROGRAM_TALLY,
+          useExisting: TypeormProgramItemRepository,
+        },
         {
           provide: PUSH_SUBSCRIPTION_REPOSITORY,
           useExisting: TypeormPushSubscriptionRepository,
@@ -152,6 +159,7 @@ export class DataAccessModule {
         MODULE_CONFIG_REPOSITORY,
         PROGRAM_ITEM_REPOSITORY,
         PROGRAM_ITEM_SIGNUP_REPOSITORY,
+        PROGRAM_TALLY,
         PUSH_SUBSCRIPTION_REPOSITORY,
         REGISTRATION_REPOSITORY,
         REGISTRATION_FIELD_REPOSITORY,

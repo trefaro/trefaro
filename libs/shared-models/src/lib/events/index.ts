@@ -8,6 +8,7 @@ export {
 export {
   EVENT_STATUSES,
   EVENT_TYPES,
+  publicEventPath,
   type EventInput,
   type EventStatus,
   type EventType,

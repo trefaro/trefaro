@@ -45,38 +45,10 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
       <h1>{{ isNew() ? 'New event' : 'Edit event' }}</h1>
       @if (!isNew()) {
         <nav class="head__links">
-          <a
-            [routerLink]="[
-              '/series',
-              seriesId(),
-              'events',
-              eventId(),
-              'participants',
-            ]"
-          >
-            Participants
-          </a>
-          <a
-            [routerLink]="[
-              '/series',
-              seriesId(),
-              'events',
-              eventId(),
-              'program',
-            ]"
-          >
-            Programme
-          </a>
-          <a
-            [routerLink]="[
-              '/series',
-              seriesId(),
-              'events',
-              eventId(),
-              'registration-form',
-            ]"
-          >
-            Registration form
+          <!-- The event's dashboard is the hub (FR 3.8); this form is one of
+               the things reachable from it, so it only leads back. -->
+          <a [routerLink]="['/series', seriesId(), 'events', eventId()]">
+            Back to the event
           </a>
         </nav>
       }
@@ -184,7 +156,7 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
         <button type="submit" [disabled]="busy()">
           {{ busy() ? 'Saving…' : 'Save' }}
         </button>
-        <a [routerLink]="['/series', seriesId()]">Cancel</a>
+        <a [routerLink]="cancelTarget()">Cancel</a>
       </div>
     </form>
   `,
@@ -285,6 +257,18 @@ export class EventFormPage {
   ) ?? [localTimeZone(), 'UTC'];
 
   protected readonly isNew = computed(() => !this.eventId());
+  /**
+   * Where "Cancel" goes: back where the organizer came from.
+   *
+   * An existing event was opened from its dashboard, a new one from the series
+   * — and a new event has no dashboard to return to.
+   */
+  protected readonly cancelTarget = computed(() => {
+    const id = this.eventId();
+    return id
+      ? ['/series', this.seriesId(), 'events', id]
+      : ['/series', this.seriesId()];
+  });
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly languages = signal<readonly string[]>([]);
@@ -381,10 +365,13 @@ export class EventFormPage {
       const id = this.eventId();
       if (id) {
         await this.events.update(id, payload);
+        // Back to the dashboard the organizer came from, which is where the
+        // change is visible — a new event has no dashboard to return to yet.
+        await this.router.navigate(['/series', this.seriesId(), 'events', id]);
       } else {
         await this.events.create(this.seriesId(), payload);
+        await this.router.navigate(['/series', this.seriesId()]);
       }
-      await this.router.navigate(['/series', this.seriesId()]);
     } catch (error: unknown) {
       this.error.set((error as ApiError)?.message ?? 'Saving failed.');
     } finally {

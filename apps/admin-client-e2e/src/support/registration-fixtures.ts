@@ -26,14 +26,27 @@ const CLIENT_URL =
   process.env['CLIENT_URL'] ??
   'http://localhost:4300';
 
-const pool = new Pool({
-  host: process.env['DATABASE_HOST'] ?? 'localhost',
-  port: Number(process.env['DATABASE_PORT'] ?? 5432),
-  user: process.env['DATABASE_USER'] ?? 'trefaro',
-  password: process.env['DATABASE_PASSWORD'] ?? 'trefaro_dev',
-  database: process.env['DATABASE_NAME'] ?? 'trefaro',
-  max: 2,
-});
+/**
+ * Opened on demand, and re-openable.
+ *
+ * Two specs use these fixtures, and Playwright may put both in one worker
+ * process — where each closes the pool when it is done. A module-level pool
+ * would leave the second spec seeding against a closed one, which fails in the
+ * fixture rather than in a test and is correspondingly hard to read.
+ */
+let pool: Pool | null = null;
+
+function db(): Pool {
+  pool ??= new Pool({
+    host: process.env['DATABASE_HOST'] ?? 'localhost',
+    port: Number(process.env['DATABASE_PORT'] ?? 5432),
+    user: process.env['DATABASE_USER'] ?? 'trefaro',
+    password: process.env['DATABASE_PASSWORD'] ?? 'trefaro_dev',
+    database: process.env['DATABASE_NAME'] ?? 'trefaro',
+    max: 2,
+  });
+  return pool;
+}
 
 /**
  * How many anonymous rows sit behind the named ones — enough for a second page.
@@ -154,7 +167,7 @@ export async function seedParticipants(label: string): Promise<SeededEvent> {
 
 /** Removes the registrations, then the series that held them (E14). */
 export async function removeParticipants(seeded: SeededEvent): Promise<void> {
-  await pool.query('DELETE FROM registration WHERE event_id = $1', [
+  await db().query('DELETE FROM registration WHERE event_id = $1', [
     seeded.eventId,
   ]);
 
@@ -170,7 +183,9 @@ export async function removeParticipants(seeded: SeededEvent): Promise<void> {
 }
 
 export async function closeFixtureDatabase(): Promise<void> {
-  await pool.end();
+  const open = pool;
+  pool = null;
+  await open?.end();
 }
 
 async function insertRegistrations(
@@ -181,7 +196,7 @@ async function insertRegistrations(
     const registeredAt = new Date(
       Date.now() - person.daysAgo * DAY_MS,
     ).toISOString();
-    await pool.query(
+    await db().query(
       `INSERT INTO registration
          (event_id, email, first_name, last_name, phone, origin, status,
           newsletter_opt_in, confirmed_at, created_at)
@@ -208,7 +223,7 @@ async function insertRegistrations(
   }
 
   // Filler, so the table has a second page to turn to.
-  await pool.query(
+  await db().query(
     `INSERT INTO registration
        (event_id, email, first_name, last_name, status, newsletter_opt_in,
         confirmed_at, created_at)

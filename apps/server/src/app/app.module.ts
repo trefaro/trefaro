@@ -3,6 +3,7 @@ import { CURATED_PLUGINS } from '../plugins';
 import { AttachmentsModule } from './business/attachments';
 import { ChatModule } from './business/chat';
 import { ConfigurationModule } from './business/config';
+import { DashboardModule } from './business/dashboard';
 import { EventSeriesModule } from './business/event-series';
 import { EventsModule } from './business/events';
 import { LoginModule } from './business/login';
@@ -64,6 +65,9 @@ import { DataAccessModule } from './data-access/data-access.module';
     // cancel. Authorized by the signed link, not by a session.
     SelfServiceModule,
     ParticipantsModule,
+    // Above the modules it composes: the dashboard asks the registration,
+    // programme and series modules for their numbers and owns none of them.
+    DashboardModule,
     MediaLinksModule,
     MailModule,
 

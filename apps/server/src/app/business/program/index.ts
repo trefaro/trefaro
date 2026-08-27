@@ -20,3 +20,8 @@ export {
   type SignUpOutcome,
   type SignUpRequest,
 } from './ports/program-item-signup.repository';
+export {
+  PROGRAM_TALLY,
+  type ProgramCounts,
+  type ProgramTally,
+} from './ports/program-tally';

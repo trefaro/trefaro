@@ -1,6 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { ApiClient } from '@trefaro/shared-http';
-import type { EventInput, OrganizerEvent } from '@trefaro/shared-models';
+import type {
+  EventDashboard,
+  EventInput,
+  OrganizerEvent,
+} from '@trefaro/shared-models';
 import { firstValueFrom } from 'rxjs';
 
 /**
@@ -22,6 +26,18 @@ export class EventsAdminService {
 
   get(id: string): Promise<OrganizerEvent> {
     return firstValueFrom(this.api.get<OrganizerEvent>(`admin/events/${id}`));
+  }
+
+  /**
+   * Everything the event dashboard shows, in one request (FR 3.8).
+   *
+   * One request rather than four, so the tiles do not appear one after another —
+   * and so the page never downloads rows in order to count them.
+   */
+  dashboard(id: string): Promise<EventDashboard> {
+    return firstValueFrom(
+      this.api.get<EventDashboard>(`admin/events/${id}/dashboard`),
+    );
   }
 
   create(seriesId: string, input: EventInput): Promise<OrganizerEvent> {

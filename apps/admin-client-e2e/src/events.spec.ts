@@ -126,7 +126,10 @@ test.describe('event administration', () => {
     await page.getByLabel('Venue', { exact: true }).fill('Alte Feuerwache');
     await page.getByRole('button', { name: 'Save' }).click();
 
+    // The event's name leads to its dashboard now (FR 3.8); the form is one
+    // click further, exactly as with a series and its detail page.
     await page.getByRole('link', { name: 'Original Event' }).click();
+    await page.getByRole('link', { name: 'Edit event' }).click();
     await expect(page.getByLabel('Name', { exact: true })).toHaveValue(
       'Original Event',
     );
@@ -134,7 +137,11 @@ test.describe('event administration', () => {
     await page.getByLabel('Name', { exact: true }).fill('Renamed Event');
     await page.getByRole('button', { name: 'Save' }).click();
 
-    await page.getByRole('link', { name: 'Renamed Event' }).click();
-    await expect(page.getByLabel('Public address')).toHaveValue(address);
+    // Saving returns to the dashboard, which shows the public address — so the
+    // assertion is about what participants would see, not about a form field.
+    await expect(
+      page.getByRole('heading', { name: 'Renamed Event', level: 1 }),
+    ).toBeVisible();
+    await expect(page.getByText(`/events/${address}`)).toBeVisible();
   });
 });

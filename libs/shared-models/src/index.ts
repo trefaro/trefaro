@@ -23,6 +23,7 @@ export {
   instantToWallClock,
   isTimeZone,
   localTimeZone,
+  publicEventPath,
   wallClockToInstant,
   zoneLabel,
   type EventInput,
@@ -36,6 +37,12 @@ export {
   type PublicEvent,
   type PublicEventSeries,
 } from './lib/events';
+export {
+  DASHBOARD_LATEST_REGISTRATIONS,
+  type EventDashboard,
+  type ProgramSummary,
+  type RegistrationFormSummary,
+} from './lib/dashboard';
 export {
   DEFAULT_PARTICIPANT_PAGE_SIZE,
   DEFAULT_PARTICIPANT_SORT,

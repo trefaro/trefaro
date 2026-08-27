@@ -198,6 +198,16 @@ is assigned to one of its work packages.
 - [ ] **Self-host the fonts.** Nothing to host yet (`system-ui`), but as soon as
       the font is configurable it must be served from the instance — no Google
       Fonts CDN (NFR 9).
+- [ ] **The organizer client cannot link to the public page.** AP 10 shows an
+      event's public address as text (`/series/…/events/…`) rather than as a
+      link, because the participant client is a different origin and nothing
+      tells this client which one: in production NGINX serves both, in
+      development they are two ports. The server knows it
+      (`PUBLIC_USER_CLIENT_URL`, used for the mail links); phase 2 is where the
+      configuration surface is worked on anyway, so that is where it belongs.
+      Verify: the dashboard offers a "view the public page" link that works in
+      development and in the container stack, and the address stays visible for
+      copying.
 
 ## Checkable after phase 3 — profiles, messaging, chat, push
 
@@ -269,6 +279,17 @@ is assigned to one of its work packages.
 - [ ] **Each new plug-in proves the contract.** Verify per plug-in: own tables
       only, prefixed `plugin_<key>_`; disabled means 404 and absent from
       `/api/config`; disabling keeps its data.
+- [ ] **The dashboard needs a hook point for plug-in tiles** (F47). The mockups
+      put programme proposals and forum posts on KPI tiles of the event
+      dashboard; both are plug-ins, and both arrive in this phase. AP 10
+      deliberately did not add an `event-dashboard` mount point to the plug-in
+      contract, because a mount point nothing fills is a capability that only
+      looks like one. Adding it is a minor version of `PLUGIN_API_VERSION` plus a
+      case in the compatibility test — the same step F45 took for the read port.
+      Verify: enabling the forum plug-in makes its tile appear on the dashboard
+      of every event, disabling it removes the tile and nothing else.
+      (The messages tile of phase 3 is a core tile and needs no hook point: it is
+      added to `EventDashboard` and to the tile grid.)
 
 ## Checkable after phase 5 — hardening and release
 

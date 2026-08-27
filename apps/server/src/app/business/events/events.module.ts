@@ -11,9 +11,10 @@ import { PublicEventsController } from './public-events.controller';
  *
  * Create and edit events including the presence, online and hybrid types
  * (FR 3.1, FR 3.2, FR 3.9), the events of a series (FR 2.3) and the public
- * landing page (FR 3.6). The organizer dashboard (FR 3.8) follows in AP 10,
- * per-field content translations (FR 3.12) in phase 2, and push on change
- * (FR 3.15) in phase 3.
+ * landing page (FR 3.6). The organizer dashboard (FR 3.8) is a composition of
+ * this module and three others and therefore lives above them, in
+ * `business/dashboard`; per-field content translations (FR 3.12) follow in
+ * phase 2, push on change (FR 3.15) in phase 3.
  *
  * Imports `EventSeriesModule` because an event is only public if its series is:
  * the rule needs both, and duplicating the series' visibility check here is how

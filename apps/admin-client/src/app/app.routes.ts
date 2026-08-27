@@ -54,6 +54,14 @@ export const appRoutes: Route[] = [
         title: 'New event — Trefaro',
       },
       {
+        // Before `series/:seriesId/events/:eventId`, so "edit" is not read as
+        // part of the event's own route — the same order the series uses.
+        path: 'series/:seriesId/events/:eventId/edit',
+        loadComponent: () =>
+          import('./pages/events/event-form-page').then((m) => m.EventFormPage),
+        title: 'Edit event — Trefaro',
+      },
+      {
         // Before `series/:seriesId/events/:eventId`, so "participants" is not
         // read as part of the event's own route.
         path: 'series/:seriesId/events/:eventId/participants',
@@ -81,9 +89,14 @@ export const appRoutes: Route[] = [
         title: 'Registration form — Trefaro',
       },
       {
+        // The event's home: its numbers, and the way to everything below it
+        // (FR 3.8). The form it used to be sits at `/edit` now, exactly as a
+        // series' detail page and its form do.
         path: 'series/:seriesId/events/:eventId',
         loadComponent: () =>
-          import('./pages/events/event-form-page').then((m) => m.EventFormPage),
+          import('./pages/event-dashboard/event-dashboard-page').then(
+            (m) => m.EventDashboardPage,
+          ),
         title: 'Event — Trefaro',
       },
       {

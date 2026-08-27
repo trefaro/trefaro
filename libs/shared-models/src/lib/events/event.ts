@@ -80,3 +80,16 @@ export interface EventInput {
   readonly languages: readonly string[];
   readonly status?: EventStatus;
 }
+
+/**
+ * The public address of an event, relative to the participant client.
+ *
+ * In one place because the shape is a decision (F28): slugs are unique per
+ * parent, so a public address has to carry both — the series first, the event
+ * inside it. Three callers build this path (the confirmation mail, the
+ * organizer's dashboard, the participant client's router), and a fourth spelling
+ * of it would be a link that works everywhere except in one mail.
+ */
+export function publicEventPath(seriesSlug: string, eventSlug: string): string {
+  return `/series/${seriesSlug}/events/${eventSlug}`;
+}

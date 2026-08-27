@@ -2,6 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type {
+  ProgramCounts,
+  ProgramTally,
+} from '../../business/program/ports/program-tally';
+import type {
   NewProgramItem,
   ProgramItemChanges,
   ProgramItemRecord,
@@ -9,9 +13,19 @@ import type {
 } from '../../business/program/ports/program-item.repository';
 import { ProgramItemEntity } from '../entities';
 
-/** PostgreSQL implementation of the programme port (FR 3.7). */
+/**
+ * PostgreSQL implementation of the programme port (FR 3.7).
+ *
+ * Also implements {@link ProgramTally}, the narrow counting port the dashboard
+ * uses (FR 3.8) — one class, two ports, the same arrangement the registration
+ * repository has with its tally. The counts are aggregated in the database
+ * rather than by reading the programme: three hundred sessions with their
+ * abstracts is a lot of bytes to move for three numbers.
+ */
 @Injectable()
-export class TypeormProgramItemRepository implements ProgramItemRepository {
+export class TypeormProgramItemRepository
+  implements ProgramItemRepository, ProgramTally
+{
   constructor(
     @InjectRepository(ProgramItemEntity)
     private readonly repository: Repository<ProgramItemEntity>,
@@ -26,6 +40,41 @@ export class TypeormProgramItemRepository implements ProgramItemRepository {
       order: { startsAt: 'ASC', endsAt: 'ASC', id: 'ASC' },
     });
     return rows.map(toRecord);
+  }
+
+  async countForEvent(eventId: string): Promise<ProgramCounts> {
+    // Two aggregates rather than the programme itself: three hundred sessions
+    // with their abstracts is a lot of bytes to move for three numbers. The
+    // seats are counted through the sessions of this event — the sign-up table
+    // has no event column of its own, which is right: a seat belongs to a
+    // session, and the session knows the event.
+    const [sessions, seats] = await Promise.all([
+      this.repository
+        .createQueryBuilder('item')
+        .select('COUNT(*)::int', 'items')
+        .addSelect(
+          'COUNT(*) FILTER (WHERE item.registration_enabled)::int',
+          'withSignup',
+        )
+        .where('item.event_id = :eventId', { eventId })
+        .getRawOne<{ items: number; withSignup: number }>(),
+      this.repository
+        .createQueryBuilder('item')
+        .innerJoin(
+          'program_item_signup',
+          'signup',
+          'signup.program_item_id = item.id',
+        )
+        .select('COUNT(*)::int', 'signups')
+        .where('item.event_id = :eventId', { eventId })
+        .getRawOne<{ signups: number }>(),
+    ]);
+
+    return {
+      items: Number(sessions?.items ?? 0),
+      withSignup: Number(sessions?.withSignup ?? 0),
+      signups: Number(seats?.signups ?? 0),
+    };
   }
 
   async findById(id: string): Promise<ProgramItemRecord | null> {

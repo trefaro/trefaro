@@ -113,6 +113,29 @@ export async function seedManyRegistrations(
   );
 }
 
+/**
+ * Claims seats in a session directly (FR 3.10).
+ *
+ * The same deliberate exception as the registrations above: the real way to a
+ * seat is a link the server mailed after a double opt-in, and that whole path is
+ * walked in `program-signups.spec.ts`. A suite that only needs a session to be
+ * two-thirds full should not have to send six mails to get there — and every
+ * constraint of the table still applies, so a state the real flow could not
+ * produce fails here too.
+ */
+export async function seedProgramSignups(
+  programItemId: string,
+  registrationIds: readonly string[],
+): Promise<void> {
+  for (const registrationId of registrationIds) {
+    await pool.query(
+      `INSERT INTO program_item_signup (program_item_id, registration_id)
+       VALUES ($1, $2)`,
+      [programItemId, registrationId],
+    );
+  }
+}
+
 /** Removes every registration of one event — the counterpart of the seeds. */
 export async function deleteRegistrations(eventId: string): Promise<void> {
   await pool.query('DELETE FROM registration WHERE event_id = $1', [eventId]);

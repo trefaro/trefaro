@@ -14,7 +14,11 @@ import type {
   RegistrationConfirmation,
   RegistrationInput,
 } from '@trefaro/shared-models';
-import { SELF_SERVICE_PATH, hasEnded } from '@trefaro/shared-models';
+import {
+  SELF_SERVICE_PATH,
+  hasEnded,
+  publicEventPath,
+} from '@trefaro/shared-models';
 import type { TrefaroEnv } from '../../core/config/env';
 import { ENV } from '../../core/config/env.module';
 import { AttachmentsService, type UploadedFile } from '../attachments';
@@ -301,7 +305,7 @@ export class RegistrationService {
       startsAt: event.startsAt,
       endsAt: event.endsAt,
       timezone: event.timezone,
-      url: this.clientUrl(`/series/${seriesSlug}/events/${event.slug}`),
+      url: this.clientUrl(publicEventPath(seriesSlug, event.slug)),
     };
     return { firstName: registration.firstName, event: mailEvent };
   }

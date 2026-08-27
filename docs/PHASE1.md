@@ -1385,6 +1385,102 @@ Landingpage sagt bei begrenzten Sessions, wie viele Plätze frei sind.
   Pflicht-Auswahlfeld, ein Pflicht-Ankreuzfeld und ein Pflicht-Dateifeld, und ein
   Test, der das fest verdrahtet, bricht beim nächsten Feld.
 
+### AP 10 — Event-Dashboard (erledigt)
+
+Stand 27.08.2026. Ein Event hat jetzt eine **Startseite**: drei KPI-Kacheln, die
+Verlinkungen sind, die letzten Anmeldungen als Tabelle, und daneben das, was ein
+Veranstalter an einem Event am häufigsten tut — veröffentlichen, zurückziehen,
+bearbeiten. Bis zu diesem Paket war die Adresse `/series/:reihe/events/:event`
+das Event-**Formular**; das war der einzige Weg zu Programm, Formular und
+Teilnehmerliste und damit ein Formular in der Rolle einer Übersicht. Das
+Formular sitzt jetzt unter `…/edit`, genau wie bei einer Veranstaltungsreihe,
+und die Adresse darüber zeigt die Zahlen.
+
+Belegt: 582 Unit-Tests (+22: Server 413, `admin-client` 59, `shared-models` 47,
+`shared-http` 14, `shared-theming` 14, `shared-plugins` 13, `user-client` 11,
+`shared-config` 8, `plugin-room-planning` 3), 217 API-Vertragstests (+14), 135
+Veranstalter-Browsertests (+12), 102 Nutzer-Browsertests (unverändert).
+
+**Das erste Paket dieser Phase ohne Migration.** Ein Dashboard ist eine Frage an
+vorhandene Daten, keine neue Spalte — und das ist der Prüfstein dafür, dass die
+Zahlen aus den Modulen kommen, die sie besitzen, statt neben ihnen zu entstehen.
+Wo Zahlen gezählt werden statt gelesen, ist ein neuer schmaler Port entstanden
+(`ProgramTally`), kein neues Feld.
+
+**Die Abnahmekriterien.** Zwei Stück, und beide sind Aussagen über den
+Bildschirm, nicht über die API:
+
+| Kriterium                                                | Wo es durchgesetzt ist                                                                                                    | Wo es bewiesen ist                                                                                                                                                               |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Die Zahlen entsprechen einer echten Datenlage            | `EventDashboardService` fragt die besitzenden Module (`ParticipantsService`, `ProgramTally`, `RegistrationFieldsService`) | `apps/server-e2e/src/api/event-dashboard.spec.ts`: gesäte Lage (7 Anmeldungen in drei Zuständen, 3 Sessions, 3 Plätze, 3 Fragen) — und danach dieselbe Frage nach jeder Änderung |
+| Jede Kachel führt auf die Ansicht, die sie zusammenfasst | Eine echte Verlinkung je Kachel, über die ganze Karte gestreckt (`.tile h2 a::after`)                                     | `apps/admin-client-e2e/src/event-dashboard.spec.ts` („leads from each tile to the view it summarizes") in drei Browsern, mit Klick und URL-Prüfung                               |
+
+Der zweite Teil des API-Vertragstests ist der wichtigere: er ändert die Daten
+und fragt erneut. Ein Dashboard, das einmal berechnet und gecacht wäre, würde
+jede Zusicherung über die gesäte Lage erfüllen und an diesen drei scheitern —
+eine Anmeldung storniert (bestätigt −1, storniert +1, Summe gleich), eine Session
+hinzugefügt und wieder gelöscht, und eine Session mit Plätzen gelöscht (die
+Plätze gehen mit ihr, die der anderen bleiben).
+
+**Die Entscheidungen dieses Pakets** stehen als **F47–F49** im
+Entscheidungsprotokoll:
+
+- **F47** — Keine Kachel für ein Modul, das es noch nicht gibt. Nachrichten
+  (Phase 3), Programmvorschläge und Forum (Phase 4) fehlen im Typ, statt als
+  harte Null dazustehen: eine Null ist eine Aussage über Daten, und ein
+  Dashboard voller Nullen bringt einem Veranstalter bei, es nicht zu lesen. Der
+  Einhängepunkt für Plug-in-Kacheln wird erst gezogen, wenn ein Plug-in eine hat
+  (Phase 4) — sonst wäre er eine Fähigkeit, die niemand liefert.
+- **F48** — Das Dashboard ist die Startseite des Events, das Formular liegt
+  unter `…/edit`. Dieselbe Ordnung wie bei der Reihe (`/series/:id` und
+  `/series/:id/edit`), und der Grund ist derselbe: die Übersicht ist der Ort, an
+  dem man ankommt, das Formular der, an den man geht.
+- **F49** — Ein Endpunkt für einen Bildschirm. Das Dashboard ist eine Anfrage,
+  nicht vier, und die Zahlen werden gezählt statt gelesen. Wo die Grenze
+  verläuft, steht bei `ProgramTally`: einen zählenden Port bekommt, was groß oder
+  unbegrenzt ist (Anmeldungen; Programmpunkte mit zwei Kilobyte Abstract, bis zu
+  dreihundert davon) — die dreißig winzigen Formularfelddefinitionen, die der
+  Editor sowieso liest, werden in der Geschäftslogik gezählt.
+
+Weiteres, das beim Bauen entschieden oder gelernt wurde:
+
+- **Das Dashboard ist ein eigenes Modul, oberhalb dessen, was es zusammensetzt.**
+  `business/dashboard` importiert Events, Reihen und Registrierung; ein Service
+  in `EventsModule` hätte den Kreis Events → Registrierung → Events geschlossen
+  und einen `forwardRef` gebraucht. Eine Zusammensetzung gehört über ihre Teile.
+- **`ProgramTally` ist der zweite Port derselben Klasse** —
+  `TypeormProgramItemRepository` implementiert beide, dieselbe Anordnung wie bei
+  `RegistrationTally` und dem Registrierungs-Repository. Zwei Aggregate in einer
+  Anfrage: Sessions und die, die fragen, wer kommt, plus die Plätze über den Join
+  auf die Sessions dieses Events (`program_item_signup` hat bewusst keine
+  Event-Spalte — ein Platz gehört einer Session).
+- **Jeder gefragte Service löst das Event erneut auf.** Drei Lesezugriffe über
+  den Primärschlüssel, und das ist der Preis dafür, dass jedes Modul seine
+  404-Regel behält statt dem Aufrufer zu glauben. Bei einem unbekannten Event
+  wird nichts weiter gefragt: ein 404 darf nicht vier Abfragen für einen
+  Bildschirm auslösen, den es nie gibt.
+- **Die öffentliche Adresse wird gezeigt, nicht verlinkt.** Der Nutzer-Client ist
+  ein anderer Origin, und der Veranstalter-Client weiß nicht, welcher (das kommt
+  mit der Konfigurationsarbeit der Phase 2, steht in `todo.md`). Ein Link, der
+  produktiv funktioniert und in der Entwicklung 404 gibt, wäre schlechter als die
+  Adresse selbst — dieselbe Linie, die die Reihen-Detailseite mit `<code>` schon
+  gezogen hat. Gebaut wird sie ab jetzt an einer Stelle: `publicEventPath` in
+  `shared-models`, benutzt von der Bestätigungsmail und vom Dashboard.
+- **Playwrights Namensvergleich ist ein Teilstring**, nicht der ganze Name:
+  `getByRole('link', { name: 'Participants' })` traf auch „All participants"
+  unter den Kacheln. Wo eine Seite zwei Wege zur selben Ansicht anbietet, braucht
+  der Test `exact: true` — und nicht die Seite einen künstlicheren Namen.
+- **Eine Kachel ist eine Karte mit genau einer Verlinkung.** Die Überschrift ist
+  der Link, ein `::after` streckt ihn über die ganze Karte. Damit ist die ganze
+  Fläche klickbar, und was eine Sprachausgabe vorliest, bleibt „Programme" statt
+  der Zahl als Teil des Namens.
+- **Das Fixture-Pool der Veranstalter-Browsersuite wird jetzt bei Bedarf
+  geöffnet.** Zwei Suiten benutzen `seedParticipants`, und Playwright kann beide
+  in denselben Arbeiter legen — wo die erste den Pool schließt, säte die zweite
+  gegen einen geschlossenen. Der Fehler entstand im Fixture, nicht im Test, und
+  war entsprechend schlecht zu lesen: sieben Fehlschläge in drei Browsern, deren
+  Meldungen von Suchfeldern und Detailansichten sprachen.
+
 ## Definition of Done für Phase 1
 
 1. Alle P1-Anforderungen aus der Scope-Tabelle sind umgesetzt und durch Tests

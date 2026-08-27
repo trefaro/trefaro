@@ -119,8 +119,10 @@ Admins · **AP 8** Programmplanung, `program_item`, Timeline auf der Landingpage
 · **AP 9** Programmpunkt-Anmeldung (`program_item_signup`), Selbstbedienung über
 den signierten Link (`business/self-service`), Lese-Port im Plug-in-Vertrag
 (Plug-in-API **1.1.0**) und F21 (plug-in-eigene Raumzuordnung + der nachgezogene
-Fremdschlüssel auf `plugin_room_planning_room.event_id`). Als nächstes AP 10
-(Event-Dashboard, FR 3.8).
+Fremdschlüssel auf `plugin_room_planning_room.event_id`) · **AP 10**
+Event-Dashboard (`business/dashboard`, ein Endpunkt je Bildschirm; die
+Event-Adresse im Veranstalter-Client ist jetzt das Dashboard, das Formular liegt
+unter `…/edit`). Als nächstes AP 11 (Follow-Up und Medien-Links, FR 3.6, F10).
 
 Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
 
@@ -241,6 +243,33 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
   Angulars `NumberValueAccessor` konvertiert, `tsc` merkt nichts. Wer den Wert
   weiterverarbeitet, nimmt `string | number` an — sonst stirbt `.trim()` still
   und nur der Browsertest sieht es.
+
+- **Ein Event hat eine Startseite, und die ist nicht sein Formular** (F48).
+  `/series/:reihe/events/:event` ist das Dashboard, `…/edit` das Formular —
+  dieselbe Ordnung wie bei der Reihe. Speichern führt zurück aufs Dashboard, ein
+  _neues_ Event weiterhin auf die Reihe.
+- **Keine Kachel für ein Modul, das es noch nicht gibt** (F47). Nachrichten
+  (Phase 3), Vorschläge und Forum (Phase 4) fehlen im Typ, statt als `0`
+  dazustehen; das Kachelraster fließt nach. Der Einhängepunkt `event-dashboard`
+  im Plug-in-Vertrag wird erst gezogen, wenn ein Plug-in eine Kachel mitbringt.
+- **Ein Endpunkt für einen Bildschirm** (F49). Das Dashboard ist eine Anfrage,
+  nicht vier — und es zählt statt zu lesen. Einen zählenden Port bekommt, was
+  groß oder unbegrenzt ist (`RegistrationTally`, `ProgramTally`); dreißig winzige
+  Felddefinitionen, die der Editor sowieso liest, werden in der Geschäftslogik
+  gezählt.
+- **Eine Zusammensetzung gehört über ihre Teile.** `business/dashboard` importiert
+  Events, Reihen und Registrierung; im `EventsModule` hätte derselbe Service den
+  Kreis geschlossen und einen `forwardRef` gebraucht. Und: jeder gefragte Service
+  löst das Event selbst auf — drei Primärschlüssel-Lesezugriffe sind der Preis
+  dafür, dass jedes Modul seine 404-Regel behält.
+- **Die öffentliche Adresse eines Events wird an einer Stelle gebaut**:
+  `publicEventPath` in `shared-models`. Verlinkt wird sie im Veranstalter-Client
+  nicht — der Nutzer-Client ist ein anderer Origin, und dieser Client weiß nicht,
+  welcher (Phase 2, steht in `todo.md`).
+- **Playwrights `name` vergleicht Teilstrings**, nicht ganze Namen:
+  `getByRole('link', { name: 'Participants' })` traf auch „All participants".
+  Wo eine Seite zwei Wege zur selben Ansicht anbietet, braucht der Test
+  `exact: true` — nicht die Seite einen künstlicheren Namen.
 
 ## Betriebskontext
 
