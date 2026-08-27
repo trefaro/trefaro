@@ -2,6 +2,7 @@ import { AdminSessionEntity } from './admin-session.entity';
 import { AdminUserEntity } from './admin-user.entity';
 import { AppConfigEntity } from './app-config.entity';
 import { EventSeriesEntity } from './event-series.entity';
+import { EventEntity } from './event.entity';
 import { ModuleConfigEntity } from './module-config.entity';
 import { PushSubscriptionEntity } from './push-subscription.entity';
 
@@ -9,6 +10,7 @@ export { AdminSessionEntity } from './admin-session.entity';
 export { AdminUserEntity } from './admin-user.entity';
 export { APP_CONFIG_SINGLETON_ID, AppConfigEntity } from './app-config.entity';
 export { EventSeriesEntity } from './event-series.entity';
+export { EventEntity } from './event.entity';
 export { ModuleConfigEntity } from './module-config.entity';
 export { PushSubscriptionEntity } from './push-subscription.entity';
 
@@ -21,6 +23,7 @@ export const CORE_ENTITIES = [
   AdminSessionEntity,
   AppConfigEntity,
   EventSeriesEntity,
+  EventEntity,
   ModuleConfigEntity,
   PushSubscriptionEntity,
 ];

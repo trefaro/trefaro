@@ -26,19 +26,25 @@ test.describe('event series administration', () => {
     await page.getByLabel('Description').fill(description);
     await page.getByRole('button', { name: 'Save' }).click();
 
-    // Back on the list, with the new series on it and not yet public.
+    // Saving lands on the series itself, where the first event would be added.
+    await expect(page.getByRole('heading', { name })).toBeVisible();
+    await expect(page).toHaveURL(/\/series\/[0-9a-f-]{36}$/);
+    // The address was derived from the name, so nobody had to think about URLs.
+    const address = page.locator('code');
+    await expect(address).toContainText('/series/e2e-series-');
+    const addressBefore = await address.innerText();
+
+    await page.getByRole('link', { name: 'Back to all series' }).click();
+
     const row = page.getByRole('row', { name: new RegExp(name) });
     await expect(row).toBeVisible();
     await expect(row).toContainText('draft');
-    // The address was derived from the name, so nobody had to think about URLs.
-    await expect(row).toContainText('/series/e2e-series-');
-
     await row.getByRole('button', { name: 'Publish' }).click();
     await expect(row).toContainText('published');
 
     // Editing keeps the address, which is what makes a shared link durable.
-    const addressBefore = await row.locator('code').innerText();
     await row.getByRole('link', { name }).click();
+    await page.getByRole('link', { name: 'Edit series' }).click();
     // Wait for the form to hold the series before typing into it: it loads
     // asynchronously, and filling first would be a race the browser sometimes
     // wins.
@@ -46,16 +52,19 @@ test.describe('event series administration', () => {
     await page.getByLabel('Name').fill(`${name} renamed`);
     await page.getByRole('button', { name: 'Save' }).click();
 
-    const renamed = page.getByRole('row', {
-      name: new RegExp(`${name} renamed`),
-    });
-    await expect(renamed).toBeVisible();
-    await expect(renamed.locator('code')).toHaveText(addressBefore);
+    await expect(
+      page.getByRole('heading', { name: `${name} renamed` }),
+    ).toBeVisible();
+    await expect(page.locator('code')).toHaveText(addressBefore);
 
+    // Deleting happens here, where the events that would go with it are listed.
     page.once('dialog', (dialog) => void dialog.accept());
-    await renamed.getByRole('button', { name: 'Delete' }).click();
+    await page.getByRole('button', { name: 'Delete series' }).click();
 
-    await expect(renamed).toBeHidden();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(
+      page.getByRole('row', { name: new RegExp(`${name} renamed`) }),
+    ).toBeHidden();
   });
 
   test('refuses to save a series without a description', async ({ page }) => {

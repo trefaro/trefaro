@@ -1,19 +1,31 @@
 import { Module } from '@nestjs/common';
+import { EventSeriesModule } from '../event-series';
+import { AdminEventsController } from './admin-events.controller';
+import { AdminSeriesEventsController } from './admin-series-events.controller';
+import { EventsService } from './events.service';
+import { PublicEventsController } from './public-events.controller';
 
 /**
  * Events within a series (UC 04, UC 05, UC 10).
  *
- * Create and edit events including presence, online and hybrid types
- * (FR 3.1, FR 3.2, FR 3.9), the organizer dashboard (FR 3.8) and the
- * public landing page (FR 3.6) — phase 1.
- * Per-field content translations (FR 3.12) follow in phase 2, and push on
- * change (FR 3.15) in phase 3.
- * The start page and the event landing page stay reachable without a login;
- * everything about participants does not.
+ * Create and edit events including the presence, online and hybrid types
+ * (FR 3.1, FR 3.2, FR 3.9), the events of a series (FR 2.3) and the public
+ * landing page (FR 3.6). The organizer dashboard (FR 3.8) follows in AP 10,
+ * per-field content translations (FR 3.12) in phase 2, and push on change
+ * (FR 3.15) in phase 3.
  *
- * Structure only at this point: phase 0 validates the architecture, it does not
- * implement features. Controllers, services and repository ports arrive with
- * the phase named above.
+ * Imports `EventSeriesModule` because an event is only public if its series is:
+ * the rule needs both, and duplicating the series' visibility check here is how
+ * the two would drift apart.
  */
-@Module({})
+@Module({
+  imports: [EventSeriesModule],
+  controllers: [
+    AdminSeriesEventsController,
+    AdminEventsController,
+    PublicEventsController,
+  ],
+  providers: [EventsService],
+  exports: [EventsService],
+})
 export class EventsModule {}

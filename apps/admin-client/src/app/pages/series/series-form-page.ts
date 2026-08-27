@@ -79,7 +79,7 @@ import { EventSeriesAdminService } from '../../features/event-series/event-serie
         <button type="submit" [disabled]="busy()">
           {{ busy() ? 'Saving…' : 'Save' }}
         </button>
-        <a routerLink="/">Cancel</a>
+        <a [routerLink]="isNew() ? '/' : ['/series', id()]">Cancel</a>
       </div>
     </form>
   `,
@@ -136,6 +136,7 @@ export class SeriesFormPage {
   /** Absent on `/series/new`; bound from the route otherwise. */
   readonly id = input<string | undefined>(undefined);
 
+
   protected readonly statuses = EVENT_SERIES_STATUSES;
   protected readonly isNew = computed(() => !this.id());
   protected readonly busy = signal(false);
@@ -183,12 +184,12 @@ export class SeriesFormPage {
 
     try {
       const id = this.id();
-      if (id) {
-        await this.admin.update(id, payload);
-      } else {
-        await this.admin.create(payload);
-      }
-      await this.router.navigate(['/']);
+      // Straight to the series afterwards, whether it was just created or
+      // edited: adding the first event is what an organizer does next.
+      const saved = id
+        ? await this.admin.update(id, payload)
+        : await this.admin.create(payload);
+      await this.router.navigate(['/series', saved.id]);
     } catch (error: unknown) {
       this.error.set((error as ApiError)?.message ?? 'Saving failed.');
     } finally {

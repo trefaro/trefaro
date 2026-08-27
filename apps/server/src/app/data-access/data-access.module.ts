@@ -2,6 +2,7 @@ import { DynamicModule, Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_CONFIG_REPOSITORY } from '../business/config/ports/app-config.repository';
 import { EVENT_SERIES_REPOSITORY } from '../business/event-series/ports/event-series.repository';
+import { EVENT_REPOSITORY } from '../business/events/ports/event.repository';
 import { ADMIN_SESSION_REPOSITORY } from '../business/login/ports/admin-session.repository';
 import { ADMIN_USER_REPOSITORY } from '../business/login/ports/admin-user.repository';
 import { MODULE_CONFIG_REPOSITORY } from '../business/config/ports/module-config.repository';
@@ -19,6 +20,7 @@ import { TypeormAdminSessionRepository } from './repositories/typeorm-admin-sess
 import { TypeormAdminUserRepository } from './repositories/typeorm-admin-user.repository';
 import { TypeormAppConfigRepository } from './repositories/typeorm-app-config.repository';
 import { TypeormEventSeriesRepository } from './repositories/typeorm-event-series.repository';
+import { TypeormEventRepository } from './repositories/typeorm-event.repository';
 import { TypeormModuleConfigRepository } from './repositories/typeorm-module-config.repository';
 import { TypeormPushSubscriptionRepository } from './repositories/typeorm-push-subscription.repository';
 
@@ -56,6 +58,7 @@ export class DataAccessModule {
         TypeormAdminSessionRepository,
         TypeormAppConfigRepository,
         TypeormEventSeriesRepository,
+        TypeormEventRepository,
         TypeormModuleConfigRepository,
         TypeormPushSubscriptionRepository,
         {
@@ -75,6 +78,10 @@ export class DataAccessModule {
           useExisting: TypeormEventSeriesRepository,
         },
         {
+          provide: EVENT_REPOSITORY,
+          useExisting: TypeormEventRepository,
+        },
+        {
           provide: MODULE_CONFIG_REPOSITORY,
           useExisting: TypeormModuleConfigRepository,
         },
@@ -88,6 +95,7 @@ export class DataAccessModule {
         ADMIN_SESSION_REPOSITORY,
         APP_CONFIG_REPOSITORY,
         EVENT_SERIES_REPOSITORY,
+        EVENT_REPOSITORY,
         MODULE_CONFIG_REPOSITORY,
         PUSH_SUBSCRIPTION_REPOSITORY,
         TypeOrmModule,

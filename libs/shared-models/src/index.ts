@@ -12,9 +12,24 @@ export type {
 } from './lib/auth';
 export {
   EVENT_SERIES_STATUSES,
+  EVENT_STATUSES,
+  EVENT_TYPES,
+  formatEventPeriod,
+  hasEnded,
+  instantToWallClock,
+  isTimeZone,
+  localTimeZone,
+  wallClockToInstant,
+  zoneLabel,
+  type EventInput,
+  type EventPeriod,
   type EventSeries,
   type EventSeriesInput,
   type EventSeriesStatus,
+  type EventStatus,
+  type EventType,
+  type OrganizerEvent,
+  type PublicEvent,
   type PublicEventSeries,
 } from './lib/events';
 export type {

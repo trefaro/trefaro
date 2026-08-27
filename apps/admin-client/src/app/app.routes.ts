@@ -39,10 +39,31 @@ export const appRoutes: Route[] = [
         title: 'New event series — Trefaro',
       },
       {
-        path: 'series/:id',
+        path: 'series/:id/edit',
         loadComponent: () =>
           import('./pages/series/series-form-page').then(
             (m) => m.SeriesFormPage,
+          ),
+        title: 'Edit event series — Trefaro',
+      },
+      {
+        // Before `series/:seriesId/events/:eventId`, or "new" would be an id.
+        path: 'series/:seriesId/events/new',
+        loadComponent: () =>
+          import('./pages/events/event-form-page').then((m) => m.EventFormPage),
+        title: 'New event — Trefaro',
+      },
+      {
+        path: 'series/:seriesId/events/:eventId',
+        loadComponent: () =>
+          import('./pages/events/event-form-page').then((m) => m.EventFormPage),
+        title: 'Event — Trefaro',
+      },
+      {
+        path: 'series/:id',
+        loadComponent: () =>
+          import('./pages/series/series-detail-page').then(
+            (m) => m.SeriesDetailPage,
           ),
         title: 'Event series — Trefaro',
       },

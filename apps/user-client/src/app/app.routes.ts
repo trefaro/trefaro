@@ -3,9 +3,9 @@ import { Route } from '@angular/router';
 /**
  * Routes of the participant client.
  *
- * `/` and `/events/:eventId` are reachable without a login — the low entry
- * barrier the thesis asks for. Everything about participants comes later and
- * behind authentication.
+ * The start page, a series and an event landing page are all reachable without
+ * a login — the low entry barrier the thesis asks for. Everything about
+ * participants comes later and behind authentication.
  */
 export const appRoutes: Route[] = [
   {
@@ -14,6 +14,15 @@ export const appRoutes: Route[] = [
     loadComponent: () =>
       import('./pages/start/start-page').then((m) => m.StartPage),
     title: 'Trefaro',
+  },
+  {
+    // Before `series/:slug`, so the more specific route wins rather than
+    // relying on the router to backtrack out of a partial match.
+    path: 'series/:seriesSlug/events/:eventSlug',
+    loadComponent: () =>
+      import('./pages/event-landing/event-landing-page').then(
+        (m) => m.EventLandingPage,
+      ),
   },
   {
     path: 'series/:slug',
@@ -32,13 +41,6 @@ export const appRoutes: Route[] = [
         (m) => m.SpikeConsolePage,
       ),
     title: 'Architecture spikes',
-  },
-  {
-    path: 'events/:eventId',
-    loadComponent: () =>
-      import('./pages/event-detail/event-detail-page').then(
-        (m) => m.EventDetailPage,
-      ),
   },
   { path: '**', redirectTo: '' },
 ];

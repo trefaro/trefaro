@@ -614,6 +614,75 @@ Entscheidungen und Abweichungen:
   Tabellenzeilen). Genau so verschwindet ein echter Fehler unter Rauschen —
   deshalb Zeitstempel im Namen und ein Teardown, der nach Präfix löscht.
 
+### AP 3 — Events und öffentliche Landingpage (erledigt)
+
+Stand 27.08.2026. `event` liegt, die drei Veranstaltungstypen funktionieren, und
+eine Reihe hat im Veranstalter- wie im Nutzer-Client eine Liste ihrer
+bevorstehenden und vergangenen Events (FR 2.3). Die öffentliche Landingpage
+(FR 3.6) zeigt Wann/Format/Wo/Sprachen und kündigt die Registrierung an, die
+AP 4 bringt.
+
+Belegt: 177 Server-Unit-Tests (+31, davon 13 in `shared-models`), 61
+API-Vertragstests (+19), 45 Veranstalter-Browsertests (+12), 60
+Nutzer-Browsertests (+27). Das Abnahmekriterium ist in allen drei Browsern
+geprüft: ein Hybrid-Event zeigt Ort **und** Online-Link, ein `draft`-Event
+antwortet öffentlich 404, und die Zeiten erscheinen in der Zone des Events
+(Läufer läuft auf UTC, die Seite zeigt GMT+2).
+
+Entscheidungen und Abweichungen:
+
+- **Ein Event ist öffentlich nur, wenn seine Reihe es ist** (F26). Ein
+  veröffentlichtes Event in einer Entwurfsreihe ist unerreichbar — sonst leckt
+  die Existenz einer unangekündigten Reihe über ihre Events. Die Regel liegt
+  einmal im `EventsService`, der jeden öffentlichen Zugriff zuerst über die
+  Reihe führt; deshalb importiert `EventsModule` das `EventSeriesModule`.
+- **Ort und Link sind erst zum Veröffentlichen Pflicht** (F27). Der Termin steht
+  vor der Raumbuchung; eine Pflichtangabe hätte nur einen Platzhalter erzeugt,
+  und der sieht aus wie eine Antwort. Als Geschäftsregel _und_ als
+  `CHECK`-Constraint.
+- **Zeiten sind absolut, die Zone hängt am Event** (E8). Der Veranstalter tippt
+  Wanduhrzeit und wählt die Zone; umgerechnet wird im Client. Der Helfer dafür
+  liegt in `shared-models` neben dem Modell, weil beide Clients dieselbe
+  Auslegung derselben zwei Felder brauchen — eine zweite Implementierung von
+  „was heißt 09:00 in Europe/Berlin" ist ein Defekt, der auf eine
+  Zeitumstellung wartet. Genau die ist getestet: der Morgen des 28.03.2027.
+- **Typwerte englisch** (F25), abweichend vom Schemaentwurf 5.3, der
+  `praesenz` vorsah.
+- **Der Event-Slug ist je Reihe eindeutig**, nicht je Instanz (E7). Die
+  öffentliche Adresse ist deshalb `/series/:reihe/events/:event`.
+- **Das Datenmodell heißt `OrganizerEvent`, nicht `Event`.** Beide Clients sind
+  Browsercode, in dem `Event` ein globaler DOM-Typ ist; ein Domänentyp
+  völlig anderer Form, der ihn verdeckt, kostet irgendwann einen Nachmittag.
+- **Löschen einer Reihe nimmt ihre Events mit** (Fremdschlüssel `ON DELETE
+CASCADE`). Die E14-Regel, die Löschen bei bestätigten Anmeldungen verbietet,
+  greift erst in AP 4 — vorher gibt es keine Anmeldungen zu prüfen. Damit
+  niemand versehentlich Planungsarbeit wegwirft, ist die Schaltfläche „Reihe
+  löschen" von der Liste auf die Reihen-Detailseite gewandert: dort stehen die
+  betroffenen Events auf dem Schirm, und der Rückfragedialog nennt ihre Anzahl.
+- **Die Phase-0-Platzhalterseite `/events/:eventId` ist entfallen.** Der
+  Einhängepunkt `event-detail` sitzt jetzt auf der echten Landingpage; zwei
+  Seiten mit demselben Einhängepunkt hätten Plug-ins doppelt gemountet.
+- **Das Logo fehlt weiter** (AP 7), die Spalte liegt — wie bei der Reihe.
+- **Playwright erwartet jetzt 10 s statt 5 s.** Der erste Lauf scheiterte
+  einmalig in Chromium: `/series/:id` war ein neuer Lazy-Chunk, den der
+  Entwicklungsserver in genau diesem Test zum ersten Mal überhaupt gebaut hat.
+  Eine kaputte Seite erscheint gar nicht, die längere Frist kostet also nichts
+  außer Flakiness.
+- **Die Fixtures des Nutzer-Clients datieren relativ zum Lauf.** Ein
+  festgeschriebenes 2027 hätte das „bevorstehende" Event irgendwann klammheimlich
+  zu einem vergangenen gemacht, und die Aufteilung nach FR 2.3 wäre aus einem
+  Grund gescheitert, der nichts mit dem Code zu tun hat.
+
+Nebenbefund außerhalb von AP 3: das **Server-Image baute seit AP 1 nicht**.
+`npm ci` verweigerte den von Nx erzeugten Lockfile, weil drei reine Typ-Imports
+(`import type { Request } from 'express'`) Nx dazu bringen, express als
+Laufzeitabhängigkeit zu führen — in der Version, die zufällig im Wurzelverzeichnis
+lag (4.22.2, dorthin gehoben von `@nx/node` und `webpack-dev-server`), während
+`@nestjs/platform-express` express 5.2.1 fest verlangt. Zwei express im Baum,
+und Nx hob `content-type@2.1.0` eine Ebene zu hoch. Behoben durch eine explizite
+Abhängigkeit auf express 5.2.1 — was zugleich einen stilleren Defekt beseitigt:
+geprüft wurde gegen express-4-Typen, ausgeführt express 5.
+
 ## Definition of Done für Phase 1
 
 1. Alle P1-Anforderungen aus der Scope-Tabelle sind umgesetzt und durch Tests

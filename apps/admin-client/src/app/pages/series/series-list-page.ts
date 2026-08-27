@@ -15,6 +15,10 @@ import { EventSeriesAdminService } from '../../features/event-series/event-serie
  * The status column is the whole point of the page: a draft is invisible to
  * participants, and an organizer has to be able to see at a glance which of
  * their series are actually public.
+ *
+ * Deleting happens on the series itself, not from this row: there the events
+ * that would go with it are on screen, so the confirmation can say what is
+ * actually at stake.
  */
 @Component({
   selector: 'trefaro-series-list-page',
@@ -63,7 +67,6 @@ import { EventSeriesAdminService } from '../../features/event-series/event-serie
                   Publish
                 </button>
               }
-              <button type="button" (click)="remove(item)">Delete</button>
             </td>
           </tr>
         } @empty {
@@ -158,11 +161,6 @@ export class SeriesListPage {
     status: EventSeries['status'],
   ): void {
     void this.run(() => this.admin.update(series.id, { status }));
-  }
-
-  protected remove(series: EventSeries): void {
-    if (!confirm(`Delete the event series "${series.name}"?`)) return;
-    void this.run(() => this.admin.remove(series.id));
   }
 
   private async run(action: () => Promise<unknown>): Promise<void> {

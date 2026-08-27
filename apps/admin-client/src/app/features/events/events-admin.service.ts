@@ -1,0 +1,42 @@
+import { Injectable, inject } from '@angular/core';
+import { ApiClient } from '@trefaro/shared-http';
+import type { EventInput, OrganizerEvent } from '@trefaro/shared-models';
+import { firstValueFrom } from 'rxjs';
+
+/**
+ * Events as the organizer manages them (FR 3.1, FR 3.2).
+ *
+ * Stateless, unlike the series service: events are always read for one series
+ * or one id, so a cached list would only ever be right for the page that just
+ * asked for it.
+ */
+@Injectable({ providedIn: 'root' })
+export class EventsAdminService {
+  private readonly api = inject(ApiClient);
+
+  listBySeries(seriesId: string): Promise<readonly OrganizerEvent[]> {
+    return firstValueFrom(
+      this.api.get<OrganizerEvent[]>(`admin/series/${seriesId}/events`),
+    );
+  }
+
+  get(id: string): Promise<OrganizerEvent> {
+    return firstValueFrom(this.api.get<OrganizerEvent>(`admin/events/${id}`));
+  }
+
+  create(seriesId: string, input: EventInput): Promise<OrganizerEvent> {
+    return firstValueFrom(
+      this.api.post<OrganizerEvent>(`admin/series/${seriesId}/events`, input),
+    );
+  }
+
+  update(id: string, input: Partial<EventInput>): Promise<OrganizerEvent> {
+    return firstValueFrom(
+      this.api.patch<OrganizerEvent>(`admin/events/${id}`, input),
+    );
+  }
+
+  remove(id: string): Promise<void> {
+    return firstValueFrom(this.api.delete<void>(`admin/events/${id}`));
+  }
+}

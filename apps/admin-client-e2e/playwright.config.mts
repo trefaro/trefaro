@@ -22,6 +22,12 @@ const baseURL = process.env['BASE_URL'] || 'http://localhost:4300';
  */
 export default defineConfig({
   ...nxE2EPreset(import.meta.dirname, { testDir: './src' }),
+  /* Playwright's 5s default is tight against a development server: the first
+   * navigation to a lazily loaded route compiles and ships that chunk on
+   * demand, so a route nobody has visited yet costs seconds once per run. A
+   * page that is actually broken never appears at all, so the longer budget
+   * costs nothing but flake. */
+  expect: { timeout: 10_000 },
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     baseURL,

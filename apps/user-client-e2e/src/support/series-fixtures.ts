@@ -24,7 +24,71 @@ export const DRAFT_SERIES = {
 
 const FIXTURES = [PUBLISHED_SERIES, DRAFT_SERIES];
 
+/**
+ * Events of the published series, dated relative to the run.
+ *
+ * Relative rather than fixed: a hard-coded 2027 would quietly turn the upcoming
+ * event into a past one a year from now, and the split the tests assert on
+ * (FR 2.3) would start failing for a reason that has nothing to do with the code.
+ */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const at = (offsetDays: number, hour: number): string =>
+  new Date(
+    Date.UTC(1970, 0, 1, hour) + Math.trunc(Date.now() / DAY_MS + offsetDays) * DAY_MS,
+  ).toISOString();
+
+/** Hybrid, published, still to come — the acceptance criterion of AP 3. */
+export const UPCOMING_EVENT = {
+  slug: 'e2e-upcoming-event',
+  name: 'E2E Upcoming Hybrid Event',
+  description: 'On site in Cologne and online at the same time.',
+  eventType: 'hybrid',
+  startsAt: at(90, 8),
+  endsAt: at(92, 15),
+  timezone: 'Europe/Berlin',
+  venueName: 'E2E Bürgerhaus Kalk',
+  venueAddress: 'Kalk-Mülheimer Str. 58, 51103 Köln',
+  onlineUrl: 'https://stream.example.org/e2e-upcoming',
+  languages: ['de', 'en'],
+  status: 'published',
+} as const;
+
+/** Published but over: it belongs under "past events", not "upcoming". */
+export const PAST_EVENT = {
+  slug: 'e2e-past-event',
+  name: 'E2E Past Event',
+  description: 'Held last quarter.',
+  eventType: 'onsite',
+  startsAt: at(-92, 8),
+  endsAt: at(-90, 15),
+  timezone: 'Europe/Berlin',
+  venueName: 'E2E Alte Feuerwache',
+  languages: ['de'],
+  status: 'published',
+} as const;
+
+/** Must answer 404 in public, exactly like a draft series. */
+export const DRAFT_EVENT = {
+  slug: 'e2e-draft-event',
+  name: 'E2E Draft Event',
+  description: 'Still being prepared.',
+  eventType: 'online',
+  startsAt: at(120, 8),
+  endsAt: at(120, 10),
+  timezone: 'Europe/Berlin',
+  languages: ['en'],
+  status: 'draft',
+} as const;
+
+const EVENT_FIXTURES = [UPCOMING_EVENT, PAST_EVENT, DRAFT_EVENT];
+
 interface AdminSeries {
+  id: string;
+  slug: string;
+}
+
+interface AdminEvent {
   id: string;
   slug: string;
 }
@@ -69,20 +133,54 @@ export async function seedSeries(clientUrl: string): Promise<void> {
       await context.get('/api/admin/series')
     ).json();
 
+    let publishedSeriesId = '';
     for (const fixture of FIXTURES) {
       const match = existing.find((series) => series.slug === fixture.slug);
       // Idempotent: a leftover from an interrupted run is brought back into
       // shape rather than duplicated under a numbered address.
-      if (match) {
-        await context.patch(`/api/admin/series/${match.id}`, {
-          data: fixture,
-        });
-      } else {
-        await context.post('/api/admin/series', { data: fixture });
-      }
+      const saved: AdminSeries = match
+        ? await (
+            await context.patch(`/api/admin/series/${match.id}`, {
+              data: fixture,
+            })
+          ).json()
+        : await (
+            await context.post('/api/admin/series', { data: fixture })
+          ).json();
+      if (fixture.slug === PUBLISHED_SERIES.slug) publishedSeriesId = saved.id;
     }
+
+    await seedEvents(context, publishedSeriesId);
   } finally {
     await context.dispose();
+  }
+}
+
+/**
+ * The events of the published series.
+ *
+ * No teardown of their own: the foreign key removes them with their series,
+ * which is also the behaviour the API contract suite asserts.
+ */
+async function seedEvents(
+  context: Awaited<ReturnType<typeof asAdmin>>,
+  seriesId: string,
+): Promise<void> {
+  const path = `/api/admin/series/${seriesId}/events`;
+  const existing: AdminEvent[] = await (await context.get(path)).json();
+
+  for (const fixture of EVENT_FIXTURES) {
+    const match = existing.find((event) => event.slug === fixture.slug);
+    const response = match
+      ? await context.patch(`/api/admin/events/${match.id}`, { data: fixture })
+      : await context.post(path, { data: fixture });
+
+    if (!response.ok()) {
+      throw new Error(
+        `Seeding the event "${fixture.slug}" failed with status ` +
+          `${response.status()}: ${await response.text()}`,
+      );
+    }
   }
 }
 

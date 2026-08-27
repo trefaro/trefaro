@@ -36,8 +36,9 @@ test.describe('event series on the public start page', () => {
     await expect(
       page.getByRole('heading', { name: PUBLISHED_SERIES.name }),
     ).toBeVisible();
-    // Where AP 3 hangs the list of the series' events.
-    await expect(page.getByRole('heading', { name: 'Events' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Upcoming events' }),
+    ).toBeVisible();
   });
 
   test('says a draft address does not exist rather than showing it', async ({

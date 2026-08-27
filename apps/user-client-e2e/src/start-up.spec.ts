@@ -1,4 +1,8 @@
 import { expect, test } from '@playwright/test';
+import {
+  PUBLISHED_SERIES,
+  UPCOMING_EVENT,
+} from './support/series-fixtures';
 
 /**
  * The participant client's start sequence, end to end.
@@ -61,9 +65,15 @@ test.describe('participant client startup', () => {
   test('mounts nothing at the event detail hook point while no plug-in is enabled', async ({
     page,
   }) => {
-    await page.goto('/events/11111111-1111-4111-8111-111111111111');
+    // The real landing page carries the hook point since AP 3; the phase-0
+    // placeholder page it used to live on is gone.
+    await page.goto(
+      `/series/${PUBLISHED_SERIES.slug}/events/${UPCOMING_EVENT.slug}`,
+    );
 
-    await expect(page.getByRole('heading', { name: 'Event' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: UPCOMING_EVENT.name }),
+    ).toBeVisible();
     const slot = page.locator(
       '.trefaro-plugin-slot[data-mount-point="event-detail"]',
     );

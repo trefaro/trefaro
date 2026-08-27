@@ -3,7 +3,7 @@ import { CURATED_PLUGINS } from '../plugins';
 import { ChatModule } from './business/chat';
 import { ConfigurationModule } from './business/config';
 import { EventSeriesModule } from './business/event-series';
-import { EventsModule } from './business/events/events.module';
+import { EventsModule } from './business/events';
 import { LoginModule } from './business/login';
 import { MailModule } from './business/mail/mail.module';
 import { MediaLinksModule } from './business/media-links/media-links.module';

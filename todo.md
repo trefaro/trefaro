@@ -54,10 +54,13 @@ is assigned to one of its work packages.
 - [ ] **Constrain `plugin_room_planning_room.event_id`.** It has been an
       unconstrained `uuid` since phase 0, because the core `event` table did not
       exist yet — the very integrity gap that decided F21 against a `room_id`
-      column. Once `event` exists, a plug-in migration adds the foreign key with
-      `ON DELETE CASCADE`, timestamped after the core migration. Verify:
-      inserting a room for an unknown event fails, and deleting an event removes
-      its rooms.
+      column. That precondition is met: `event` exists since AP 3. Deliberately
+      still open, and assigned to AP 9 rather than AP 3, because every room
+      fixture in the spike scripts and the API contract suite currently points at
+      an invented event id; the foreign key has to arrive together with pointing
+      them at real events. A plug-in migration adds it with `ON DELETE CASCADE`,
+      timestamped after the core migration. Verify: inserting a room for an
+      unknown event fails, and deleting an event removes its rooms.
 - [ ] **Implement F21 — the room link as a plug-in-owned join table.** Decided
       26.08.2026; nothing is built yet. `program_item` gets **no** `room_id`
       column; the room planning plug-in creates

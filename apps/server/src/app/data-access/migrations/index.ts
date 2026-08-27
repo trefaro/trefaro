@@ -1,6 +1,7 @@
 import { InitialCoreSchema1787702400000 } from './1787702400000-InitialCoreSchema';
 import { AdminIdentity1787788800000 } from './1787788800000-AdminIdentity';
 import { EventSeries1787788900000 } from './1787788900000-EventSeries';
+import { Events1787789000000 } from './1787789000000-Events';
 
 /**
  * Core migrations, in the order they must run.
@@ -12,4 +13,5 @@ export const CORE_MIGRATIONS = [
   InitialCoreSchema1787702400000,
   AdminIdentity1787788800000,
   EventSeries1787788900000,
+  Events1787789000000,
 ];

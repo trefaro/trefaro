@@ -3,7 +3,7 @@
 ## Anforderungsanalyse und Umsetzungsplan (abgeleitet aus der Masterthesis von Marius Schulze)
 
 **Projektname:** **Trefaro** (Kunstwort: deutsch „Treff" + Esperanto-Sammelsuffix „-aro" = „Sammlung von Treffen" ≙ Veranstaltungsreihe)
-**Version:** 1.4 (Entscheidungen F21–F24 ergänzt: F21 nach den Phase-0-Spikes, F22–F24 bei der Planung von Phase 1, siehe Kapitel 7; Schemaentwurf 5.3 bei den bereits umgesetzten Tabellen an den Ist-Stand angeglichen) · **Datum:** 26.08.2026
+**Version:** 1.5 (Entscheidungen F21–F27 ergänzt: F21 nach den Phase-0-Spikes, F22–F24 bei der Planung von Phase 1, F25–F27 bei der Umsetzung der Events in AP 3, siehe Kapitel 7; Schemaentwurf 5.3 bei den bereits umgesetzten Tabellen an den Ist-Stand angeglichen) · **Datum:** 27.08.2026
 **Grundlage:** Masterthesis „Konzeption einer Whitelabel-Anwendung für effizientes Eventmanagement und Community-Bildung in gemeinnützigen Organisationen" (WBH, 2024) inkl. aller Drawio-Diagramme (Bausteinsicht, Laufzeitsicht, Verteilungssicht, Use-Case-Diagramm) und Design-Mockups.
 
 ---
@@ -202,8 +202,18 @@ module_config     (module_key [PK], enabled, settings_json, updated_at)
                      zweiter Schlüssel wäre nur eine weitere Sache, die konsistent
                      bleiben muss (entschieden im Server-Plug-in-Spike, Phase 0)
 event_series      (id, name*, description*, logo_path*, …optionale Felder, created_at)
-event             (id, series_id → event_series, name, description, logo_path,
-                   start_date, end_date, venue, event_type [praesenz|online|hybrid], status)
+event             (id, series_id → event_series [ON DELETE CASCADE], slug, name, description,
+                   logo_path?, event_type [onsite|online|hybrid], starts_at, ends_at,
+                   timezone, venue_name?, venue_address?, online_url?, languages [varchar[]],
+                   status [draft|published|archived], created_at, updated_at)
+                   ← Typwerte englisch, nicht `praesenz` (F25): Bezeichner sind Code
+                   ← slug ist eindeutig **je Reihe**, nicht je Instanz (E7): zwei Reihen
+                     dürfen beide ein `kickoff` haben, die Reihe steht ohnehin in der URL
+                   ← starts_at/ends_at sind absolute Zeitpunkte, `timezone` sagt, in
+                     welcher Zone sie zu lesen sind (E8); Wanduhrzeiten zu speichern
+                     macht „wann beginnt es" für alle außer dem Veranstalter unbeantwortbar
+                   ← Ort und Link sind erst zum **Veröffentlichen** Pflicht, nicht im
+                     Entwurf (F27); `CHK_event_published_place` hält die Regel auch in der DB
 event_translation (event_id, locale, name, description, …)   ← feldweise Übersetzungen
 program_item      (id, event_id, title, description, speaker, starts_at, ends_at,
                    registration_enabled, capacity?)
@@ -331,6 +341,9 @@ Usability-Test mit Democracy International (Wiederholung der 7 Aufgaben + bislan
 | F22 | Admin-Sitzungen: JWT oder serverseitige Sitzung?                                          | **Serverseitige Sitzung in `admin_session`**, opakes Zufallstoken als HttpOnly-Cookie, gespeichert wird nur dessen Hash. Grund: FR 1.2 erlaubt das Löschen von Admin-Zugängen, und das muss laufende Sitzungen sofort beenden — ein JWT lebt bis zum Ablauf weiter. Kosten: ein Lesezugriff pro Admin-Request, bei < 20 Mitarbeitenden irrelevant. Ergänzt Schema 5.3                                                                                                           |
 | F23 | Double-Opt-In-Token: gespeichert oder signiert?                                           | **HMAC-SHA256-signiert mit `AUTH_SECRET`**, Nutzlast (Zweck, Registrierungs-ID, Ablauf) im Token selbst; die Spalte `registration.confirmation_token` entfällt. Bestätigt wird per POST, verlinkt per GET, damit ein Link-vorladender E-Mail-Scanner keine Anmeldung bestätigt. Akzeptiert: ein Wechsel von `AUTH_SECRET` entwertet offene Bestätigungslinks. Derselbe Signierer trägt in Phase 1 die Selbstbedienung der Teilnehmenden, weil der Nutzer-Login erst Phase 3 ist |
 | F24 | Einladung ehemaliger Teilnehmender (FR 2.4) ohne Newsletter-Modul                         | **Nur Adressen bestätigter Anmeldungen derselben Veranstaltungsreihe**, jede Mail mit Widerspruchslink, der `registration.contact_opt_out` setzt; widersprochene Adressen erscheinen in keiner weiteren Liste. Kein Versandmodul — F8 bleibt unangetastet. Ergänzt Schema 5.3                                                                                                                                                                                                   |
+| F25 | Sprache der Aufzählungswerte in der Datenbank                                             | **Englisch** (`onsite\|online\|hybrid`), nicht `praesenz` wie im Schemaentwurf 5.3. Grund: die Projektkonvention „Code, Bezeichner, Kommentare englisch" gilt auch für Spaltenwerte, und ein gemischtsprachiges Schema ist genau die Inkonsistenz, die später jemand falsch abtippt. Betrifft nur `event.event_type`; die restlichen Statuswerte waren schon englisch                                                                                                           |
+| F26 | Sichtbarkeit eines Events gegenüber seiner Reihe                                          | **Ein Event ist öffentlich nur, wenn seine Reihe veröffentlicht ist.** Ein veröffentlichtes Event in einer Entwurfsreihe antwortet öffentlich 404, nicht 403 — sonst leckt die Existenz einer unangekündigten Reihe über ihre Events. Umsetzung: jeder öffentliche Lesezugriff geht zuerst über die Reihe und erbt deren 404; die Regel liegt einmal im `EventsService`, nicht zweimal                                                                                          |
+| F27 | Vollständigkeit von Events: Pflicht ab wann?                                              | **Ort bzw. Link sind zum Veröffentlichen Pflicht, im Entwurf nicht.** Ein Veranstalter legt den Termin fest, bevor Raum oder Konferenzsoftware gebucht sind; verlangt man die Angabe sofort, entsteht ein Platzhalter — und der sieht aus wie eine Antwort. Präsenz braucht `venue_name`, Online braucht `online_url`, Hybrid beides. Doppelt gesichert: Geschäftsregel im Service, `CHECK`-Constraint in der DB                                                                |
 
 ---
 
@@ -339,7 +352,7 @@ Usability-Test mit Democracy International (Wiederholung der 7 Aufgaben + bislan
 1. **E-Mail-Spalte in der Teilnehmerübersicht** ergänzt (einzige konkrete Korrektur aus dem Usability-Test, Kapitel 6).
 2. **Technologiewahl** (Angular 22, NestJS, TypeORM, Web Push, Transloco …) — in der Thesis bewusst offen gelassen; gemäß Präferenz TypeScript-Ende-zu-Ende konkretisiert und am 26.08.2026 vollständig entschieden (Kapitel 5.2 und 7).
 3. **Datenbank: PostgreSQL statt MySQL** — bewusste, begründete Abweichung von der Thesis-Entscheidung (Kapitel 5.2 / F5). Das Administrations-Argument der Thesis entfällt beim reinen Container-Betrieb; JSONB und Volltextsuche stützen FR 3.5/4.3/4.4. Die Schichtenarchitektur hält einen späteren Wechsel offen.
-4. **Datenbankschema-Erstentwurf** (Kapitel 5.3) — in der Thesis explizit ausgeklammert; Vorschlag zur Diskussion. Seither präzisiert durch F21 (Raumzuordnung), F22 (`admin_session`), F23 (kein `confirmation_token`) und F24 (`contact_opt_out`).
+4. **Datenbankschema-Erstentwurf** (Kapitel 5.3) — in der Thesis explizit ausgeklammert; Vorschlag zur Diskussion. Seither präzisiert durch F21 (Raumzuordnung), F22 (`admin_session`), F23 (kein `confirmation_token`), F24 (`contact_opt_out`) und F25 (englische Typwerte).
 5. **Lizenz AGPLv3 statt GPL** — Verschärfung im Sinne der Thesis-Intention (Open-Source-Charakter auch bei SaaS-Betrieb Dritter geschützt).
 6. **Chat-Scope erweitert** (Echtzeit + Gruppenchats, F9) — geht über die Umfrage-Priorität (2,88) hinaus, greift aber den expliziten Interview-Wunsch (Schnee: Gruppenchats, Bildaustausch) auf.
 7. **Individueller Programmplan als Plug-in** — die Thesis nennt ihn als Plug-in-Beispiel (für Democracy International relevant, Umfrage 2,48); so übernommen.
