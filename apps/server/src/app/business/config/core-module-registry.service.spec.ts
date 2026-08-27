@@ -1,0 +1,166 @@
+import { CoreModuleRegistryService } from './core-module-registry.service';
+import type {
+  ModuleConfigRecord,
+  ModuleConfigRepository,
+  ModuleDefault,
+} from './ports/module-config.repository';
+
+/** In-memory stand-in for the data access layer's module_config repository. */
+class FakeModuleConfigRepository implements ModuleConfigRepository {
+  readonly rows = new Map<string, ModuleConfigRecord>();
+
+  constructor(enabled: readonly string[] = []) {
+    for (const key of enabled) {
+      this.rows.set(key, { moduleKey: key, enabled: true, settings: {} });
+    }
+  }
+
+  async findAll(): Promise<readonly ModuleConfigRecord[]> {
+    return [...this.rows.values()];
+  }
+
+  async ensureDefaults(defaults: readonly ModuleDefault[]): Promise<void> {
+    for (const entry of defaults) {
+      if (!this.rows.has(entry.moduleKey)) {
+        this.rows.set(entry.moduleKey, { ...entry, settings: {} });
+      }
+    }
+  }
+
+  async setEnabled(
+    moduleKey: string,
+    enabled: boolean,
+  ): Promise<ModuleConfigRecord> {
+    const next = { moduleKey, enabled, settings: {} };
+    this.rows.set(moduleKey, next);
+    return next;
+  }
+}
+
+/**
+ * Which optional core modules are on (FR 1.5) — the counterpart of the plug-in
+ * registry, and since AP 11 the single answer to that question.
+ *
+ * Two things are asserted that were nobody's job before: that a module shipped
+ * switched on is switched on after a first boot (`media-links` is the only one),
+ * and that a change made directly in the table is picked up without a restart —
+ * which is what makes a switched-off module answer 404 in a running instance
+ * (F53).
+ */
+describe('CoreModuleRegistryService', () => {
+  let repository: FakeModuleConfigRepository;
+  let service: CoreModuleRegistryService;
+
+  beforeEach(() => {
+    repository = new FakeModuleConfigRepository();
+    service = new CoreModuleRegistryService(repository);
+  });
+
+  afterEach(() => service.onApplicationShutdown());
+
+  it('seeds a configuration row per core module on first boot', async () => {
+    await service.onApplicationBootstrap();
+
+    // Media links are the one optional module that ships switched on: embedding
+    // external links costs nothing when unused. The community features start
+    // off, because the survey put them behind event management.
+    expect(repository.rows.get('media-links')?.enabled).toBe(true);
+    expect(repository.rows.get('chat')?.enabled).toBe(false);
+    expect(service.isEnabled('media-links')).toBe(true);
+    expect(service.isEnabled('chat')).toBe(false);
+  });
+
+  it('does not overwrite a module the organization already configured', async () => {
+    await repository.setEnabled('chat', true);
+
+    await service.onApplicationBootstrap();
+
+    expect(service.isEnabled('chat')).toBe(true);
+  });
+
+  it('answers no for a module key that is not a core module', async () => {
+    // A plug-in's flag lives in the same table; answering for it here would make
+    // two registries disagree about the same key.
+    await repository.setEnabled('room-planning', true);
+    await service.onApplicationBootstrap();
+
+    expect(service.isEnabled('room-planning')).toBe(false);
+    expect(service.enabledKeys()).not.toContain('room-planning');
+  });
+
+  it('reports the enabled keys sorted, which is what /api/config carries', async () => {
+    await repository.setEnabled('chat', true);
+    await repository.setEnabled('push', true);
+    await service.onApplicationBootstrap();
+
+    expect(service.enabledKeys()).toEqual(['chat', 'media-links', 'push']);
+  });
+
+  it('lists every optional module, enabled or not', async () => {
+    await service.onApplicationBootstrap();
+
+    // The administration offers what can be switched on, not only what is.
+    expect(service.all().map((module) => module.key)).toContain('chat');
+  });
+
+  it('picks up a change made outside the application on refresh', async () => {
+    await service.onApplicationBootstrap();
+    expect(service.isEnabled('media-links')).toBe(true);
+
+    await repository.setEnabled('media-links', false);
+    await service.refresh();
+
+    expect(service.isEnabled('media-links')).toBe(false);
+  });
+});
+
+describe('CoreModuleRegistryService enabled-state refresh', () => {
+  let repository: FakeModuleConfigRepository;
+  let service: CoreModuleRegistryService;
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    repository = new FakeModuleConfigRepository();
+    service = new CoreModuleRegistryService(repository);
+  });
+
+  afterEach(() => {
+    service.onApplicationShutdown();
+    jest.useRealTimers();
+  });
+
+  it('switches a module off without a restart', async () => {
+    await service.onApplicationBootstrap();
+
+    // Stands in for an operator flipping the flag in module_config while the
+    // server keeps running — the only way to do it until phase 2 builds the
+    // module administration.
+    await repository.setEnabled('media-links', false);
+    await jest.advanceTimersByTimeAsync(15_000);
+
+    expect(service.isEnabled('media-links')).toBe(false);
+  });
+
+  it('stops refreshing once the application shuts down', async () => {
+    await service.onApplicationBootstrap();
+    service.onApplicationShutdown();
+
+    await repository.setEnabled('chat', true);
+    await jest.advanceTimersByTimeAsync(60_000);
+
+    expect(service.isEnabled('chat')).toBe(false);
+  });
+
+  it('keeps the last known state when a refresh fails', async () => {
+    await service.onApplicationBootstrap();
+    expect(service.isEnabled('media-links')).toBe(true);
+
+    jest
+      .spyOn(repository, 'findAll')
+      .mockRejectedValueOnce(new Error('database unreachable'));
+    await jest.advanceTimersByTimeAsync(15_000);
+
+    // A blip in the database must not make every optional module answer 404.
+    expect(service.isEnabled('media-links')).toBe(true);
+  });
+});

@@ -68,9 +68,21 @@ check(
   'a disabled plug-in is absent from the configuration',
   Array.isArray(config.body?.plugins) && config.body.plugins.length === 0,
 );
+/**
+ * Whether this instance has a VAPID key pair in its environment.
+ *
+ * Both readings are correct — a developer's `.env` may or may not carry one —
+ * so the checks below adapt instead of failing for a configuration decision.
+ * What must hold either way is that only the *public* key is ever published.
+ */
+const pushConfigured = typeof config.body?.webPushPublicKey === 'string';
 check(
-  'no VAPID key is published while push is unconfigured',
-  config.body?.webPushPublicKey === null,
+  pushConfigured
+    ? 'the public VAPID key is published while push is configured'
+    : 'no VAPID key is published while push is unconfigured',
+  pushConfigured
+    ? (config.body?.webPushPublicKey ?? '').length > 0
+    : config.body?.webPushPublicKey === null,
 );
 check(
   'the private VAPID key never appears in the payload',
@@ -83,8 +95,14 @@ const disabled = await call(
   `/api/admin/plugins/room-planning/events/${EVENT}/rooms`,
 );
 check(
-  'a disabled plug-in answers 404, not 403',
-  disabled.status === 404,
+  // 401 rather than 404, and that is the administrative guard doing its job:
+  // it hangs on the `/api/admin` prefix (E16) and therefore answers before any
+  // module's own guard can. That a *disabled* plug-in answers 404 to a request
+  // that got past the login is what `verify-plugin-toggle.mjs` proves, with a
+  // session; the same holds for a switched-off core module (F53), which
+  // `apps/server-e2e/src/api/media-links.spec.ts` asserts.
+  'an administrative plug-in path is 401 without a session, before anything else',
+  disabled.status === 401,
   `got ${disabled.status}`,
 );
 
@@ -112,8 +130,10 @@ const pushOff = await call('/api/user/push/subscriptions', {
   }),
 });
 check(
-  'subscribing without a VAPID key pair is 503, not a crash',
-  pushOff.status === 503,
+  pushConfigured
+    ? 'subscribing is accepted while push is configured'
+    : 'subscribing without a VAPID key pair is 503, not a crash',
+  pushOff.status === (pushConfigured ? 204 : 503),
   `got ${pushOff.status}`,
 );
 

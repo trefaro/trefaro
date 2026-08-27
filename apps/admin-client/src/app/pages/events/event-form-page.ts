@@ -15,6 +15,8 @@ import type { EventType } from '@trefaro/shared-models';
 import {
   EVENT_STATUSES,
   EVENT_TYPES,
+  MAX_FOLLOW_UP_LENGTH,
+  hasEnded,
   instantToWallClock,
   localTimeZone,
   wallClockToInstant,
@@ -32,6 +34,10 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
  * - **Venue and link appear with the type.** An on-site event has no stream URL
  *   to fill in, and a field that does not apply is a field that gets filled in
  *   wrongly.
+ * - **The follow-up text can be written before the event.** It only reaches the
+ *   landing page once the event has ended — the server withholds it until then
+ *   (F50) — so this field says so rather than leaving an organizer to wonder
+ *   whether they have just published next month's thank-you note.
  *
  * The logo FR 3.1 asks for is missing until uploads exist (AP 7); the column is
  * already in the schema.
@@ -141,6 +147,19 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
         <small>The languages the event is held in.</small>
       </fieldset>
 
+      <label for="followUpBody">After the event</label>
+      <textarea
+        id="followUpBody"
+        formControlName="followUpBody"
+        rows="4"
+        [attr.maxlength]="maxFollowUpLength"
+      >
+      </textarea>
+      <small>
+        {{ followUpHint() }} Recordings and material are links of their own —
+        add those under "Media links".
+      </small>
+
       <label for="status">Status</label>
       <select id="status" formControlName="status">
         @for (status of statuses; track status) {
@@ -248,6 +267,7 @@ export class EventFormPage {
 
   protected readonly types = EVENT_TYPES;
   protected readonly statuses = EVENT_STATUSES;
+  protected readonly maxFollowUpLength = MAX_FOLLOW_UP_LENGTH;
   /**
    * Every zone the runtime knows, so an organization anywhere finds its own.
    * The fallback covers a browser without `supportedValuesOf`.
@@ -293,12 +313,15 @@ export class EventFormPage {
     venueName: [''],
     venueAddress: [''],
     onlineUrl: [''],
+    followUpBody: [''],
     status: ['draft'],
   });
 
   private readonly eventType = signal<EventType>('onsite');
   protected readonly needsVenue = computed(() => this.eventType() !== 'online');
   protected readonly needsLink = computed(() => this.eventType() !== 'onsite');
+  /** Whether the event this form is editing is already over (F50). */
+  private readonly over = signal(false);
 
   constructor() {
     this.form.controls.eventType.valueChanges.subscribe((type) =>
@@ -317,6 +340,19 @@ export class EventFormPage {
         this.languages.set(this.locales());
       }
     });
+  }
+
+  /**
+   * What the follow-up field promises, in the tense that is true.
+   *
+   * The event's own end decides it, so an organizer editing a conference that
+   * finished last week is told the text is live — and one planning next June's
+   * is told it is not yet.
+   */
+  protected followUpHint(): string {
+    return this.over()
+      ? 'This event has ended, so this text is on its landing page now.'
+      : 'Shown on the landing page once the event has ended, not before.';
   }
 
   protected toggleLanguage(locale: string): void {
@@ -357,6 +393,9 @@ export class EventFormPage {
       venueName: this.needsVenue() ? raw.venueName.trim() || null : null,
       venueAddress: this.needsVenue() ? raw.venueAddress.trim() || null : null,
       onlineUrl: this.needsLink() ? raw.onlineUrl.trim() || null : null,
+      // Unlike the venue fields, never cleared by a rule of this form: an
+      // emptied box means no text, and the server reads it the same way.
+      followUpBody: raw.followUpBody.trim() || null,
       languages: [...this.languages()],
       status: raw.status as (typeof EVENT_STATUSES)[number],
     };
@@ -396,10 +435,12 @@ export class EventFormPage {
         venueName: event.venueName ?? '',
         venueAddress: event.venueAddress ?? '',
         onlineUrl: event.onlineUrl ?? '',
+        followUpBody: event.followUpBody ?? '',
         status: event.status,
       });
       this.eventType.set(event.eventType);
       this.languages.set(event.languages);
+      this.over.set(hasEnded(event));
     } catch (error: unknown) {
       this.error.set(
         (error as ApiError)?.status === 404

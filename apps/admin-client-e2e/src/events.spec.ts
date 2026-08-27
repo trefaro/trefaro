@@ -18,8 +18,12 @@ const END = '2027-03-30T17:00';
 async function seedSeries(page: Page, label: string): Promise<string> {
   const response = await page.request.post('/api/admin/series', {
     data: {
-      // The teardown deletes by the slug this name produces.
-      name: `E2E Series ${label}`,
+      // Named for this spec, not just `E2E Series`: `event-series.spec.ts`
+      // derives its slug from the same words, and two workers landing in the
+      // same millisecond raced on the unique index — one of them got a 409 and
+      // the failure read as a broken fixture. The prefix the global teardown
+      // sweeps by is unchanged.
+      name: `E2E Series Events ${label}`,
       description: 'Seeded by the organizer client event spec.',
       status: 'published',
     },
@@ -143,5 +147,31 @@ test.describe('event administration', () => {
       page.getByRole('heading', { name: 'Renamed Event', level: 1 }),
     ).toBeVisible();
     await expect(page.getByText(`/events/${address}`)).toBeVisible();
+  });
+
+  test('keeps a follow-up text that is written before the event (F50)', async ({
+    page,
+  }) => {
+    const followUp = 'Thank you for coming. The recordings follow next week.';
+
+    await page.goto(`/series/${seriesId}/events/new`);
+    await page.getByLabel('Name', { exact: true }).fill('Event With A Sequel');
+    await page.getByLabel('Description').fill('Ends with a thank-you note.');
+    await page.getByLabel('Starts').fill(START);
+    await page.getByLabel('Ends').fill(END);
+    await page.getByLabel('Venue', { exact: true }).fill('Alte Feuerwache');
+    await page.getByLabel('After the event').fill(followUp);
+    await page.getByRole('button', { name: 'Save' }).click();
+
+    await page.getByRole('link', { name: 'Event With A Sequel' }).click();
+    await page.getByRole('link', { name: 'Edit event' }).click();
+
+    // Read back whenever it was written: the organizer is the person writing
+    // it, and the field says when participants will see it — which is not now,
+    // because this event is in 2027.
+    await expect(page.getByLabel('After the event')).toHaveValue(followUp);
+    await expect(
+      page.getByText('Shown on the landing page once the event has ended'),
+    ).toBeVisible();
   });
 });

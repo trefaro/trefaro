@@ -12,16 +12,11 @@ import {
   SERVER_PLUGINS,
   type ServerPlugin,
 } from '../plugin-api';
+import { ModuleFlagCache } from '../config/module-flags';
 import {
   MODULE_CONFIG_REPOSITORY,
   type ModuleConfigRepository,
 } from '../config/ports/module-config.repository';
-
-/**
- * How often the enabled flags are re-read. Short enough that switching a plug-in
- * on feels immediate, long enough to be irrelevant next to normal query load.
- */
-const ENABLED_STATE_REFRESH_MS = 15_000;
 
 /**
  * Aggregates the curated plug-ins and decides which of them are live.
@@ -37,74 +32,47 @@ const ENABLED_STATE_REFRESH_MS = 15_000;
  * including one made directly in the database, before the module administration
  * UI exists. Phase 2's admin endpoint additionally calls {@link refresh} so its
  * own change is visible immediately.
+ *
+ * That caching is {@link ModuleFlagCache}, shared with the core modules since
+ * AP 11: both families read the same table, and one of them having a different
+ * refresh interval would be two answers to "how long until my change takes
+ * effect". What stays here is everything specific to plug-ins — the descriptors,
+ * and that a plug-in is off by default.
  */
 @Injectable()
 export class PluginRegistryService
   implements OnApplicationBootstrap, OnApplicationShutdown
 {
-  private readonly logger = new Logger(PluginRegistryService.name);
-  private enabledKeys = new Set<string>();
-  private refreshTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly flags: ModuleFlagCache;
 
   constructor(
     @Inject(SERVER_PLUGINS) private readonly plugins: readonly ServerPlugin[],
-    @Inject(MODULE_CONFIG_REPOSITORY)
-    private readonly moduleConfig: ModuleConfigRepository,
-  ) {}
+    @Inject(MODULE_CONFIG_REPOSITORY) moduleConfig: ModuleConfigRepository,
+  ) {
+    this.flags = new ModuleFlagCache(
+      moduleConfig,
+      'Plug-ins',
+      new Logger(PluginRegistryService.name),
+    );
+  }
 
   /** Runs after TypeORM has connected, so reading configuration is safe here. */
   async onApplicationBootstrap(): Promise<void> {
-    await this.moduleConfig.ensureDefaults(
+    await this.flags.start(
       this.plugins.map((plugin) => ({
         moduleKey: plugin.key,
         enabled: plugin.enabledByDefault ?? false,
       })),
     );
-    await this.refresh();
-
-    // `unref` so the timer never keeps the process alive: a container must still
-    // stop on SIGTERM.
-    this.refreshTimer = setInterval(() => {
-      void this.refresh().catch((error: unknown) =>
-        this.logger.warn(
-          `Could not refresh plug-in configuration: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        ),
-      );
-    }, ENABLED_STATE_REFRESH_MS);
-    this.refreshTimer.unref?.();
   }
 
   onApplicationShutdown(): void {
-    if (this.refreshTimer) {
-      clearInterval(this.refreshTimer);
-      this.refreshTimer = null;
-    }
+    this.flags.stop();
   }
 
   /** Re-reads the enabled flags from configuration. */
-  async refresh(): Promise<void> {
-    const previous = this.enabledKeys;
-    const records = await this.moduleConfig.findAll();
-    const known = new Set(this.plugins.map((plugin) => plugin.key));
-    this.enabledKeys = new Set(
-      records
-        .filter((record) => record.enabled && known.has(record.moduleKey))
-        .map((record) => record.moduleKey),
-    );
-
-    // Logged only when it actually changed — this runs on a timer, and a line
-    // every few seconds would bury everything else.
-    if (!sameKeys(previous, this.enabledKeys)) {
-      this.logger.log(
-        `Plug-ins enabled: ${
-          this.enabledKeys.size === 0
-            ? '(none)'
-            : [...this.enabledKeys].sort().join(', ')
-        }`,
-      );
-    }
+  refresh(): Promise<void> {
+    return this.flags.refresh();
   }
 
   /** Every plug-in in the image, enabled or not — the administration lists these. */
@@ -113,7 +81,7 @@ export class PluginRegistryService
   }
 
   isEnabled(pluginKey: string): boolean {
-    return this.enabledKeys.has(pluginKey);
+    return this.flags.isEnabled(pluginKey);
   }
 
   /**
@@ -138,10 +106,6 @@ export class PluginRegistryService
         };
       });
   }
-}
-
-function sameKeys(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
-  return a.size === b.size && [...a].every((key) => b.has(key));
 }
 
 /**

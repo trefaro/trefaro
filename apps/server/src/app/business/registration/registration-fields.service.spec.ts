@@ -42,6 +42,7 @@ const EVENT = {
   venueAddress: null,
   onlineUrl: null,
   languages: ['de'],
+  followUpBody: null,
   status: 'published',
   createdAt: '2026-08-01T10:00:00.000Z',
   updatedAt: '2026-08-01T10:00:00.000Z',

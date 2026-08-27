@@ -2,15 +2,11 @@ import type { TrefaroEnv } from '../../core/config/env';
 import { loadEnv } from '../../core/config/env';
 import type { PluginRegistryService } from '../plugin-manager';
 import { ConfigurationService } from './configuration.service';
+import type { CoreModuleRegistryService } from './core-module-registry.service';
 import type {
   AppConfigRecord,
   AppConfigRepository,
 } from './ports/app-config.repository';
-import type {
-  ModuleConfigRecord,
-  ModuleConfigRepository,
-  ModuleDefault,
-} from './ports/module-config.repository';
 
 const storedConfig: AppConfigRecord = {
   primaryColor: '#1f6f5c',
@@ -28,36 +24,18 @@ class FakeAppConfigRepository implements AppConfigRepository {
   }
 }
 
-class FakeModuleConfigRepository implements ModuleConfigRepository {
-  readonly rows = new Map<string, ModuleConfigRecord>();
-
-  constructor(enabled: readonly string[] = []) {
-    for (const key of enabled) {
-      this.rows.set(key, { moduleKey: key, enabled: true, settings: {} });
-    }
-  }
-
-  async findAll(): Promise<readonly ModuleConfigRecord[]> {
-    return [...this.rows.values()];
-  }
-
-  async ensureDefaults(defaults: readonly ModuleDefault[]): Promise<void> {
-    for (const entry of defaults) {
-      if (!this.rows.has(entry.moduleKey)) {
-        this.rows.set(entry.moduleKey, { ...entry, settings: {} });
-      }
-    }
-  }
-
-  async setEnabled(
-    moduleKey: string,
-    enabled: boolean,
-  ): Promise<ModuleConfigRecord> {
-    const next = { moduleKey, enabled, settings: {} };
-    this.rows.set(moduleKey, next);
-    return next;
-  }
-}
+/**
+ * Stands in for the registry that owns the flags.
+ *
+ * A stub rather than a fake repository: since AP 11 this service does not read
+ * `module_config` at all. Which modules are on is the registry's answer, and
+ * that is the whole point — the guard in front of an optional module's endpoints
+ * reads the same one, so the payload and the API cannot disagree (F53).
+ */
+const coreModulesWith = (enabled: readonly string[]) =>
+  ({
+    enabledKeys: () => enabled,
+  }) as unknown as CoreModuleRegistryService;
 
 const noPlugins = {
   enabledClientDescriptors: () => [],
@@ -65,15 +43,15 @@ const noPlugins = {
 
 function serviceWith(options: {
   appConfig?: AppConfigRepository;
-  moduleConfig?: ModuleConfigRepository;
+  coreModules?: CoreModuleRegistryService;
   env?: TrefaroEnv;
   plugins?: PluginRegistryService;
 }): ConfigurationService {
   return new ConfigurationService(
     options.appConfig ?? new FakeAppConfigRepository(),
-    options.moduleConfig ?? new FakeModuleConfigRepository(),
     options.env ?? loadEnv({}),
     options.plugins ?? noPlugins,
+    options.coreModules ?? coreModulesWith([]),
   );
 }
 
@@ -100,40 +78,18 @@ describe('ConfigurationService', () => {
     expect((await service.getAppConfig()).theme.logoUrl).toBeNull();
   });
 
-  it('lists enabled core modules and ignores everything else', async () => {
+  it('reports the enabled core modules the registry names', async () => {
     const service = serviceWith({
-      moduleConfig: new FakeModuleConfigRepository([
-        'chat',
-        'media-links',
-        // A plug-in key: reported through `plugins`, not through `enabledModules`.
-        'room-planning',
-      ]),
+      coreModules: coreModulesWith(['chat', 'media-links']),
     });
 
+    // Straight through, in the registry's order: seeding the defaults and
+    // filtering out keys that are not core modules happen there, and are tested
+    // in `core-module-registry.service.spec.ts`.
     expect((await service.getAppConfig()).enabledModules).toEqual([
       'chat',
       'media-links',
     ]);
-  });
-
-  it('seeds the default state of every core module on first boot', async () => {
-    const repository = new FakeModuleConfigRepository();
-    const service = serviceWith({ moduleConfig: repository });
-
-    await service.onApplicationBootstrap();
-
-    // media-links is the only core module that ships switched on.
-    expect(repository.rows.get('media-links')?.enabled).toBe(true);
-    expect(repository.rows.get('chat')?.enabled).toBe(false);
-  });
-
-  it('does not overwrite a module the organization already configured', async () => {
-    const repository = new FakeModuleConfigRepository(['chat']);
-    const service = serviceWith({ moduleConfig: repository });
-
-    await service.onApplicationBootstrap();
-
-    expect(repository.rows.get('chat')?.enabled).toBe(true);
   });
 
   it('passes the enabled plug-ins through to the clients', async () => {

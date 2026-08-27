@@ -1,4 +1,5 @@
 import type { OrganizerEvent } from '../events/event';
+import type { MediaLinkSummary } from '../media-links/media-link';
 import type {
   ParticipantRow,
   RegistrationCounts,
@@ -61,6 +62,15 @@ export interface EventDashboard {
   readonly latestRegistrations: readonly ParticipantRow[];
   readonly program: ProgramSummary;
   readonly form: RegistrationFormSummary;
+  /**
+   * The media links of this event, or `null` when the module is switched off.
+   *
+   * `null` rather than four zeros, and that is rule 2 above applied to a module
+   * that *can* exist: an organization that switched `media-links` off (FR 1.5)
+   * gets no tile, because a tile leading to an API that answers 404 (F53) would
+   * be a dead end drawn as a feature.
+   */
+  readonly mediaLinks: MediaLinkSummary | null;
 }
 
 /**

@@ -80,6 +80,17 @@ export const appRoutes: Route[] = [
         title: 'Programme — Trefaro',
       },
       {
+        // Same reason again. The page says so itself when the module is switched
+        // off (FR 1.5), rather than being routed away — the address may sit in
+        // somebody's bookmarks.
+        path: 'series/:seriesId/events/:eventId/media-links',
+        loadComponent: () =>
+          import('./pages/media-links/media-links-page').then(
+            (m) => m.MediaLinksPage,
+          ),
+        title: 'Media links — Trefaro',
+      },
+      {
         // Same reason again.
         path: 'series/:seriesId/events/:eventId/registration-form',
         loadComponent: () =>

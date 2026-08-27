@@ -33,6 +33,7 @@ const EVENT: PublicEvent = {
   venueAddress: null,
   onlineUrl: null,
   languages: ['de'],
+  followUpBody: null,
 };
 
 const item = (id: string): PublicProgramItem => ({

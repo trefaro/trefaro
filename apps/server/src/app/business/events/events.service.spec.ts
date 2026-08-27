@@ -418,6 +418,7 @@ describe('EventsService', () => {
         'description',
         'endsAt',
         'eventType',
+        'followUpBody',
         'id',
         'languages',
         'logoUrl',
@@ -430,9 +431,95 @@ describe('EventsService', () => {
         'venueName',
       ]);
     });
+
+    describe('the follow-up text (FR 3.6, F50)', () => {
+      const followUpBody =
+        'Thank you for coming. The next Democracy Day is on 14 June.';
+
+      it('is withheld while the event has not ended', async () => {
+        const event = await service.create('series-1', {
+          ...onsite,
+          status: 'published',
+          followUpBody,
+        });
+
+        // Not hidden by the page — absent from the payload. A follow-up in the
+        // JSON is a follow-up anybody can read, three weeks before it is true.
+        expect(
+          (await service.getPublic('climate-2027', event.slug)).followUpBody,
+        ).toBeNull();
+      });
+
+      it('appears once the event is over', async () => {
+        const event = await service.create('series-1', {
+          ...onsite,
+          status: 'published',
+          startsAt: '2020-03-14T08:00:00.000Z',
+          endsAt: '2020-03-14T16:00:00.000Z',
+          followUpBody,
+        });
+
+        expect(
+          (await service.getPublic('climate-2027', event.slug)).followUpBody,
+        ).toBe(followUpBody);
+      });
+
+      it('is withheld in the list as well, not only on the detail page', async () => {
+        await service.create('series-1', {
+          ...onsite,
+          status: 'published',
+          followUpBody,
+        });
+
+        const [event] = await service.listPublic('climate-2027');
+
+        // The same mapping answers both, which is the point of gating it there:
+        // a second place to remember would be a place to forget.
+        expect(event.followUpBody).toBeNull();
+      });
+    });
   });
 
   describe('the organizer view', () => {
+    it('reads back the follow-up text whenever it was written', async () => {
+      const created = await service.create('series-1', {
+        ...onsite,
+        followUpBody: '  Recordings follow next week.  ',
+      });
+
+      // Trimmed, and readable long before the event: the organizer is the
+      // person writing it, and a form that could not read back its own field
+      // would empty itself on every save.
+      expect(created.followUpBody).toBe('Recordings follow next week.');
+      expect((await service.getForOrganizer(created.id)).followUpBody).toBe(
+        'Recordings follow next week.',
+      );
+    });
+
+    it('takes an emptied follow-up field as no text at all', async () => {
+      const created = await service.create('series-1', {
+        ...onsite,
+        followUpBody: 'Draft of a thank-you.',
+      });
+
+      const cleared = await service.update(created.id, { followUpBody: '   ' });
+
+      // The same rule as every other optional field here: an emptied form field
+      // means "no value", not the empty string.
+      expect(cleared.followUpBody).toBeNull();
+    });
+
+    it('leaves the follow-up text alone when a change does not mention it', async () => {
+      const created = await service.create('series-1', {
+        ...onsite,
+        followUpBody: 'Recordings follow next week.',
+      });
+
+      const renamed = await service.update(created.id, { name: 'Kickoff' });
+
+      expect(renamed.followUpBody).toBe('Recordings follow next week.');
+    });
+
     it('lists drafts and published events in date order', async () => {
       const later = await service.create('series-1', {
         ...onsite,

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigurationModule } from '../config';
 import { EventSeriesModule } from '../event-series';
 import { EventsModule } from '../events';
 import { RegistrationModule } from '../registration';
@@ -15,15 +16,23 @@ import { EventDashboardService } from './event-dashboard.service';
  * `forwardRef`, which is how a module graph stops being readable. A composition
  * belongs above the things it composes.
  *
- * `ProgramModule` is deliberately *not* imported: the dashboard needs three
- * numbers about the programme, not the programme, and it gets them through the
- * narrow `PROGRAM_TALLY` port the data access layer binds globally.
+ * `ProgramModule` and `MediaLinksModule` are deliberately *not* imported: the
+ * dashboard needs numbers about a programme and a media list, not either of
+ * them, and it gets those through the narrow `PROGRAM_TALLY` and
+ * `MEDIA_LINK_TALLY` ports the data access layer binds globally. What it does
+ * import is `ConfigurationModule`, to ask whether an optional module is switched
+ * on before showing a tile that leads to it (FR 1.5, F53).
  *
  * What arrives here later: the tile for new messages (phase 3) and the tiles the
  * programme proposal and forum plug-ins bring (phase 4).
  */
 @Module({
-  imports: [EventsModule, EventSeriesModule, RegistrationModule],
+  imports: [
+    ConfigurationModule,
+    EventsModule,
+    EventSeriesModule,
+    RegistrationModule,
+  ],
   controllers: [AdminEventDashboardController],
   providers: [EventDashboardService],
   exports: [EventDashboardService],

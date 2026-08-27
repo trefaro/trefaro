@@ -91,6 +91,20 @@ export class ProgramService {
   }
 
   /**
+   * One session as the organizer sees it.
+   *
+   * For callers that need to know what a session belongs to before writing
+   * something against it — the media links of AP 11 attach to a session and have
+   * to establish that it is a session of *their* event. Through this service
+   * rather than through the repository port, so the 404 for a session that is
+   * gone is worded in one place.
+   */
+  async getForOrganizer(id: string): Promise<ProgramItem> {
+    const item = await this.require(id);
+    return toProgramItem(item, await this.countsFor([item]));
+  }
+
+  /**
    * The programme a participant reads on the landing page (FR 3.6).
    *
    * Through the public event lookup, so the programme of a draft event — or of

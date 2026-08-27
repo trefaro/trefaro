@@ -76,6 +76,17 @@ export class EventEntity {
   @Column({ type: 'varchar', length: 16 })
   status!: EventStatus;
 
+  /**
+   * What participants read once the event is over (FR 3.6, UC 10).
+   *
+   * `text`, because a follow-up is prose rather than a field, and nullable
+   * because most events never get one. Whether it is *shown* is not stored: the
+   * event's own end decides that, and the business layer withholds it until then
+   * (F50).
+   */
+  @Column({ name: 'follow_up_body', type: 'text', nullable: true })
+  followUpBody!: string | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 

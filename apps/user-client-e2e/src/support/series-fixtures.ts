@@ -44,6 +44,12 @@ export const UPCOMING_EVENT = {
   slug: 'e2e-upcoming-event',
   name: 'E2E Upcoming Hybrid Event',
   description: 'On site in Cologne and online at the same time.',
+  /**
+   * Written, and deliberately so: the point of F50 is that a follow-up text can
+   * be prepared before an event and still not be readable. The landing page
+   * test asserts this sentence is nowhere on the page.
+   */
+  followUpBody: 'E2E this text must not be readable before the event.',
   eventType: 'hybrid',
   startsAt: at(90, 8),
   endsAt: at(92, 15),
@@ -55,11 +61,19 @@ export const UPCOMING_EVENT = {
   status: 'published',
 } as const;
 
-/** Published but over: it belongs under "past events", not "upcoming". */
+/**
+ * Published but over: it belongs under "past events", not "upcoming".
+ *
+ * The only event with a follow-up text, because it is the only one allowed to
+ * show one — the server withholds it until an event has ended (F50).
+ */
 export const PAST_EVENT = {
   slug: 'e2e-past-event',
   name: 'E2E Past Event',
   description: 'Held last quarter.',
+  followUpBody:
+    'E2E thank you for coming. The recording is linked below, and the next ' +
+    'Democracy Day is in the spring.',
   eventType: 'onsite',
   startsAt: at(-92, 8),
   endsAt: at(-90, 15),
@@ -177,6 +191,48 @@ export const PROGRAM_ITEMS = [
   },
 ] as const;
 
+/**
+ * Media links of both published events (FR 3.6, F10).
+ *
+ * External addresses that nobody follows in a test — `example.org` is reserved
+ * for exactly this. Three shapes are needed to cover the page: a link of the
+ * event as a whole, a link of one *session* (rendered inside the timeline), and
+ * links on the past event, whose section sits under its follow-up text.
+ *
+ * `session` names the programme item a link belongs to by title, because a
+ * programme item has no key of its own (F40) — the seed looks the id up.
+ */
+export const MEDIA_LINKS = [
+  {
+    event: UPCOMING_EVENT.slug,
+    kind: 'stream',
+    title: 'E2E Watch the plenary live',
+    url: 'https://tube.example.org/w/e2e-plenary',
+    session: null,
+  },
+  {
+    event: UPCOMING_EVENT.slug,
+    kind: 'material',
+    title: 'E2E Slides of the opening keynote',
+    url: 'https://files.example.org/e2e-keynote-slides.pdf',
+    session: 'E2E Opening keynote',
+  },
+  {
+    event: PAST_EVENT.slug,
+    kind: 'recording',
+    title: 'E2E Recording of the closing plenary',
+    url: 'https://tube.example.org/w/e2e-closing',
+    session: null,
+  },
+  {
+    event: PAST_EVENT.slug,
+    kind: 'material',
+    title: 'E2E Report of the past event',
+    url: 'https://files.example.org/e2e-report.pdf',
+    session: null,
+  },
+] as const;
+
 interface AdminSeries {
   id: string;
   slug: string;
@@ -244,9 +300,11 @@ export async function seedSeries(clientUrl: string): Promise<void> {
       if (fixture.slug === PUBLISHED_SERIES.slug) publishedSeriesId = saved.id;
     }
 
-    const upcomingEventId = await seedEvents(context, publishedSeriesId);
+    const eventIds = await seedEvents(context, publishedSeriesId);
+    const upcomingEventId = eventIds.get(UPCOMING_EVENT.slug) ?? '';
     await seedRegistrationFields(context, upcomingEventId);
     await seedProgram(context, upcomingEventId);
+    await seedMediaLinks(context, eventIds);
   } finally {
     await context.dispose();
   }
@@ -261,11 +319,13 @@ export async function seedSeries(clientUrl: string): Promise<void> {
 async function seedEvents(
   context: Awaited<ReturnType<typeof asAdmin>>,
   seriesId: string,
-): Promise<string> {
+): Promise<Map<string, string>> {
   const path = `/api/admin/series/${seriesId}/events`;
   const existing: AdminEvent[] = await (await context.get(path)).json();
 
-  let upcomingEventId = '';
+  // Keyed by slug, because two of the three events carry fixtures of their own
+  // now: the upcoming one its form and programme, the past one its media links.
+  const ids = new Map<string, string>();
   for (const fixture of EVENT_FIXTURES) {
     const match = existing.find((event) => event.slug === fixture.slug);
     const response = match
@@ -278,11 +338,9 @@ async function seedEvents(
           `${response.status()}: ${await response.text()}`,
       );
     }
-    if (fixture.slug === UPCOMING_EVENT.slug) {
-      upcomingEventId = ((await response.json()) as AdminEvent).id;
-    }
+    ids.set(fixture.slug, ((await response.json()) as AdminEvent).id);
   }
-  return upcomingEventId;
+  return ids;
 }
 
 /**
@@ -359,6 +417,61 @@ async function seedProgram(
         `Seeding the programme item "${fixture.title}" failed with status ` +
           `${response.status()}: ${await response.text()}`,
       );
+    }
+  }
+}
+
+/**
+ * The media links of both published events (FR 3.6, F10).
+ *
+ * Matched by address, because a media link has no key either — and an address is
+ * what makes one link the same link as another. Removed with the event by the
+ * foreign key, so no teardown of its own.
+ */
+async function seedMediaLinks(
+  context: Awaited<ReturnType<typeof asAdmin>>,
+  eventIds: ReadonlyMap<string, string>,
+): Promise<void> {
+  for (const [slug, eventId] of eventIds) {
+    const fixtures = MEDIA_LINKS.filter((link) => link.event === slug);
+    if (fixtures.length === 0) continue;
+
+    const path = `/api/admin/events/${eventId}/media-links`;
+    const existing: { id: string; url: string }[] = await (
+      await context.get(path)
+    ).json();
+    const sessions: { id: string; title: string }[] = await (
+      await context.get(`/api/admin/events/${eventId}/program-items`)
+    ).json();
+
+    for (const fixture of fixtures) {
+      const programItemId = fixture.session
+        ? (sessions.find((item) => item.title === fixture.session)?.id ?? null)
+        : null;
+      if (fixture.session && !programItemId) {
+        throw new Error(
+          `The media link "${fixture.title}" names the session ` +
+            `"${fixture.session}", which this event does not have.`,
+        );
+      }
+
+      const data = {
+        kind: fixture.kind,
+        title: fixture.title,
+        url: fixture.url,
+        programItemId,
+      };
+      const match = existing.find((link) => link.url === fixture.url);
+      const response = match
+        ? await context.patch(`/api/admin/media-links/${match.id}`, { data })
+        : await context.post(path, { data });
+
+      if (!response.ok()) {
+        throw new Error(
+          `Seeding the media link "${fixture.title}" failed with status ` +
+            `${response.status()}: ${await response.text()}`,
+        );
+      }
     }
   }
 }

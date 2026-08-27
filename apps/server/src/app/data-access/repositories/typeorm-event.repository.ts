@@ -128,6 +128,7 @@ function toRecord(row: EventEntity): EventRecord {
     onlineUrl: row.onlineUrl,
     languages: row.languages,
     status: row.status,
+    followUpBody: row.followUpBody,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

@@ -68,6 +68,12 @@ interface Dashboard {
   }[];
   program: { items: number; withSignup: number; signups: number };
   form: { questions: number; required: number };
+  mediaLinks: {
+    links: number;
+    streams: number;
+    recordings: number;
+    materials: number;
+  } | null;
 }
 
 /** A one-day conference in Cologne: 08:00 to 18:00 local, 14 June 2099. */
@@ -289,11 +295,15 @@ describe('event dashboard API', () => {
     const { body } = await dashboard(event.id);
 
     // Messages arrive in phase 3, proposals and the forum in phase 4. Until
-    // then their absence is the honest answer; a zero would be a claim.
+    // then their absence is the honest answer; a zero would be a claim. Media
+    // links are here since AP 11 — and `null` rather than absent when the
+    // organization has switched that module off (F53), which
+    // `media-links.spec.ts` asserts.
     expect(Object.keys(body).sort()).toEqual([
       'event',
       'form',
       'latestRegistrations',
+      'mediaLinks',
       'program',
       'registrations',
       'seriesSlug',
@@ -304,6 +314,14 @@ describe('event dashboard API', () => {
     const { status, body } = await dashboard(emptyEvent.id);
 
     expect(status).toBe(200);
+    // The module is on and the event has nothing linked: a zero is right here,
+    // because the tile leads somewhere and the number is an invitation.
+    expect(body.mediaLinks).toEqual({
+      links: 0,
+      streams: 0,
+      recordings: 0,
+      materials: 0,
+    });
     expect(body.registrations).toEqual({
       total: 0,
       pending: 0,

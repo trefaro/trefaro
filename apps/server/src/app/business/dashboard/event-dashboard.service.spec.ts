@@ -6,8 +6,10 @@ import type {
   RegistrationField,
 } from '@trefaro/shared-models';
 import { DASHBOARD_LATEST_REGISTRATIONS } from '@trefaro/shared-models';
+import type { CoreModuleRegistryService } from '../config';
 import type { EventSeriesService } from '../event-series';
 import type { EventsService } from '../events';
+import type { MediaLinkTally } from '../media-links/ports/media-link-tally';
 import type { ProgramTally } from '../program/ports/program-tally';
 import type {
   ParticipantsService,
@@ -37,6 +39,7 @@ const EVENT: OrganizerEvent = {
   venueAddress: null,
   onlineUrl: null,
   languages: ['de'],
+  followUpBody: null,
   seriesId: 'series-1',
   status: 'published',
   createdAt: '2026-08-01T09:00:00.000Z',
@@ -65,7 +68,23 @@ describe('EventDashboardService', () => {
   let participants: { list: jest.Mock };
   let fields: { listForOrganizer: jest.Mock };
   let program: jest.Mocked<ProgramTally>;
+  let mediaLinks: jest.Mocked<MediaLinkTally>;
+  /** Which optional core modules are on; `media-links` is the only one here. */
+  let enabledModules: string[];
   let service: EventDashboardService;
+
+  const build = (): EventDashboardService =>
+    new EventDashboardService(
+      events as unknown as EventsService,
+      series as unknown as EventSeriesService,
+      participants as unknown as ParticipantsService,
+      fields as unknown as RegistrationFieldsService,
+      program,
+      mediaLinks,
+      {
+        isEnabled: (key: string) => enabledModules.includes(key),
+      } as unknown as CoreModuleRegistryService,
+    );
 
   beforeEach(() => {
     events = { getForOrganizer: jest.fn(async () => EVENT) };
@@ -85,14 +104,17 @@ describe('EventDashboardService', () => {
         signups: 9,
       })),
     };
+    mediaLinks = {
+      countForEvent: jest.fn(async (_eventId: string) => ({
+        links: 3,
+        streams: 1,
+        recordings: 1,
+        materials: 1,
+      })),
+    };
+    enabledModules = ['media-links'];
 
-    service = new EventDashboardService(
-      events as unknown as EventsService,
-      series as unknown as EventSeriesService,
-      participants as unknown as ParticipantsService,
-      fields as unknown as RegistrationFieldsService,
-      program,
-    );
+    service = build();
   });
 
   it('answers with the event, its series address and every tile', async () => {
@@ -108,6 +130,25 @@ describe('EventDashboardService', () => {
     });
     expect(dashboard.program).toEqual({ items: 4, withSignup: 2, signups: 9 });
     expect(dashboard.form).toEqual({ questions: 3, required: 2 });
+    expect(dashboard.mediaLinks).toEqual({
+      links: 3,
+      streams: 1,
+      recordings: 1,
+      materials: 1,
+    });
+  });
+
+  it('has no media tile, and asks nothing, while the module is off', async () => {
+    enabledModules = [];
+
+    const dashboard = await build().forEvent(EVENT.id);
+
+    // `null`, not four zeros: the module's endpoints answer 404 while it is off
+    // (F53), so a tile leading there would be a dead end drawn as a feature —
+    // and counting rows nobody may read would be the same mistake one layer
+    // down.
+    expect(dashboard.mediaLinks).toBeNull();
+    expect(mediaLinks.countForEvent).not.toHaveBeenCalled();
   });
 
   it('reads the series of the event, not of the request', async () => {
@@ -132,12 +173,14 @@ describe('EventDashboardService', () => {
     ]);
   });
 
-  it('counts the programme instead of reading it', async () => {
+  it('counts the programme and the media links instead of reading them', async () => {
     await service.forEvent(EVENT.id);
 
-    // The narrow port, not `ProgramService`: three hundred sessions with their
-    // abstracts is a lot of bytes to move for three numbers.
+    // The narrow ports, not the services: three hundred sessions with their
+    // abstracts is a lot of bytes to move for three numbers, and the dashboard
+    // has no business knowing what a link points at.
     expect(program.countForEvent).toHaveBeenCalledWith(EVENT.id);
+    expect(mediaLinks.countForEvent).toHaveBeenCalledWith(EVENT.id);
   });
 
   it('turns an unknown event into a 404 rather than a screen of zeros', async () => {
@@ -151,5 +194,6 @@ describe('EventDashboardService', () => {
     expect(participants.list).not.toHaveBeenCalled();
     expect(program.countForEvent).not.toHaveBeenCalled();
     expect(fields.listForOrganizer).not.toHaveBeenCalled();
+    expect(mediaLinks.countForEvent).not.toHaveBeenCalled();
   });
 });

@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import {
   DRAFT_EVENT,
   DRAFT_SERIES,
+  MEDIA_LINKS,
   PAST_EVENT,
   PROGRAM_ITEMS,
   PUBLISHED_SERIES,
@@ -16,11 +17,15 @@ import {
  * *and* its online link, a draft event answers as absent, and the times appear
  * in the event's own zone rather than the browser's (E8).
  *
- * The programme block at the end is the second half of AP 8's criterion: the
- * timeline renders in the event's zone. It belongs in a browser rather than in
- * the API contract suite because the conversion happens in the client — the
- * server sends absolute instants, and the runner's own zone is UTC, so a page
- * that read the reader's clock would be visibly an hour or two out here.
+ * The programme block is the second half of AP 8's criterion: the timeline
+ * renders in the event's zone. It belongs in a browser rather than in the API
+ * contract suite because the conversion happens in the client — the server sends
+ * absolute instants, and the runner's own zone is UTC, so a page that read the
+ * reader's clock would be visibly an hour or two out here.
+ *
+ * The last two blocks are AP 11's criterion, from the participant's side: the
+ * follow-up section appears only after the event has ended, and media links are
+ * links that leave the page rather than embedded players (F50, F51).
  */
 const landingPage = (seriesSlug: string, eventSlug: string) =>
   `/series/${seriesSlug}/events/${eventSlug}`;
@@ -189,5 +194,92 @@ test.describe('the programme on the landing page', () => {
     // No empty heading over nothing: a past event with no sessions planned says
     // nothing about a programme at all.
     await expect(page.getByRole('heading', { name: 'Programme' })).toBeHidden();
+  });
+});
+
+test.describe('what an event leaves behind', () => {
+  const stream = MEDIA_LINKS[0];
+  const sessionMaterial = MEDIA_LINKS[1];
+  const recording = MEDIA_LINKS[2];
+
+  test('shows the follow-up text of an event that is over', async ({
+    page,
+  }) => {
+    await page.goto(landingPage(PUBLISHED_SERIES.slug, PAST_EVENT.slug));
+
+    const followUp = page.getByRole('region', { name: 'After the event' });
+    await expect(followUp).toBeVisible();
+    await expect(followUp).toContainText('E2E thank you for coming');
+  });
+
+  test('does not show the follow-up text of an event still to come', async ({
+    page,
+  }) => {
+    await page.goto(landingPage(PUBLISHED_SERIES.slug, UPCOMING_EVENT.slug));
+
+    // The fixture has written one, so this is not "there is nothing to show":
+    // the server withholds it until the event has ended (F50), which means the
+    // sentence is not in the page source either.
+    await expect(
+      page.getByRole('heading', { name: 'After the event' }),
+    ).toBeHidden();
+    expect(await page.content()).not.toContain(
+      'must not be readable before the event',
+    );
+  });
+
+  test('links to a stream rather than embedding it', async ({ page }) => {
+    await page.goto(landingPage(PUBLISHED_SERIES.slug, UPCOMING_EVENT.slug));
+
+    const media = page.getByRole('region', { name: 'Watch and read' });
+    await expect(media).toBeVisible();
+    // The section names the kind, so a participant knows what they are opening.
+    await expect(media.getByRole('heading', { level: 3 })).toContainText(
+      'Live streams',
+    );
+
+    const link = media.getByRole('link', { name: stream.title });
+    await expect(link).toHaveAttribute('href', stream.url);
+    await expect(link).toHaveAttribute('target', '_blank');
+    // No referrer: following the link does not tell the other side which
+    // instance sent the visitor (NFR 9, F51).
+    await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    // And nothing is embedded — an iframe would load a third party's code into
+    // a page that promises not to.
+    await expect(page.locator('iframe')).toHaveCount(0);
+  });
+
+  test("puts a session's link with its session, not in the list", async ({
+    page,
+  }) => {
+    await page.goto(landingPage(PUBLISHED_SERIES.slug, UPCOMING_EVENT.slug));
+
+    // The slides of the keynote hang on the keynote, so they are inside the
+    // timeline rather than in the event's own media section.
+    const session = page
+      .getByRole('listitem')
+      .filter({ hasText: PROGRAM_ITEMS[0].title });
+    await expect(
+      session.getByRole('link', { name: sessionMaterial.title }),
+    ).toBeVisible();
+    await expect(
+      page
+        .getByRole('region', { name: 'Watch and read' })
+        .getByRole('link', { name: sessionMaterial.title }),
+    ).toBeHidden();
+  });
+
+  test('offers the recording of an event that is over', async ({ page }) => {
+    await page.goto(landingPage(PUBLISHED_SERIES.slug, PAST_EVENT.slug));
+
+    const media = page.getByRole('region', { name: 'Watch and read' });
+    await expect(
+      media.getByRole('link', { name: recording.title }),
+    ).toHaveAttribute('href', recording.url);
+    // Recordings before materials, which is the order of the kinds (F52).
+    const kinds = await media
+      .getByRole('heading', { level: 3 })
+      .allInnerTexts();
+    expect(kinds).toEqual(['Recordings', 'Materials']);
   });
 });

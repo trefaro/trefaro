@@ -25,6 +25,8 @@ export interface EventRecord {
   readonly onlineUrl: string | null;
   readonly languages: readonly string[];
   readonly status: EventStatus;
+  /** Prose shown after the event has ended (FR 3.6); `null` while none is written. */
+  readonly followUpBody: string | null;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 }
@@ -43,6 +45,7 @@ export interface NewEvent {
   readonly onlineUrl: string | null;
   readonly languages: readonly string[];
   readonly status: EventStatus;
+  readonly followUpBody: string | null;
 }
 
 /** Only the fields actually given are written. */
@@ -59,6 +62,7 @@ export interface EventChanges {
   readonly onlineUrl?: string | null;
   readonly languages?: readonly string[];
   readonly status?: EventStatus;
+  readonly followUpBody?: string | null;
 }
 
 /** Raised when a slug is already taken within the same series. */

@@ -1,4 +1,10 @@
 export { CORE_MODULES, type CoreModuleDescriptor } from './core-modules';
+export {
+  CoreModuleController,
+  CoreModuleEnabledGuard,
+} from './core-module-enabled.guard';
+export { CoreModuleRegistryService } from './core-module-registry.service';
+export { MODULE_FLAG_REFRESH_MS, ModuleFlagCache } from './module-flags';
 export { ConfigurationModule } from './configuration.module';
 export { ConfigurationService } from './configuration.service';
 export {

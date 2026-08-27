@@ -244,8 +244,15 @@ plugin_room_planning_program_item_room
                         ← dieselbe Migration zieht den fehlenden Fremdschlüssel auf
                           plugin_room_planning_room.event_id nach (F46)
 media_link             (id uuid pk, event_id fk→event ON DELETE CASCADE,
-                        program_item_id? fk→program_item ON DELETE CASCADE, title, url,
-                        kind [stream|recording|material], sort)
+                        program_item_id? fk→program_item, kind [stream|recording|material],
+                        title, url, created_at, updated_at)
+                        ← ohne sort (F52): die Art ist die Reihenfolge, innerhalb der Art
+                          die Anlagereihenfolge — dieselbe Begründung wie F40
+                        ← der Fremdschlüssel auf die Session ist das Paar
+                          (program_item_id, event_id) gegen UQ_program_item_id_event (F54):
+                          ein Link kann keine Session eines anderen Events nennen, und
+                          MATCH SIMPLE lässt program_item_id IS NULL ungeprüft durch —
+                          genau das ist ein Link am Event als Ganzem
 
 -- Plug-in-eigene Tabelle, Migration des Raumplanungs-Plug-ins:
 plugin_room_planning_program_item_room
@@ -290,12 +297,14 @@ unauthentifiziert; `/api/admin/**` verlangt eine Sitzung (E16).
 | `GET/POST /api/admin/events/:id/program-items`                       | FR 3.7, Programm je Event                                    | 8   |
 | `PATCH/DELETE /api/admin/program-items/:id`                          | Session ändern, entfernen (F40)                              | 8   |
 | `GET /api/admin/program-items/:id/signups`                           | Auslastung mit Namen und Adressen, FR 3.10                   | 9   |
-| `… /api/admin/events/:id/media-links`                                | FR 3.6, F10                                                  | 11  |
+| `GET/POST /api/admin/events/:id/media-links`                         | FR 3.6, F10                                                  | 11  |
+| `PATCH/DELETE /api/admin/media-links/:id`                            | Einen Link ändern, entfernen (F52)                           | 11  |
 | `GET /api/admin/series/:id/former-participants`                      | FR 2.4                                                       | 12  |
 | `POST /api/admin/series/:id/invitations`                             | FR 2.4                                                       | 12  |
 | `GET /api/user/series[/:slug]`                                       | Startseite, Reihenseite                                      | 2   |
 | `GET /api/user/series/:reihe/events[/:event]`                        | Event-Landingpage                                            | 3   |
 | `GET /api/user/series/:reihe/events/:event/program`                  | Programmplan                                                 | 8   |
+| `GET /… /events/:event/media-links`                                  | Streams, Aufzeichnungen, Material (404 wenn aus, F53)        | 11  |
 | `… /events/:event/registration-fields`                               | Feldsatz des Formulars                                       | 6   |
 | `POST /… /events/:event/registrations`                               | FR 3.5, gedrosselt; ab AP 7 auch `multipart/form-data` (F39) | 4   |
 | `POST /api/user/registrations/confirm`                               | Double-Opt-In (E5b)                                          | 4   |
@@ -1480,6 +1489,105 @@ Weiteres, das beim Bauen entschieden oder gelernt wurde:
   gegen einen geschlossenen. Der Fehler entstand im Fixture, nicht im Test, und
   war entsprechend schlecht zu lesen: sieben Fehlschläge in drei Browsern, deren
   Meldungen von Suchfeldern und Detailansichten sprachen.
+
+### AP 11 — Follow-Up und Medien-Links (erledigt)
+
+Stand 27.08.2026. Ein Event hat jetzt eine zweite Hälfte: das, was es
+hinterlässt. Der **Follow-Up-Text** wird vorher geschrieben und erscheint auf der
+Landingpage, sobald das Event vorbei ist; die **Medien-Links** verweisen auf
+Streams, Aufzeichnungen und Material, das jemand anderes hostet — je Event und
+optional je Programmpunkt. `media-links` ist damit das erste **abschaltbare
+Kernmodul mit einer API**, und deshalb ist in diesem Paket auch der
+`CoreModuleEnabledGuard` entstanden.
+
+Belegt: 645 Unit-Tests (+63: Server 451, `admin-client` 73, `shared-models` 58,
+`shared-http` 14, `shared-theming` 14, `shared-plugins` 13, `user-client` 11,
+`shared-config` 8, `plugin-room-planning` 3), 240 API-Vertragstests (+23), 156
+Veranstalter-Browsertests (+21), 117 Nutzer-Browsertests (+15). Migration
+`1787789800000-MediaLinksAndFollowUp` einmal vorwärts und einmal zurück
+ausgeführt.
+
+**Die Abnahmekriterien.** Beide sind Aussagen über eine laufende Instanz:
+
+| Kriterium                                              | Wo es durchgesetzt ist                                                                                                 | Wo es bewiesen ist                                                                                                                                                      |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ein abgeschaltetes `media-links`-Modul liefert 404     | `CoreModuleEnabledGuard` auf allen drei Controllern, gegen den Zwischenspeicher, den auch `/api/config` liest          | `apps/server-e2e/src/api/media-links.spec.ts`, „a switched-off module": Flag in `module_config` umgelegt, auf das Nachlesen gewartet, dann alle drei Endpunkte gefragt  |
+| Die Follow-Up-Sektion ist erst nach `ends_at` sichtbar | `toPublicEvent` gibt den Text nur heraus, wenn `hasEnded` — die Entscheidung fällt im Server, nicht in der Seite (F50) | Dieselbe API-Suite (Payload eines bevorstehenden und eines vergangenen Events) **und** `apps/user-client-e2e/src/event-landing.spec.ts` (Text nicht im Seitenquelltext) |
+
+Der zweite Test ist der, der die Entscheidung trägt: das Fixture **schreibt**
+einen Follow-Up-Text auf das bevorstehende Event, und der Browsertest prüft, dass
+der Satz nicht im Quelltext der Seite steht. Ein `@if` im Template hätte den Text
+mitgeliefert und nur nicht gezeichnet.
+
+**Die Entscheidungen dieses Pakets** stehen als **F50–F54** im
+Entscheidungsprotokoll:
+
+- **F50** — Der Follow-Up-Text verlässt den Server erst, wenn das Event vorbei
+  ist. Der Veranstalter liest ihn immer (er schreibt ihn), die Öffentlichkeit
+  erst danach. Eine Spalte am Event, keine Tabelle: es gibt genau einen Text.
+- **F51** — Verlinken, nicht einbetten. F10 sagt „einbetten"; ein `<iframe>` lädt
+  den Code eines Dritten — praktisch Googles — in eine Seite, die das Gegenteil
+  verspricht (NFR 9). Deshalb: `target="_blank"`, `rel="noopener noreferrer"`,
+  kein oEmbed, kein Vorschaubild, und der Server fragt die Zieladresse nie.
+- **F52** — Die Art ist die Reihenfolge (Stream → Aufzeichnung → Material),
+  innerhalb einer Art die Anlagereihenfolge. **Kein `sort`** — Abweichung vom
+  Schemaentwurf 5.3, dieselbe Begründung wie F40 bei `program_item`.
+- **F53** — Ein abgeschaltetes Kernmodul antwortet 404, wie ein Plug-in. Und:
+  beide Familien lesen **denselben** Zwischenspeicher (`ModuleFlagCache`), damit
+  `/api/config` und die API nicht auseinanderlaufen können.
+- **F54** — Ein Link an einem Programmpunkt gehört dem Event des Programmpunkts,
+  und das garantiert die Datenbank: der Fremdschlüssel ist das Paar
+  `(program_item_id, event_id)`. Eine gelöschte Session nimmt ihre Links mit.
+
+Weiteres, das beim Bauen entschieden oder gelernt wurde:
+
+- **Der Zwischenspeicher der Modul-Flags ist jetzt geteilter Code.**
+  `ModuleFlagCache` in `business/config` bedient `PluginRegistryService` und den
+  neuen `CoreModuleRegistryService`: eine Zeile pro Modul beim ersten Start, die
+  Flags im Speicher, alle 15 s neu gelesen. Zwei Intervalle wären zwei Antworten
+  auf „wie lange, bis meine Änderung wirkt".
+- **`ConfigurationService` liest `module_config` nicht mehr selbst.** Er fragt die
+  Registry, und genau das ist der Punkt: vorher hätte der Guard einen
+  Zwischenspeicher gelesen und `/api/config` die Tabelle — für die Dauer eines
+  Intervalls hätte ein Client von einem Modul erfahren, dessen API 404 gibt.
+- **Die Kachel „Media links" fehlt, wenn das Modul aus ist.** `mediaLinks` im
+  Dashboard ist `MediaLinkSummary | null`; bei `null` zeichnet der Client keine
+  Kachel und der Server zählt nicht einmal. Das ist F47 auf ein Modul angewendet,
+  das es geben _könnte_ — eine Kachel auf einen 404 wäre eine Sackgasse, als
+  Funktion gezeichnet.
+- **`MediaLinkTally` ist der dritte zählende Port.** Ein Aggregat mit drei
+  `FILTER`-Zählungen; die Grenze ist die aus F49 (groß oder unbegrenzt bekommt
+  einen Port). Die Kachel nennt darunter die Arten, die vorhanden sind — „1
+  stream · 2 recordings" sagt einem Veranstalter, was vor dem Event fehlt und was
+  danach kam; drei Nullen sagten das nicht.
+- **`ProgramService.getForOrganizer` ist neu**, damit das Medien-Modul prüfen
+  kann, zu welchem Event eine Session gehört, ohne selbst an
+  `PROGRAM_ITEM_REPOSITORY` zu gehen. Der 404 für eine verschwundene Session
+  bleibt an einer Stelle formuliert.
+- **Ein `<select>`, dessen Optionen aus einem `@for` kommen, nimmt kein
+  `[value]`.** Angular schreibt die `value`-Eigenschaft, bevor die Optionen
+  existieren, und die Zuweisung fällt **wortlos** weg. Sichtbar wurde es nur im
+  Browsertest (die Zeile zeigte immer die erste Option). Lösung: `[selected]` an
+  den Optionen. Das Hinzufügen-Formular hatte das Problem nie —
+  `formControlName` wartet auf die Optionen.
+- **Zwei Browsersuiten leiteten denselben Slug ab.** `events.spec.ts` und
+  `event-series.spec.ts` bildeten beide `E2E Series <projekt> <ms>`; landen zwei
+  Arbeiter in derselben Millisekunde, verliert einer das Rennen am eindeutigen
+  Index und bekommt 409 — der Fehlschlag las sich wie ein kaputtes Fixture. Der
+  Name der Events-Suite heißt jetzt anders.
+- **`tools/spike-verification/verify-api.mjs` prüfte zwei Dinge, die nicht mehr
+  stimmen konnten.** Ein Pfad unter `/api/admin` ohne Sitzung ist 401, bevor
+  irgendein Modul-Guard dran ist (E16) — das Skript erwartete 404; und die
+  Push-Prüfungen setzten eine Instanz **ohne** VAPID-Schlüssel voraus. Beides
+  korrigiert: die Push-Prüfungen passen sich an die Konfiguration an, statt für
+  eine Konfigurationsentscheidung Alarm zu schlagen. Ein Prüfskript, das falsch
+  Alarm schlägt, ist schlimmer als keins.
+- **Keine Backticks in Angular-Template-Kommentaren** — die Regel aus AP 8 ist
+  einmal mehr zugeschlagen, mit Fehlern an ganz anderen Stellen der Datei.
+- **Der Storno-Hinweis an Teilnehmende** (`todo.md`) hing an einer
+  Follow-Up-**Mail**; AP 11 baut nach Plan die Follow-Up-**Sektion**. Er ist nach
+  AP 12 verschoben, wo der Versand an Adressen entsteht — dort gehört er hin,
+  statt als vierte, isoliert geschriebene Mailvorlage.
 
 ## Definition of Done für Phase 1
 

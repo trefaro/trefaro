@@ -9,6 +9,7 @@ import { Attachments1787789400000 } from './1787789400000-Attachments';
 import { FileRegistrationFields1787789500000 } from './1787789500000-FileRegistrationFields';
 import { ProgramItems1787789600000 } from './1787789600000-ProgramItems';
 import { ProgramItemSignups1787789700000 } from './1787789700000-ProgramItemSignups';
+import { MediaLinksAndFollowUp1787789800000 } from './1787789800000-MediaLinksAndFollowUp';
 
 /**
  * Core migrations, in the order they must run.
@@ -28,4 +29,5 @@ export const CORE_MIGRATIONS = [
   FileRegistrationFields1787789500000,
   ProgramItems1787789600000,
   ProgramItemSignups1787789700000,
+  MediaLinksAndFollowUp1787789800000,
 ];

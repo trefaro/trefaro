@@ -138,6 +138,13 @@ test.describe('event dashboard', () => {
     const form = tile(page, 'Registration form');
     await expect(form).toContainText('1 extra question');
     await expect(form).toContainText('1 of them required.');
+
+    // The media links module ships switched on (FR 1.5), and this event has
+    // nothing linked yet: a zero is right here, because the tile leads
+    // somewhere. Its absence is what a switched-off module looks like (F53).
+    const media = tile(page, 'Media links');
+    await expect(media).toContainText('0');
+    await expect(media).toContainText('Nothing linked yet.');
   });
 
   test('lists the newest registrations with their addresses', async ({
@@ -171,6 +178,10 @@ test.describe('event dashboard', () => {
     await page.goto(dashboard());
     await page.getByRole('link', { name: 'Registration form' }).click();
     await expect(page).toHaveURL(/\/registration-form$/);
+
+    await page.goto(dashboard());
+    await page.getByRole('link', { name: 'Media links' }).click();
+    await expect(page).toHaveURL(/\/media-links$/);
 
     await page.goto(dashboard());
     await page.getByRole('link', { name: 'Edit event' }).click();

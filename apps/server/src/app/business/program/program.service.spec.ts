@@ -127,6 +127,7 @@ const EVENT: OrganizerEvent = {
   venueAddress: null,
   onlineUrl: null,
   languages: ['de'],
+  followUpBody: null,
   status: 'published',
   createdAt: '2026-08-27T09:00:00.000Z',
   updatedAt: '2026-08-27T09:00:00.000Z',

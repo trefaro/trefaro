@@ -1,6 +1,10 @@
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import type { EventStatus, EventType } from '@trefaro/shared-models';
-import { EVENT_STATUSES, EVENT_TYPES } from '@trefaro/shared-models';
+import {
+  EVENT_STATUSES,
+  EVENT_TYPES,
+  MAX_FOLLOW_UP_LENGTH,
+} from '@trefaro/shared-models';
 import {
   ArrayMaxSize,
   ArrayNotEmpty,
@@ -12,6 +16,7 @@ import {
   IsUrl,
   Length,
   Matches,
+  MaxLength,
 } from 'class-validator';
 import { MAX_SLUG_LENGTH } from '../../common/slug';
 
@@ -128,6 +133,22 @@ export class CreateEventDto {
   @IsOptional()
   @IsIn(EVENT_STATUSES as string[])
   status?: EventStatus;
+
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    description:
+      'What participants read once the event is over (FR 3.6, UC 10). Written ' +
+      'whenever the organizer likes and shown only after the event has ended ' +
+      '(F50) — so it can be prepared in advance.',
+    example:
+      'Thank you for coming. The recordings are linked below; the next ' +
+      'Democracy Day is on 14 June.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(MAX_FOLLOW_UP_LENGTH)
+  followUpBody?: string | null;
 }
 
 /** Every field optional; only what is sent gets written. */

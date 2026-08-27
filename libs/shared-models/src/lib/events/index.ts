@@ -8,6 +8,7 @@ export {
 export {
   EVENT_STATUSES,
   EVENT_TYPES,
+  MAX_FOLLOW_UP_LENGTH,
   publicEventPath,
   type EventInput,
   type EventStatus,

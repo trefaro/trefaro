@@ -7,6 +7,8 @@ import { EVENT_SERIES_REPOSITORY } from '../business/event-series/ports/event-se
 import { EVENT_REPOSITORY } from '../business/events/ports/event.repository';
 import { ADMIN_SESSION_REPOSITORY } from '../business/login/ports/admin-session.repository';
 import { ADMIN_USER_REPOSITORY } from '../business/login/ports/admin-user.repository';
+import { MEDIA_LINK_TALLY } from '../business/media-links/ports/media-link-tally';
+import { MEDIA_LINK_REPOSITORY } from '../business/media-links/ports/media-link.repository';
 import { MODULE_CONFIG_REPOSITORY } from '../business/config/ports/module-config.repository';
 import { PROGRAM_ITEM_SIGNUP_REPOSITORY } from '../business/program/ports/program-item-signup.repository';
 import { PROGRAM_ITEM_REPOSITORY } from '../business/program/ports/program-item.repository';
@@ -31,6 +33,7 @@ import { TypeormAppConfigRepository } from './repositories/typeorm-app-config.re
 import { TypeormAttachmentRepository } from './repositories/typeorm-attachment.repository';
 import { TypeormEventSeriesRepository } from './repositories/typeorm-event-series.repository';
 import { TypeormEventRepository } from './repositories/typeorm-event.repository';
+import { TypeormMediaLinkRepository } from './repositories/typeorm-media-link.repository';
 import { TypeormModuleConfigRepository } from './repositories/typeorm-module-config.repository';
 import { TypeormProgramItemSignupRepository } from './repositories/typeorm-program-item-signup.repository';
 import { TypeormProgramItemRepository } from './repositories/typeorm-program-item.repository';
@@ -75,6 +78,7 @@ export class DataAccessModule {
         TypeormAppConfigRepository,
         TypeormEventSeriesRepository,
         TypeormEventRepository,
+        TypeormMediaLinkRepository,
         TypeormModuleConfigRepository,
         TypeormProgramItemRepository,
         TypeormProgramItemSignupRepository,
@@ -110,6 +114,16 @@ export class DataAccessModule {
         {
           provide: EVENT_REPOSITORY,
           useExisting: TypeormEventRepository,
+        },
+        {
+          provide: MEDIA_LINK_REPOSITORY,
+          useExisting: TypeormMediaLinkRepository,
+        },
+        // Same class, second port: how many links an event has, without the
+        // addresses they point at (FR 3.8).
+        {
+          provide: MEDIA_LINK_TALLY,
+          useExisting: TypeormMediaLinkRepository,
         },
         {
           provide: MODULE_CONFIG_REPOSITORY,
@@ -156,6 +170,8 @@ export class DataAccessModule {
         FILE_STORE,
         EVENT_SERIES_REPOSITORY,
         EVENT_REPOSITORY,
+        MEDIA_LINK_REPOSITORY,
+        MEDIA_LINK_TALLY,
         MODULE_CONFIG_REPOSITORY,
         PROGRAM_ITEM_REPOSITORY,
         PROGRAM_ITEM_SIGNUP_REPOSITORY,

@@ -55,9 +55,25 @@ export interface PublicEvent {
   readonly onlineUrl: string | null;
   /** BCP 47 tags of the languages the event is held in. Never empty. */
   readonly languages: readonly string[];
+  /**
+   * What the organizer wants read once the event is over (FR 3.6, UC 10).
+   *
+   * `null` while the event has not ended — and withheld by the *server*, not
+   * hidden by the page (F50). A text that is in the payload is a text anybody
+   * can read, whatever the client chooses to draw; a follow-up that names the
+   * next date or thanks the people who came must not be readable three weeks
+   * before it is true.
+   */
+  readonly followUpBody: string | null;
 }
 
-/** What an organizer sees, including events that are not public yet. */
+/**
+ * What an organizer sees, including events that are not public yet.
+ *
+ * Here {@link PublicEvent.followUpBody} carries whatever is stored, whenever it
+ * was written: the organizer is the person writing it, so withholding it from
+ * them would hide the field from the only view that can fill it.
+ */
 export interface OrganizerEvent extends PublicEvent {
   readonly seriesId: string;
   readonly status: EventStatus;
@@ -79,7 +95,18 @@ export interface EventInput {
   readonly onlineUrl?: string | null;
   readonly languages: readonly string[];
   readonly status?: EventStatus;
+  /** Prepared before the event and shown after it (FR 3.6, F50). */
+  readonly followUpBody?: string | null;
 }
+
+/**
+ * How long a follow-up text may be.
+ *
+ * Room for a few paragraphs and the links that belong with them, not for a
+ * report: the material itself is a media link (F10), and a landing page that
+ * scrolls for ten screens after the fact is not read.
+ */
+export const MAX_FOLLOW_UP_LENGTH = 5000;
 
 /**
  * The public address of an event, relative to the participant client.

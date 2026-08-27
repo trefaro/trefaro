@@ -136,6 +136,25 @@ export async function seedProgramSignups(
   }
 }
 
+/**
+ * Switches an optional core module on or off (FR 1.5).
+ *
+ * Straight into `module_config`, because that is the only switch there is until
+ * phase 2 builds the module administration — and it is also how an operator does
+ * it today, which makes it the honest thing to test against. The server re-reads
+ * the flags on a timer, so a caller has to wait for the change to take effect
+ * rather than expecting the next request to see it.
+ */
+export async function setModuleEnabled(
+  moduleKey: string,
+  enabled: boolean,
+): Promise<void> {
+  await pool.query(
+    'UPDATE module_config SET enabled = $2 WHERE module_key = $1',
+    [moduleKey, enabled],
+  );
+}
+
 /** Removes every registration of one event — the counterpart of the seeds. */
 export async function deleteRegistrations(eventId: string): Promise<void> {
   await pool.query('DELETE FROM registration WHERE event_id = $1', [eventId]);

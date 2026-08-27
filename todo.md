@@ -71,10 +71,13 @@ is assigned to one of its work packages.
 - [ ] **Tell a participant when an organizer cancels their registration.** AP 5
       lets an organizer cancel and reinstate (F31), and the person concerned
       learns nothing — a silent cancellation is the kind of thing that turns into
-      somebody standing at a door. AP 11 builds the follow-up mail on top of the
-      same participant list; the message belongs there rather than in a fourth
-      mail template written in isolation. Verify: cancelling produces one mail,
-      reinstating does not produce a second one that contradicts it.
+      somebody standing at a door. This entry expected AP 11 to build a follow-up
+      **mail**; AP 11 built the follow-up **section** on the landing page, which
+      the phase plan asked for and which sends nothing. So it moves to **AP 12**,
+      where writing a message to selected addresses is the work package's whole
+      subject — the same templates, the same opt-out link, one recipient instead
+      of a list. Verify: cancelling produces one mail, reinstating does not
+      produce a second one that contradicts it.
 - [x] **The uploads volume is finally used.** Done in AP 7: the `file` field
       type, the `attachment` table, and `GET /api/admin/attachments/:id` as the
       only way to the bytes. Both things that were easy to lose happened — the
@@ -191,6 +194,20 @@ is assigned to one of its work packages.
       holds once the PWA is polished, and that a new deployment is actually
       picked up by an installed client.
       → [`03-web-push.md`](docs/spikes/03-web-push.md#open-items)
+- [ ] **The module administration has to refresh both registries.** Switching a
+      module on or off in phase 2's UI writes `module_config`; the flags are
+      cached and re-read every 15 s (`ModuleFlagCache`), so without a call to
+      `CoreModuleRegistryService.refresh()` **and**
+      `PluginRegistryService.refresh()` the organizer would flip a switch and
+      watch nothing happen for a quarter of a minute. Both methods exist for
+      exactly this. Verify: switching `media-links` off in the UI makes the
+      dashboard tile disappear on the next reload, not fifteen seconds later.
+- [ ] **The names of the media link kinds are English strings in the clients.**
+      `MEDIA_LINK_KIND_LABELS` in `shared-models` holds "Live stream",
+      "Recording" and "Material" in one place so the switch to Transloco is one
+      change; the same holds for the section heading "Watch and read" and the
+      organizer's "After the event". Belongs with the translation catalogue
+      below, not before it.
 - [ ] **Translation keys need a catalogue.** The plug-in contract already carries
       `titleKey` and `labelKey`, and `CORE_MODULES` carries `titleKey`; Transloco
       is not installed yet, so nothing resolves them. Verify: switching language

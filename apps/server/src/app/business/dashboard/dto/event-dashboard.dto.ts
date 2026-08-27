@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import type {
   EventDashboard,
+  MediaLinkSummary,
   ProgramSummary,
   RegistrationFormSummary,
 } from '@trefaro/shared-models';
@@ -40,6 +41,20 @@ export class RegistrationFormSummaryDto implements RegistrationFormSummary {
   required!: number;
 }
 
+export class MediaLinkSummaryDto implements MediaLinkSummary {
+  @ApiProperty({ description: 'External links of this event (FR 3.6, F10).' })
+  links!: number;
+
+  @ApiProperty()
+  streams!: number;
+
+  @ApiProperty()
+  recordings!: number;
+
+  @ApiProperty()
+  materials!: number;
+}
+
 export class EventDashboardDto implements EventDashboard {
   @ApiProperty({ type: OrganizerEventDto })
   event!: OrganizerEventDto;
@@ -68,4 +83,14 @@ export class EventDashboardDto implements EventDashboard {
 
   @ApiProperty({ type: RegistrationFormSummaryDto })
   form!: RegistrationFormSummaryDto;
+
+  @ApiProperty({
+    type: MediaLinkSummaryDto,
+    nullable: true,
+    description:
+      '`null` when the organization has switched `media-links` off (FR 1.5): ' +
+      'its endpoints then answer 404 (F53), so a tile leading there would be a ' +
+      'dead end drawn as a feature.',
+  })
+  mediaLinks!: MediaLinkSummaryDto | null;
 }

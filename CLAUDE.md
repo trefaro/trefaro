@@ -122,7 +122,11 @@ den signierten Link (`business/self-service`), Lese-Port im Plug-in-Vertrag
 Fremdschlüssel auf `plugin_room_planning_room.event_id`) · **AP 10**
 Event-Dashboard (`business/dashboard`, ein Endpunkt je Bildschirm; die
 Event-Adresse im Veranstalter-Client ist jetzt das Dashboard, das Formular liegt
-unter `…/edit`). Als nächstes AP 11 (Follow-Up und Medien-Links, FR 3.6, F10).
+unter `…/edit`) · **AP 11** Follow-Up-Text am Event und Medien-Links
+(`business/media-links`, `media_link`), dazu der `CoreModuleEnabledGuard`:
+`media-links` ist das erste abschaltbare Kernmodul mit eigener API. Als nächstes
+AP 12 (ehemalige Teilnehmende einladen, FR 2.4) — dort entsteht auch der
+Storno-Hinweis an Teilnehmende, der bis AP 11 an einer Follow-Up-Mail hing.
 
 Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
 
@@ -270,6 +274,38 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
   `getByRole('link', { name: 'Participants' })` traf auch „All participants".
   Wo eine Seite zwei Wege zur selben Ansicht anbietet, braucht der Test
   `exact: true` — nicht die Seite einen künstlicheren Namen.
+
+- **Der Follow-Up-Text verlässt den Server erst nach `ends_at`** (F50). Gefiltert
+  wird in `toPublicEvent`, nicht im Template: ein `@if` hätte den Text
+  mitgeliefert und nur nicht gezeichnet. Der Veranstalter liest ihn immer — er
+  schreibt ihn, meist vorher.
+- **Externe Medien werden verlinkt, nicht eingebettet** (F51). Ein `<iframe>`
+  lädt fremden Code (praktisch Googles) in eine Seite, die das Gegenteil
+  verspricht (NFR 9). Deshalb `target="_blank"` + `rel="noopener noreferrer"`,
+  und der Server fragt die Zieladresse **nie** ab (kein oEmbed, kein
+  Vorschaubild, kein Titel-Abruf). Erlaubt sind nur `http`/`https` — geprüft in
+  Client, DTO und Geschäftslogik.
+- **Die Art ist die Reihenfolge** (F52). `MEDIA_LINK_KINDS` ist die Menge der
+  gültigen Werte _und_ ihre Sequenz; `media_link` hat kein `sort`. Umsortieren
+  heißt: Art ändern, oder löschen und neu anlegen.
+- **Ein abgeschaltetes Kernmodul antwortet 404**, wie ein Plug-in (F53) —
+  `@CoreModuleController(key)` plus `CoreModuleEnabledGuard`. Und: `/api/config`
+  und der Guard lesen **denselben** Zwischenspeicher (`ModuleFlagCache`, 15 s),
+  damit nicht ein Client von einem Modul erfährt, dessen API 404 gibt. Ein neues
+  optionales Modul braucht beides; wer den Schalter zur Laufzeit umlegt, ruft
+  `refresh()`.
+- **Die Zugehörigkeit eines Links zu einer Session garantiert die Datenbank**
+  (F54): der Fremdschlüssel ist das Paar `(program_item_id, event_id)`. Die
+  Geschäftslogik prüft es zusätzlich, damit daraus ein 400 wird und kein
+  Constraint-Fehler.
+- **Ein `<select>`, dessen Optionen aus einem `@for` kommen, nimmt kein
+  `[value]`** — Angular schreibt die Eigenschaft, bevor die Optionen existieren,
+  und die Zuweisung fällt wortlos weg. `[selected]` an den Optionen; mit
+  `formControlName` tritt das Problem nicht auf.
+- **Zwei Browsersuiten dürfen nicht denselben Slug ableiten.** `E2E Series
+<projekt> <ms>` in zwei Dateien = ein Rennen am eindeutigen Index, sobald zwei
+  Playwright-Arbeiter in derselben Millisekunde säen. Der Fehlschlag liest sich
+  wie ein kaputtes Fixture.
 
 ## Betriebskontext
 

@@ -8,7 +8,7 @@ import { EventSeriesModule } from './business/event-series';
 import { EventsModule } from './business/events';
 import { LoginModule } from './business/login';
 import { MailModule } from './business/mail';
-import { MediaLinksModule } from './business/media-links/media-links.module';
+import { MediaLinksModule } from './business/media-links';
 import { ParticipantsModule } from './business/participants/participants.module';
 import {
   PluginHostModule,
@@ -68,6 +68,8 @@ import { DataAccessModule } from './data-access/data-access.module';
     // Above the modules it composes: the dashboard asks the registration,
     // programme and series modules for their numbers and owns none of them.
     DashboardModule,
+    // Optional (FR 1.5) and the first module that is: switched off, its
+    // endpoints answer 404 rather than only vanishing from /api/config (F53).
     MediaLinksModule,
     MailModule,
 

@@ -1,8 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { EventDashboard } from '@trefaro/shared-models';
-import { DASHBOARD_LATEST_REGISTRATIONS } from '@trefaro/shared-models';
+import type { EventDashboard, MediaLinkSummary } from '@trefaro/shared-models';
+import {
+  DASHBOARD_LATEST_REGISTRATIONS,
+  MEDIA_LINKS_MODULE_KEY,
+} from '@trefaro/shared-models';
+import { CoreModuleRegistryService } from '../config';
 import { EventSeriesService } from '../event-series';
 import { EventsService } from '../events';
+import {
+  MEDIA_LINK_TALLY,
+  type MediaLinkTally,
+} from '../media-links/ports/media-link-tally';
 import {
   PROGRAM_TALLY,
   type ProgramTally,
@@ -40,6 +48,12 @@ import {
  *    tiny rows that the form editor reads anyway, so counting them here is
  *    honest rather than wasteful. Where that line runs is written down on
  *    {@link ProgramTally}.
+ * 4. **A switched-off module has no tile, and is not asked either.** `media-links`
+ *    is optional (FR 1.5). When it is off its endpoints answer 404 (F53), so a
+ *    tile leading there would be a dead end drawn as a feature — the tile is
+ *    `null` rather than four zeros, which is F47 applied to a module that could
+ *    exist. And the query is skipped: asking a module that is off would be
+ *    counting rows nobody may read.
  */
 @Injectable()
 export class EventDashboardService {
@@ -54,12 +68,16 @@ export class EventDashboardService {
     // needs a session — let alone who signed up for one.
     @Inject(PROGRAM_TALLY)
     private readonly program: ProgramTally,
+    @Inject(MEDIA_LINK_TALLY)
+    private readonly mediaLinks: MediaLinkTally,
+    // Whether the optional module is switched on at all (FR 1.5).
+    private readonly modules: CoreModuleRegistryService,
   ) {}
 
   async forEvent(eventId: string): Promise<EventDashboard> {
     const event = await this.events.getForOrganizer(eventId);
 
-    const [series, page, program, fields] = await Promise.all([
+    const [series, page, program, fields, mediaLinks] = await Promise.all([
       this.series.getForOrganizer(event.seriesId),
       // Newest first is the default of the overview, which is what "latest"
       // means here — the arrival an organizer has not seen yet.
@@ -68,6 +86,7 @@ export class EventDashboardService {
       }),
       this.program.countForEvent(eventId),
       this.fields.listForOrganizer(eventId),
+      this.mediaLinkSummary(eventId),
     ]);
 
     return {
@@ -80,6 +99,16 @@ export class EventDashboardService {
         questions: fields.length,
         required: fields.filter((field) => field.required).length,
       },
+      mediaLinks,
     };
+  }
+
+  /** `null` when the organization has switched the module off (F53). */
+  private async mediaLinkSummary(
+    eventId: string,
+  ): Promise<MediaLinkSummary | null> {
+    return this.modules.isEnabled(MEDIA_LINKS_MODULE_KEY)
+      ? this.mediaLinks.countForEvent(eventId)
+      : null;
   }
 }

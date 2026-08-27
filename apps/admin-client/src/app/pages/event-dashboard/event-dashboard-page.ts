@@ -9,7 +9,11 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { ApiError } from '@trefaro/shared-http';
-import type { EventDashboard, OrganizerEvent } from '@trefaro/shared-models';
+import type {
+  EventDashboard,
+  MediaLinkSummary,
+  OrganizerEvent,
+} from '@trefaro/shared-models';
 import {
   formatEventPeriod,
   formatInstant,
@@ -27,11 +31,14 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
  *    cannot act on is decoration. The whole tile is the hit area, but there is
  *    exactly one real link inside it — the heading — so what a screen reader
  *    announces is "Participants", not the number read out as part of the name.
- * 2. **No tile for a module that does not exist yet.** The mockup's tiles for
- *    new messages (phase 3) and for programme proposals and the forum (phase 4)
- *    are absent rather than showing a hard zero: a zero is a claim about data,
- *    and a dashboard full of zeros teaches an organizer to stop reading it. The
- *    grid reflows when they arrive.
+ * 2. **No tile for a module that does not exist yet — or is switched off.** The
+ *    mockup's tiles for new messages (phase 3) and for programme proposals and
+ *    the forum (phase 4) are absent rather than showing a hard zero: a zero is a
+ *    claim about data, and a dashboard full of zeros teaches an organizer to
+ *    stop reading it. The same holds for the media links tile, which the server
+ *    omits when the organization has switched the module off (FR 1.5, F53): a
+ *    tile leading to endpoints that answer 404 would be a dead end drawn as a
+ *    feature. The grid reflows either way.
  * 3. **The e-mail address is in the table.** Same rule as in the participant
  *    overview (E13) — the next thing an organizer does after seeing a new
  *    registration is write to the person.
@@ -150,6 +157,30 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
           </p>
           <p class="tile__meta">{{ formMeta() }}</p>
         </article>
+        @if (view.mediaLinks; as media) {
+          <article class="tile">
+            <h2>
+              <a
+                [routerLink]="[
+                  '/series',
+                  seriesId(),
+                  'events',
+                  eventId(),
+                  'media-links',
+                ]"
+              >
+                Media links
+              </a>
+            </h2>
+            <p class="tile__value">
+              {{ media.links }}
+              <span class="tile__unit">
+                {{ media.links === 1 ? 'link' : 'links' }}
+              </span>
+            </p>
+            <p class="tile__meta">{{ mediaMeta(media) }}</p>
+          </article>
+        }
         <!-- The tiles for messages (phase 3) and for the proposal and forum
              plug-ins (phase 4) appear here. Deliberately not present as zeros
              while the modules do not exist. -->
@@ -415,6 +446,33 @@ export class EventDashboardPage {
       `${program.signups} ${seats} taken in ` +
       `${program.withSignup} ${sessions}`
     );
+  }
+
+  /**
+   * What the media tile says under its number (FR 3.6).
+   *
+   * The kinds that have something, named — "1 stream · 2 recordings" tells an
+   * organizer what is missing before an event and what arrived after it. A tally
+   * of three zeros would not.
+   */
+  protected mediaMeta(media: MediaLinkSummary): string {
+    if (media.links === 0) return 'Nothing linked yet.';
+
+    const parts: string[] = [];
+    if (media.streams > 0) {
+      parts.push(`${media.streams} stream${media.streams === 1 ? '' : 's'}`);
+    }
+    if (media.recordings > 0) {
+      parts.push(
+        `${media.recordings} recording${media.recordings === 1 ? '' : 's'}`,
+      );
+    }
+    if (media.materials > 0) {
+      parts.push(
+        `${media.materials} material${media.materials === 1 ? '' : 's'}`,
+      );
+    }
+    return parts.join(' · ');
   }
 
   protected formMeta(): string {

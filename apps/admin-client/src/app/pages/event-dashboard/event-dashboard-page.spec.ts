@@ -3,6 +3,7 @@ import { provideRouter } from '@angular/router';
 import type {
   EventDashboard,
   EventStatus,
+  MediaLinkSummary,
   OrganizerEvent,
   ParticipantRow,
 } from '@trefaro/shared-models';
@@ -24,6 +25,7 @@ const EVENT: OrganizerEvent = {
   venueAddress: null,
   onlineUrl: null,
   languages: ['de'],
+  followUpBody: null,
   status: 'published',
   createdAt: '2026-08-01T10:00:00.000Z',
   updatedAt: '2026-08-01T10:00:00.000Z',
@@ -55,6 +57,7 @@ function dashboard(overrides: Partial<EventDashboard> = {}): EventDashboard {
     latestRegistrations: [row()],
     program: { items: 4, withSignup: 2, signups: 9 },
     form: { questions: 3, required: 2 },
+    mediaLinks: { links: 3, streams: 1, recordings: 2, materials: 0 },
     ...overrides,
   };
 }
@@ -66,6 +69,7 @@ interface PageInternals {
   participantsMeta: () => string;
   programMeta: () => string;
   formMeta: () => string;
+  mediaMeta: (media: MediaLinkSummary) => string;
   setStatus: (status: EventStatus) => void;
   registeredAt: (iso: string) => string;
 }
@@ -152,7 +156,20 @@ describe('EventDashboardPage', () => {
     expect(links()).toContain('Participants');
     expect(links()).toContain('Programme');
     expect(links()).toContain('Registration form');
+    expect(links()).toContain('Media links');
     expect(links()).toContain('All participants');
+  });
+
+  it('has no media tile while the module is switched off', async () => {
+    const { links, text } = await render({
+      view: dashboard({ mediaLinks: null }),
+    });
+
+    // `null` from the server means the organization switched `media-links` off
+    // (FR 1.5). Its endpoints then answer 404 (F53), so the tile would be a dead
+    // end drawn as a feature — and a zero would be a claim about data (F47).
+    expect(links()).not.toContain('Media links');
+    expect(text()).not.toContain('Nothing linked yet.');
   });
 
   it('shows the e-mail address in the table of latest registrations', async () => {
@@ -242,6 +259,36 @@ describe('EventDashboardPage', () => {
       });
 
       expect(page.formMeta()).toBe('Only the standard fields.');
+    });
+
+    it('names the kinds of media that are there, and leaves out the rest', async () => {
+      const { page } = await render();
+
+      // What is missing before an event and what arrived after it — a tally of
+      // three numbers including zeros would not say that.
+      expect(
+        page.mediaMeta({
+          links: 3,
+          streams: 1,
+          recordings: 2,
+          materials: 0,
+        }),
+      ).toBe('1 stream · 2 recordings');
+    });
+
+    it('says an event with the module on but nothing linked has nothing linked', async () => {
+      const { page, text } = await render({
+        view: dashboard({
+          mediaLinks: { links: 0, streams: 0, recordings: 0, materials: 0 },
+        }),
+      });
+
+      // A tile with a zero *is* right here: the module exists, and the number is
+      // an invitation to add the first link.
+      expect(
+        page.mediaMeta({ links: 0, streams: 0, recordings: 0, materials: 0 }),
+      ).toBe('Nothing linked yet.');
+      expect(text()).toContain('Nothing linked yet.');
     });
   });
 

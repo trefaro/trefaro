@@ -11,7 +11,7 @@ import type {
   OrganizerEvent,
   PublicEvent,
 } from '@trefaro/shared-models';
-import { isTimeZone } from '@trefaro/shared-models';
+import { hasEnded, isTimeZone } from '@trefaro/shared-models';
 import { AttachmentsService } from '../attachments';
 import { isSlug, slugify } from '../common/slug';
 import { EventSeriesService } from '../event-series/event-series.service';
@@ -58,6 +58,7 @@ export interface CreateEventInput {
   readonly onlineUrl?: string | null;
   readonly languages: readonly string[];
   readonly status?: EventStatus;
+  readonly followUpBody?: string | null;
 }
 
 export type UpdateEventInput = Partial<CreateEventInput>;
@@ -177,6 +178,7 @@ export class EventsService {
           timezone: this.timezone(input.timezone),
           languages,
           status,
+          followUpBody: normalizeOptional(input.followUpBody),
           ...period,
           ...candidate,
         }),
@@ -243,6 +245,9 @@ export class EventsService {
           ? {}
           : { languages: this.languages(input.languages) }),
         ...(input.status === undefined ? {} : { status: input.status }),
+        ...(input.followUpBody === undefined
+          ? {}
+          : { followUpBody: normalizeOptional(input.followUpBody) }),
         ...period,
         ...place,
       });
@@ -398,7 +403,17 @@ function normalizeOptional(value: string | null | undefined): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+/**
+ * The participant's view of an event — and the one place the follow-up is gated.
+ *
+ * The text is withheld until the event has ended (F50), here rather than in the
+ * client: a page that hides it would still have shipped it, and "what we will
+ * say afterwards" is written weeks before it is true. `hasEnded` is the same
+ * helper the series list splits upcoming from past with, so "over" means one
+ * thing in this application.
+ */
 function toPublicEvent(record: EventRecord): PublicEvent {
+  const endsAt = record.endsAt.toISOString();
   return {
     id: record.id,
     slug: record.slug,
@@ -407,18 +422,27 @@ function toPublicEvent(record: EventRecord): PublicEvent {
     logoUrl: toMediaUrl(record.logoPath),
     eventType: record.eventType,
     startsAt: record.startsAt.toISOString(),
-    endsAt: record.endsAt.toISOString(),
+    endsAt,
     timezone: record.timezone,
     venueName: record.venueName,
     venueAddress: record.venueAddress,
     onlineUrl: record.onlineUrl,
     languages: record.languages,
+    followUpBody: hasEnded({ endsAt }) ? record.followUpBody : null,
   };
 }
 
+/**
+ * The organizer's view.
+ *
+ * The follow-up is restored to what is stored: the organizer is the person
+ * writing it, and a form that could not read back its own field would be a form
+ * that empties itself on every save.
+ */
 function toOrganizerEvent(record: EventRecord): OrganizerEvent {
   return {
     ...toPublicEvent(record),
+    followUpBody: record.followUpBody,
     seriesId: record.seriesId,
     status: record.status,
     createdAt: record.createdAt.toISOString(),

@@ -28,6 +28,10 @@ import { EventEntity } from './event.entity';
  */
 @Entity({ name: 'program_item' })
 @Index(['eventId', 'startsAt', 'endsAt', 'id'])
+// The pair `media_link` points at, so a media link can only name a session of
+// its own event (AP 11). Not a new rule — the primary key already makes it
+// unique; the migration owns it as `UQ_program_item_id_event`.
+@Index(['id', 'eventId'], { unique: true })
 export class ProgramItemEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;

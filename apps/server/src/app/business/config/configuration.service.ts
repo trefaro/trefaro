@@ -1,17 +1,13 @@
-import { Inject, Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { AppConfig } from '@trefaro/shared-models';
 import { ENV } from '../../core/config/env.module';
 import type { TrefaroEnv } from '../../core/config/env';
 import { PluginRegistryService } from '../plugin-manager';
-import { CORE_MODULES } from './core-modules';
+import { CoreModuleRegistryService } from './core-module-registry.service';
 import {
   APP_CONFIG_REPOSITORY,
   type AppConfigRepository,
 } from './ports/app-config.repository';
-import {
-  MODULE_CONFIG_REPOSITORY,
-  type ModuleConfigRepository,
-} from './ports/module-config.repository';
 
 /** Public URL prefix under which stored files are served. */
 const MEDIA_URL_PREFIX = '/api/media';
@@ -23,43 +19,27 @@ const MEDIA_URL_PREFIX = '/api/media';
  * first, then the plug-in web components. It answers without a login, because
  * the participant start page and the event landing page are public — so nothing
  * privacy-sensitive may enter this payload.
+ *
+ * Which modules are enabled comes from {@link CoreModuleRegistryService} rather
+ * than from the table directly, so this payload and the guard in front of an
+ * optional module's endpoints answer from the same state (F53). Two readers of
+ * the same flag, one cached and one not, would disagree for as long as the
+ * refresh interval — and a client would then be told about a module whose API
+ * answers 404.
  */
 @Injectable()
-export class ConfigurationService implements OnApplicationBootstrap {
+export class ConfigurationService {
   constructor(
     @Inject(APP_CONFIG_REPOSITORY)
     private readonly appConfig: AppConfigRepository,
-    @Inject(MODULE_CONFIG_REPOSITORY)
-    private readonly moduleConfig: ModuleConfigRepository,
     @Inject(ENV) private readonly env: TrefaroEnv,
     private readonly plugins: PluginRegistryService,
+    private readonly coreModules: CoreModuleRegistryService,
   ) {}
 
-  /** Runs after TypeORM has connected, so writing defaults is safe here. */
-  async onApplicationBootstrap(): Promise<void> {
-    // A module shipped by a newer version appears in the administration without
-    // a manual database step.
-    await this.moduleConfig.ensureDefaults(
-      CORE_MODULES.map((module) => ({
-        moduleKey: module.key,
-        enabled: module.enabledByDefault,
-      })),
-    );
-  }
-
   async getAppConfig(): Promise<AppConfig> {
-    const [config, modules] = await Promise.all([
-      this.appConfig.load(),
-      this.moduleConfig.findAll(),
-    ]);
-
-    const coreModuleKeys = new Set(CORE_MODULES.map((module) => module.key));
-    const enabledModules = modules
-      .filter(
-        (module) => module.enabled && coreModuleKeys.has(module.moduleKey),
-      )
-      .map((module) => module.moduleKey)
-      .sort();
+    const config = await this.appConfig.load();
+    const enabledModules = this.coreModules.enabledKeys();
 
     return {
       theme: {

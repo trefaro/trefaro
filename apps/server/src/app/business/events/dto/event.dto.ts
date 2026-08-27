@@ -59,6 +59,17 @@ export class PublicEventDto implements PublicEvent {
 
   @ApiProperty({ type: [String], example: ['de', 'en'] })
   languages!: readonly string[];
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description:
+      'What participants read once the event is over (FR 3.6, UC 10). `null` ' +
+      'until it has ended: the text is withheld here rather than hidden by the ' +
+      'page (F50), because a follow-up in the payload is a follow-up anybody ' +
+      'can read. An organizer sees it whenever it was written.',
+  })
+  followUpBody!: string | null;
 }
 
 export class OrganizerEventDto
