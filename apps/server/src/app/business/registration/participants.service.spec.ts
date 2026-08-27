@@ -1,10 +1,12 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import type {
+  AttachmentSummary,
   OrganizerEvent,
   RegistrationCounts,
   RegistrationStatus,
   RegistrationWeek,
 } from '@trefaro/shared-models';
+import type { AttachmentsService } from '../attachments';
 import type { EventLocation, EventsService } from '../events';
 import { ParticipantsService } from './participants.service';
 import type {
@@ -148,17 +150,33 @@ class FakeEventsService {
   }
 }
 
+/** The files of one registration, as the detail panel asks for them (E9). */
+class FakeAttachmentsService {
+  summaries: readonly AttachmentSummary[] = [];
+  readonly asked: string[] = [];
+
+  async summariesFor(
+    registrationId: string,
+  ): Promise<readonly AttachmentSummary[]> {
+    this.asked.push(registrationId);
+    return this.summaries;
+  }
+}
+
 describe('ParticipantsService', () => {
   let repository: RecordingRegistrationRepository;
   let events: FakeEventsService;
+  let attachments: FakeAttachmentsService;
   let service: ParticipantsService;
 
   beforeEach(() => {
     repository = new RecordingRegistrationRepository();
     events = new FakeEventsService();
+    attachments = new FakeAttachmentsService();
     service = new ParticipantsService(
       repository,
       events as unknown as EventsService,
+      attachments as unknown as AttachmentsService,
     );
   });
 
@@ -348,6 +366,27 @@ describe('ParticipantsService', () => {
       // The registration is an obligation towards a person; it does not become
       // invisible because the event was unpublished.
       expect(detail.eventName).toBe('Kickoff in Köln');
+    });
+
+    it('carries the uploaded files, which the table deliberately does not', async () => {
+      repository.rows = [record()];
+      attachments.summaries = [
+        {
+          id: 'attachment-1',
+          fieldKey: 'passport',
+          fileName: 'passport.pdf',
+          mimeType: 'application/pdf',
+          sizeBytes: 1024,
+          uploadedAt: '2026-08-24T09:30:00.000Z',
+        },
+      ];
+
+      const detail = await service.get('registration-1');
+
+      // On the detail rather than on the row: the table has to stay fast at two
+      // thousand rows, and a file is opened one at a time anyway.
+      expect(detail.attachments).toHaveLength(1);
+      expect(attachments.asked).toEqual(['registration-1']);
     });
 
     it('answers 404 for an id nothing matches', async () => {

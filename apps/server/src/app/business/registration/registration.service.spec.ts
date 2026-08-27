@@ -12,11 +12,15 @@ import type {
   RegistrationWeek,
 } from '@trefaro/shared-models';
 import type { TrefaroEnv } from '../../core/config/env';
+import type { AttachmentsService, UploadedFile } from '../attachments';
 import type { EventLocation, EventsService } from '../events';
 import { MailDeliveryError, MailService } from '../mail';
 import type { ConfirmationMailContext, RegistrationMailContext } from '../mail';
 import { TokenSigner } from '../security';
-import type { RegistrationFieldsService } from './registration-fields.service';
+import type {
+  CheckedSubmission,
+  RegistrationFieldsService,
+} from './registration-fields.service';
 import {
   type NewRegistration,
   type RegistrationChanges,
@@ -157,12 +161,33 @@ class FakeRegistrationFieldsService {
   /** Set to make the next validation fail the way a missing answer would. */
   rejecting = false;
   answers: CustomFieldValues = {};
+  uploads: readonly UploadedFile[] = [];
 
-  async validateAnswers(): Promise<CustomFieldValues> {
+  async validateSubmission(): Promise<CheckedSubmission> {
     if (this.rejecting) {
       throw new BadRequestException('"Dietary requirements" is required.');
     }
-    return this.answers;
+    return { customFields: this.answers, uploads: this.uploads };
+  }
+}
+
+/** Records what the registration flow asks of the attachment store (E9). */
+class FakeAttachmentsService {
+  readonly stored: { registrationId: string; keys: string[] }[] = [];
+  readonly purged: string[] = [];
+
+  async store(
+    registrationId: string,
+    uploads: readonly UploadedFile[],
+  ): Promise<void> {
+    this.stored.push({
+      registrationId,
+      keys: uploads.map((upload) => upload.fieldKey),
+    });
+  }
+
+  async purgeForRegistration(registrationId: string): Promise<void> {
+    this.purged.push(registrationId);
   }
 }
 
@@ -196,6 +221,7 @@ describe('RegistrationService', () => {
   let mail: RecordingMailService;
   let events: FakeEventsService;
   let fields: FakeRegistrationFieldsService;
+  let attachments: FakeAttachmentsService;
   let service: RegistrationService;
 
   beforeEach(() => {
@@ -203,10 +229,12 @@ describe('RegistrationService', () => {
     mail = new RecordingMailService();
     events = new FakeEventsService();
     fields = new FakeRegistrationFieldsService();
+    attachments = new FakeAttachmentsService();
     service = new RegistrationService(
       repository,
       events as unknown as EventsService,
       fields as unknown as RegistrationFieldsService,
+      attachments as unknown as AttachmentsService,
       mail as unknown as MailService,
       new TokenSigner(ENV),
       ENV,
@@ -253,6 +281,42 @@ describe('RegistrationService', () => {
         'dietary-requirements': 'vegan',
         visa: true,
       });
+    });
+
+    it('stores an uploaded file against the registration (E9)', async () => {
+      fields.uploads = [
+        {
+          fieldKey: 'passport',
+          fileName: 'passport.pdf',
+          mimeType: 'application/pdf',
+          bytes: Buffer.from('%PDF-1.7'),
+        },
+      ];
+
+      await service.register('buergerraete', 'kickoff', INPUT);
+
+      expect(attachments.stored).toEqual([
+        { registrationId: repository.rows[0].id, keys: ['passport'] },
+      ]);
+    });
+
+    it("does not let a public request replace a confirmed registration's file", async () => {
+      await service.register('buergerraete', 'kickoff', INPUT);
+      await service.confirm(tokenFrom(mail.confirmations[0].confirmUrl));
+      fields.uploads = [
+        {
+          fieldKey: 'passport',
+          fileName: 'other.pdf',
+          mimeType: 'application/pdf',
+          bytes: Buffer.from('%PDF-1.7'),
+        },
+      ];
+
+      await service.register('buergerraete', 'kickoff', INPUT);
+
+      // Anyone who knows the address could otherwise swap the visa document of
+      // somebody who is already registered — and nothing here authorizes that.
+      expect(attachments.stored).toEqual([]);
     });
 
     it('writes nothing and sends nothing when an answer is refused', async () => {
@@ -453,15 +517,20 @@ describe('RegistrationService', () => {
 
       // Unlike deleting an event, this is allowed once confirmed: it is how an
       // organization answers a request for erasure (E14).
-      await service.remove(repository.rows[0].id);
+      const id = repository.rows[0].id;
+      await service.remove(id);
 
       expect(repository.rows).toHaveLength(0);
+      // The files go too: the cascade would take their rows and leave the bytes.
+      expect(attachments.purged).toEqual([id]);
     });
 
-    it('answers 404 for a registration that is already gone', async () => {
+    it('answers 404 for a registration that is already gone, removing nothing', async () => {
       await expect(service.remove('registration-9')).rejects.toThrow(
         NotFoundException,
       );
+
+      expect(attachments.purged).toEqual([]);
     });
   });
 });

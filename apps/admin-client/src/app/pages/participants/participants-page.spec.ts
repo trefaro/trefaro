@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import type {
+  AttachmentSummary,
   OrganizerEvent,
   ParticipantDetail,
   ParticipantPage as ParticipantPageModel,
@@ -12,6 +13,7 @@ import type {
   RegistrationStatus,
 } from '@trefaro/shared-models';
 import { EventsAdminService } from '../../features/events/events-admin.service';
+import { AttachmentsAdminService } from '../../features/registrations/attachments-admin.service';
 import { ParticipantsAdminService } from '../../features/registrations/participants-admin.service';
 import { RegistrationFieldsAdminService } from '../../features/registrations/registration-fields-admin.service';
 import { ParticipantsPage } from './participants-page';
@@ -54,6 +56,15 @@ function row(overrides: Partial<ParticipantRow> = {}): ParticipantRow {
   };
 }
 
+const PASSPORT: AttachmentSummary = {
+  id: 'attachment-1',
+  fieldKey: 'passport',
+  fileName: 'passport.pdf',
+  mimeType: 'application/pdf',
+  sizeBytes: 428_112,
+  uploadedAt: '2026-08-24T09:30:00.000Z',
+};
+
 const FIELDS: readonly RegistrationField[] = [
   {
     id: 'field-1',
@@ -63,6 +74,8 @@ const FIELDS: readonly RegistrationField[] = [
     type: 'text',
     helpText: null,
     options: [],
+    accept: [],
+    maxSizeBytes: null,
     required: false,
     sort: 0,
   },
@@ -74,8 +87,23 @@ const FIELDS: readonly RegistrationField[] = [
     type: 'checkbox',
     helpText: null,
     options: [],
+    accept: [],
+    maxSizeBytes: null,
     required: false,
     sort: 1,
+  },
+  {
+    id: 'field-3',
+    eventId: 'event-1',
+    key: 'passport',
+    label: 'Passport scan',
+    type: 'file',
+    helpText: null,
+    options: [],
+    accept: ['application/pdf'],
+    maxSizeBytes: 5 * 1024 * 1024,
+    required: true,
+    sort: 2,
   },
 ];
 
@@ -133,10 +161,26 @@ class FakeParticipantsAdminService {
   }
 }
 
+/** Records what the detail panel asks to be downloaded (E9). */
+class FakeAttachmentsAdminService {
+  readonly saved: AttachmentSummary[] = [];
+
+  async save(attachment: AttachmentSummary): Promise<void> {
+    this.saved.push(attachment);
+  }
+}
+
 /** The template drives protected members; the tests reach them the same way. */
 interface PageInternals {
   answers: () => readonly { label: string; value: string }[];
   leftovers: () => readonly { key: string; value: string }[];
+  documents: () => readonly {
+    key: string;
+    label: string;
+    file: AttachmentSummary | null;
+  }[];
+  download: (file: AttachmentSummary) => Promise<void>;
+  size: (file: AttachmentSummary) => string;
   bars: () => readonly { totalHeight: number; confirmedHeight: number }[];
   chartLabel: () => string;
   pages: () => number;
@@ -164,10 +208,12 @@ async function render(
 ): Promise<{
   page: PageInternals;
   participants: FakeParticipantsAdminService;
+  attachments: FakeAttachmentsAdminService;
   navigations: Navigation[];
   settle: () => Promise<void>;
 }> {
   const participants = new FakeParticipantsAdminService();
+  const attachments = new FakeAttachmentsAdminService();
   // Before the component exists: the detail panel is loaded by an effect on the
   // first change detection, and setting it afterwards would not re-run.
   participants.detail = seeded.detail ?? null;
@@ -185,6 +231,7 @@ async function render(
         provide: RegistrationFieldsAdminService,
         useValue: { list: () => Promise.resolve(fields) },
       },
+      { provide: AttachmentsAdminService, useValue: attachments },
     ],
   });
 
@@ -208,6 +255,7 @@ async function render(
   return {
     page: fixture.componentInstance as unknown as PageInternals,
     participants,
+    attachments,
     navigations,
     settle: async () => {
       await fixture.whenStable();
@@ -392,10 +440,14 @@ describe('ParticipantsPage', () => {
   });
 
   describe('the answers to the configurable fields (F12)', () => {
-    const detail = (customFields: Record<string, string | boolean>) => ({
+    const detail = (
+      customFields: Record<string, string | boolean>,
+      attachments: readonly AttachmentSummary[] = [],
+    ) => ({
       ...row({ customFields }),
       eventId: 'event-1',
       eventName: EVENT.name,
+      attachments,
     });
 
     it('labels every question the event asks, answered or not', async () => {
@@ -422,6 +474,64 @@ describe('ParticipantsPage', () => {
         label: 'Needs a visa letter',
         value: 'no',
       });
+    });
+
+    it('lists every file field, and what arrived for it (E9)', async () => {
+      const { page } = await render(
+        { selected: 'registration-1' },
+        { detail: detail({}, [PASSPORT]) },
+      );
+
+      // A file field is not answered with a value (F37), so it does not appear
+      // among the answers — it appears with the name of what was uploaded.
+      expect(page.answers().map((answer) => answer.label)).not.toContain(
+        'Passport scan',
+      );
+      expect(page.documents()).toEqual([
+        { key: 'passport', label: 'Passport scan', file: PASSPORT },
+      ]);
+      expect(page.size(PASSPORT)).toBe('418 KB');
+    });
+
+    it('says so when a required file is still missing', async () => {
+      const { page } = await render(
+        { selected: 'registration-1' },
+        { detail: detail({}) },
+      );
+
+      // An organizer chasing a visa document needs to see that it is missing.
+      expect(page.documents()).toEqual([
+        { key: 'passport', label: 'Passport scan', file: null },
+      ]);
+    });
+
+    it('keeps showing a file whose question was removed (F34)', async () => {
+      const { page } = await render(
+        { selected: 'registration-1' },
+        {
+          fields: [],
+          detail: detail({}, [PASSPORT]),
+        },
+      );
+
+      // Under its bare key, like a leftover answer: the organizer removed the
+      // question, not the document.
+      expect(page.documents()).toEqual([
+        { key: 'passport', label: 'passport', file: PASSPORT },
+      ]);
+    });
+
+    it('fetches a file instead of linking to the upload volume', async () => {
+      const { page, attachments } = await render(
+        { selected: 'registration-1' },
+        { detail: detail({}, [PASSPORT]) },
+      );
+
+      await page.download(PASSPORT);
+
+      // The volume has no public URL at all (E9); the bytes come through the
+      // administrative session.
+      expect(attachments.saved).toEqual([PASSPORT]);
     });
 
     it('keeps showing an answer whose question was removed (F34)', async () => {

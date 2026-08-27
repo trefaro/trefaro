@@ -17,6 +17,7 @@ import type {
 import { hasEnded } from '@trefaro/shared-models';
 import type { TrefaroEnv } from '../../core/config/env';
 import { ENV } from '../../core/config/env.module';
+import { AttachmentsService, type UploadedFile } from '../attachments';
 import { EventsService } from '../events';
 import { MailDeliveryError, MailService } from '../mail';
 import type { MailEvent, RegistrationMailContext } from '../mail';
@@ -58,6 +59,8 @@ export class RegistrationService {
     // The field kit (F12): what an answer has to look like follows from the
     // definitions, so the service that owns them is what checks it.
     private readonly fields: RegistrationFieldsService,
+    // Uploaded files (E9) live next to the row, not in it.
+    private readonly attachments: AttachmentsService,
     private readonly mail: MailService,
     private readonly tokens: TokenSigner,
     @Inject(ENV) private readonly env: TrefaroEnv,
@@ -67,6 +70,7 @@ export class RegistrationService {
     seriesSlug: string,
     eventSlug: string,
     input: RegistrationInput,
+    files: readonly UploadedFile[] = [],
   ): Promise<RegistrationAcknowledgement> {
     // Through the public lookup, so a draft event — and any event of a series
     // that is not public — cannot be registered for at all (F26).
@@ -77,19 +81,29 @@ export class RegistrationService {
 
     const email = normalizeEmail(input.email);
     // Before anything is written: a form missing a required answer must not
-    // leave a pending row behind, and must not send a mail either.
-    const customFields = await this.fields.validateAnswers(
+    // leave a pending row behind, must not send a mail, and must not put a byte
+    // into the upload volume.
+    const { customFields, uploads } = await this.fields.validateSubmission(
       event.id,
       input.customFields,
+      files,
     );
 
     const existing = await this.registrations.findByEventAndEmail(
       event.id,
       email,
     );
+    // A confirmed registration is not rewritten by a public request — see
+    // {@link reuse}. Its files are part of that: anyone who knows an address
+    // could otherwise replace the visa document it was registered with.
+    const writable = !existing || existing.status !== 'confirmed';
     const registration = existing
       ? await this.reuse(existing, input, customFields)
       : await this.add(event.id, email, input, customFields);
+
+    if (writable && uploads.length > 0) {
+      await this.attachments.store(registration.id, uploads);
+    }
 
     await this.notify(registration, event, seriesSlug);
     return { email };
@@ -148,11 +162,17 @@ export class RegistrationService {
    * data", and the groundwork for the erasure functions of phase 5. Cancelling
    * instead — which keeps the record and frees the seat — arrives with the
    * participant overview in AP 5, together with everything else an organizer
-   * does to a single registration. From AP 7 this also removes the files that
-   * were uploaded with it, which is why it is a service method and not a plain
-   * repository call.
+   * does to a single registration. It also removes the files uploaded with it
+   * (E9), which is why it is a service method and not a plain repository call:
+   * the database cascade would take the rows and leave the bytes.
    */
   async remove(id: string): Promise<void> {
+    // The 404 before anything is removed, so a mistyped id changes nothing.
+    await this.require(id);
+    // Files before the row: the rows are what say which files exist, and the
+    // foreign key would take them with the registration — leaving the volume
+    // holding bytes that nothing references any more.
+    await this.attachments.purgeForRegistration(id);
     if (!(await this.registrations.delete(id))) {
       throw new NotFoundException(GONE);
     }

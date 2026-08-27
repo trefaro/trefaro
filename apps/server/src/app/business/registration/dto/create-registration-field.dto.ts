@@ -12,7 +12,10 @@ import {
   MAX_FIELD_OPTIONS,
   MAX_FIELD_OPTION_LENGTH,
   MAX_REGISTRATION_FIELDS,
+  MAX_UPLOAD_BYTES,
+  MIN_UPLOAD_MAX_BYTES,
   REGISTRATION_FIELD_TYPES,
+  UPLOAD_MIME_TYPES,
 } from '@trefaro/shared-models';
 import {
   ArrayMaxSize,
@@ -20,12 +23,29 @@ import {
   IsArray,
   IsBoolean,
   IsIn,
+  IsInt,
   IsOptional,
   IsString,
   IsUUID,
   Length,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
+
+/**
+ * The accepted-types and size-limit properties, spelled out once.
+ *
+ * Both classes below carry them, and both have to carry them identically: the
+ * form builder tightens an allowlist through `PATCH` exactly as it sets one
+ * through `POST`.
+ */
+const ACCEPT_DESCRIPTION =
+  'The MIME types a file field accepts, from the fixed catalogue (F38). ' +
+  'Required for a file field, refused for any other type.';
+const MAX_SIZE_DESCRIPTION =
+  'The largest file this field takes, in bytes. Defaults to 5 MB; never above ' +
+  'the 10 MB this server reads at all.';
 
 /**
  * What an organizer sends when defining a field (F12, FR 3.5).
@@ -80,6 +100,29 @@ export class CreateRegistrationFieldDto implements RegistrationFieldInput {
   @MaxLength(MAX_FIELD_OPTION_LENGTH, { each: true })
   options?: string[];
 
+  @ApiProperty({
+    required: false,
+    type: [String],
+    enum: UPLOAD_MIME_TYPES,
+    description: ACCEPT_DESCRIPTION,
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(UPLOAD_MIME_TYPES.length)
+  @IsIn(UPLOAD_MIME_TYPES, { each: true })
+  accept?: string[];
+
+  @ApiProperty({
+    required: false,
+    example: 5_242_880,
+    description: MAX_SIZE_DESCRIPTION,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(MIN_UPLOAD_MAX_BYTES)
+  @Max(MAX_UPLOAD_BYTES)
+  maxSizeBytes?: number;
+
   @ApiProperty({ required: false, default: false })
   @IsOptional()
   @IsBoolean()
@@ -113,6 +156,29 @@ export class UpdateRegistrationFieldDto implements RegistrationFieldChange {
   @IsString({ each: true })
   @MaxLength(MAX_FIELD_OPTION_LENGTH, { each: true })
   options?: string[];
+
+  @ApiProperty({
+    required: false,
+    type: [String],
+    enum: UPLOAD_MIME_TYPES,
+    description: ACCEPT_DESCRIPTION,
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(UPLOAD_MIME_TYPES.length)
+  @IsIn(UPLOAD_MIME_TYPES, { each: true })
+  accept?: string[];
+
+  @ApiProperty({
+    required: false,
+    example: 5_242_880,
+    description: MAX_SIZE_DESCRIPTION,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(MIN_UPLOAD_MAX_BYTES)
+  @Max(MAX_UPLOAD_BYTES)
+  maxSizeBytes?: number;
 
   @ApiProperty({ required: false })
   @IsOptional()

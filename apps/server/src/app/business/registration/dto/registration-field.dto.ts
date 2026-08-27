@@ -4,7 +4,10 @@ import type {
   RegistrationFieldPublic,
   RegistrationFieldType,
 } from '@trefaro/shared-models';
-import { REGISTRATION_FIELD_TYPES } from '@trefaro/shared-models';
+import {
+  REGISTRATION_FIELD_TYPES,
+  UPLOAD_MIME_TYPES,
+} from '@trefaro/shared-models';
 
 /**
  * OpenAPI shapes of the field kit (F12, FR 3.5).
@@ -42,9 +45,29 @@ export class RegistrationFieldPublicDto implements RegistrationFieldPublic {
   options!: string[];
 
   @ApiProperty({
+    type: [String],
+    enum: UPLOAD_MIME_TYPES,
+    description:
+      'The MIME types a file field accepts; empty for any other type. Chosen ' +
+      'from a fixed catalogue rather than typed (F38).',
+  })
+  accept!: string[];
+
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    example: 5_242_880,
+    description:
+      'The largest file this field takes, in bytes; null for any other type. ' +
+      'A larger file is refused whatever this says.',
+  })
+  maxSizeBytes!: number | null;
+
+  @ApiProperty({
     description:
       'A required checkbox has to be ticked, not merely answered — a consent ' +
-      'box that accepts "no" is not a consent box.',
+      'box that accepts "no" is not a consent box. A required file field has ' +
+      'to be answered with a file on every submission.',
   })
   required!: boolean;
 }

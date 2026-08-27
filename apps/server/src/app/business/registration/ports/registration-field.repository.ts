@@ -23,6 +23,10 @@ export interface RegistrationFieldRecord {
   readonly type: RegistrationFieldType;
   readonly helpText: string | null;
   readonly options: readonly string[];
+  /** Accepted MIME types of a file field; empty for every other type (F38). */
+  readonly accept: readonly string[];
+  /** Size limit of a file field in bytes; `null` for every other type. */
+  readonly maxSizeBytes: number | null;
   readonly required: boolean;
   readonly sort: number;
 }
@@ -35,6 +39,10 @@ export interface NewRegistrationField {
   readonly type: RegistrationFieldType;
   readonly helpText: string | null;
   readonly options: readonly string[];
+  /** Accepted MIME types of a file field; empty for every other type (F38). */
+  readonly accept: readonly string[];
+  /** Size limit of a file field in bytes; `null` for every other type. */
+  readonly maxSizeBytes: number | null;
   readonly required: boolean;
   readonly sort: number;
 }
@@ -44,6 +52,8 @@ export interface RegistrationFieldChanges {
   readonly label?: string;
   readonly helpText?: string | null;
   readonly options?: readonly string[];
+  readonly accept?: readonly string[];
+  readonly maxSizeBytes?: number | null;
   readonly required?: boolean;
 }
 

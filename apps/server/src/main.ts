@@ -7,6 +7,7 @@ import { AppModule } from './app/app.module';
 import type { TrefaroEnv } from './app/core/config/env';
 import { ENV } from './app/core/config/env.module';
 import { AllExceptionsFilter } from './app/core/filters/all-exceptions.filter';
+import { VALIDATION_PIPE_OPTIONS } from './app/core/validation';
 import { ConfiguredIoAdapter } from './app/core/websocket/configured-io.adapter';
 
 /** REST endpoints live under `/api`; the reverse proxy routes on that prefix. */
@@ -36,16 +37,9 @@ async function bootstrap(): Promise<void> {
   // socket.io needs the same allow-list, and a gateway decorator cannot read it.
   app.useWebSocketAdapter(new ConfiguredIoAdapter(app, env));
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      // An unexpected field is a mistake worth reporting, not something to drop
-      // silently — a registration form's field kit is configurable, so a typo in
-      // a field key must not disappear.
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
+  // The same options the registration form's multipart pipe reuses — see
+  // `core/validation.ts`.
+  app.useGlobalPipes(new ValidationPipe(VALIDATION_PIPE_OPTIONS));
 
   app.useGlobalFilters(new AllExceptionsFilter(app.get(HttpAdapterHost)));
 

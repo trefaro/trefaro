@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AttachmentsModule } from '../attachments';
 import { EventsModule } from '../events';
 import { MailModule } from '../mail';
 import { SecurityModule } from '../security';
@@ -28,11 +29,14 @@ import { RegistrationService } from './registration.service';
  * the configurable form (F12) — both the definitions an organizer manages and
  * the validation of the answers, because the definition *is* the rule.
  *
- * Still to come: the file upload field type (AP 7) and the participant's own
- * view of their registration (AP 9, E11).
+ * Imports `AttachmentsModule` for the file upload field type (E9): the bytes
+ * live next to the registration rather than in it, and this module is what puts
+ * them there and what takes them away again.
+ *
+ * Still to come: the participant's own view of their registration (AP 9, E11).
  */
 @Module({
-  imports: [EventsModule, MailModule, SecurityModule],
+  imports: [EventsModule, MailModule, SecurityModule, AttachmentsModule],
   controllers: [
     PublicRegistrationsController,
     PublicRegistrationFieldsController,

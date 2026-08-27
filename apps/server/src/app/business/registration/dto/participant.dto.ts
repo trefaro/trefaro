@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import type {
+  AttachmentSummary,
   CustomFieldValues,
   ParticipantDetail,
   ParticipantPage,
@@ -141,6 +142,31 @@ export class RegistrationStatisticsDto implements RegistrationStatistics {
   timezone!: string;
 }
 
+/** One file a participant uploaded (E9) — metadata only, never the bytes. */
+export class AttachmentSummaryDto implements AttachmentSummary {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty({
+    example: 'passport-scan',
+    description:
+      'The field that asked for it — stable across a rewording (F35).',
+  })
+  fieldKey!: string;
+
+  @ApiProperty({ example: 'passport.pdf' })
+  fileName!: string;
+
+  @ApiProperty({ example: 'application/pdf' })
+  mimeType!: string;
+
+  @ApiProperty({ example: 428_112 })
+  sizeBytes!: number;
+
+  @ApiProperty({ example: '2026-08-24T09:30:00.000Z' })
+  uploadedAt!: string;
+}
+
 export class ParticipantDetailDto
   extends ParticipantRowDto
   implements ParticipantDetail
@@ -150,4 +176,13 @@ export class ParticipantDetailDto
 
   @ApiProperty({ example: 'Kickoff in Köln' })
   eventName!: string;
+
+  @ApiProperty({
+    type: [AttachmentSummaryDto],
+    description:
+      'The files uploaded with this registration, in form order. The bytes are ' +
+      'fetched one at a time from `/api/admin/attachments/{id}`; the upload ' +
+      'volume is never served statically (E9).',
+  })
+  attachments!: AttachmentSummaryDto[];
 }

@@ -10,6 +10,7 @@ import {
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type { ApiError } from '@trefaro/shared-http';
 import type {
+  AttachmentSummary,
   OrganizerEvent,
   ParticipantDetail,
   ParticipantPage,
@@ -28,10 +29,12 @@ import {
   PARTICIPANT_SORTS,
   REGISTRATION_STATUSES,
   formatAnswer,
+  formatBytes,
   formatInstant,
   pageCount,
 } from '@trefaro/shared-models';
 import { EventsAdminService } from '../../features/events/events-admin.service';
+import { AttachmentsAdminService } from '../../features/registrations/attachments-admin.service';
 import { ParticipantsAdminService } from '../../features/registrations/participants-admin.service';
 import { RegistrationFieldsAdminService } from '../../features/registrations/registration-fields-admin.service';
 
@@ -305,6 +308,30 @@ interface Bar extends RegistrationWeek {
           </dl>
         }
 
+        @if (documents().length > 0) {
+          <h3>Files</h3>
+          <ul class="files">
+            @for (document of documents(); track document.key) {
+              <li>
+                <span class="files__label">{{ document.label }}</span>
+                @if (document.file; as file) {
+                  <button
+                    type="button"
+                    class="link"
+                    [disabled]="downloading() === file.id"
+                    (click)="download(file)"
+                  >
+                    {{ file.fileName }}
+                  </button>
+                  <span class="meta">{{ size(file) }}</span>
+                } @else {
+                  <span class="meta">nothing uploaded</span>
+                }
+              </li>
+            }
+          </ul>
+        }
+
         @if (leftovers().length > 0) {
           <h3>No longer asked for</h3>
           <dl>
@@ -553,6 +580,42 @@ interface Bar extends RegistrationWeek {
       font-size: 0.9rem;
     }
 
+    .files {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .files li {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.4rem;
+    }
+
+    .files__label {
+      font-weight: 600;
+    }
+
+    /* A download is a request, not a navigation — but it should read as a link. */
+    .link {
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--trefaro-color-primary-strong);
+      font: inherit;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .link:disabled {
+      opacity: 0.55;
+      cursor: default;
+    }
+
     .detail__actions {
       display: flex;
       gap: 0.6rem;
@@ -591,6 +654,7 @@ export class ParticipantsPage {
 
   private readonly participants = inject(ParticipantsAdminService);
   private readonly registrationFields = inject(RegistrationFieldsAdminService);
+  private readonly attachments = inject(AttachmentsAdminService);
   private readonly events = inject(EventsAdminService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -617,6 +681,9 @@ export class ParticipantsPage {
 
   /** What the search box is filtering by right now, according to the URL. */
   protected readonly searchTerm = computed(() => text(this.search()).trim());
+
+  /** The attachment currently being fetched, so its button can say so. */
+  protected readonly downloading = signal<string | null>(null);
 
   /** The registration whose detail panel is open, if any. */
   protected readonly selectedId = computed(() => text(this.selected()));
@@ -727,10 +794,50 @@ export class ParticipantsPage {
   protected readonly answers = computed(() => {
     const person = this.detail();
     if (!person) return [];
-    return this.fields().map((field) => ({
-      label: field.label,
-      value: formatAnswer(person.customFields[field.key]),
-    }));
+    return (
+      this.fields()
+        // A file field is not answered with a value (F37); it appears under
+        // "Files", with the name of what was uploaded.
+        .filter((field) => field.type !== 'file')
+        .map((field) => ({
+          label: field.label,
+          value: formatAnswer(person.customFields[field.key]),
+        }))
+    );
+  });
+
+  /**
+   * The files this registration was asked for, and what arrived (E9).
+   *
+   * Every file field is listed, answered or not — an organizer chasing a missing
+   * visa document needs to see that it is missing. A file whose question was
+   * deleted since is listed too, under its bare key: deleting the question does
+   * not delete the answer (F34), and a document least of all.
+   */
+  protected readonly documents = computed(() => {
+    const person = this.detail();
+    if (!person) return [];
+
+    const uploaded = new Map(
+      person.attachments.map((attachment) => [attachment.fieldKey, attachment]),
+    );
+    const asked = this.fields().filter((field) => field.type === 'file');
+    const askedKeys = new Set(asked.map((field) => field.key));
+
+    return [
+      ...asked.map((field) => ({
+        key: field.key,
+        label: field.label,
+        file: uploaded.get(field.key) ?? null,
+      })),
+      ...person.attachments
+        .filter((attachment) => !askedKeys.has(attachment.fieldKey))
+        .map((attachment) => ({
+          key: attachment.fieldKey,
+          label: attachment.fieldKey,
+          file: attachment,
+        })),
+    ];
   });
 
   /**
@@ -748,6 +855,30 @@ export class ParticipantsPage {
       .filter(([key]) => !known.has(key))
       .map(([key, value]) => ({ key, value: formatAnswer(value) }));
   });
+
+  protected size(file: AttachmentSummary): string {
+    return formatBytes(file.sizeBytes);
+  }
+
+  /**
+   * Fetches one uploaded file and hands it to the browser (E9).
+   *
+   * A button rather than a link: the bytes only come with an administrative
+   * session, and the volume has no public URL to link to at all.
+   */
+  protected async download(file: AttachmentSummary): Promise<void> {
+    if (this.downloading()) return;
+    this.downloading.set(file.id);
+    try {
+      await this.attachments.save(file);
+    } catch (error: unknown) {
+      this.error.set(
+        (error as ApiError)?.message ?? 'The file could not be downloaded.',
+      );
+    } finally {
+      this.downloading.set(null);
+    }
+  }
 
   /** What a screen reader is told instead of the bars. */
   protected readonly chartLabel = computed(() => {

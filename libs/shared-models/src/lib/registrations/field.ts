@@ -16,17 +16,20 @@
  * 2. **An option is its own value.** A select field holds plain strings, so what
  *    the participant chose and what the overview shows are the same text — there
  *    is no mapping table that can go stale.
- * 3. **Only three types in phase 1**, the ones AP 6 names. The file upload FR
- *    3.5 also asks for (visa documents) is a fourth, and it arrives with the
- *    storage it needs in AP 7 rather than as an unusable enum value now.
+ * 3. **A file answer is not a value** (F37). The three other types answer with
+ *    something that fits in `custom_fields_json`; a file answers with bytes, and
+ *    those live in an `attachment` row of their own. Nothing about the file is
+ *    duplicated into the JSON, so there is no second copy of it to disagree with
+ *    the first.
  */
 
-export type RegistrationFieldType = 'text' | 'select' | 'checkbox';
+export type RegistrationFieldType = 'text' | 'select' | 'checkbox' | 'file';
 
 export const REGISTRATION_FIELD_TYPES: readonly RegistrationFieldType[] = [
   'text',
   'select',
   'checkbox',
+  'file',
 ];
 
 /**
@@ -74,6 +77,16 @@ export interface RegistrationFieldPublic {
   /** The choices of a select field; empty for every other type. */
   readonly options: readonly string[];
   /**
+   * The MIME types a file field accepts; empty for every other type.
+   *
+   * Chosen from {@link UPLOAD_TYPES} rather than typed (F38), and non-empty for
+   * a file field: a field that accepts everything is a field that accepts an
+   * executable.
+   */
+  readonly accept: readonly string[];
+  /** The largest file this field takes, in bytes; `null` for every other type. */
+  readonly maxSizeBytes: number | null;
+  /**
    * Whether the form may be submitted without it.
    *
    * A required checkbox has to be ticked, not merely answered (F36) — a consent
@@ -103,6 +116,9 @@ export interface RegistrationFieldInput {
   readonly key?: string;
   readonly helpText?: string | null;
   readonly options?: readonly string[];
+  readonly accept?: readonly string[];
+  /** Defaults to {@link DEFAULT_UPLOAD_MAX_BYTES} for a file field. */
+  readonly maxSizeBytes?: number;
   readonly required?: boolean;
 }
 
@@ -127,6 +143,10 @@ export interface RegistrationFieldOrder {
  * In one place, because the overview, the detail panel and later the export all
  * have to say the same thing about the same answer — and because "false" is not
  * what an organizer should read where "no" is meant.
+ *
+ * Not for a file field: what was uploaded is an {@link AttachmentSummary}, and
+ * a file field with nothing uploaded reads as the same dash as any other
+ * unanswered question.
  */
 export function formatAnswer(value: CustomFieldValue | undefined): string {
   if (value === undefined || value === '') return '—';

@@ -22,6 +22,7 @@ import {
   MAX_PARTICIPANT_PAGE_SIZE,
   PARTICIPANT_SORTS,
 } from '@trefaro/shared-models';
+import { AttachmentsService } from '../attachments';
 import { EventsService } from '../events';
 import {
   REGISTRATION_REPOSITORY,
@@ -54,6 +55,9 @@ export class ParticipantsService {
     @Inject(REGISTRATION_REPOSITORY)
     private readonly registrations: RegistrationRepository,
     private readonly events: EventsService,
+    // Read for the detail panel only: a page of the table must not turn into
+    // one query per row (E9, and the load rule of FR 3.3).
+    private readonly attachments: AttachmentsService,
   ) {}
 
   /**
@@ -125,11 +129,15 @@ export class ParticipantsService {
    */
   async get(id: string): Promise<ParticipantDetail> {
     const registration = await this.require(id);
-    const { event } = await this.events.locate(registration.eventId);
+    const [{ event }, attachments] = await Promise.all([
+      this.events.locate(registration.eventId),
+      this.attachments.summariesFor(registration.id),
+    ]);
     return {
       ...toRow(registration),
       eventId: registration.eventId,
       eventName: event.name,
+      attachments,
     };
   }
 

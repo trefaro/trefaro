@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AttachmentsModule } from '../attachments';
 import { AdminEventSeriesController } from './admin-event-series.controller';
 import { EventSeriesService } from './event-series.service';
 import { PublicEventSeriesController } from './public-event-series.controller';
@@ -16,6 +17,9 @@ import { PublicEventSeriesController } from './public-event-series.controller';
  * in the wrong place.
  */
 @Module({
+  // Deleting a series cascades to its registrations; their files have to be
+  // removed before the rows that name them are (E9).
+  imports: [AttachmentsModule],
   controllers: [AdminEventSeriesController, PublicEventSeriesController],
   providers: [EventSeriesService],
   exports: [EventSeriesService],

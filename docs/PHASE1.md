@@ -256,33 +256,33 @@ Zwei Regeln, die sich aus Phase 0 ergeben und hier greifen:
 `/api/user/**` ist teilnehmendenseitig und in Phase 1 durchgehend
 unauthentifiziert; `/api/admin/**` verlangt eine Sitzung (E16).
 
-| Methode + Pfad                                          | Zweck                             | AP  |
-| ------------------------------------------------------- | --------------------------------- | --- |
-| `POST /api/admin/auth/login` · `logout` · `GET auth/me` | UC 01                             | 1   |
-| `GET/POST/DELETE /api/admin/admins`                     | FR 1.2                            | 1   |
-| `GET/POST/PATCH/DELETE /api/admin/series[/:id]`         | FR 2.1, 2.2                       | 2   |
-| `GET/POST/PATCH/DELETE /api/admin/events[/:id]`         | FR 3.1, 3.2                       | 3   |
-| `GET /api/admin/events/:id/dashboard`                   | FR 3.8                            | 10  |
-| `GET/POST /api/admin/events/:id/registration-fields`    | F12, Formular je Event            | 6   |
-| `PUT /api/admin/events/:id/registration-fields/order`   | Reihenfolge als Ganzes (F35)      | 6   |
-| `PATCH/DELETE /api/admin/registration-fields/:id`       | Frage ändern, entfernen (F34)     | 6   |
-| `GET /api/admin/events/:id/registrations`               | FR 3.3, mit Suche und Paginierung | 5   |
-| `GET /api/admin/events/:id/registrations/statistics`    | Wochen-Anmeldegrafik              | 5   |
-| `GET/PATCH/DELETE /api/admin/registrations/:id`         | Detail, Stornieren, Löschen (E14) | 5   |
-| `GET /api/admin/attachments/:id`                        | Anhang herunterladen (E9)         | 7   |
-| `… /api/admin/events/:id/program-items`                 | FR 3.7                            | 8   |
-| `GET /api/admin/program-items/:id/signups`              | Auslastung, FR 3.10               | 9   |
-| `… /api/admin/events/:id/media-links`                   | FR 3.6, F10                       | 11  |
-| `GET /api/admin/series/:id/former-participants`         | FR 2.4                            | 12  |
-| `POST /api/admin/series/:id/invitations`                | FR 2.4                            | 12  |
-| `GET /api/user/series[/:slug]`                          | Startseite, Reihenseite           | 2   |
-| `GET /api/user/series/:reihe/events[/:event]`           | Event-Landingpage                 | 3   |
-| `GET /api/user/series/:reihe/events/:event/program`     | Programmplan                      | 8   |
-| `… /events/:event/registration-fields`                  | Feldsatz des Formulars            | 6   |
-| `POST /… /events/:event/registrations`                  | FR 3.5, gedrosselt                | 4   |
-| `POST /api/user/registrations/confirm`                  | Double-Opt-In (E5b)               | 4   |
-| `GET /api/user/registrations/me`                        | „Meine Anmeldung" (E11)           | 9   |
-| `PUT/DELETE /api/user/program-items/:id/signup`         | FR 3.10 (E11)                     | 9   |
+| Methode + Pfad                                          | Zweck                                                        | AP  |
+| ------------------------------------------------------- | ------------------------------------------------------------ | --- |
+| `POST /api/admin/auth/login` · `logout` · `GET auth/me` | UC 01                                                        | 1   |
+| `GET/POST/DELETE /api/admin/admins`                     | FR 1.2                                                       | 1   |
+| `GET/POST/PATCH/DELETE /api/admin/series[/:id]`         | FR 2.1, 2.2                                                  | 2   |
+| `GET/POST/PATCH/DELETE /api/admin/events[/:id]`         | FR 3.1, 3.2                                                  | 3   |
+| `GET /api/admin/events/:id/dashboard`                   | FR 3.8                                                       | 10  |
+| `GET/POST /api/admin/events/:id/registration-fields`    | F12, Formular je Event                                       | 6   |
+| `PUT /api/admin/events/:id/registration-fields/order`   | Reihenfolge als Ganzes (F35)                                 | 6   |
+| `PATCH/DELETE /api/admin/registration-fields/:id`       | Frage ändern, entfernen (F34)                                | 6   |
+| `GET /api/admin/events/:id/registrations`               | FR 3.3, mit Suche und Paginierung                            | 5   |
+| `GET /api/admin/events/:id/registrations/statistics`    | Wochen-Anmeldegrafik                                         | 5   |
+| `GET/PATCH/DELETE /api/admin/registrations/:id`         | Detail, Stornieren, Löschen (E14)                            | 5   |
+| `GET /api/admin/attachments/:id`                        | Anhang herunterladen (E9)                                    | 7   |
+| `… /api/admin/events/:id/program-items`                 | FR 3.7                                                       | 8   |
+| `GET /api/admin/program-items/:id/signups`              | Auslastung, FR 3.10                                          | 9   |
+| `… /api/admin/events/:id/media-links`                   | FR 3.6, F10                                                  | 11  |
+| `GET /api/admin/series/:id/former-participants`         | FR 2.4                                                       | 12  |
+| `POST /api/admin/series/:id/invitations`                | FR 2.4                                                       | 12  |
+| `GET /api/user/series[/:slug]`                          | Startseite, Reihenseite                                      | 2   |
+| `GET /api/user/series/:reihe/events[/:event]`           | Event-Landingpage                                            | 3   |
+| `GET /api/user/series/:reihe/events/:event/program`     | Programmplan                                                 | 8   |
+| `… /events/:event/registration-fields`                  | Feldsatz des Formulars                                       | 6   |
+| `POST /… /events/:event/registrations`                  | FR 3.5, gedrosselt; ab AP 7 auch `multipart/form-data` (F39) | 4   |
+| `POST /api/user/registrations/confirm`                  | Double-Opt-In (E5b)                                          | 4   |
+| `GET /api/user/registrations/me`                        | „Meine Anmeldung" (E11)                                      | 9   |
+| `PUT/DELETE /api/user/program-items/:id/signup`         | FR 3.10 (E11)                                                | 9   |
 
 Die öffentlichen Pfade sind geschachtelt, weil ein Slug je Reihe eindeutig ist
 und nicht je Instanz (E7, F28) — die Zeilen oben nennen sie in der Form, in der
@@ -1003,6 +1003,142 @@ Was anders lief:
   und kollidiert damit gar nicht mit `email` — der erste Test dazu prüfte etwas
   anderes als er behauptete. Die Liste trifft die abgeleiteten Schlüssel, nicht
   die Beschriftungen, und der Test sagt es jetzt auch.
+
+### AP 7 — Feldtyp Datei-Upload (erledigt)
+
+Stand 27.08.2026. Der Feld-Baukasten hat seinen vierten Typ: ein Event kann eine
+**Datei** verlangen (F12, Teil 2, E9) — Visa-Dokumente, Passscans, ausgefüllte
+Formulare. Der Veranstalter legt fest, welche Formate das Feld annimmt und wie
+groß eine Datei sein darf; der Nutzer-Client schickt sie mit derselben Absendung
+wie den Rest des Formulars; die Bytes liegen im Upload-Volume und sind
+ausschließlich über eine authentifizierte Anfrage erreichbar. Damit ist auch der
+Phase-1-Punkt „the uploads volume is finally used" aus `todo.md` abgehakt — das
+Volume aus der Verteilungssicht wird zum ersten Mal benutzt.
+
+Belegt: 447 Unit-Tests (+55: Server 325, `admin-client` 44, `shared-http` 14),
+146 API-Vertragstests (+17), 87 Veranstalter-Browsertests (+9), 78
+Nutzer-Browsertests (+3). Beide Richtungen der zwei neuen Migrationen wurden
+gefahren: `down` von Hand ausgeführt, `up` beim nächsten Serverstart erneut
+angewandt, Schema danach identisch.
+
+**Das Abnahmekriterium, alle drei Hälften.** Jede ist an einer anderen Stelle
+durchgesetzt, und deshalb prüft `apps/server-e2e/src/api/attachments.spec.ts`
+alle drei:
+
+| Fall                                         | Antwort | durchgesetzt von                                    |
+| -------------------------------------------- | ------- | --------------------------------------------------- |
+| Download ohne Sitzung                        | 401     | Admin-Guard über dem URL-Präfix (E16)               |
+| Datei größer als das Feld erlaubt            | 400     | `maxSizeBytes` der Definition                       |
+| Datei größer als die serverweite Obergrenze  | 413     | `limits.fileSize` des Multipart-Parsers             |
+| Typ, den das Feld nicht annimmt              | 400     | `accept` der Definition (F38)                       |
+| Bytes passen nicht zum angegebenen Typ       | 400     | Signaturprüfung (`file-signature.ts`)               |
+| leere Datei                                  | 400     | dieselbe Prüfung                                    |
+| Pflicht-Dateifeld ohne Datei                 | 400     | `validateSubmission`, bei **jeder** Absendung (F39) |
+| Wert statt Datei unter einem Datei-Schlüssel | 400     | F37 — eine Datei ist kein Wert                      |
+| Dateiteil, den kein Feld verlangt            | 400     | dieselbe Regel wie für unbekannte Antwortschlüssel  |
+| Volume nach dem Löschen der Anmeldung        | leer    | `AttachmentsService.purgeForRegistration`           |
+| Volume nach dem Löschen des **Events**       | leer    | `purgeForEvent` — der Kaskade fehlt genau das       |
+
+Die letzten zwei Zeilen prüft die Suite am Dateisystem: sie zählt die Dateien im
+Volume vor und nach dem Löschen. Das ist die einzige Stelle im Repository, die
+das tut, und sie kann es, weil die Vertragssuite auf derselben Maschine läuft wie
+der Server, gegen den sie spricht.
+
+Was dabei entschieden wurde (im Referenzdokument als F37–F39 protokolliert):
+
+- **Eine Datei ist keine Antwort in `custom_fields_json`, sondern eine
+  `attachment`-Zeile** (F37). Die Id zusätzlich in die JSON-Spalte zu schreiben
+  wäre eine zweite Wahrheit, die der ersten widersprechen kann. Zugeordnet wird
+  über den **Feldschlüssel** (F35), nicht über die Id der Definition — der
+  Schlüssel übersteht eine Umformulierung und überlebt die Definition selbst
+  (F34: eine gelöschte Frage löscht auch kein Dokument; das Detail-Panel zeigt
+  es dann unter seinem bloßen Schlüssel).
+- **Der Eigentümer ist ein echter Fremdschlüssel, kein `owner_type`/`owner_id`-Paar**
+  (F37) — eine Abweichung vom Schemaentwurf, mit Absicht: das Erste, was diese
+  Tabelle garantieren muss, ist, dass keine Datei ihren Eigentümer überlebt, und
+  ein polymorphes Paar lässt sich überhaupt nicht einschränken. Phase 3 ergänzt
+  für Chat-Anhänge einen zweiten nullable Schlüssel mit Check.
+- **Die Typ-Allowlist ist ein Katalog, kein Freitextfeld** (F38): PDF, JPEG, PNG,
+  WebP, DOCX. Und der **Content-Type wird nicht geglaubt** — geprüft werden die
+  ersten Bytes, sonst ist `passport.pdf` mit DOS-Header eine erlaubte Datei.
+- **Pflicht heißt: bei jeder Absendung** (F39). Eine Ausnahme „liegt schon vor"
+  würde vom Zustand einer bestehenden Anmeldung abhängen und damit über das
+  öffentliche Formular verraten, ob eine Adresse angemeldet ist (E10).
+- **Eine Anfrage, nicht zwei** (F39). Multipart: die Felder als JSON im Teil
+  `payload`, jede Datei in einem Teil, der nach ihrem Feldschlüssel benannt ist.
+  Die Alternative — erst hochladen, dann anmelden — bräuchte einen Endpunkt, der
+  von jedem Dateien annimmt, ohne eine Anmeldung zu haben, an die sie gehören.
+
+Weitere Festlegungen, klein aber folgenreich:
+
+- **Dateien sind Datenzugriff.** `FileStore` ist ein Port wie ein Repository; die
+  Implementierung (`LocalDiskFileStore`) liegt in der Datenzugriff-Schicht. Die
+  Geschäftslogik weiß, _dass_ eine Datei bleibt, nicht _wo_ — dieselbe Trennung,
+  die den Datenbankwechsel offen hält.
+- **Generierte Namen ohne Endung**, verteilt über Unterverzeichnisse nach den
+  ersten zwei Zeichen. Nichts an einem gespeicherten Pfad lädt zum Raten eines
+  anderen ein, und ein Verzeichnis mit hunderttausend Einträgen ist auf jedem
+  Dateisystem langsam. Der Originalname bleibt in der Zeile — er ist das Einzige,
+  was einem Veranstalter sagt, wessen Dokument er vor sich hat.
+- **Es gibt keine Transaktion über Dateisystem und Datenbank.** Wo die zwei
+  auseinanderlaufen können, kompensiert `AttachmentsService` in die Richtung, die
+  keine Daten verliert: ein Byte-Bereich, den nichts referenziert, kostet Platz
+  und wird geloggt — eine Zeile, die auf eine entfernte Datei zeigt, kostet den
+  Veranstalter das Dokument, das er einsammeln sollte.
+- **Der Download ist ein Knopf, kein Link.** Er holt die Bytes über die
+  Sitzung und übergibt sie dem Browser; das Volume hat keine öffentliche URL, auf
+  die man verlinken könnte. Kopfzeilen: immer `attachment` (niemals `inline` —
+  hinter dem Reverse Proxy wäre eine gerenderte Datei Skript des
+  Veranstalter-Clients), `nosniff`, `no-store` und eine CSP, die nichts erlaubt.
+- **Fünf Dateifelder je Formular** und eine serverweite Obergrenze von 10 MB je
+  Datei. Damit hat eine Absendung des öffentlichen Endpunkts einen begrenzten
+  ungünstigsten Fall — was ein gedrosselter, unauthentifizierter Endpunkt haben
+  muss. Fünf mal zehn wären allerdings 50 MB und damit mehr, als der Reverse
+  Proxy als Body annimmt (`client_max_body_size 25m`, seit Phase 0 gesetzt).
+  Deshalb gibt es zusätzlich `MAX_SUBMISSION_BYTES` (20 MB) **unterhalb** des
+  Proxy-Limits: einen Body, den NGINX ablehnt, beantwortet eine Seite, die
+  niemand geschrieben hat — sagen soll es die Anwendung. Die beiden Zahlen
+  gehören zusammen, und beide Kommentare sagen das.
+- **`multer` bleibt eine indirekte Abhängigkeit**, und `@types/multer` kommt
+  nicht dazu (die Frage stand im Plan). Was die Geschäftslogik von einem
+  Multipart-Teil braucht, sind vier Eigenschaften; die stehen als eigenes
+  Interface im Controller, und damit hängt die Schicht nicht am Typpaket eines
+  Parsers, den sie sonst nicht kennt.
+- **Das Limit für Anmeldeversuche ist von 30 auf 60 je fünf Minuten gestiegen.**
+  Ehrlicher Auslöser: die Vertragssuite spricht diesen Endpunkt jetzt aus drei
+  Dateien an und lief in die alte Zahl. Sachlich richtig ist es trotzdem — ein
+  Büro oder eine Schule teilt eine öffentliche Adresse, zwanzig Kolleg*innen sind
+  hier also ein Client. Was das Limit **nicht** begrenzt, sind Versuche je
+  E-Mail-Adresse; das braucht einen zweiten Zähler und steht in `todo.md`.
+
+Was anders lief:
+
+- **Umlaute im Dateinamen kamen doppelt kodiert an.** `multer` dekodiert den
+  Namen eines Multipart-Teils standardmäßig als latin1, Browser schicken ihn als
+  UTF-8 — „Grüße.pdf" wurde zu „GrÃ¼ÃŸe.pdf", bevor irgendetwas hier es sehen
+  konnte. Gefunden hat es der Vertragstest, der eine Datei wieder herunterlädt
+  und den Namen im `Content-Disposition` prüft; behoben mit
+  `defParamCharset: 'utf8'`. Für eine deutsche Organisation wäre das kein
+  Randfall gewesen.
+- **Ein Datei-Feld darf kein Formularsteuerelement bekommen.** Der Wert eines
+  `<input type="file">` lässt sich nicht setzen, und ein Wert unter einem
+  Datei-Schlüssel wäre serverseitig ein 400 (F37). Die gewählten Dateien liegen
+  deshalb in einem Signal neben dem Formular, und die Pflichtprüfung dafür steht
+  in `submit()` — mit einer Meldung, die das fehlende Feld nennt, weil ein Knopf,
+  der nichts tut, das Schlechteste von beidem ist.
+- **Ein Test aus AP 6 prüfte plötzlich etwas anderes als er behauptete.** „lehnt
+  einen Typ ab, für den es noch kein Steuerelement gibt" schickte `file` — was
+  jetzt gültig ist und aus einem anderen Grund abgelehnt wurde. Er schickt jetzt
+  einen Typ, den es wirklich nicht gibt.
+- **Nicht gebaut: ein Aufräumlauf über das Volume.** Er wäre das Netz unter den
+  Fällen, in denen Datenbank und Volume trotz Kompensation auseinanderlaufen
+  (Absturz zwischen zwei Schritten). Steht als Härtungspunkt in `todo.md`, Phase
+  5 — jetzt wäre es Vorratsarbeit gegen ein Problem, das noch keine Instanz hat.
+- **`/api/media` bleibt leer.** Der Kommentar an `MEDIA_URL_PREFIX` versprach den
+  Endpunkt für AP 7; Anhänge gehen aber bewusst **nicht** über einen statischen
+  Pfad (E9), und Logos gibt es erst in Phase 2. Der Kommentar zeigt jetzt
+  dorthin, statt ein Versprechen zu tragen, das dieses Paket nicht einlösen
+  wollte.
 
 ## Definition of Done für Phase 1
 

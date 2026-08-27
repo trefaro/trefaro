@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { EventSeries, PublicEventSeries } from '@trefaro/shared-models';
+import type { AttachmentsService } from '../attachments';
 import type { EventSeriesService } from '../event-series/event-series.service';
 import type { RegistrationTally } from '../registration/ports/registration-tally';
 import { EventsService, type CreateEventInput } from './events.service';
@@ -122,10 +123,25 @@ class FakeEventSeriesService {
   }
 }
 
+/** Records the purge the delete paths owe the upload volume (E9). */
+class FakeAttachmentsService {
+  readonly purgedEvents: string[] = [];
+  readonly purgedSeries: string[] = [];
+
+  async purgeForEvent(eventId: string): Promise<void> {
+    this.purgedEvents.push(eventId);
+  }
+
+  async purgeForSeries(seriesId: string): Promise<void> {
+    this.purgedSeries.push(seriesId);
+  }
+}
+
 describe('EventsService', () => {
   let repository: FakeEventRepository;
   let series: FakeEventSeriesService;
   let tally: FakeRegistrationTally;
+  let attachments: FakeAttachmentsService;
   let service: EventsService;
 
   const onsite: CreateEventInput = {
@@ -143,10 +159,12 @@ describe('EventsService', () => {
     repository = new FakeEventRepository();
     series = new FakeEventSeriesService();
     tally = new FakeRegistrationTally();
+    attachments = new FakeAttachmentsService();
     service = new EventsService(
       repository,
       series as unknown as EventSeriesService,
       tally,
+      attachments as unknown as AttachmentsService,
     );
   });
 
@@ -437,7 +455,7 @@ describe('EventsService', () => {
   });
 
   describe('delete', () => {
-    it('removes the event', async () => {
+    it('removes the event, and the uploaded files with it', async () => {
       const created = await service.create('series-1', onsite);
 
       await service.delete(created.id);
@@ -445,12 +463,17 @@ describe('EventsService', () => {
       await expect(service.getForOrganizer(created.id)).rejects.toThrow(
         NotFoundException,
       );
+      // The database cascade takes the registrations and their attachment rows;
+      // only this call takes the bytes (E9).
+      expect(attachments.purgedEvents).toEqual([created.id]);
     });
 
-    it('refuses an unknown event', async () => {
+    it('refuses an unknown event, removing nothing', async () => {
       await expect(service.delete('event-9')).rejects.toThrow(
         NotFoundException,
       );
+
+      expect(attachments.purgedEvents).toEqual([]);
     });
 
     it('refuses an event people have confirmed they are coming to', async () => {

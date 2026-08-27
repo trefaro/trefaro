@@ -24,10 +24,16 @@ import type {
 } from '@trefaro/shared-models';
 import {
   MAX_CUSTOM_TEXT_LENGTH,
+  acceptAttribute,
+  formatBytes,
   formatEventPeriod,
+  uploadTypeLabel,
 } from '@trefaro/shared-models';
 import { PublicEventsService } from '../../features/events/public-events.service';
-import { RegistrationsService } from '../../features/registrations/registration.service';
+import {
+  RegistrationsService,
+  type RegistrationFileAnswer,
+} from '../../features/registrations/registration.service';
 
 /**
  * The registration form (FR 3.5, mockups 5.4) — the survey's second highest
@@ -140,6 +146,20 @@ import { RegistrationsService } from '../../features/registrations/registration.
                       }
                     </select>
                   </label>
+                } @else if (field.type === 'file') {
+                  <label>
+                    <span>{{ labelOf(field) }}</span>
+                    <input
+                      type="file"
+                      [attr.accept]="acceptOf(field)"
+                      [attr.aria-describedby]="describedBy(field)"
+                      (change)="pick(field, $event)"
+                    />
+                  </label>
+                  <small class="hint">{{ fileHint(field) }}</small>
+                  @if (fileProblem(field); as problem) {
+                    <small class="notice" role="alert">{{ problem }}</small>
+                  }
                 } @else {
                   <label>
                     <span>{{ labelOf(field) }}</span>
@@ -291,6 +311,18 @@ export class EventRegistrationPage {
   protected readonly maxTextLength = MAX_CUSTOM_TEXT_LENGTH;
 
   /**
+   * The files picked so far, by field key.
+   *
+   * Outside the form group on purpose: the value of a file input cannot be set
+   * programmatically, so a form control for it would be a control the form
+   * cannot own — and `customFields` must not carry a value for a file field,
+   * which the server refuses (F37).
+   */
+  private readonly chosen = signal<Record<string, File>>({});
+  /** What is wrong with a picked file, by field key — shown under the input. */
+  private readonly problems = signal<Record<string, string>>({});
+
+  /**
    * The answers, one control per defined field.
    *
    * A `FormRecord` rather than a second typed group: the control names are not
@@ -328,6 +360,69 @@ export class EventRegistrationPage {
     });
   }
 
+  protected acceptOf(field: RegistrationFieldPublic): string | null {
+    return field.accept.length > 0 ? acceptAttribute(field.accept) : null;
+  }
+
+  /** What a participant needs to know before opening the file picker. */
+  protected fileHint(field: RegistrationFieldPublic): string {
+    const types = field.accept.map(uploadTypeLabel).join(', ');
+    const limit = field.maxSizeBytes;
+    return limit ? `${types}, up to ${formatBytes(limit)}` : types;
+  }
+
+  protected fileProblem(field: RegistrationFieldPublic): string | null {
+    return this.problems()[field.key] ?? null;
+  }
+
+  /**
+   * Takes the file the participant picked, or says why it cannot be sent.
+   *
+   * Checked here as a courtesy — the server checks the same things and more,
+   * including whether the bytes are of the type they claim. The point of doing
+   * it twice is that somebody on a slow connection learns about a file that is
+   * too large before uploading it.
+   */
+  protected pick(field: RegistrationFieldPublic, event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0] ?? null;
+    const problem = file ? this.reject(field, file) : null;
+
+    this.problems.update((problems) => {
+      const next = { ...problems };
+      if (problem) next[field.key] = problem;
+      else delete next[field.key];
+      return next;
+    });
+
+    this.chosen.update((chosen) => {
+      const next = { ...chosen };
+      if (file && !problem) next[field.key] = file;
+      else delete next[field.key];
+      return next;
+    });
+  }
+
+  private reject(field: RegistrationFieldPublic, file: File): string | null {
+    if (field.accept.length > 0 && !field.accept.includes(file.type)) {
+      return `This field takes ${field.accept.map(uploadTypeLabel).join(', ')}.`;
+    }
+    if (field.maxSizeBytes !== null && file.size > field.maxSizeBytes) {
+      return `That file is ${formatBytes(file.size)}; at most ${formatBytes(
+        field.maxSizeBytes,
+      )} can be sent.`;
+    }
+    if (file.size === 0) return 'That file is empty.';
+    return null;
+  }
+
+  /** Required file fields nothing has been picked for yet. */
+  private missingFiles(): readonly RegistrationFieldPublic[] {
+    const chosen = this.chosen();
+    return this.fields().filter(
+      (field) => field.type === 'file' && field.required && !chosen[field.key],
+    );
+  }
+
   /** The label as it is read, with the asterisk the mandatory fields carry. */
   protected labelOf(field: RegistrationFieldPublic): string {
     return field.required ? `${field.label} *` : field.label;
@@ -347,10 +442,26 @@ export class EventRegistrationPage {
       return;
     }
 
+    // A file input has no validator of its own, so the required ones are
+    // checked here — and named, because "Register" doing nothing is worse than
+    // any error message.
+    const missing = this.missingFiles();
+    if (missing.length > 0) {
+      this.error.set(
+        `Please attach a file for ${missing
+          .map((field) => `"${field.label}"`)
+          .join(', ')}.`,
+      );
+      return;
+    }
+
     this.busy.set(true);
     this.error.set(null);
 
     const raw = this.form.getRawValue();
+    const files: readonly RegistrationFileAnswer[] = Object.entries(
+      this.chosen(),
+    ).map(([fieldKey, file]) => ({ fieldKey, file }));
     try {
       const answer = await this.registrations.register(
         this.seriesSlug(),
@@ -364,6 +475,7 @@ export class EventRegistrationPage {
           newsletterOptIn: raw.newsletterOptIn,
           customFields: raw.customFields,
         },
+        files,
       );
       this.sentTo.set(answer.email);
     } catch (error: unknown) {
@@ -415,7 +527,14 @@ export class EventRegistrationPage {
    * already typed.
    */
   private syncAnswers(fields: readonly RegistrationFieldPublic[]): void {
-    const wanted = new Map(fields.map((field) => [field.key, field]));
+    // File fields deliberately get no control: their answer is a part of the
+    // request, not a value in `customFields`, and a value there is refused
+    // (F37).
+    const wanted = new Map(
+      fields
+        .filter((field) => field.type !== 'file')
+        .map((field) => [field.key, field]),
+    );
 
     for (const key of Object.keys(this.answers.controls)) {
       if (!wanted.has(key)) this.answers.removeControl(key);

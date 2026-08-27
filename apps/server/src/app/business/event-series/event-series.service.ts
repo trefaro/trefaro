@@ -9,6 +9,7 @@ import type {
   EventSeriesStatus,
   PublicEventSeries,
 } from '@trefaro/shared-models';
+import { AttachmentsService } from '../attachments';
 import { isSlug, slugify } from '../common/slug';
 import { toMediaUrl } from '../media/media-url';
 import {
@@ -60,6 +61,9 @@ export class EventSeriesService {
     // `EventsService` for why it is a narrow port rather than the repository.
     @Inject(REGISTRATION_TALLY)
     private readonly registrations: RegistrationTally,
+    // Deleting a series cascades all the way to its registrations, and a
+    // cascade removes rows but no files (E9).
+    private readonly attachments: AttachmentsService,
   ) {}
 
   async listForOrganizer(): Promise<readonly EventSeries[]> {
@@ -167,6 +171,11 @@ export class EventSeriesService {
         `This series has ${confirmed} confirmed registration${confirmed === 1 ? '' : 's'} across its events — archive it instead of deleting it.`,
       );
     }
+    // Resolves the series, so a mistyped id changes nothing.
+    await this.getForOrganizer(id);
+    // The cascade reaches events and registrations; the files it would leave
+    // behind are removed here first (E9).
+    await this.attachments.purgeForSeries(id);
     if (!(await this.series.delete(id))) {
       throw new NotFoundException(`No event series with id "${id}"`);
     }

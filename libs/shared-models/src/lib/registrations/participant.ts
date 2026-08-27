@@ -1,5 +1,6 @@
 import type { CustomFieldValues } from './field';
 import type { RegistrationStatus } from './registration';
+import type { AttachmentSummary } from './upload';
 
 /**
  * The participant overview (FR 3.3, UC 08) — the highest rated function of the
@@ -144,6 +145,14 @@ export interface RegistrationStatistics {
 export interface ParticipantDetail extends ParticipantRow {
   readonly eventId: string;
   readonly eventName: string;
+  /**
+   * The files uploaded with this registration (E9), in form order.
+   *
+   * On the detail rather than on the row, like the answers are shown in the
+   * detail panel: the table has to stay readable and fast at two thousand rows,
+   * and a file is something an organizer opens one at a time anyway.
+   */
+  readonly attachments: readonly AttachmentSummary[];
 }
 
 /** What an organizer may change about a registration (E14). */

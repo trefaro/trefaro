@@ -16,9 +16,14 @@ import type {
   RegistrationFieldType,
 } from '@trefaro/shared-models';
 import {
+  DEFAULT_UPLOAD_MAX_BYTES,
   MAX_FIELD_HELP_LENGTH,
   MAX_FIELD_LABEL_LENGTH,
   MAX_REGISTRATION_FIELDS,
+  MAX_UPLOAD_BYTES,
+  MIN_UPLOAD_MAX_BYTES,
+  UPLOAD_TYPES,
+  formatBytes,
 } from '@trefaro/shared-models';
 import { EventsAdminService } from '../../features/events/events-admin.service';
 import { RegistrationFieldsAdminService } from '../../features/registrations/registration-fields-admin.service';
@@ -29,7 +34,25 @@ interface FieldDraft {
   helpText: string;
   /** One choice per line — see the note in the template. */
   optionsText: string;
+  /** Accepted MIME types of a file field, from the catalogue (F38). */
+  accept: string[];
+  /** The size limit as an organizer states it; stored in bytes. */
+  maxSizeMb: number;
   required: boolean;
+}
+
+/** Bytes are what the field stores; megabytes are what a person types. */
+const BYTES_PER_MB = 1024 * 1024;
+
+function toMegabytes(bytes: number | null): number {
+  return (
+    Math.round(((bytes ?? DEFAULT_UPLOAD_MAX_BYTES) / BYTES_PER_MB) * 10) / 10
+  );
+}
+
+function toBytes(megabytes: number): number {
+  const bytes = Math.round(megabytes * BYTES_PER_MB);
+  return Math.min(MAX_UPLOAD_BYTES, Math.max(MIN_UPLOAD_MAX_BYTES, bytes));
 }
 
 /**
@@ -154,6 +177,37 @@ interface FieldDraft {
               <small class="meta">One choice per line.</small>
             }
 
+            @if (field.type === 'file') {
+              <fieldset class="types">
+                <legend>Accepted file types</legend>
+                @for (type of uploadTypes; track type.mimeType) {
+                  <label class="check">
+                    <input
+                      type="checkbox"
+                      [checked]="draft(field.id).accept.includes(type.mimeType)"
+                      (change)="toggle(field.id, type.mimeType)"
+                    />
+                    <span>{{ type.label }}</span>
+                  </label>
+                }
+              </fieldset>
+              <label>
+                <span>Largest file (MB)</span>
+                <input
+                  type="number"
+                  [attr.min]="minMegabytes"
+                  [attr.max]="maxMegabytes"
+                  step="0.5"
+                  [value]="draft(field.id).maxSizeMb"
+                  (input)="edit(field.id, { maxSizeMb: number($event) })"
+                />
+              </label>
+              <small class="meta">
+                At most {{ ceiling }} — a larger file is refused whatever this
+                says.
+              </small>
+            }
+
             <label class="check">
               <input
                 type="checkbox"
@@ -215,6 +269,7 @@ interface FieldDraft {
               <option value="text">Text</option>
               <option value="select">One of several choices</option>
               <option value="checkbox">Yes or no</option>
+              <option value="file">A file</option>
             </select>
           </label>
 
@@ -228,6 +283,36 @@ interface FieldDraft {
               ></textarea>
             </label>
             <small class="meta">One choice per line.</small>
+          }
+
+          @if (newType() === 'file') {
+            <fieldset class="types">
+              <legend>Accepted file types</legend>
+              @for (type of uploadTypes; track type.mimeType) {
+                <label class="check">
+                  <input
+                    type="checkbox"
+                    [checked]="newAccept().includes(type.mimeType)"
+                    (change)="toggleNew(type.mimeType)"
+                  />
+                  <span>{{ type.label }}</span>
+                </label>
+              }
+            </fieldset>
+            <label>
+              <span>Largest file (MB)</span>
+              <input
+                formControlName="maxSizeMb"
+                type="number"
+                [attr.min]="minMegabytes"
+                [attr.max]="maxMegabytes"
+                step="0.5"
+              />
+            </label>
+            <small class="meta">
+              Participants only see the types you tick. Nothing larger than
+              {{ ceiling }} is accepted, whatever the limit says.
+            </small>
           }
 
           <label>
@@ -294,6 +379,21 @@ interface FieldDraft {
       border: 1px solid color-mix(in oklab, currentColor 20%, transparent);
       border-radius: 0.5rem;
       max-inline-size: 40rem;
+    }
+
+    .types {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      margin: 0;
+      padding: 0.6rem 0.8rem;
+      border: 1px solid color-mix(in oklab, currentColor 20%, transparent);
+      border-radius: 0.4rem;
+    }
+
+    .types legend {
+      padding-inline: 0.3rem;
+      font-weight: 600;
     }
 
     .field__head {
@@ -405,6 +505,10 @@ export class RegistrationFieldsPage {
   protected readonly maxLabelLength = MAX_FIELD_LABEL_LENGTH;
   protected readonly maxHelpLength = MAX_FIELD_HELP_LENGTH;
   protected readonly maxFields = MAX_REGISTRATION_FIELDS;
+  protected readonly uploadTypes = UPLOAD_TYPES;
+  protected readonly minMegabytes = toMegabytes(MIN_UPLOAD_MAX_BYTES);
+  protected readonly maxMegabytes = toMegabytes(MAX_UPLOAD_BYTES);
+  protected readonly ceiling = formatBytes(MAX_UPLOAD_BYTES);
 
   private readonly fieldsService = inject(RegistrationFieldsAdminService);
   private readonly events = inject(EventsAdminService);
@@ -426,9 +530,19 @@ export class RegistrationFieldsPage {
     label: ['', Validators.required],
     type: ['text' as RegistrationFieldType],
     optionsText: [''],
+    maxSizeMb: [toMegabytes(DEFAULT_UPLOAD_MAX_BYTES)],
     helpText: [''],
     required: [false],
   });
+
+  /**
+   * The accepted types of the question being added.
+   *
+   * A signal rather than a form control: what a checkbox list holds is a set,
+   * and a `FormArray` of booleans would only make the mapping to MIME types
+   * somebody else's problem.
+   */
+  protected readonly newAccept = signal<string[]>([]);
 
   /**
    * The kind of answer the new question asks — mirrored into a signal.
@@ -460,6 +574,29 @@ export class RegistrationFieldsPage {
     return (event.target as HTMLInputElement).checked;
   }
 
+  protected number(event: Event): number {
+    return Number((event.target as HTMLInputElement).value);
+  }
+
+  /** Ticks or unticks one accepted type of the question being added. */
+  protected toggleNew(mimeType: string): void {
+    this.newAccept.update((accept) =>
+      accept.includes(mimeType)
+        ? accept.filter((entry) => entry !== mimeType)
+        : [...accept, mimeType],
+    );
+  }
+
+  /** The same for a question that already exists. */
+  protected toggle(id: string, mimeType: string): void {
+    const accept = this.draft(id).accept;
+    this.edit(id, {
+      accept: accept.includes(mimeType)
+        ? accept.filter((entry) => entry !== mimeType)
+        : [...accept, mimeType],
+    });
+  }
+
   protected draft(id: string): FieldDraft {
     return this.drafts()[id] ?? blankDraft();
   }
@@ -479,6 +616,8 @@ export class RegistrationFieldsPage {
       draft.label !== saved.label ||
       draft.helpText !== saved.helpText ||
       draft.optionsText !== saved.optionsText ||
+      draft.accept.join(',') !== saved.accept.join(',') ||
+      draft.maxSizeMb !== saved.maxSizeMb ||
       draft.required !== saved.required
     );
   }
@@ -496,9 +635,21 @@ export class RegistrationFieldsPage {
         type: raw.type,
         helpText: raw.helpText.trim() || null,
         options: raw.type === 'select' ? lines(raw.optionsText) : [],
+        // Only where they mean something: the server refuses accepted types on
+        // a field that is not a file field, and it is right to.
+        ...(raw.type === 'file'
+          ? {
+              accept: this.newAccept(),
+              maxSizeBytes: toBytes(raw.maxSizeMb),
+            }
+          : {}),
         required: raw.required,
       });
-      this.form.reset({ type: raw.type });
+      this.form.reset({
+        type: raw.type,
+        maxSizeMb: toMegabytes(DEFAULT_UPLOAD_MAX_BYTES),
+      });
+      this.newAccept.set([]);
     });
   }
 
@@ -513,6 +664,9 @@ export class RegistrationFieldsPage {
         // any other type — so they are only sent where they mean something.
         ...(field.type === 'select'
           ? { options: lines(draft.optionsText) }
+          : {}),
+        ...(field.type === 'file'
+          ? { accept: draft.accept, maxSizeBytes: toBytes(draft.maxSizeMb) }
           : {}),
       }),
     );
@@ -600,7 +754,14 @@ export class RegistrationFieldsPage {
 }
 
 function blankDraft(): FieldDraft {
-  return { label: '', helpText: '', optionsText: '', required: false };
+  return {
+    label: '',
+    helpText: '',
+    optionsText: '',
+    accept: [],
+    maxSizeMb: toMegabytes(DEFAULT_UPLOAD_MAX_BYTES),
+    required: false,
+  };
 }
 
 function draftOf(field: RegistrationField): FieldDraft {
@@ -608,6 +769,8 @@ function draftOf(field: RegistrationField): FieldDraft {
     label: field.label,
     helpText: field.helpText ?? '',
     optionsText: field.options.join('\n'),
+    accept: [...field.accept],
+    maxSizeMb: toMegabytes(field.maxSizeBytes),
     required: field.required,
   };
 }

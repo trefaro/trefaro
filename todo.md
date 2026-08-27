@@ -75,21 +75,42 @@ is assigned to one of its work packages.
       same participant list; the message belongs there rather than in a fourth
       mail template written in isolation. Verify: cancelling produces one mail,
       reinstating does not produce a second one that contradicts it.
-- [ ] **The uploads volume is finally used.** AP 7 adds the `file` field type to
-      the kit AP 6 built. Two things are easy to lose: the check constraint
-      `CHK_registration_field_type` currently allows `text`, `select` and
-      `checkbox` only and has to be widened by that migration, and
-      `RegistrationFieldsService.validateAnswers` needs a branch for a value
-      that is a reference to a stored file rather than a string or a boolean.
-      Verify: type and size validation, that a stored file is only reachable by
-      an authorized request, and that deleting a registration deletes its files.
-- [ ] **Two questions about the field kit for the M1 feedback round.** Both were
-      decided deliberately in AP 6 and both are cheap to change if Democracy
+- [x] **The uploads volume is finally used.** Done in AP 7: the `file` field
+      type, the `attachment` table, and `GET /api/admin/attachments/:id` as the
+      only way to the bytes. Both things that were easy to lose happened — the
+      check constraint was widened by the migration, and the validation branch
+      for a file is in `validateSubmission` rather than beside it. Verified in
+      `apps/server-e2e/src/api/attachments.spec.ts`, including the file count in
+      the volume before and after a deletion.
+- [ ] **Throttle registration attempts per e-mail address, not only per client.**
+      `REGISTRATIONS_PER_WINDOW` counts per client address, which is what the
+      guard can see — so one address can be mailed as often as a single client is
+      allowed to submit at all (60 per five minutes since AP 7, raised because an
+      office shares one public address). The endpoint sends a mail to whatever
+      address it is given, so the number that matters is per recipient. Needs a
+      second counter with its own key; belongs with the hardening of phase 5,
+      together with the SMTP work.
+- [ ] **A sweep over the upload volume.** `AttachmentsService` compensates where
+      the database and the volume can disagree, and it compensates towards
+      keeping bytes rather than losing them — so a crash between two steps can
+      leave a file that no row references. It is logged when it happens by
+      compensation, but nothing finds one left by a crash. A sweep that lists the
+      volume, joins it against `attachment.file_path` and reports (not deletes)
+      what nothing points at would close it. Phase 5: right now it would be
+      stock-keeping against a problem no instance has yet.
+- [ ] **Three questions about the field kit for the M1 feedback round.** All were
+      decided deliberately, and all are cheap to change if Democracy
       International says otherwise. First: there is **no multi-line text type** —
       a text field holds 500 characters, which is a paragraph, but it renders as
       a single line. Second: the answers appear in the **detail panel only, not
       as table columns**, because the overview has to stay readable and fast at
-      two thousand rows (AP 5). Ask before building either.
+      two thousand rows (AP 5). Third (AP 7): the accepted file types are a
+      **fixed catalogue of five** (PDF, JPEG, PNG, WebP, DOCX), and a form asks
+      for at most five files. If the pilot partner collects something else —
+      scanned forms as TIFF, a spreadsheet — the catalogue in
+      `libs/shared-models/src/lib/registrations/upload.ts` is where it goes, and
+      it needs a signature in `file-signature.ts` to go with it. Ask before
+      building any of the three.
 - [ ] **The participant search does not look into the answers.** It covers first
       name, last name and e-mail (F32). Searching `custom_fields_json` means a
       JSONB predicate that no index of ours covers, so it is not a small

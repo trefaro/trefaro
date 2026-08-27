@@ -43,8 +43,29 @@ export class ApiClient {
     );
   }
 
+  /**
+   * A POST. A `FormData` body travels as multipart, everything else as JSON.
+   *
+   * Nothing to configure for that: the browser sets the content type of a
+   * `FormData` body itself, including the boundary — which is why Angular must
+   * not be given one, and why the registration form with a file field goes
+   * through this same method.
+   */
   post<T>(path: string, body: unknown): Observable<T> {
     return this.request(this.http.post<T>(this.url(path), body));
+  }
+
+  /**
+   * A GET whose answer is a file rather than JSON.
+   *
+   * Fetched rather than linked to: an attachment is only readable with an
+   * administrative session (E9), and a request carries it where a link opened
+   * in a new tab may not.
+   */
+  file(path: string): Observable<Blob> {
+    return this.request(
+      this.http.get(this.url(path), { responseType: 'blob' }),
+    );
   }
 
   put<T>(path: string, body: unknown): Observable<T> {

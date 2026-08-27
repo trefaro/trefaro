@@ -12,6 +12,7 @@ import type {
   PublicEvent,
 } from '@trefaro/shared-models';
 import { isTimeZone } from '@trefaro/shared-models';
+import { AttachmentsService } from '../attachments';
 import { isSlug, slugify } from '../common/slug';
 import { EventSeriesService } from '../event-series/event-series.service';
 import {
@@ -91,6 +92,10 @@ export class EventsService {
     // not this module's business, and the port does not offer it.
     @Inject(REGISTRATION_TALLY)
     private readonly registrations: RegistrationTally,
+    // Deleting an event cascades through its registrations, and a cascade
+    // removes rows but no files (E9) — so the files go first, while the rows
+    // that name them still exist.
+    private readonly attachments: AttachmentsService,
   ) {}
 
   /** Every event of a series, drafts included (FR 2.3, organizer side). */
@@ -262,6 +267,8 @@ export class EventsService {
         `This event has ${confirmed} confirmed registration${confirmed === 1 ? '' : 's'} — archive it instead of deleting it.`,
       );
     }
+    await this.require(id);
+    await this.attachments.purgeForEvent(id);
     if (!(await this.events.delete(id))) {
       throw new NotFoundException(`No event with id "${id}"`);
     }

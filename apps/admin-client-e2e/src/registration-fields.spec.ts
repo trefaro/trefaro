@@ -17,7 +17,10 @@ const END = '2027-09-14T17:00';
 
 interface Seeded {
   seriesId: string;
+  /** The public address of the series — the upload test registers through it. */
+  seriesSlug: string;
   eventId: string;
+  eventSlug: string;
 }
 
 async function seed(page: Page, label: string): Promise<Seeded> {
@@ -29,8 +32,13 @@ async function seed(page: Page, label: string): Promise<Seeded> {
       status: 'published',
     },
   });
-  expect(series.ok()).toBe(true);
-  const { id: seriesId } = (await series.json()) as { id: string };
+  // The status and the body in the message: a bare `ok()` assertion here says
+  // only that the fixture failed, not why.
+  expect(`${series.status()} ${await series.text()}`).toMatch(/^201/);
+  const { id: seriesId, slug: seriesSlug } = (await series.json()) as {
+    id: string;
+    slug: string;
+  };
 
   const event = await page.request.post(
     `/api/admin/series/${seriesId}/events`,
@@ -48,14 +56,22 @@ async function seed(page: Page, label: string): Promise<Seeded> {
       },
     },
   );
-  expect(event.ok()).toBe(true);
-  const { id: eventId } = (await event.json()) as { id: string };
+  expect(`${event.status()} ${await event.text()}`).toMatch(/^201/);
+  const { id: eventId, slug: eventSlug } = (await event.json()) as {
+    id: string;
+    slug: string;
+  };
 
-  return { seriesId, eventId };
+  return { seriesId, seriesSlug, eventId, eventSlug };
 }
 
 test.describe('the registration form of an event', () => {
-  let seeded: Seeded = { seriesId: '', eventId: '' };
+  let seeded: Seeded = {
+    seriesId: '',
+    seriesSlug: '',
+    eventId: '',
+    eventSlug: '',
+  };
 
   test.beforeEach(async ({ page }, testInfo) => {
     seeded = await seed(page, `${testInfo.project.name} ${Date.now()}`);
@@ -177,6 +193,91 @@ test.describe('the registration form of an event', () => {
       'Where do you come from?',
     );
     await expect(question(page, 'where-do-you-come-form')).toBeVisible();
+  });
+
+  test('adds a question that asks for a file, with the types it takes', async ({
+    page,
+  }) => {
+    await open(page);
+
+    const form = addForm(page);
+    await form.getByLabel('Question').fill('Passport scan');
+    await form.getByLabel('Kind of answer').selectOption('file');
+    // The catalogue, not a text box for MIME types (F38): an organizer who could
+    // type one could accept an executable.
+    await form.getByRole('checkbox', { name: 'PDF' }).check();
+    await form.getByLabel('Largest file (MB)').fill('2');
+    await form.getByRole('button', { name: 'Add question' }).click();
+
+    const card = question(page, 'passport-scan');
+    await expect(card.getByText('file', { exact: true })).toBeVisible();
+    await expect(card.getByRole('checkbox', { name: 'PDF' })).toBeChecked();
+    await expect(card.getByLabel('Largest file (MB)')).toHaveValue('2');
+  });
+
+  test('refuses a file question that accepts nothing, with the reason', async ({
+    page,
+  }) => {
+    await open(page);
+
+    const form = addForm(page);
+    await form.getByLabel('Question').fill('Passport scan');
+    await form.getByLabel('Kind of answer').selectOption('file');
+    await form.getByRole('button', { name: 'Add question' }).click();
+
+    await expect(page.getByRole('alert')).toContainText(
+      'at least one accepted file type',
+    );
+  });
+
+  test('hands a collected file back to the organizer as a download', async ({
+    page,
+  }) => {
+    await open(page);
+
+    // The question is built through the interface, so this test covers the seam
+    // between the form an organizer defines and the file it collects.
+    const form = addForm(page);
+    await form.getByLabel('Question').fill('Passport scan');
+    await form.getByLabel('Kind of answer').selectOption('file');
+    await form.getByRole('checkbox', { name: 'PDF' }).check();
+    await form.getByRole('button', { name: 'Add question' }).click();
+    await expect(question(page, 'passport-scan')).toBeVisible();
+
+    // The registration itself goes in through the public endpoint: filling in
+    // the participant form in a browser is what the participant client's own
+    // suite covers.
+    const email = `e2e-upload-${Date.now()}@files.example.org`;
+    const submitted = await page.request.post(
+      `/api/user/series/${seeded.seriesSlug}/events/${seeded.eventSlug}/registrations`,
+      {
+        multipart: {
+          payload: JSON.stringify({
+            firstName: 'Amina',
+            lastName: 'Okonkwo',
+            email,
+          }),
+          'passport-scan': {
+            name: 'Reisepass.pdf',
+            mimeType: 'application/pdf',
+            buffer: Buffer.from('%PDF-1.7\nseeded by the organizer suite\n'),
+          },
+        },
+      },
+    );
+    expect(submitted.status()).toBe(202);
+
+    await page.goto(
+      `/series/${seeded.seriesId}/events/${seeded.eventId}/participants`,
+    );
+    await page.getByRole('link', { name: 'Okonkwo, Amina' }).click();
+
+    // The name the participant's file had, which is the only thing that says
+    // whose document it is.
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Reisepass.pdf' }).click();
+
+    expect((await download).suggestedFilename()).toBe('Reisepass.pdf');
   });
 
   test('moves a question and deletes it again', async ({ page }) => {

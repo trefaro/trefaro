@@ -1,5 +1,7 @@
 import { DynamicModule, Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ATTACHMENT_REPOSITORY } from '../business/attachments/ports/attachment.repository';
+import { FILE_STORE } from '../business/attachments/ports/file-store';
 import { APP_CONFIG_REPOSITORY } from '../business/config/ports/app-config.repository';
 import { EVENT_SERIES_REPOSITORY } from '../business/event-series/ports/event-series.repository';
 import { EVENT_REPOSITORY } from '../business/events/ports/event.repository';
@@ -19,9 +21,11 @@ import type { TrefaroEnv } from '../core/config/env';
 import { buildDataSourceOptions } from './data-source';
 import { CORE_ENTITIES } from './entities';
 import { collectPluginPersistence } from './plugin-data-access/plugin-persistence.registry';
+import { LocalDiskFileStore } from './storage/local-disk.file-store';
 import { TypeormAdminSessionRepository } from './repositories/typeorm-admin-session.repository';
 import { TypeormAdminUserRepository } from './repositories/typeorm-admin-user.repository';
 import { TypeormAppConfigRepository } from './repositories/typeorm-app-config.repository';
+import { TypeormAttachmentRepository } from './repositories/typeorm-attachment.repository';
 import { TypeormEventSeriesRepository } from './repositories/typeorm-event-series.repository';
 import { TypeormEventRepository } from './repositories/typeorm-event.repository';
 import { TypeormModuleConfigRepository } from './repositories/typeorm-module-config.repository';
@@ -60,6 +64,8 @@ export class DataAccessModule {
       ],
       providers: [
         TypeormAdminUserRepository,
+        TypeormAttachmentRepository,
+        LocalDiskFileStore,
         TypeormAdminSessionRepository,
         TypeormAppConfigRepository,
         TypeormEventSeriesRepository,
@@ -79,6 +85,16 @@ export class DataAccessModule {
         {
           provide: APP_CONFIG_REPOSITORY,
           useExisting: TypeormAppConfigRepository,
+        },
+        {
+          provide: ATTACHMENT_REPOSITORY,
+          useExisting: TypeormAttachmentRepository,
+        },
+        // The upload volume behind a port, for the same reason the tables are:
+        // the business layer knows that a file is kept, not where (E9).
+        {
+          provide: FILE_STORE,
+          useExisting: LocalDiskFileStore,
         },
         {
           provide: EVENT_SERIES_REPOSITORY,
@@ -115,6 +131,8 @@ export class DataAccessModule {
         ADMIN_USER_REPOSITORY,
         ADMIN_SESSION_REPOSITORY,
         APP_CONFIG_REPOSITORY,
+        ATTACHMENT_REPOSITORY,
+        FILE_STORE,
         EVENT_SERIES_REPOSITORY,
         EVENT_REPOSITORY,
         MODULE_CONFIG_REPOSITORY,

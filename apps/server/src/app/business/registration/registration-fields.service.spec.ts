@@ -2,9 +2,21 @@ import {
   BadRequestException,
   ConflictException,
   NotFoundException,
+  PayloadTooLargeException,
 } from '@nestjs/common';
-import type { OrganizerEvent, PublicEvent } from '@trefaro/shared-models';
-import { MAX_CUSTOM_TEXT_LENGTH } from '@trefaro/shared-models';
+import type {
+  CustomFieldValues,
+  OrganizerEvent,
+  PublicEvent,
+} from '@trefaro/shared-models';
+import {
+  DEFAULT_UPLOAD_MAX_BYTES,
+  MAX_CUSTOM_TEXT_LENGTH,
+  MAX_FILE_FIELDS,
+  MAX_SUBMISSION_BYTES,
+  MAX_UPLOAD_BYTES,
+} from '@trefaro/shared-models';
+import type { UploadedFile } from '../attachments';
 import type { EventsService } from '../events';
 import {
   RegistrationFieldKeyTakenError,
@@ -119,6 +131,22 @@ class FakeEventsService {
   }
 }
 
+/** A file that really is what it says: the first bytes of a PDF. */
+const PDF = Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\n', 'latin1');
+/** Bytes of no known kind — what a renamed executable looks like. */
+const NOT_A_PDF = Buffer.from('MZ\u0090\u0000\u0003', 'latin1');
+
+const upload = (
+  fieldKey: string,
+  overrides: Partial<UploadedFile> = {},
+): UploadedFile => ({
+  fieldKey,
+  fileName: 'passport.pdf',
+  mimeType: 'application/pdf',
+  bytes: PDF,
+  ...overrides,
+});
+
 describe('RegistrationFieldsService', () => {
   let repository: FakeRegistrationFieldRepository;
   let events: FakeEventsService;
@@ -138,6 +166,21 @@ describe('RegistrationFieldsService', () => {
     overrides: Record<string, unknown> = {},
   ): Promise<{ id: string; key: string; sort: number }> =>
     service.create(EVENT.id, { label, type: 'text', ...overrides });
+
+  const addFile = (label: string, overrides: Record<string, unknown> = {}) =>
+    service.create(EVENT.id, {
+      label,
+      type: 'file',
+      accept: ['application/pdf'],
+      ...overrides,
+    });
+
+  /** The values half of a checked submission — what most of these assert on. */
+  const answers = async (
+    given: CustomFieldValues | undefined,
+    files: readonly UploadedFile[] = [],
+  ): Promise<CustomFieldValues> =>
+    (await service.validateSubmission(EVENT.id, given, files)).customFields;
 
   describe('create', () => {
     it('derives the key an answer is stored under from the label', async () => {
@@ -205,6 +248,56 @@ describe('RegistrationFieldsService', () => {
 
       // Two identical entries in a dropdown are a slip of the paste buffer.
       expect(field.options).toEqual(['Vegan', 'Vegetarian']);
+    });
+
+    it('refuses a file field that accepts nothing', async () => {
+      // The same reason a selection needs a choice, one step more serious: a
+      // field that accepts everything accepts an executable.
+      await expect(
+        service.create(EVENT.id, { label: 'Passport', type: 'file' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('refuses a file type this instance does not store', async () => {
+      await expect(
+        addFile('Passport', { accept: ['application/zip'] }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('refuses accepted types on a field that is not a file field', async () => {
+      await expect(
+        add('Comment', { accept: ['application/pdf'] }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('gives a file field a size limit without being asked', async () => {
+      const field = await addFile('Passport');
+
+      // An organizer who has to pick a number before the field works is being
+      // asked a question they have no way to answer.
+      expect(field.maxSizeBytes).toBe(DEFAULT_UPLOAD_MAX_BYTES);
+    });
+
+    it('refuses a limit above what the server reads at all', async () => {
+      await expect(
+        addFile('Passport', { maxSizeBytes: MAX_UPLOAD_BYTES + 1 }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('refuses a size limit on a field that is not a file field', async () => {
+      await expect(add('Comment', { maxSizeBytes: 1024 })).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('bounds how many files one form asks for', async () => {
+      for (let index = 0; index < MAX_FILE_FIELDS; index += 1) {
+        await addFile(`Document ${index}`);
+      }
+
+      // Five times the ceiling is what one submission of a public endpoint may
+      // cost; a sixth document is asking too much of a participant anyway.
+      await expect(addFile('One more')).rejects.toThrow(ConflictException);
     });
 
     it('reports an unknown event rather than creating a field nobody sees', async () => {
@@ -310,16 +403,16 @@ describe('RegistrationFieldsService', () => {
         type: 'text',
         helpText: null,
         options: [],
+        accept: [],
+        maxSizeBytes: null,
         required: false,
       });
     });
   });
 
-  describe('validateAnswers', () => {
+  describe('validateSubmission', () => {
     it('accepts a registration for an event without extra fields', async () => {
-      await expect(
-        service.validateAnswers(EVENT.id, undefined),
-      ).resolves.toEqual({});
+      await expect(answers(undefined)).resolves.toEqual({});
     });
 
     it('refuses an unknown key instead of dropping it', async () => {
@@ -327,48 +420,44 @@ describe('RegistrationFieldsService', () => {
 
       // The rule the global validation pipe applies to the request's own
       // properties, one level down: a typo must not cost an answer silently.
-      await expect(
-        service.validateAnswers(EVENT.id, { 'dietary-requirement': 'vegan' }),
-      ).rejects.toThrow(BadRequestException);
+      await expect(answers({ 'dietary-requirement': 'vegan' })).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('refuses a missing answer to a required field', async () => {
       await add('Passport name', { required: true });
 
-      await expect(service.validateAnswers(EVENT.id, {})).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(answers({})).rejects.toThrow(BadRequestException);
     });
 
     it('treats an empty string as no answer at all', async () => {
       await add('Passport name', { required: true });
 
-      await expect(
-        service.validateAnswers(EVENT.id, { 'passport-name': '   ' }),
-      ).rejects.toThrow(BadRequestException);
+      await expect(answers({ 'passport-name': '   ' })).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('drops an unanswered optional field rather than storing an empty value', async () => {
       await add('Comment');
 
-      await expect(
-        service.validateAnswers(EVENT.id, { comment: '' }),
-      ).resolves.toEqual({});
+      await expect(answers({ comment: '' })).resolves.toEqual({});
     });
 
     it('trims what was typed', async () => {
       await add('Passport name');
 
-      await expect(
-        service.validateAnswers(EVENT.id, { 'passport-name': '  Amina  ' }),
-      ).resolves.toEqual({ 'passport-name': 'Amina' });
+      await expect(answers({ 'passport-name': '  Amina  ' })).resolves.toEqual({
+        'passport-name': 'Amina',
+      });
     });
 
     it('refuses an answer longer than a text field takes', async () => {
       await add('Comment');
 
       await expect(
-        service.validateAnswers(EVENT.id, {
+        answers({
           comment: 'x'.repeat(MAX_CUSTOM_TEXT_LENGTH + 1),
         }),
       ).rejects.toThrow(BadRequestException);
@@ -381,30 +470,30 @@ describe('RegistrationFieldsService', () => {
         options: ['Vegan', 'Vegetarian'],
       });
 
-      await expect(
-        service.validateAnswers(EVENT.id, { meal: 'Steak' }),
-      ).rejects.toThrow(BadRequestException);
+      await expect(answers({ meal: 'Steak' })).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('requires a required checkbox to be ticked, not merely answered', async () => {
       await add('Code of conduct', { type: 'checkbox', required: true });
 
       // A consent box that accepts "no" is not a consent box.
-      await expect(
-        service.validateAnswers(EVENT.id, { 'code-of-conduct': false }),
-      ).rejects.toThrow(BadRequestException);
-      await expect(
-        service.validateAnswers(EVENT.id, { 'code-of-conduct': true }),
-      ).resolves.toEqual({ 'code-of-conduct': true });
+      await expect(answers({ 'code-of-conduct': false })).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(answers({ 'code-of-conduct': true })).resolves.toEqual({
+        'code-of-conduct': true,
+      });
     });
 
     it('keeps a "no" to an optional checkbox', async () => {
       await add('Needs a visa letter', { type: 'checkbox' });
 
       // "No" is an answer; only an absent key means the question was skipped.
-      await expect(
-        service.validateAnswers(EVENT.id, { 'needs-a-visa-letter': false }),
-      ).resolves.toEqual({ 'needs-a-visa-letter': false });
+      await expect(answers({ 'needs-a-visa-letter': false })).resolves.toEqual({
+        'needs-a-visa-letter': false,
+      });
     });
 
     it('refuses a value of the wrong kind', async () => {
@@ -412,20 +501,153 @@ describe('RegistrationFieldsService', () => {
       await add('Visa', { type: 'checkbox' });
 
       await expect(
-        service.validateAnswers(EVENT.id, {
+        answers({
           comment: true,
         }),
       ).rejects.toThrow(BadRequestException);
+      await expect(answers({ visa: 'yes' })).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('accepts a file the field asked for', async () => {
+      await addFile('Passport');
+
+      const checked = await service.validateSubmission(EVENT.id, undefined, [
+        upload('passport'),
+      ]);
+
+      // Nothing about the file goes into the values (F37): it is an attachment
+      // row of its own, and a copy of it in the JSON could disagree with it.
+      expect(checked.customFields).toEqual({});
+      expect(checked.uploads).toEqual([
+        {
+          fieldKey: 'passport',
+          fileName: 'passport.pdf',
+          mimeType: 'application/pdf',
+          bytes: PDF,
+        },
+      ]);
+    });
+
+    it('refuses a missing file for a required file field', async () => {
+      await addFile('Passport', { required: true });
+
+      // Required on every submission, including a repeated one: making the rule
+      // depend on what was uploaded before would tell a stranger whether the
+      // address is registered (E10).
+      await expect(answers(undefined)).rejects.toThrow(BadRequestException);
+    });
+
+    it('drops an unanswered optional file field', async () => {
+      await addFile('Passport');
+
+      await expect(answers(undefined)).resolves.toEqual({});
+    });
+
+    it('refuses a type the field does not accept', async () => {
+      await addFile('Passport', { accept: ['image/png'] });
+
+      await expect(answers(undefined, [upload('passport')])).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('refuses a file larger than the field takes', async () => {
+      await addFile('Passport', { maxSizeBytes: 64 * 1024 });
+
+      const large = Buffer.concat([PDF, Buffer.alloc(64 * 1024)]);
       await expect(
-        service.validateAnswers(EVENT.id, { visa: 'yes' }),
+        answers(undefined, [upload('passport', { bytes: large })]),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('refuses a file whose bytes are not what it claims to be', async () => {
+      await addFile('Passport');
+
+      // The type of a multipart part is set by whoever sends the request, so an
+      // allowlist alone accepts an executable called passport.pdf.
+      await expect(
+        answers(undefined, [upload('passport', { bytes: NOT_A_PDF })]),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('refuses an empty file', async () => {
+      await addFile('Passport');
+
+      await expect(
+        answers(undefined, [upload('passport', { bytes: Buffer.alloc(0) })]),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('refuses a file no field asked for', async () => {
+      await addFile('Passport');
+
+      await expect(
+        answers(undefined, [upload('proof-of-payment')]),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('refuses a file sent for a field that is not a file field', async () => {
+      await add('Comment');
+
+      await expect(answers(undefined, [upload('comment')])).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('refuses a value where a file is asked for', async () => {
+      await addFile('Passport');
+
+      await expect(
+        answers({ passport: 'attached, promise' }, [upload('passport')]),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('refuses more files than one request may carry', async () => {
+      await addFile('First document', { maxSizeBytes: MAX_UPLOAD_BYTES });
+      await addFile('Second document', { maxSizeBytes: MAX_UPLOAD_BYTES });
+      await addFile('Third document', { maxSizeBytes: MAX_UPLOAD_BYTES });
+
+      const chunk = Buffer.concat([PDF, Buffer.alloc(7 * 1024 * 1024)]);
+      // Each file is within its field's limit; together they are over what one
+      // request may carry — and the reverse proxy in front of a production
+      // instance would otherwise be the thing that answers.
+      await expect(
+        answers(undefined, [
+          upload('first-document', { bytes: chunk }),
+          upload('second-document', { bytes: chunk }),
+          upload('third-document', { bytes: chunk }),
+        ]),
+      ).rejects.toThrow(PayloadTooLargeException);
+      expect(3 * chunk.length).toBeGreaterThan(MAX_SUBMISSION_BYTES);
+    });
+
+    it('refuses two files for one field', async () => {
+      await addFile('Passport');
+
+      await expect(
+        answers(undefined, [upload('passport'), upload('passport')]),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('makes the file name safe rather than refusing it', async () => {
+      await addFile('Passport');
+
+      const checked = await service.validateSubmission(EVENT.id, undefined, [
+        upload('passport', { fileName: '../../etc/pa"ssport.pdf' }),
+      ]);
+
+      // A name from a form ends up in a header and on somebody's disk; what it
+      // must not do is refuse a registration over a character.
+      expect(checked.uploads[0].fileName).toBe('passport.pdf');
     });
 
     it('stores the answers in form order, whatever order they arrived in', async () => {
       await add('First');
       await add('Second');
 
-      const stored = await service.validateAnswers(EVENT.id, {
+      const stored = await answers({
         second: 'b',
         first: 'a',
       });

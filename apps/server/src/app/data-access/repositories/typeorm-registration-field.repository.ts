@@ -42,7 +42,11 @@ export class TypeormRegistrationFieldRepository implements RegistrationFieldRepo
     try {
       return toRecord(
         await this.repository.save(
-          this.repository.create({ ...field, options: [...field.options] }),
+          this.repository.create({
+            ...field,
+            options: [...field.options],
+            accept: [...field.accept],
+          }),
         ),
       );
     } catch (error: unknown) {
@@ -56,12 +60,16 @@ export class TypeormRegistrationFieldRepository implements RegistrationFieldRepo
     id: string,
     changes: RegistrationFieldChanges,
   ): Promise<RegistrationFieldRecord | null> {
-    const { options, ...rest } = changes;
+    const { options, accept, ...rest } = changes;
     const result = await this.repository.update(
       { id },
-      // The options are copied: the port hands them over as `readonly`, and
+      // Both lists are copied: the port hands them over as `readonly`, and
       // TypeORM writes into what it is given.
-      { ...rest, ...(options === undefined ? {} : { options: [...options] }) },
+      {
+        ...rest,
+        ...(options === undefined ? {} : { options: [...options] }),
+        ...(accept === undefined ? {} : { accept: [...accept] }),
+      },
     );
     if ((result.affected ?? 0) === 0) return null;
     return this.findById(id);
@@ -110,6 +118,8 @@ function toRecord(row: RegistrationFieldEntity): RegistrationFieldRecord {
     type: row.type,
     helpText: row.helpText,
     options: row.options ?? [],
+    accept: row.accept ?? [],
+    maxSizeBytes: row.maxSizeBytes,
     required: row.required,
     sort: row.sort,
   };

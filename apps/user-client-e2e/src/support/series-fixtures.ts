@@ -113,6 +113,15 @@ export const REGISTRATION_FIELDS = [
     type: 'checkbox',
     required: true,
   },
+  {
+    key: 'passport-scan',
+    label: 'Passport scan',
+    type: 'file',
+    helpText: 'The page with your photograph, for the visa letter.',
+    accept: ['application/pdf'],
+    maxSizeBytes: 1024 * 1024,
+    required: true,
+  },
 ] as const;
 
 interface AdminSeries {
@@ -250,6 +259,12 @@ async function seedRegistrationFields(
             helpText: 'helpText' in fixture ? fixture.helpText : null,
             required: fixture.required,
             ...('options' in fixture ? { options: fixture.options } : {}),
+            ...('accept' in fixture
+              ? {
+                  accept: fixture.accept,
+                  maxSizeBytes: fixture.maxSizeBytes,
+                }
+              : {}),
           },
         })
       : await context.post(path, { data: fixture });

@@ -5,6 +5,8 @@ import { Events1787789000000 } from './1787789000000-Events';
 import { Registrations1787789100000 } from './1787789100000-Registrations';
 import { ParticipantOverview1787789200000 } from './1787789200000-ParticipantOverview';
 import { RegistrationFields1787789300000 } from './1787789300000-RegistrationFields';
+import { Attachments1787789400000 } from './1787789400000-Attachments';
+import { FileRegistrationFields1787789500000 } from './1787789500000-FileRegistrationFields';
 
 /**
  * Core migrations, in the order they must run.
@@ -20,4 +22,6 @@ export const CORE_MIGRATIONS = [
   Registrations1787789100000,
   ParticipantOverview1787789200000,
   RegistrationFields1787789300000,
+  Attachments1787789400000,
+  FileRegistrationFields1787789500000,
 ];

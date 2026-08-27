@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CURATED_PLUGINS } from '../plugins';
+import { AttachmentsModule } from './business/attachments';
 import { ChatModule } from './business/chat';
 import { ConfigurationModule } from './business/config';
 import { EventSeriesModule } from './business/event-series';
@@ -44,6 +45,10 @@ import { DataAccessModule } from './data-access/data-access.module';
     EventsModule,
     ProgramModule,
     RegistrationModule,
+    // Files uploaded with a registration (E9). Listed although three modules
+    // already import it, so the composition root stays the place where the
+    // module map can be read.
+    AttachmentsModule,
     ParticipantsModule,
     MediaLinksModule,
     MailModule,

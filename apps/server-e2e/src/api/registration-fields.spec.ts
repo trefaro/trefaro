@@ -318,10 +318,10 @@ describe('registration fields API', () => {
       expect(response.status).toBe(400);
     });
 
-    it('refuses a type that has no form control yet', async () => {
-      // `file` arrives with the storage it needs in AP 7; until then it would be
-      // an enum value nobody can answer.
-      const response = await define({ label: 'Passport', type: 'file' });
+    it('refuses a type that does not exist', async () => {
+      // Four types exist; `file` joined them in AP 7 and is covered by its own
+      // suite, together with the storage it needs.
+      const response = await define({ label: 'Signature', type: 'signature' });
 
       expect(response.status).toBe(400);
     });
@@ -389,6 +389,9 @@ describe('registration fields API', () => {
       const response = await publicFields();
 
       expect(response.status).toBe(200);
+      // `accept` and `maxSizeBytes` belong to the file field type (AP 7) and are
+      // empty and null for every other type — the form still renders from this
+      // one payload alone.
       expect(response.body).toEqual([
         {
           key: 'dietary-requirements',
@@ -396,6 +399,8 @@ describe('registration fields API', () => {
           type: 'text',
           helpText: 'So the caterer knows.',
           options: [],
+          accept: [],
+          maxSizeBytes: null,
           required: false,
         },
         {
@@ -404,6 +409,8 @@ describe('registration fields API', () => {
           type: 'select',
           helpText: null,
           options: ['Vegan', 'Vegetarian'],
+          accept: [],
+          maxSizeBytes: null,
           required: true,
         },
       ]);

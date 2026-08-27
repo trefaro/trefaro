@@ -114,7 +114,8 @@ Veranstaltungsreihen · **AP 3** Events und öffentliche Landingpage · **AP 4**
 Registrierung mit Double-Opt-In und Mail-Modul · **AP 5** Teilnehmerübersicht
 → damit ist **M1** erreicht (Kernschleife lauffähig, erste Feedbackrunde mit
 Democracy International fällig) · **AP 6** Feld-Baukasten (Text, Auswahl,
-Ankreuzfeld). Als nächstes AP 7 (Feldtyp Datei-Upload).
+Ankreuzfeld) · **AP 7** Feldtyp Datei-Upload, `attachment`, Download nur für
+Admins. Als nächstes AP 8 (Programmplanung).
 
 Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
 
@@ -157,6 +158,25 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
   stilles Verwerfen.
 - **`private` reicht für ein Angular-Template nicht**, und `tsc --noEmit` merkt
   das nicht: Template-Prüfung passiert erst im Testbuild des Clients.
+- **Eine Datei ist keine Antwort in `custom_fields_json`** (F37), sondern eine
+  `attachment`-Zeile mit echtem Fremdschlüssel auf `registration`, zugeordnet
+  über den Feldschlüssel. Ein Wert unter einem Datei-Schlüssel ist ein 400.
+- **Dateien sind Datenzugriff.** `FileStore` ist ein Port wie ein Repository; die
+  Geschäftslogik weiß, _dass_ eine Datei bleibt, nicht _wo_. Bei Bedarf an
+  Dateizugriff in der Geschäftslogik einen Port ziehen, nicht `fs` importieren.
+- **Dem Content-Type wird nicht geglaubt** (F38): geprüft werden die ersten Bytes
+  gegen den behaupteten Typ. Die erlaubten Typen sind ein Katalog in
+  `shared-models`, kein Freitext — ein neuer Typ braucht dort einen Eintrag _und_
+  eine Signatur in `file-signature.ts`.
+- **Das Upload-Volume wird nie statisch ausgeliefert** (E9). Einziger Weg zu den
+  Bytes: `GET /api/admin/attachments/:id`, immer als `attachment`-Download.
+  `/api/media` ist für Logos in Phase 2 und ausdrücklich nicht dafür.
+- **Kaskaden löschen Zeilen, keine Dateien.** Wer Anmeldungen (mittelbar) löscht
+  — Anmeldung, Event, Reihe — ruft vorher `AttachmentsService.purge…`, solange
+  die Zeilen noch sagen können, welche Dateien gemeint sind.
+- **Eine Anmeldung mit Datei ist eine Anfrage** (F39): `multipart/form-data`,
+  Felder als JSON im Teil `payload`, jede Datei in einem Teil mit dem Namen ihres
+  Feldschlüssels. Geschrieben wird erst, wenn alles geprüft ist.
 
 ## Betriebskontext
 

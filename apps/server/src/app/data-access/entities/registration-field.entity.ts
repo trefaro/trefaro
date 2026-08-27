@@ -55,6 +55,19 @@ export class RegistrationFieldEntity {
   @Column({ name: 'options_json', type: 'jsonb', default: () => "'[]'" })
   options!: string[];
 
+  /**
+   * The MIME types a file field accepts; an empty array for every other type.
+   *
+   * From a fixed catalogue, not free text (F38): an organizer who could type a
+   * type could accept an executable.
+   */
+  @Column({ name: 'accept_json', type: 'jsonb', default: () => "'[]'" })
+  accept!: string[];
+
+  /** Size limit of a file field in bytes; `null` for every other type. */
+  @Column({ name: 'max_size_bytes', type: 'int', nullable: true })
+  maxSizeBytes!: number | null;
+
   @Column({ type: 'boolean', default: false })
   required!: boolean;
 

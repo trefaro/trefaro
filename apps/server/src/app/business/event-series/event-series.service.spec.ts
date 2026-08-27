@@ -1,5 +1,6 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import type { RegistrationTally } from '../registration/ports/registration-tally';
+import type { AttachmentsService } from '../attachments';
 import { EventSeriesService } from './event-series.service';
 import {
   EventSeriesSlugTakenError,
@@ -87,9 +88,24 @@ class FakeEventSeriesRepository implements EventSeriesRepository {
   }
 }
 
+/** Records the purge the delete paths owe the upload volume (E9). */
+class FakeAttachmentsService {
+  readonly purgedEvents: string[] = [];
+  readonly purgedSeries: string[] = [];
+
+  async purgeForEvent(eventId: string): Promise<void> {
+    this.purgedEvents.push(eventId);
+  }
+
+  async purgeForSeries(seriesId: string): Promise<void> {
+    this.purgedSeries.push(seriesId);
+  }
+}
+
 describe('EventSeriesService', () => {
   let repository: FakeEventSeriesRepository;
   let tally: FakeRegistrationTally;
+  let attachments: FakeAttachmentsService;
   let service: EventSeriesService;
 
   const minimal = {
@@ -100,7 +116,12 @@ describe('EventSeriesService', () => {
   beforeEach(() => {
     repository = new FakeEventSeriesRepository();
     tally = new FakeRegistrationTally();
-    service = new EventSeriesService(repository, tally);
+    attachments = new FakeAttachmentsService();
+    service = new EventSeriesService(
+      repository,
+      tally,
+      attachments as unknown as AttachmentsService,
+    );
   });
 
   describe('create', () => {
@@ -297,18 +318,23 @@ describe('EventSeriesService', () => {
   });
 
   describe('delete', () => {
-    it('removes a series that was created by mistake', async () => {
+    it('removes a series that was created by mistake, files included', async () => {
       const created = await service.create(minimal);
 
       await service.delete(created.id);
 
       expect(repository.rows).toHaveLength(0);
+      // The cascade reaches the registrations of every event; their files are
+      // only reachable from here (E9).
+      expect(attachments.purgedSeries).toEqual([created.id]);
     });
 
-    it('answers 404 for a series that is already gone', async () => {
+    it('answers 404 for a series that is already gone, removing nothing', async () => {
       await expect(service.delete('series-99')).rejects.toThrow(
         NotFoundException,
       );
+
+      expect(attachments.purgedSeries).toEqual([]);
     });
 
     it('refuses a series whose events carry confirmed registrations', async () => {

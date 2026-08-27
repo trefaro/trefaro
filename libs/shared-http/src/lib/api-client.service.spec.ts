@@ -96,6 +96,31 @@ describe('ApiClient', () => {
     request.flush(null);
   });
 
+  it('asks for a blob where the answer is a file, not JSON', () => {
+    configure();
+    client.file('admin/attachments/attachment-1').subscribe();
+
+    // An attachment download (E9): the bytes come through the same session as
+    // every other request, which a link opened in a new tab cannot promise.
+    const request = http.expectOne('/api/admin/attachments/attachment-1');
+    expect(request.request.responseType).toBe('blob');
+    request.flush(new Blob(['%PDF-1.7']));
+  });
+
+  it('leaves a FormData body alone, so the browser sets the boundary', () => {
+    configure();
+    const form = new FormData();
+    form.append('payload', '{"email":"amina@example.org"}');
+    client.post('user/series/a/events/b/registrations', form).subscribe();
+
+    const request = http.expectOne('/api/user/series/a/events/b/registrations');
+    expect(request.request.body).toBe(form);
+    // No content type of ours: Angular would send it without a boundary, and a
+    // multipart body without one cannot be parsed.
+    expect(request.request.headers.has('Content-Type')).toBe(false);
+    request.flush({ email: 'amina@example.org' });
+  });
+
   it('translates a failure into an ApiError instead of an HttpErrorResponse', async () => {
     configure();
     const failure = new Promise<ApiError>((resolve) => {

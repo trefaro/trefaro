@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AttachmentsModule } from '../attachments';
 import { EventSeriesModule } from '../event-series';
 import { AdminEventsController } from './admin-events.controller';
 import { AdminSeriesEventsController } from './admin-series-events.controller';
@@ -16,10 +17,12 @@ import { PublicEventsController } from './public-events.controller';
  *
  * Imports `EventSeriesModule` because an event is only public if its series is:
  * the rule needs both, and duplicating the series' visibility check here is how
- * the two would drift apart.
+ * the two would drift apart. And `AttachmentsModule`, because deleting an event
+ * has to take the uploaded files with it — the database cascade removes the
+ * rows and leaves the bytes (E9).
  */
 @Module({
-  imports: [EventSeriesModule],
+  imports: [EventSeriesModule, AttachmentsModule],
   controllers: [
     AdminSeriesEventsController,
     AdminEventsController,

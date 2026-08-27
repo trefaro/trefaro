@@ -62,6 +62,15 @@ test.describe('registering for an event', () => {
     ).toBeVisible();
     await page.getByLabel('Meal *').selectOption('Vegan');
     await page.getByLabel('I have read the code of conduct *').check();
+    // The file field (E9). The hint says what the form takes before the picker
+    // is opened, because a rejected file after a long upload is the worst way to
+    // learn about a limit.
+    await expect(page.getByText('PDF, up to 1.0 MB')).toBeVisible();
+    await page.getByLabel('Passport scan *').setInputFiles({
+      name: 'Reisepass.pdf',
+      mimeType: 'application/pdf',
+      buffer: Buffer.from('%PDF-1.7\nnot a real passport\n'),
+    });
 
     await page.getByRole('button', { name: 'Register' }).click();
 
@@ -119,7 +128,7 @@ test.describe('registering for an event', () => {
       .fill(
         `e2e-unanswered-${testInfo.project.name}@registrations.example.org`,
       );
-    // The optional question is answered, the two required ones are not.
+    // The optional question is answered; the three required ones are not.
     await page.getByLabel('Dietary requirements').fill('Nothing special');
 
     await page.getByRole('button', { name: 'Register' }).click();
@@ -128,6 +137,35 @@ test.describe('registering for an event', () => {
     // the same registration with 400, which the API contract suite asserts —
     // this is the courtesy that keeps the participant from finding out by mail
     // that nothing happened.
+    await expect(
+      page.getByRole('heading', { name: 'Almost done' }),
+    ).toBeHidden();
+  });
+
+  test('says why a file cannot be sent, before it is sent', async ({
+    page,
+  }, testInfo) => {
+    await page.goto(`${LANDING_PAGE}/register`);
+    await page.getByLabel('First name').fill('Wrong');
+    await page.getByLabel('Last name').fill('Filetype');
+    await page
+      .getByLabel('E-mail')
+      .fill(`e2e-filetype-${testInfo.project.name}@registrations.example.org`);
+    await page.getByLabel('Meal *').selectOption('Vegan');
+    await page.getByLabel('I have read the code of conduct *').check();
+
+    await page.getByLabel('Passport scan *').setInputFiles({
+      name: 'holiday.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    });
+
+    // A courtesy, not the rule — the server checks the type and the bytes
+    // themselves. But it is the difference between an explanation and a form
+    // that seems not to react.
+    await expect(page.getByRole('alert')).toContainText('takes PDF');
+
+    await page.getByRole('button', { name: 'Register' }).click();
     await expect(
       page.getByRole('heading', { name: 'Almost done' }),
     ).toBeHidden();
