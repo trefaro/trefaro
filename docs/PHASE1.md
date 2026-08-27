@@ -1719,6 +1719,18 @@ Weiteres, das beim Bauen entschieden oder gelernt wurde:
   dasselbe wie im Veranstalter-Client: einmal anmelden pro **Lauf**, Sitzung in
   einer Datei, alle anderen lesen sie. Damit ist der `todo.md`-Punkt „die
   Browsersuiten melden sich fünfmal pro Lauf an" erledigt.
+- **Die drei E2E-Projekte teilen sich die Drosselung eines Servers.** Die CI
+  fährt sie mit `--parallel=1` gegen **eine** Instanz, also ist jedes Limit, das
+  je Client-Adresse zählt, ein Budget für den ganzen Lauf: 60 öffentliche
+  Registrierungen in fünf Minuten, 20 Logins. Die erste CI-Runde dieses Pakets
+  fiel deshalb durch — die neue Nutzer-Client-Suite registrierte sechsmal
+  zusätzlich über das echte Formular, und die letzten Tests von
+  `registrations.spec.ts` bekamen 429 statt 404/409/400. Lokal war es unsichtbar,
+  weil ich die Suiten einzeln laufen ließ. Behoben, indem diese Suite ihre
+  bestätigte Anmeldung sät statt sie zu registrieren (die Zusage, die sie prüft,
+  ist der Widerspruchslink, nicht der Double-Opt-In) und indem beide Suiten
+  langsamer pollen. Nachprüfbar mit `nx run-many -t e2e --parallel=1` — genau
+  das, was die CI tut, und was ich vorher nicht getan hatte.
 - **Eine Reihe kann zwischen Auflisten und Lesen verschwinden.** Seit AP 12 legt
   eine Suite je Test eine Reihe an und löscht sie wieder; `removeRegistrations`
   lief dabei über eine Liste, in der eine davon schon weg war, und `.map` auf

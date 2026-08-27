@@ -159,6 +159,21 @@ is assigned to one of its work packages.
       refused, the check belongs in `ProgramSignupsService` and needs the
       programme of the event, not just the one session.
 
+- [ ] **The three e2e projects share one server's rate limits.** CI runs them
+      with `--parallel=1` against a single instance, so every limit that counts
+      per client address is a budget for the whole run: sixty public
+      registrations per five minutes (`REGISTRATIONS_PER_WINDOW`) and twenty
+      logins (`LOGIN_ATTEMPTS_PER_WINDOW`). The API contract suite spends most of
+      the registrations, deliberately — the double opt-in through the real form
+      _is_ its subject. The first CI run of AP 12 failed because the new
+      participant-client suite added six more and pushed the total over sixty;
+      the fix was to seed that fixture instead (`support/registration-seed.ts`).
+      What is left is the margin, and it is thin. Before a suite adds
+      registrations through the form again, either count what the run already
+      makes or seed. Worth a proper answer in phase 5, when the throttle gets a
+      second counter per recipient anyway: a test profile that raises the limits
+      would work, but only if it cannot be the one an instance ships with.
+
 - [ ] **The invitation sender has no pause and no retry.** AP 12 sends one mail
       after another as fast as the mail server accepts them, and a refused
       address is recorded as failed and never tried again. Against Mailpit and

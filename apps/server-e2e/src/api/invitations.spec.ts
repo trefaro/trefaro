@@ -150,7 +150,11 @@ describe('invitations API', () => {
       last = (await api<Invitation>(`/api/admin/invitations/${id}`, asAdmin()))
         .body;
       if (last.state !== 'sending') return last;
-      await new Promise((resolve) => setTimeout(resolve, 250));
+      // Half a second, not a quarter: a global limit of 300 requests per minute
+      // and client address covers every route (`ThrottlerModule.forRoot`), and
+      // in CI this suite shares that budget with two browser suites against the
+      // same server. Polling is the one thing here that can spend it in bursts.
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
     throw new Error(
       `Invitation ${id} was still sending after ${timeoutMs / 1000}s ` +

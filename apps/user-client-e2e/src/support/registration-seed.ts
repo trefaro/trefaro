@@ -1,0 +1,65 @@
+import { Pool } from 'pg';
+
+/**
+ * A confirmed registration, written straight into the database.
+ *
+ * A deliberate exception to this suite's rule that fixtures go through the real
+ * flow, and it is the same exception the organizer suite makes for the same
+ * reason: the public registration endpoint sends a mail per attempt and allows
+ * sixty attempts per five minutes and client address (E4). In CI all three e2e
+ * projects run against one server, so those sixty are shared — and a suite that
+ * spends six of them on a fixture makes an unrelated spec fail with a 429.
+ *
+ * What is *not* faked is the part under test. The invitation suite needs a
+ * confirmed registration to exist; that the double opt-in produces one is
+ * proven in `registration.spec.ts`, in `my-registration.spec.ts` and in the API
+ * contract suite, all three against Mailpit. Every constraint of the table still
+ * applies here, so a state the real flow could not reach fails here too.
+ */
+let pool: Pool | null = null;
+
+function db(): Pool {
+  pool ??= new Pool({
+    host: process.env['DATABASE_HOST'] ?? 'localhost',
+    port: Number(process.env['DATABASE_PORT'] ?? 5432),
+    user: process.env['DATABASE_USER'] ?? 'trefaro',
+    password: process.env['DATABASE_PASSWORD'] ?? 'trefaro_dev',
+    database: process.env['DATABASE_NAME'] ?? 'trefaro',
+    max: 2,
+  });
+  return pool;
+}
+
+export interface SeededPerson {
+  readonly email: string;
+  readonly firstName: string;
+  readonly lastName: string;
+}
+
+/** Inserts one confirmed registration and returns its id. */
+export async function seedConfirmedRegistration(
+  eventId: string,
+  person: SeededPerson,
+): Promise<string> {
+  const result = await db().query<{ id: string }>(
+    `INSERT INTO registration
+       (event_id, email, first_name, last_name, status, confirmed_at, created_at)
+     VALUES ($1, $2, $3, $4, 'confirmed', now(), now())
+     RETURNING id`,
+    [eventId, person.email.toLowerCase(), person.firstName, person.lastName],
+  );
+  return result.rows[0].id;
+}
+
+/**
+ * Closes the pool again, re-openably.
+ *
+ * A worker that seeds after the close reopens it: Playwright may put two specs
+ * in one worker process, and a closed module-level pool would fail in the
+ * fixture rather than in a test.
+ */
+export async function closeSeedDatabase(): Promise<void> {
+  const open = pool;
+  pool = null;
+  await open?.end();
+}

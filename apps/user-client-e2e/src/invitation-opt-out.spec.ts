@@ -1,5 +1,9 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import { optOutPathFrom, waitForMailTo } from './support/mail';
+import {
+  closeSeedDatabase,
+  seedConfirmedRegistration,
+} from './support/registration-seed';
 import { asAdmin } from './support/series-fixtures';
 
 /**
@@ -18,10 +22,13 @@ import { asAdmin } from './support/series-fixtures';
  * objection is instance-wide (F57), so a shared fixture would let the first
  * engine to finish take the address away from the other two.
  *
- * One administrative context for the whole file, opened once and reused. The
- * login is rate limited per address (E4) and three engines share one account —
- * a context per test would spend that budget on the fixture and fail the run
- * with a 429 that says nothing about invitations.
+ * One administrative context for the whole file, opened once and reused, and the
+ * participant is seeded rather than registered. Both for the same reason: in CI
+ * all three e2e projects run against one server, and the login and the public
+ * registration form each allow a fixed number of attempts per five minutes and
+ * client address (E4). Spending those on a fixture makes an unrelated spec fail
+ * with a 429 — which is what the first CI run of AP 12 did. What is under test
+ * here is the objection link, not the double opt-in.
  */
 const CLIENT_URL =
   process.env['BASE_URL'] ??
@@ -71,11 +78,10 @@ interface Invited {
 /**
  * A confirmed participant who has just been invited, and their objection link.
  *
- * Registers through the public endpoint and confirms through the mailed link —
- * the only way to a confirmed registration (E5) — then invites that one person
- * as the organizer and takes the objection link out of the message that
- * arrives. The event carries no extra questions, so the submission stays one
- * JSON body; the field kit is `registration.spec.ts`' subject.
+ * The series and the event go through the administrative API — the same path an
+ * organizer takes — and the registration is seeded (see
+ * `support/registration-seed.ts` for why). Then that one person is invited, and
+ * the objection link is taken out of the message that actually arrived.
  */
 async function invite(
   admin: APIRequestContext,
@@ -108,22 +114,11 @@ async function invite(
   ).json();
 
   const email = `objector-${label}@e2e.example.org`.toLowerCase();
-  const registered = await admin.post(
-    `/api/user/series/${series.slug}/events/${event.slug}/registrations`,
-    {
-      data: { firstName: 'Ola', lastName: 'Objector', email },
-    },
-  );
-  expect(`${registered.status()} ${await registered.text()}`).toMatch(/^202/);
-
-  const request = await waitForMailTo(email, { subject: /confirm|bestätige/i });
-  const token = new URL(
-    `http://localhost${/\/registrations\/confirm\?token=[^\s]+/.exec(request.text)?.[0] ?? ''}`,
-  ).searchParams.get('token');
-  const confirmed = await admin.post('/api/user/registrations/confirm', {
-    data: { token },
+  await seedConfirmedRegistration(event.id, {
+    email,
+    firstName: 'Ola',
+    lastName: 'Objector',
   });
-  expect(`${confirmed.status()} ${await confirmed.text()}`).toMatch(/^200/);
 
   const contacts = async (): Promise<readonly Contact[]> => {
     const { rows = [] } = (await (
@@ -189,6 +184,7 @@ test.describe('objecting to further invitations', () => {
 
   test.afterAll(async () => {
     await admin.dispose();
+    await closeSeedDatabase();
   });
 
   // The registration first, then the series: a confirmed registration blocks
