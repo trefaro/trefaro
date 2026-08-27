@@ -6,6 +6,7 @@ import { ConfigurationModule } from './business/config';
 import { DashboardModule } from './business/dashboard';
 import { EventSeriesModule } from './business/event-series';
 import { EventsModule } from './business/events';
+import { InvitationsModule } from './business/invitations';
 import { LoginModule } from './business/login';
 import { MailModule } from './business/mail';
 import { MediaLinksModule } from './business/media-links';
@@ -71,6 +72,10 @@ import { DataAccessModule } from './data-access/data-access.module';
     // Optional (FR 1.5) and the first module that is: switched off, its
     // endpoints answer 404 rather than only vanishing from /api/config (F53).
     MediaLinksModule,
+    // Writing to former participants of a series (FR 2.4). Above the modules it
+    // composes, like the dashboard: it asks the registration module who may be
+    // written to and owns nothing about registrations itself.
+    InvitationsModule,
     MailModule,
 
     // Community features.

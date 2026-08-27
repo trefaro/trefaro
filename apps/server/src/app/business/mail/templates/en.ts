@@ -2,6 +2,7 @@ import { formatEventPeriod } from '@trefaro/shared-models';
 import { escapeHtml, htmlAction, htmlBody, htmlLink } from './html';
 import type {
   ConfirmationMailContext,
+  InvitationMailContext,
   MailTemplates,
   ReceiptMailContext,
   RegistrationMailContext,
@@ -84,6 +85,78 @@ export const englishMailTemplates: MailTemplates = {
         'Keep this link to yourself: anyone who has it can change your ' +
           'registration.',
         'See you there.',
+      ),
+    };
+  },
+
+  registrationCancelled(context: RegistrationMailContext): RenderedMail {
+    const { event, firstName } = context;
+    return {
+      subject: `Your registration for ${event.name} was cancelled`,
+      text: [
+        `Hello ${firstName},`,
+        '',
+        `your registration for ${event.name} (${period(context)}) has been ` +
+          'cancelled by the organizers. You are not expected there any more, ' +
+          'and any sessions you had signed up for are free again.',
+        '',
+        'If that is not what you wanted, you can register again:',
+        '',
+        event.url,
+      ].join('\n'),
+      html: htmlBody(
+        `Hello ${escapeHtml(firstName)},`,
+        `your registration for <strong>${escapeHtml(event.name)}</strong> ` +
+          `(${escapeHtml(period(context))}) has been cancelled by the ` +
+          'organizers. You are not expected there any more, and any sessions ' +
+          'you had signed up for are free again.',
+        'If that is not what you wanted, you can register again.',
+        htmlAction(event.url, 'Back to the event'),
+      ),
+    };
+  },
+
+  invitation(context: InvitationMailContext): RenderedMail {
+    const { event, firstName, paragraphs, seriesName, subject, optOutUrl } =
+      context;
+    // Why this arrived and how to stop the next one. Not the organizer's words
+    // and not optional: it is what makes writing to former participants
+    // legitimate at all (E15).
+    const footer =
+      `You are receiving this message because you registered for an event of ` +
+      `${seriesName}. If you would rather not be invited again, say so here — ` +
+      'one click, no reply needed:';
+
+    return {
+      subject,
+      text: [
+        `Hello ${firstName},`,
+        '',
+        ...paragraphs.flatMap((paragraph) => [paragraph, '']),
+        ...(event
+          ? [
+              `${event.name}`,
+              `When: ${formatEventPeriod(event, LOCALE)}`,
+              `Details: ${event.url}`,
+              '',
+            ]
+          : []),
+        footer,
+        '',
+        optOutUrl,
+      ].join('\n'),
+      html: htmlBody(
+        `Hello ${escapeHtml(firstName)},`,
+        ...paragraphs.map((paragraph) => escapeHtml(paragraph)),
+        ...(event
+          ? [
+              `<strong>${escapeHtml(event.name)}</strong><br />` +
+                `When: ${escapeHtml(formatEventPeriod(event, LOCALE))}<br />` +
+                `Details: ${htmlLink(event.url, event.url)}`,
+            ]
+          : []),
+        footer,
+        htmlAction(optOutUrl, 'Do not invite me again'),
       ),
     };
   },

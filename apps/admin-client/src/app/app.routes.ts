@@ -111,6 +111,18 @@ export const appRoutes: Route[] = [
         title: 'Event — Trefaro',
       },
       {
+        // Before `series/:id`, so "invitations" is not read as an id — the same
+        // order the event's own sub-pages use. The parameter is `seriesId`
+        // because `withComponentInputBinding()` binds by name, and that is what
+        // the page's input is called.
+        path: 'series/:seriesId/invitations',
+        loadComponent: () =>
+          import('./pages/invitations/invitations-page').then(
+            (m) => m.InvitationsPage,
+          ),
+        title: 'Invite former participants — Trefaro',
+      },
+      {
         path: 'series/:id',
         loadComponent: () =>
           import('./pages/series/series-detail-page').then(

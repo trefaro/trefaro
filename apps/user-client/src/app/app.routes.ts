@@ -8,7 +8,8 @@ import { Route } from '@angular/router';
  * mailed link opens: confirming a registration (E5b) and "my registration"
  * (E11), both authorized by a signed token rather than by a session. The
  * participant login of phase 3 goes in front of the second one and leaves the
- * links already in people's inboxes working.
+ * links already in people's inboxes working. The third such page is the
+ * objection to further invitations (E15), which needs no account by design.
  */
 export const appRoutes: Route[] = [
   {
@@ -48,6 +49,17 @@ export const appRoutes: Route[] = [
         (m) => m.MyRegistrationPage,
       ),
     title: 'My registration',
+  },
+  {
+    // The objection link in an invitation points here (E15, F58); the token
+    // arrives as a query parameter, exactly as for the two links above. The
+    // page objects by POST, so a link previewer decides nothing.
+    path: 'invitations/unsubscribe',
+    loadComponent: () =>
+      import('./pages/invitation-opt-out/invitation-opt-out-page').then(
+        (m) => m.InvitationOptOutPage,
+      ),
+    title: 'Invitations',
   },
   {
     // Before `series/:slug`, so the more specific route wins rather than

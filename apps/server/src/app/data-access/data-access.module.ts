@@ -6,6 +6,7 @@ import { APP_CONFIG_REPOSITORY } from '../business/config/ports/app-config.repos
 import { EVENT_SERIES_REPOSITORY } from '../business/event-series/ports/event-series.repository';
 import { EVENT_REPOSITORY } from '../business/events/ports/event.repository';
 import { ADMIN_SESSION_REPOSITORY } from '../business/login/ports/admin-session.repository';
+import { INVITATION_REPOSITORY } from '../business/invitations/ports/invitation.repository';
 import { ADMIN_USER_REPOSITORY } from '../business/login/ports/admin-user.repository';
 import { MEDIA_LINK_TALLY } from '../business/media-links/ports/media-link-tally';
 import { MEDIA_LINK_REPOSITORY } from '../business/media-links/ports/media-link.repository';
@@ -33,6 +34,7 @@ import { TypeormAppConfigRepository } from './repositories/typeorm-app-config.re
 import { TypeormAttachmentRepository } from './repositories/typeorm-attachment.repository';
 import { TypeormEventSeriesRepository } from './repositories/typeorm-event-series.repository';
 import { TypeormEventRepository } from './repositories/typeorm-event.repository';
+import { TypeormInvitationRepository } from './repositories/typeorm-invitation.repository';
 import { TypeormMediaLinkRepository } from './repositories/typeorm-media-link.repository';
 import { TypeormModuleConfigRepository } from './repositories/typeorm-module-config.repository';
 import { TypeormProgramItemSignupRepository } from './repositories/typeorm-program-item-signup.repository';
@@ -78,6 +80,7 @@ export class DataAccessModule {
         TypeormAppConfigRepository,
         TypeormEventSeriesRepository,
         TypeormEventRepository,
+        TypeormInvitationRepository,
         TypeormMediaLinkRepository,
         TypeormModuleConfigRepository,
         TypeormProgramItemRepository,
@@ -114,6 +117,10 @@ export class DataAccessModule {
         {
           provide: EVENT_REPOSITORY,
           useExisting: TypeormEventRepository,
+        },
+        {
+          provide: INVITATION_REPOSITORY,
+          useExisting: TypeormInvitationRepository,
         },
         {
           provide: MEDIA_LINK_REPOSITORY,
@@ -170,6 +177,7 @@ export class DataAccessModule {
         FILE_STORE,
         EVENT_SERIES_REPOSITORY,
         EVENT_REPOSITORY,
+        INVITATION_REPOSITORY,
         MEDIA_LINK_REPOSITORY,
         MEDIA_LINK_TALLY,
         MODULE_CONFIG_REPOSITORY,

@@ -68,16 +68,17 @@ is assigned to one of its work packages.
       but it must happen before a release: an instance whose mail lands in spam
       cannot register anyone, and no test in this repository can find that out.
       Latest point is the hardening of phase 5, together with TLS.
-- [ ] **Tell a participant when an organizer cancels their registration.** AP 5
-      lets an organizer cancel and reinstate (F31), and the person concerned
-      learns nothing — a silent cancellation is the kind of thing that turns into
-      somebody standing at a door. This entry expected AP 11 to build a follow-up
-      **mail**; AP 11 built the follow-up **section** on the landing page, which
-      the phase plan asked for and which sends nothing. So it moves to **AP 12**,
-      where writing a message to selected addresses is the work package's whole
-      subject — the same templates, the same opt-out link, one recipient instead
-      of a list. Verify: cancelling produces one mail, reinstating does not
-      produce a second one that contradicts it.
+- [x] **Tell a participant when an organizer cancels their registration.** Done
+      in AP 12 (F59). `ParticipantsService.setStatus` takes an `actor`, and the
+      notice goes out only when the **organizer** cancels a **confirmed**
+      registration — not when the participant cancels on their own page (they
+      just read the answer) and not on reinstating (a second mail would
+      contradict the first without saying which one is current). It is
+      transactional, so `contact_opt_out` does not stop it: somebody who does not
+      want invitations still has to learn that they are not expected at the door.
+      Verified in `participants.service.spec.ts` (five tests) and in
+      `apps/server-e2e/src/api/participants.spec.ts` against Mailpit, including
+      that reinstating sends nothing.
 - [x] **The uploads volume is finally used.** Done in AP 7: the `file` field
       type, the `attachment` table, and `GET /api/admin/attachments/:id` as the
       only way to the bytes. Both things that were easy to lose happened — the
@@ -93,15 +94,16 @@ is assigned to one of its work packages.
       address it is given, so the number that matters is per recipient. Needs a
       second counter with its own key; belongs with the hardening of phase 5,
       together with the SMTP work.
-- [ ] **The browser suites still log in five times per run.** The API contract
-      suite shares one session since AP 7; `user-client-e2e` signs in for the
-      seed, for the teardown and once per browser project in
-      `removeRegistrations`, and `admin-client-e2e` once for its storage state.
-      That is about 10 of the 20 attempts the login allows in five minutes
-      (`LOGIN_ATTEMPTS_PER_WINDOW`), which is enough margin today and will not be
-      forever: this is exactly what broke the CI run of AP 7, one suite too late
-      to notice. The fix is the same shape — one storage state per Playwright
-      run, reused by the fixtures. Do it when the next package adds a suite.
+- [x] **The browser suites still log in five times per run.** Done in AP 12,
+      and not a moment too early: the new participant-client suite pushed the
+      count past the twenty attempts the login allows in five minutes, and the
+      run failed with a 429 **in the seed** — a message that says nothing about
+      what is being tested. `asAdmin` in `user-client-e2e` now signs in once per
+      run, saves the session to a file in the temporary directory and hands every
+      later caller a context built from it; the global teardown deletes the file
+      last, after the teardown that needs it. Same shape as `admin-client-e2e`
+      has had since AP 1. What is left of the original entry: nothing — the API
+      contract suite already shared one session, and both browser suites now do.
 - [ ] **A sweep over the upload volume.** `AttachmentsService` compensates where
       the database and the volume can disagree, and it compensates towards
       keeping bytes rather than losing them — so a crash between two steps can
@@ -156,6 +158,39 @@ is assigned to one of its work packages.
       whether they mean to split their morning. If the pilot partner wants it
       refused, the check belongs in `ProgramSignupsService` and needs the
       programme of the event, not just the one session.
+
+- [ ] **The invitation sender has no pause and no retry.** AP 12 sends one mail
+      after another as fast as the mail server accepts them, and a refused
+      address is recorded as failed and never tried again. Against Mailpit and
+      against a well-behaved server that is right; against a shared mail service
+      with a per-minute limit, two hundred invitations in twenty seconds is how
+      an instance gets itself throttled or blacklisted — and a mailbox that was
+      briefly full stays "failed" for good. Both wants the same seam: a
+      configurable pause between mails, and a second attempt for a delivery that
+      failed with a temporary code. The rows already carry what a retry needs
+      (`status`, `failure`), so this is the sender's own loop and no schema
+      change. Belongs with the SMTP work of phase 5, where a real server is
+      available to measure against.
+- [ ] **No `List-Unsubscribe` header on invitations.** The objection link is in
+      the body (F58), which is where a person looks. Mail clients look for the
+      header, and Gmail and Outlook weigh its absence when they decide whether a
+      bulk message is spam — so the feature that works may still not arrive. It
+      needs `List-Unsubscribe` plus `List-Unsubscribe-Post: List-Unsubscribe=One-Click`,
+      which in turn needs an endpoint that accepts a bare POST without the page
+      in front of it, and the `Mailer` port to carry headers. Deliberately not in
+      AP 12: one-click unsubscribe from a header is exactly the request E5b says
+      a link previewer must not be able to make, so the endpoint needs its own
+      reasoning rather than a copy of this one. Phase 5, with the SMTP work.
+- [ ] **`CORE_MODULES` still lists `newsletter`, and nothing reads it.** The
+      descriptor is from phase 0 and appears in `/api/config` as a module that is
+      switched off. Nothing checks the flag, because there is no newsletter
+      module in v1 and there will not be one (F8) — and inviting former
+      participants is deliberately _not_ it (F55), so AP 12 did not give the flag
+      a meaning either. Same smell as the fields AP 6 and AP 9 refused to add: a
+      flag nothing reads looks like a feature that exists. Decide in phase 2,
+      when the module administration makes the list visible to an organizer:
+      either the key goes, or it is renamed to what the opt-in management it
+      would actually gate is called.
 
 ## Checkable after phase 2 — whitelabel, module administration, i18n, PWA
 

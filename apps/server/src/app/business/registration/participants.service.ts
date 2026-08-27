@@ -2,6 +2,7 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import type {
@@ -24,6 +25,7 @@ import {
 } from '@trefaro/shared-models';
 import { AttachmentsService } from '../attachments';
 import { EventsService } from '../events';
+import { MailDeliveryError, MailService, PublicLinks } from '../mail';
 import {
   REGISTRATION_REPOSITORY,
   type RegistrationRecord,
@@ -35,6 +37,15 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** More than this many empty weeks are not drawn; see `fillGaps`. */
 const MAX_WEEKS = 260;
+
+/**
+ * Who is changing a registration's status.
+ *
+ * Not an authorization — both may cancel, and the rules are the same for both
+ * (E14). It decides one thing: whether the participant is told, because
+ * somebody who cancelled on their own page does not need a mail about it (F59).
+ */
+export type StatusChangeActor = 'organizer' | 'participant';
 
 /**
  * The participant overview, as the organizer reads it (UC 08, FR 3.3).
@@ -51,6 +62,8 @@ const MAX_WEEKS = 260;
  */
 @Injectable()
 export class ParticipantsService {
+  private readonly logger = new Logger(ParticipantsService.name);
+
   constructor(
     @Inject(REGISTRATION_REPOSITORY)
     private readonly registrations: RegistrationRepository,
@@ -58,6 +71,9 @@ export class ParticipantsService {
     // Read for the detail panel only: a page of the table must not turn into
     // one query per row (E9, and the load rule of FR 3.3).
     private readonly attachments: AttachmentsService,
+    // For the one message this service sends: the cancellation notice (F59).
+    private readonly mail: MailService,
+    private readonly links: PublicLinks,
   ) {}
 
   /**
@@ -165,6 +181,7 @@ export class ParticipantsService {
   async setStatus(
     id: string,
     status: RegistrationStatus,
+    actor: StatusChangeActor,
   ): Promise<ParticipantRow> {
     const registration = await this.require(id);
     if (registration.status === status) return toRow(registration);
@@ -173,7 +190,65 @@ export class ParticipantsService {
 
     const updated = await this.registrations.update(id, { status });
     if (!updated) throw new NotFoundException(GONE);
+
+    if (
+      actor === 'organizer' &&
+      status === 'cancelled' &&
+      registration.status === 'confirmed'
+    ) {
+      await this.notifyCancelled(updated);
+    }
+
     return toRow(updated);
+  }
+
+  /**
+   * Tells the participant that their registration was cancelled (F59).
+   *
+   * Three conditions, each of them load-bearing:
+   *
+   * - **Only when somebody else did it.** A participant who just cancelled on
+   *   their own page has read the answer already; a mail confirming what they
+   *   did a second ago is noise. That is what `actor` distinguishes — not who
+   *   is allowed to cancel, which is the same for both.
+   * - **Only out of `confirmed`.** A pending registration's address has never
+   *   been confirmed to belong to the person behind it (E5), so this
+   *   application does not send it anything except the confirmation request.
+   * - **Only on the way in.** Reinstating sends nothing: a second mail saying
+   *   "you are registered after all" would contradict the first without saying
+   *   which one is current, and an organizer who fixed a misclick within the
+   *   minute would have written to somebody twice for nothing.
+   *
+   * A failure here does not fail the cancellation. The status change is the
+   * organizer's decision and it has already been written; a mail server that is
+   * down must not turn it into an error the organizer retries.
+   */
+  private async notifyCancelled(
+    registration: RegistrationRecord,
+  ): Promise<void> {
+    try {
+      // `locate` rather than the public lookup: the notice has to go out even
+      // if the event has meanwhile gone back to being a draft (the same
+      // reasoning as for the self-service links).
+      const { event, seriesSlug } = await this.events.locate(
+        registration.eventId,
+      );
+      await this.mail.sendRegistrationCancelled(registration.email, {
+        firstName: registration.firstName,
+        event: {
+          name: event.name,
+          startsAt: event.startsAt,
+          endsAt: event.endsAt,
+          timezone: event.timezone,
+          url: this.links.event(seriesSlug, event.slug),
+        },
+      });
+    } catch (error: unknown) {
+      if (!(error instanceof MailDeliveryError)) throw error;
+      this.logger.warn(
+        `Registration ${registration.id} was cancelled, but the notice could not be sent.`,
+      );
+    }
   }
 
   private assertAllowed(

@@ -15,6 +15,9 @@ import {
   type RegistrationRepository,
   type RegistrationSearch,
   type RegistrationSlice,
+  type SeriesContactRecord,
+  type SeriesContactSearch,
+  type SeriesContactSlice,
 } from '../../business/registration/ports/registration.repository';
 import type { RegistrationTally } from '../../business/registration/ports/registration-tally';
 import { RegistrationEntity } from '../entities';
@@ -190,6 +193,126 @@ export class TypeormRegistrationRepository
     }));
   }
 
+  /**
+   * The addresses a series may invite, folded by address (FR 2.4, F24).
+   *
+   * `DISTINCT ON (lower(email))` with the order below keeps the most recent
+   * registration of each address; the window function counts the whole group
+   * before that happens, which is why `events` is the number of the series'
+   * events this person is confirmed for and not `1`.
+   *
+   * Two queries rather than a `count(*) OVER ()` in one: a page past the end of
+   * the list returns no rows, and a total that came out of those rows would then
+   * be zero — which the client would draw as "nobody to invite".
+   */
+  async searchSeriesContacts(
+    query: SeriesContactSearch,
+  ): Promise<SeriesContactSlice> {
+    const parameters: unknown[] = [query.seriesId];
+    const filter = contactFilter(query.terms, parameters);
+
+    const totals = (await this.repository.query(
+      `SELECT count(DISTINCT lower(registration.email)) AS total
+         FROM registration
+         JOIN event ON event.id = registration.event_id
+        WHERE ${filter}`,
+      parameters,
+    )) as { total: string }[];
+
+    const rows = (await this.repository.query(
+      `WITH contacts AS (
+         SELECT DISTINCT ON (lower(registration.email))
+                registration.id AS registration_id,
+                registration.email AS email,
+                registration.first_name AS first_name,
+                registration.last_name AS last_name,
+                registration.created_at AS last_registered_at,
+                count(*) OVER (
+                  PARTITION BY lower(registration.email)
+                ) AS events
+           FROM registration
+           JOIN event ON event.id = registration.event_id
+          WHERE ${filter}
+          ORDER BY lower(registration.email),
+                   registration.created_at DESC,
+                   registration.id DESC
+       )
+       SELECT * FROM contacts
+        ORDER BY last_registered_at DESC, registration_id DESC
+        LIMIT $${parameters.length + 1} OFFSET $${parameters.length + 2}`,
+      [...parameters, query.limit, query.offset],
+    )) as ContactRow[];
+
+    return {
+      rows: rows.map(toContact),
+      total: count(totals[0]?.total),
+    };
+  }
+
+  /**
+   * The selectable contacts among a list of registration ids (F55).
+   *
+   * Same filter, no paging. `events` counts only the selected registrations of
+   * an address here, which nothing reads — this answer exists to say *whether*
+   * an id may be written to and with what address, not to be displayed.
+   */
+  async findSeriesContacts(
+    seriesId: string,
+    registrationIds: readonly string[],
+  ): Promise<readonly SeriesContactRecord[]> {
+    if (registrationIds.length === 0) return [];
+
+    const parameters: unknown[] = [seriesId, [...registrationIds]];
+    const filter = contactFilter([], parameters);
+
+    const rows = (await this.repository.query(
+      `SELECT DISTINCT ON (lower(registration.email))
+              registration.id AS registration_id,
+              registration.email AS email,
+              registration.first_name AS first_name,
+              registration.last_name AS last_name,
+              registration.created_at AS last_registered_at,
+              count(*) OVER (
+                PARTITION BY lower(registration.email)
+              ) AS events
+         FROM registration
+         JOIN event ON event.id = registration.event_id
+        WHERE ${filter}
+          AND registration.id = ANY($2::uuid[])
+        ORDER BY lower(registration.email),
+                 registration.created_at DESC,
+                 registration.id DESC`,
+      parameters,
+    )) as ContactRow[];
+
+    return rows.map(toContact);
+  }
+
+  /**
+   * One statement for the whole objection (F57).
+   *
+   * Every row of that address, across every series — the objection belongs to
+   * the person. `contact_opt_out = false` in the filter is what makes the answer
+   * meaningful: zero rows changed means this address had already objected, which
+   * is a different sentence for the page to say.
+   */
+  async optOutByEmail(email: string): Promise<number> {
+    // The query builder rather than `query()`: for an UPDATE, TypeORM's raw
+    // `query()` answers `[rows, rowCount]` — a two-element array whatever
+    // happened, so counting its length would report "two rows changed" for
+    // every call, including one that changed nothing. `affected` is the number.
+    const result = await this.repository
+      .createQueryBuilder()
+      .update(RegistrationEntity)
+      .set({ contactOptOut: true })
+      .where('lower(email) = lower(:email)', { email })
+      // Only the rows that had not objected yet, so the count means something:
+      // zero is "this address had already objected" (E15, F57).
+      .andWhere('contact_opt_out = false')
+      .execute();
+    return result.affected ?? 0;
+  }
+
   confirmedForEvent(eventId: string): Promise<number> {
     return this.repository.countBy({ eventId, status: 'confirmed' });
   }
@@ -210,6 +333,56 @@ interface CountRow {
   pending: string;
   confirmed: string;
   cancelled: string;
+}
+
+interface ContactRow {
+  registration_id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  last_registered_at: Date;
+  events: string;
+}
+
+function toContact(row: ContactRow): SeriesContactRecord {
+  return {
+    registrationId: row.registration_id,
+    email: row.email,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    events: count(row.events),
+    lastRegisteredAt: new Date(row.last_registered_at),
+  };
+}
+
+/**
+ * The `WHERE` every audience query shares, and the rule it encodes (E15).
+ *
+ * Confirmed, this series, and never an address that has objected. Appended to
+ * `parameters`, which starts with the series id — so the caller's own
+ * placeholders continue after whatever the terms needed.
+ */
+function contactFilter(
+  terms: readonly string[],
+  parameters: unknown[],
+): string {
+  const clauses = [
+    'event.series_id = $1',
+    `registration.status = 'confirmed'`,
+    'registration.contact_opt_out = false',
+  ];
+
+  for (const term of terms) {
+    parameters.push(`%${escapeLike(term)}%`);
+    const placeholder = `$${parameters.length}`;
+    clauses.push(
+      `(lower(registration.first_name) LIKE ${placeholder}
+        OR lower(registration.last_name) LIKE ${placeholder}
+        OR lower(registration.email) LIKE ${placeholder})`,
+    );
+  }
+
+  return clauses.join(' AND ');
 }
 
 interface WeekRow {

@@ -83,6 +83,9 @@ export class AdminRegistrationsController {
     return this.participants.setStatus(
       id,
       body.status,
+      // The organizer is acting, so a cancellation is news to the participant
+      // and a notice goes out (F59).
+      'organizer',
     ) as Promise<ParticipantRowDto>;
   }
 

@@ -253,6 +253,34 @@ media_link             (id uuid pk, event_id fk→event ON DELETE CASCADE,
                           ein Link kann keine Session eines anderen Events nennen, und
                           MATCH SIMPLE lässt program_item_id IS NULL ungeprüft durch —
                           genau das ist ein Link am Event als Ganzem
+invitation             (id uuid pk, series_id fk→event_series ON DELETE CASCADE,
+                        event_id? fk→event ON DELETE SET NULL, subject, body,
+                        created_at, finished_at?)
+                        ← ohne updated_at: eine Einladung wird nicht bearbeitet, sie
+                          wird verschickt
+                        ← event_id nullable und SET NULL: das Protokoll, wem geschrieben
+                          wurde, überlebt das Event, zu dem eingeladen wurde
+invitation_recipient   (id uuid pk, invitation_id fk→invitation ON DELETE CASCADE,
+                        registration_id fk→registration ON DELETE CASCADE,
+                        status [pending|sent|failed], failure?, sent_at?)
+                        unique (invitation_id, registration_id)
+                        ← **keine E-Mail-Spalte** (F55): ein Empfänger ist eine
+                          Anmeldung, die Adresse wird beim Verfassen über den
+                          Fremdschlüssel gelesen. Diese Funktion legt keine zweite Kopie
+                          von Kontaktdaten an, und eine gelöschte Anmeldung nimmt ihren
+                          Platz in jeder vergangenen Einladung mit
+                        ← die Zeilen **sind** die Warteschlange: der Versender fragt nach
+                          der nächsten `pending`-Zeile und schreibt das Ergebnis zurück.
+                          Kein `sent_count` daneben — nach einem Absturz gäbe es zwei
+                          Wahrheiten und keine Möglichkeit zu sagen, welche gilt (F56)
+                        ← IDX_invitation_recipient_pending ist partiell (WHERE status =
+                          'pending'): die ausgeschlossenen Zeilen sind nach einem
+                          fertigen Versand die überwältigende Mehrheit
+                        ← CHK: status <> 'sent' OR sent_at IS NOT NULL
+registration           ← ergänzt um IDX_registration_email auf lower(email): die
+                        Adressliste gruppiert nach Adresse, der Widerspruch schreibt
+                        alle Zeilen einer Adresse (F57). Bis AP 12 wurde eine Adresse
+                        nur je Event gesucht
 
 -- Plug-in-eigene Tabelle, Migration des Raumplanungs-Plug-ins:
 plugin_room_planning_program_item_room
@@ -299,8 +327,9 @@ unauthentifiziert; `/api/admin/**` verlangt eine Sitzung (E16).
 | `GET /api/admin/program-items/:id/signups`                           | Auslastung mit Namen und Adressen, FR 3.10                   | 9   |
 | `GET/POST /api/admin/events/:id/media-links`                         | FR 3.6, F10                                                  | 11  |
 | `PATCH/DELETE /api/admin/media-links/:id`                            | Einen Link ändern, entfernen (F52)                           | 11  |
-| `GET /api/admin/series/:id/former-participants`                      | FR 2.4                                                       | 12  |
-| `POST /api/admin/series/:id/invitations`                             | FR 2.4                                                       | 12  |
+| `GET /api/admin/series/:id/contacts`                                 | FR 2.4, wer angeschrieben werden darf (E15)                  | 12  |
+| `GET/POST /api/admin/series/:id/invitations`                         | FR 2.4, Protokoll und Versand (202, F56)                     | 12  |
+| `GET /api/admin/invitations/:id`                                     | Fortschritt eines Versands (F56)                             | 12  |
 | `GET /api/user/series[/:slug]`                                       | Startseite, Reihenseite                                      | 2   |
 | `GET /api/user/series/:reihe/events[/:event]`                        | Event-Landingpage                                            | 3   |
 | `GET /api/user/series/:reihe/events/:event/program`                  | Programmplan                                                 | 8   |
@@ -311,6 +340,7 @@ unauthentifiziert; `/api/admin/**` verlangt eine Sitzung (E16).
 | `GET /api/user/registrations/me?token=…`                             | „Meine Anmeldung" (E11)                                      | 9   |
 | `POST /api/user/registrations/me/cancellation`                       | Selbst absagen (E11, E14)                                    | 9   |
 | `PUT/DELETE /api/user/program-items/:id/signup`                      | FR 3.10 (E11), Token im Rumpf (F44)                          | 9   |
+| `POST /api/user/invitations/opt-out`                                 | Widerspruch gegen Einladungen (E15, F58)                     | 12  |
 | `… /api/admin/plugins/room-planning/program-items/:id/rooms/:roomId` | Raumzuordnung, `PUT`/`DELETE` (F21)                          | 9   |
 | `GET /api/admin/plugins/room-planning/rooms/:id/schedule`            | Belegung eines Raums mit Anmeldezahlen (F45)                 | 9   |
 
@@ -1588,6 +1618,112 @@ Weiteres, das beim Bauen entschieden oder gelernt wurde:
   Follow-Up-**Mail**; AP 11 baut nach Plan die Follow-Up-**Sektion**. Er ist nach
   AP 12 verschoben, wo der Versand an Adressen entsteht — dort gehört er hin,
   statt als vierte, isoliert geschriebene Mailvorlage.
+
+### AP 12 — Ehemalige Teilnehmende einladen (erledigt)
+
+Stand 28.08.2026. Das letzte fachliche Paket der Phase, und das einzige, das
+Menschen anschreibt, die nicht gerade um etwas gebeten haben. Deshalb besteht es
+fast vollständig aus Einschränkungen: Die **Adressliste** kommt aus bestätigten
+Anmeldungen **derselben Reihe** ohne Widerspruch (E15), eine **Auswahl nennt
+Anmeldungen, keine Adressen** (F55), jede Mail trägt einen **Widerspruchslink**,
+den der Veranstalter nicht weglassen kann (F58), und ein Widerspruch bringt diese
+Instanz für diese Adresse **überall** zum Schweigen (F57). Dazu der Storno-Hinweis
+an Teilnehmende, der seit AP 5 offen war (F59).
+
+Belegt: 746 Unit-Tests (+101: Server 518, `admin-client` 91, `shared-models` 67,
+`user-client` 18, `shared-http` 14, `shared-theming` 14, `shared-plugins` 13,
+`shared-config` 8, `plugin-room-planning` 3), 278 API-Vertragstests (+38), 189
+Veranstalter-Browsertests (+33), 126 Nutzer-Browsertests (+9). Migration
+`1787789900000-Invitations` einmal vorwärts und einmal zurück ausgeführt, beide
+`tools/spike-verification`-Skripte grün.
+
+**Die Abnahmekriterien.** Beide sind Aussagen über eine laufende Instanz:
+
+| Kriterium                                                        | Wo es durchgesetzt ist                                                                                                                                                | Wo es bewiesen ist                                                                                                                                                                                   |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Eine widersprochene Adresse taucht in keiner weiteren Liste auf  | `contactFilter` im Repository — bestätigt, diese Reihe, `contact_opt_out = false`; nicht als Parameter, sondern als Regel, die die Portsignatur nicht abschalten kann | `apps/server-e2e/src/api/invitations.spec.ts`: Einladung raus, Widerspruchslink **aus der gesendeten Mail** geholt, benutzt, Liste erneut gefragt — plus derselbe Weg im Browser (`user-client-e2e`) |
+| Der Versand an 200 Adressen läuft nicht in einen Request-Timeout | Der `POST` schreibt die Empfängerzeilen und antwortet **202**; `InvitationSenderService` arbeitet sie danach einzeln ab (F56)                                         | Dieselbe API-Suite, „two hundred addresses": 200 bestätigte Anmeldungen gesät, Antwort in unter zwei Sekunden gemessen, dann bis `sent = 200` gepollt                                                |
+
+Der erste Test ist der, der die Zusage trägt: Der Token wird **nicht** im Test
+signiert, sondern aus der Nachricht gelesen, die der Server tatsächlich
+verschickt hat. Damit ist auch belegt, dass die Vorlage den Link schreibt — nicht
+der Veranstalter.
+
+**Die Entscheidungen dieses Pakets** stehen als **F55–F59** im
+Entscheidungsprotokoll:
+
+- **F55** — Ein Empfänger ist eine **Anmeldung**, keine Adresse. Die API nimmt
+  nirgends eine E-Mail-Adresse an, und jede gesendete Id wird erneut durch den
+  Adressfilter gelesen. Das macht es strukturell unmöglich, über diese Funktion
+  eine beliebige Adresse anzuschreiben — und `invitation_recipient` hat deshalb
+  keine Adressspalte, sondern einen Fremdschlüssel.
+- **F56** — Der Versand ist nicht die Anfrage. 200 SMTP-Gespräche passen in keinen
+  HTTP-Request; ein Veranstalter, der vier Minuten auf einen Spinner sieht, lädt
+  die Seite neu. Also: 202, Empfängerzeilen als Warteschlange in der Datenbank,
+  sequentieller Versender, Fortschritt **aus den Zeilen gezählt** statt in einem
+  Zähler gespeichert. Ein Neustart setzt fort, was er unterbrochen hat.
+- **F57** — Ein Widerspruch gehört dem **Menschen**, nicht der Zeile. Er setzt
+  `contact_opt_out` auf **jeder** Anmeldung dieser Adresse in der ganzen Instanz;
+  ein Flag an einer Anmeldung hätte die nächste Reihe wieder schreiben lassen.
+- **F58** — Der Widerspruchslink steht in der Vorlage, nicht im Text des
+  Veranstalters, und zeigt auf eine **Seite**, die per POST widerspricht (E5b).
+  Sein Token gilt zwei Jahre: ein toter Link würde die Zusage aus E15 brechen.
+- **F59** — `contact_opt_out` stoppt **Einladungen, nicht transaktionale Mail**.
+  Wer nicht mehr eingeladen werden will, muss trotzdem erfahren, dass seine
+  Anmeldung storniert wurde. Der Hinweis geht nur raus, wenn der **Veranstalter**
+  storniert, nur aus `confirmed` heraus, und Wiederherstellen schickt nichts.
+
+Weiteres, das beim Bauen entschieden oder gelernt wurde:
+
+- **`ContactsService` ist der vierte Dienst auf `registration`** — und der
+  einzige, der `contact_opt_out` schreibt. Er liegt im Registrierungsmodul, weil
+  dort der Port der Tabelle liegt; das Einladungsmodul fragt ihn, wer
+  angeschrieben werden darf, und berührt keine Anmeldungszeile selbst.
+- **Eine Adresse ist eine Zeile in der Liste, nicht drei.** Wer an drei Events
+  der Reihe war, erscheint einmal: `DISTINCT ON (lower(email))` mit
+  `count(*) OVER (PARTITION BY …)` liefert die jüngste Anmeldung **und** die
+  Anzahl der Events. Zwei Abfragen statt `count(*) OVER ()` in einer — eine Seite
+  hinter dem Ende der Liste liefert keine Zeilen, und die Gesamtzahl daraus wäre
+  null, was der Client als „niemand da" zeichnet.
+- **Eine abgelehnte Auswahl wird ganz abgelehnt, nicht teilweise verschickt.** Wer
+  achtzig Leute markiert hat und bei neunundsiebzig ankommt, kann nicht
+  herausfinden, wer fehlt. Der Fall ist eine veraltete Liste — jemand hat
+  zwischen Laden und Senden widersprochen.
+- **Eine Einladung ist kein Newsletter-Modul (F8).** Es gibt keine Liste, in die
+  man sich einträgt, und kein Feld, in das man eine Adresse tippt. Deshalb ist
+  das Einladen auch **kein abschaltbares Kernmodul**: ein Schalter wäre einer, mit
+  dem der Widerspruchs-Endpunkt 404 antwortet.
+- **`PublicLinks` ist neu und ersetzt drei Kopien.** Absolute Adressen in den
+  Nutzer-Client wurden bisher in `RegistrationService` gebaut; jetzt brauchen sie
+  drei Module. Ein Dienst im Mail-Modul, weil eine solche Adresse nur für eine
+  Nachricht gebaut wird, die die Instanz verlässt.
+- **`setStatus` bekommt einen `actor`.** Nicht als Berechtigung — beide dürfen
+  stornieren, und die Regeln sind dieselben (E14) — sondern damit die eine
+  Entscheidung fällt, die davon abhängt: Wer auf seiner eigenen Seite absagt,
+  bekommt keine Mail darüber (F59). Der Parameter ist Pflicht; ein Standardwert
+  hätte die Frage an beiden Aufrufstellen unsichtbar gemacht.
+- **Ein UPDATE über `repository.query()` antwortet `[rows, rowCount]`.** Zwei
+  Elemente, immer — `rows.length` hätte für jeden Aufruf „zwei Zeilen geändert"
+  gemeldet, auch für einen, der nichts geändert hat. Sichtbar wurde es nur an dem
+  einen Test, der einen zweiten Klick auf denselben Link erwartet. Lösung: der
+  Query-Builder und `result.affected`.
+- **Fixture-Namen tragen keine Uhrzeit mehr.** `<engine> <Date.now()>` kollidierte
+  am eindeutigen Slug-Index, sobald zwei Playwright-Arbeiter in derselben
+  Millisekunde säten — die Regel aus AP 11, jetzt an der Ursache behoben:
+  `fixtureLabel()` bildet `<scope>-<pid>-<n>`. Ein Arbeiter ist ein Prozess,
+  seine pid trennt ihn von allen anderen.
+- **Der Nutzer-Client-Browsersuite reichten die Logins nicht mehr.** Sie meldete
+  sich für Seed, Teardown und jede Aufräumfunktion einzeln an; mit dieser Suite
+  waren es mehr als die zwanzig Versuche in fünf Minuten, die der Login erlaubt
+  (E4) — und der Fehlschlag stand im Fixture, nicht im Test. Jetzt gilt hier
+  dasselbe wie im Veranstalter-Client: einmal anmelden pro **Lauf**, Sitzung in
+  einer Datei, alle anderen lesen sie. Damit ist der `todo.md`-Punkt „die
+  Browsersuiten melden sich fünfmal pro Lauf an" erledigt.
+- **Eine Reihe kann zwischen Auflisten und Lesen verschwinden.** Seit AP 12 legt
+  eine Suite je Test eine Reihe an und löscht sie wieder; `removeRegistrations`
+  lief dabei über eine Liste, in der eine davon schon weg war, und `.map` auf
+  den 404-Rumpf riss den Teardown eines völlig anderen Tests mit. Aufräumcode
+  muss mit einem 404 rechnen.
 
 ## Definition of Done für Phase 1
 

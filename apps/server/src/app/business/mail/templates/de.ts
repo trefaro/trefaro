@@ -2,6 +2,7 @@ import { formatEventPeriod } from '@trefaro/shared-models';
 import { escapeHtml, htmlAction, htmlBody, htmlLink } from './html';
 import type {
   ConfirmationMailContext,
+  InvitationMailContext,
   MailTemplates,
   ReceiptMailContext,
   RegistrationMailContext,
@@ -83,6 +84,78 @@ export const germanMailTemplates: MailTemplates = {
         htmlAction(selfServiceUrl, 'Meine Anmeldung öffnen'),
         'Gib diesen Link nicht weiter: wer ihn hat, kann deine Anmeldung ändern.',
         'Wir freuen uns auf dich.',
+      ),
+    };
+  },
+
+  registrationCancelled(context: RegistrationMailContext): RenderedMail {
+    const { event, firstName } = context;
+    return {
+      subject: `Deine Anmeldung zu ${event.name} wurde storniert`,
+      text: [
+        `Hallo ${firstName},`,
+        '',
+        `deine Anmeldung zu ${event.name} (${period(context)}) wurde vom ` +
+          'Veranstaltungsteam storniert. Du wirst dort nicht mehr erwartet, ' +
+          'und Plätze in einzelnen Programmpunkten sind wieder frei.',
+        '',
+        'Falls das nicht dein Wunsch war, kannst du dich erneut anmelden:',
+        '',
+        event.url,
+      ].join('\n'),
+      html: htmlBody(
+        `Hallo ${escapeHtml(firstName)},`,
+        `deine Anmeldung zu <strong>${escapeHtml(event.name)}</strong> ` +
+          `(${escapeHtml(period(context))}) wurde vom Veranstaltungsteam ` +
+          'storniert. Du wirst dort nicht mehr erwartet, und Plätze in ' +
+          'einzelnen Programmpunkten sind wieder frei.',
+        'Falls das nicht dein Wunsch war, kannst du dich erneut anmelden.',
+        htmlAction(event.url, 'Zur Veranstaltung'),
+      ),
+    };
+  },
+
+  invitation(context: InvitationMailContext): RenderedMail {
+    const { event, firstName, paragraphs, seriesName, subject, optOutUrl } =
+      context;
+    // Warum diese Mail kommt und wie man die nächste verhindert. Nicht die
+    // Worte des Veranstalters und nicht optional: genau das macht das
+    // Anschreiben ehemaliger Teilnehmender überhaupt legitim (E15).
+    const footer =
+      'Du bekommst diese Nachricht, weil du dich einmal für eine ' +
+      `Veranstaltung von ${seriesName} angemeldet hast. Wenn du nicht wieder ` +
+      'eingeladen werden möchtest, sag es hier — ein Klick, keine Antwort nötig:';
+
+    return {
+      subject,
+      text: [
+        `Hallo ${firstName},`,
+        '',
+        ...paragraphs.flatMap((paragraph) => [paragraph, '']),
+        ...(event
+          ? [
+              `${event.name}`,
+              `Wann: ${formatEventPeriod(event, LOCALE)}`,
+              `Alle Infos: ${event.url}`,
+              '',
+            ]
+          : []),
+        footer,
+        '',
+        optOutUrl,
+      ].join('\n'),
+      html: htmlBody(
+        `Hallo ${escapeHtml(firstName)},`,
+        ...paragraphs.map((paragraph) => escapeHtml(paragraph)),
+        ...(event
+          ? [
+              `<strong>${escapeHtml(event.name)}</strong><br />` +
+                `Wann: ${escapeHtml(formatEventPeriod(event, LOCALE))}<br />` +
+                `Alle Infos: ${htmlLink(event.url, event.url)}`,
+            ]
+          : []),
+        footer,
+        htmlAction(optOutUrl, 'Bitte nicht mehr einladen'),
       ),
     };
   },

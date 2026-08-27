@@ -7,6 +7,7 @@ import { AdminEventRegistrationFieldsController } from './admin-event-registrati
 import { AdminEventRegistrationsController } from './admin-event-registrations.controller';
 import { AdminRegistrationFieldsController } from './admin-registration-fields.controller';
 import { AdminRegistrationsController } from './admin-registrations.controller';
+import { ContactsService } from './contacts.service';
 import { ParticipantsService } from './participants.service';
 import { PublicRegistrationFieldsController } from './public-registration-fields.controller';
 import { PublicRegistrationsController } from './public-registrations.controller';
@@ -36,6 +37,11 @@ import { RegistrationService } from './registration.service';
  * The participant's own view of their registration lives in
  * `business/self-service` (E11) and reuses two of the services above: it is a
  * seam between a signed link and these rules, not a second set of them.
+ *
+ * `ContactsService` is the fourth, added in AP 12: the same table read across a
+ * *series* and folded by address, plus the one place `contact_opt_out` is
+ * written (E15). The invitations module asks it who may be written to; it never
+ * composes or sends anything itself.
  */
 @Module({
   imports: [EventsModule, MailModule, SecurityModule, AttachmentsModule],
@@ -52,11 +58,13 @@ import { RegistrationService } from './registration.service';
     RegistrationService,
     ParticipantsService,
     RegistrationFieldsService,
+    ContactsService,
   ],
   exports: [
     RegistrationService,
     ParticipantsService,
     RegistrationFieldsService,
+    ContactsService,
   ],
 })
 export class RegistrationModule {}

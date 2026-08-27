@@ -124,9 +124,13 @@ Event-Dashboard (`business/dashboard`, ein Endpunkt je Bildschirm; die
 Event-Adresse im Veranstalter-Client ist jetzt das Dashboard, das Formular liegt
 unter `…/edit`) · **AP 11** Follow-Up-Text am Event und Medien-Links
 (`business/media-links`, `media_link`), dazu der `CoreModuleEnabledGuard`:
-`media-links` ist das erste abschaltbare Kernmodul mit eigener API. Als nächstes
-AP 12 (ehemalige Teilnehmende einladen, FR 2.4) — dort entsteht auch der
-Storno-Hinweis an Teilnehmende, der bis AP 11 an einer Follow-Up-Mail hing.
+`media-links` ist das erste abschaltbare Kernmodul mit eigener API · **AP 12**
+Ehemalige Teilnehmende einladen (`business/invitations`, `invitation` +
+`invitation_recipient`, `ContactsService` im Registrierungsmodul,
+Widerspruchsseite im Nutzer-Client) und der Storno-Hinweis an Teilnehmende.
+Damit sind **alle fachlichen Pakete der Phase 1 durch**; offen ist nur **AP 13**
+(Phasenabschluss: `todo.md` durchgehen, `docs/PHASE1.md` gegen den tatsächlichen
+Verlauf prüfen, Feedbackrunde mit Democracy International auswerten).
 
 Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
 
@@ -298,6 +302,41 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
   (F54): der Fremdschlüssel ist das Paar `(program_item_id, event_id)`. Die
   Geschäftslogik prüft es zusätzlich, damit daraus ein 400 wird und kein
   Constraint-Fehler.
+- **Ein Empfänger ist eine Anmeldung, keine Adresse** (F55). Keine Schnittstelle
+  dieser Anwendung nimmt eine E-Mail-Adresse an, um etwas hinzuschicken; eine
+  Auswahl nennt Ids, und jede wird erneut durch denselben Filter gelesen
+  (bestätigt, diese Reihe, kein Widerspruch). `invitation_recipient` hat deshalb
+  keine Adressspalte — die Adresse kommt beim Verfassen über den Fremdschlüssel.
+- **Ein Versand an viele Adressen ist ein Vorgang, keine Anfrage** (F56). Der
+  `POST` schreibt die Empfängerzeilen und antwortet **202**; die Zeilen _sind_ die
+  Warteschlange, und nach jeder Mail wird erneut nach der nächsten `pending`-Zeile
+  gefragt. Der Fortschritt wird aus den Zeilen **gezählt**, nie daneben
+  gespeichert. Wer eine zweite solche Funktion baut, zieht denselben Schnitt.
+- **Ein Widerspruch gehört dem Menschen, nicht der Zeile** (F57): `contact_opt_out`
+  wird auf **allen** Anmeldungen einer Adresse in der ganzen Instanz gesetzt, und
+  nur die noch nicht widersprochenen werden gezählt — „null geändert" ist die
+  Aussage „hatte schon widersprochen".
+- **`contact_opt_out` stoppt Einladungen, nicht transaktionale Mail** (F59).
+  Bestätigung, Empfangsbestätigung und Stornohinweis gehen unabhängig davon raus.
+  Der Stornohinweis nur, wenn der **Veranstalter** eine **bestätigte** Anmeldung
+  storniert; Selbstabsage und Wiederherstellen schicken nichts. Deshalb hat
+  `setStatus` einen `actor` — nicht als Berechtigung, sondern damit diese eine
+  Entscheidung an der Aufrufstelle sichtbar ist.
+- **Ein UPDATE über `repository.query()` antwortet `[rows, rowCount]`** — zwei
+  Elemente, immer. `rows.length` meldet also „zwei Zeilen geändert", auch wenn
+  nichts geändert wurde. Wer eine Anzahl braucht, nimmt den Query-Builder und
+  `result.affected`.
+- **Fixture-Namen in den Browsersuiten tragen keine Uhrzeit.** `fixtureLabel()`
+  bildet `<scope>-<pid>-<n>`; ein Playwright-Arbeiter ist ein Prozess, seine pid
+  trennt ihn von allen anderen. `Date.now()` kollidierte am eindeutigen
+  Slug-Index, und der Fehlschlag las sich wie ein kaputtes Fixture.
+- **Eine Browsersuite meldet sich einmal pro Lauf an**, nicht pro Fixture: der
+  Login erlaubt 20 Versuche in fünf Minuten (E4), und ein 429 im Seed sagt nichts
+  über den Test. Beide Suiten legen die Sitzung in eine Datei im Temp-Verzeichnis
+  und lesen sie.
+- **Aufräumcode muss mit einem 404 rechnen.** Seit AP 12 legt eine Suite je Test
+  eine Reihe an und löscht sie wieder; wer über eine Liste iteriert, findet
+  Einträge, die es beim zweiten Zugriff nicht mehr gibt.
 - **Ein `<select>`, dessen Optionen aus einem `@for` kommen, nimmt kein
   `[value]`** — Angular schreibt die Eigenschaft, bevor die Optionen existieren,
   und die Zuweisung fällt wortlos weg. `[selected]` an den Optionen; mit

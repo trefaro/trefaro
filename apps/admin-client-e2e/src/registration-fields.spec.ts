@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ADMIN_STORAGE_STATE } from './support/admin-session';
+import { ADMIN_STORAGE_STATE, fixtureLabel } from './support/admin-session';
 
 /**
  * Building an event's registration form in the browser (F12, FR 3.5) — AP 6.
@@ -74,7 +74,7 @@ test.describe('the registration form of an event', () => {
   };
 
   test.beforeEach(async ({ page }, testInfo) => {
-    seeded = await seed(page, `${testInfo.project.name} ${Date.now()}`);
+    seeded = await seed(page, fixtureLabel(testInfo.project.name));
   });
 
   test.afterEach(async ({ page }) => {

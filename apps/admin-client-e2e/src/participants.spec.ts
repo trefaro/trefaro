@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { ADMIN_STORAGE_STATE } from './support/admin-session';
+import { ADMIN_STORAGE_STATE, fixtureLabel } from './support/admin-session';
 import {
   FILLER_ROWS,
   PARTICIPANTS,
@@ -31,9 +31,7 @@ test.describe('participant overview', () => {
   test.beforeAll(async () => {
     // Per engine: three of them run this spec against one instance, and the
     // fixtures must not see each other's rows.
-    seeded = await seedParticipants(
-      `${test.info().project.name}-${Date.now()}`,
-    );
+    seeded = await seedParticipants(fixtureLabel(test.info().project.name));
   });
 
   test.afterAll(async () => {

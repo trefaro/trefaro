@@ -22,11 +22,20 @@ export interface CapturedMail {
   readonly text: string;
 }
 
-/** The newest message to `address`, waiting briefly for it to be indexed. */
+/**
+ * The newest message to `address`, waiting briefly for it to be indexed.
+ *
+ * `subject` narrows it, which matters wherever an address receives more than one
+ * message: an invitation (FR 2.4) arrives after the two mails of the double
+ * opt-in, and it arrives *later* than the request that triggered it, because the
+ * sending happens in the background (F56). Without the pattern the wait would
+ * end immediately on the receipt that is already there.
+ */
 export async function waitForMailTo(
   address: string,
-  timeoutMs = 15_000,
+  options: { timeoutMs?: number; subject?: RegExp } = {},
 ): Promise<CapturedMail> {
+  const timeoutMs = options.timeoutMs ?? 15_000;
   const deadline = Date.now() + timeoutMs;
 
   let lastError = '';
@@ -48,11 +57,13 @@ export async function waitForMailTo(
     const { messages = [] } = (await response.json()) as {
       messages?: MailpitSummary[];
     };
-    const summary = messages.find((mail) =>
-      mail.To.some(
-        (recipient) =>
-          recipient.Address.toLowerCase() === address.toLowerCase(),
-      ),
+    const summary = messages.find(
+      (mail) =>
+        mail.To.some(
+          (recipient) =>
+            recipient.Address.toLowerCase() === address.toLowerCase(),
+        ) &&
+        (!options.subject || options.subject.test(mail.Subject)),
     );
 
     if (summary) {
@@ -65,7 +76,9 @@ export async function waitForMailTo(
   }
 
   throw new Error(
-    `No mail for ${address} arrived within ${timeoutMs / 1000}s` +
+    `No mail for ${address}${
+      options.subject ? ` matching ${options.subject}` : ''
+    } arrived within ${timeoutMs / 1000}s` +
       (lastError
         ? `. Mailpit at ${MAILPIT_URL} was not reachable (${lastError}) — start it with ` +
           '`docker compose -f infra/docker-compose.dev.yml up -d mailpit`.'
@@ -98,6 +111,23 @@ export function confirmationPathFrom(mail: CapturedMail): string {
  * its own configured client URL in the mail, which need not be the address the
  * browser reaches the client on.
  */
+/**
+ * The objection link from an invitation (E15, F58), as a path.
+ *
+ * Relative for the same reason as the two above. That every invitation carries
+ * one is not an assumption: the template writes it, not the organizer, so this
+ * function throwing means the promise E15 makes has been broken.
+ */
+export function optOutPathFrom(mail: CapturedMail): string {
+  const match =
+    /https?:\/\/[^\s]*\/invitations\/unsubscribe\?token=[^\s]+/.exec(mail.text);
+  if (!match) {
+    throw new Error(`No objection link in "${mail.subject}"`);
+  }
+  const url = new URL(match[0]);
+  return `${url.pathname}${url.search}`;
+}
+
 export function selfServicePathFrom(mail: CapturedMail): string {
   const match = /https?:\/\/[^\s]*\/registrations\/me\?token=[^\s]+/.exec(
     mail.text,

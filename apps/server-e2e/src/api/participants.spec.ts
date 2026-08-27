@@ -7,7 +7,9 @@ import {
   seedRegistrations,
 } from '../support/database';
 import {
+  clearMailbox,
   confirmationTokenFrom,
+  countMailTo,
   waitForMailTo,
   waitForMailpit,
 } from '../support/mailpit';
@@ -503,6 +505,75 @@ describe('participant overview API', () => {
 
       expect(response.status).toBe(401);
     });
+  });
+
+  describe('the notice a cancelled participant receives (F59)', () => {
+    /** Their own registration, so cancelling it disturbs no other test. */
+    let cancelMe = '';
+    const email = address('cancelled-by-organizer');
+
+    beforeAll(async () => {
+      const [id] = await seedRegistrations(event.id, [
+        {
+          email,
+          firstName: 'Nadia',
+          lastName: 'Cancelled',
+          status: 'confirmed',
+        },
+      ]);
+      cancelMe = id;
+      await clearMailbox();
+    }, 30_000);
+
+    it('writes to the participant when the organizer cancels', async () => {
+      const response = await api<Row>(
+        `/api/admin/registrations/${cancelMe}`,
+        asAdminJson('PATCH', { status: 'cancelled' }),
+      );
+      expect(response.status).toBe(200);
+
+      // A silent cancellation is the kind of thing that ends with somebody
+      // standing at a door.
+      const mail = await waitForMailTo(email);
+      expect(mail.subject).toMatch(/cancelled|storniert/i);
+      expect(mail.text).toContain('Participant Overview Event');
+      // Not an invitation, so no objection link (F59).
+      expect(mail.text).not.toContain('/invitations/unsubscribe');
+    }, 30_000);
+
+    it('says nothing more when the registration is reinstated', async () => {
+      const before = await countMailTo(email);
+
+      await api(
+        `/api/admin/registrations/${cancelMe}`,
+        asAdminJson('PATCH', { status: 'confirmed' }),
+      );
+
+      // A second mail saying "you are registered after all" would contradict
+      // the first without saying which one is current.
+      expect(await countMailTo(email)).toBe(before);
+    });
+
+    it('does not write to an address that was never confirmed', async () => {
+      const pendingAddress = address('cancelled-while-pending');
+      const [pendingId] = await seedRegistrations(event.id, [
+        {
+          email: pendingAddress,
+          firstName: 'Pia',
+          lastName: 'Pending',
+          status: 'pending',
+        },
+      ]);
+
+      await api(
+        `/api/admin/registrations/${pendingId}`,
+        asAdminJson('PATCH', { status: 'cancelled' }),
+      );
+
+      // Its address has never been shown to belong to the person behind it
+      // (E5), so nothing but the confirmation request goes there.
+      expect(await countMailTo(pendingAddress)).toBe(0);
+    }, 30_000);
   });
 
   describe('a registration from the real form', () => {

@@ -101,6 +101,23 @@ export function selfServiceTokenFrom(mail: CapturedMail): string {
   return decodeURIComponent(match[1]);
 }
 
+/**
+ * The `token` of the objection link in an invitation (E15, F58).
+ *
+ * Every invitation carries one, written by the template rather than by the
+ * organizer — so a message without this link is a bug, and this helper throwing
+ * is the test that says so.
+ */
+export function optOutTokenFrom(mail: CapturedMail): string {
+  const match = /invitations\/unsubscribe\?token=([A-Za-z0-9_.%-]+)/.exec(
+    mail.text,
+  );
+  if (!match) {
+    throw new Error(`No objection link in "${mail.subject}"`);
+  }
+  return decodeURIComponent(match[1]);
+}
+
 async function findMailTo(address: string): Promise<CapturedMail | null> {
   const summary = (await list()).find((mail) => addressed(mail, address));
   if (!summary) return null;

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { ADMIN_STORAGE_STATE } from './support/admin-session';
+import { ADMIN_STORAGE_STATE, fixtureLabel } from './support/admin-session';
 
 /**
  * Managing event series in the browser (UC 02, UC 03, FR 2.1, FR 2.2).
@@ -16,7 +16,7 @@ test.describe('event series administration', () => {
   }, testInfo) => {
     // Unique per run: three browsers share one instance, and a row left over
     // from a failed run must not turn into an ambiguous match here.
-    const name = `E2E Series ${testInfo.project.name} ${Date.now()}`;
+    const name = `E2E Series ${fixtureLabel(testInfo.project.name)}`;
     const description = 'Created by the organizer client e2e suite.';
 
     await page.goto('/');

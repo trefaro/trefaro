@@ -7,7 +7,9 @@ import { MAILER, type Mailer } from './ports/mailer';
 import { mailTemplates } from './templates';
 import type {
   ConfirmationMailContext,
+  InvitationMailContext,
   ReceiptMailContext,
+  RegistrationMailContext,
   RenderedMail,
 } from './templates';
 
@@ -67,6 +69,47 @@ export class MailService {
       to,
       templates.registrationConfirmed(context),
       `registration receipt (${templates.locale})`,
+    );
+  }
+
+  /**
+   * Tells a participant that their registration was cancelled (F59).
+   *
+   * Transactional: it goes out whether or not the address has objected to being
+   * invited (`contact_opt_out`), because it is not an invitation. Somebody who
+   * asked not to be invited again still has to learn that they are no longer
+   * expected at the door.
+   *
+   * @throws MailDeliveryError
+   */
+  async sendRegistrationCancelled(
+    to: string,
+    context: RegistrationMailContext,
+  ): Promise<void> {
+    const templates = await this.templates();
+    await this.deliver(
+      to,
+      templates.registrationCancelled(context),
+      `cancellation notice (${templates.locale})`,
+    );
+  }
+
+  /**
+   * One invitation to one former participant (FR 2.4). @throws MailDeliveryError
+   *
+   * One recipient per call, deliberately: a shared `To` or `CC` would show every
+   * invited person who else was invited, which for an organization running
+   * political events is a data breach with a single click. The sender loops.
+   */
+  async sendInvitation(
+    to: string,
+    context: InvitationMailContext,
+  ): Promise<void> {
+    const templates = await this.templates();
+    await this.deliver(
+      to,
+      templates.invitation(context),
+      `invitation (${templates.locale})`,
     );
   }
 

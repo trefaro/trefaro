@@ -229,9 +229,13 @@ describe('SelfServiceService', () => {
     it('cancels through the organizer’s own status rules (E14)', async () => {
       const view = await service.cancel(linkFor());
 
+      // With `participant` as the actor, so no cancellation notice goes out:
+      // the person is cancelling on their own page and reads the answer there
+      // (F59).
       expect(participants.setStatus).toHaveBeenCalledWith(
         CONFIRMED.id,
         'cancelled',
+        'participant',
       );
       expect(view.status).toBe('cancelled');
     });

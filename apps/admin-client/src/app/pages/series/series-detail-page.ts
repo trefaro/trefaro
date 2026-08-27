@@ -20,6 +20,10 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
  * This is also where a series is deleted, rather than from the list: the events
  * that would go with it are on screen here, so the confirmation can say what is
  * actually at stake instead of asking the organizer to remember.
+ *
+ * And it is the way to the invitations (FR 2.4), which belong to the series
+ * rather than to one of its events: the addresses come from every event of the
+ * series, and the invitation usually goes out before the next one exists.
  */
 @Component({
   selector: 'trefaro-series-detail-page',
@@ -47,6 +51,9 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
             [routerLink]="['/series', item.id, 'events', 'new']"
           >
             New event
+          </a>
+          <a [routerLink]="['/series', item.id, 'invitations']">
+            Invite former participants
           </a>
           <a [routerLink]="['/series', item.id, 'edit']">Edit series</a>
           <button type="button" (click)="removeSeries(item)">

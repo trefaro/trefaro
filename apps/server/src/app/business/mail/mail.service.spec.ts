@@ -2,7 +2,11 @@ import type { AppConfigRecord } from '../config/ports/app-config.repository';
 import { MailDeliveryError, MailService } from './mail.service';
 import type { Mailer, OutgoingMail } from './ports/mailer';
 import { mailTemplates } from './templates';
-import type { ConfirmationMailContext, ReceiptMailContext } from './templates';
+import type {
+  ConfirmationMailContext,
+  InvitationMailContext,
+  ReceiptMailContext,
+} from './templates';
 
 const CONTEXT: ConfirmationMailContext = {
   firstName: 'Amina',
@@ -27,6 +31,22 @@ const RECEIPT: ReceiptMailContext = {
   firstName: CONTEXT.firstName,
   event: CONTEXT.event,
   selfServiceUrl: 'https://events.example.org/registrations/me?token=ghi.jkl',
+};
+
+/**
+ * An invitation to former participants (FR 2.4).
+ *
+ * The organizer writes the subject and the paragraphs; the objection link and
+ * the sentence explaining it are the template's, which is what makes them
+ * impossible to leave out of a message (F58).
+ */
+const INVITATION: InvitationMailContext = {
+  firstName: 'Amina',
+  seriesName: 'Bürgerräte',
+  subject: 'You are invited: Democracy Days 2027',
+  paragraphs: ['we would love to see you again.', 'Registration is open.'],
+  event: CONTEXT.event,
+  optOutUrl: 'https://events.example.org/invitations/unsubscribe?token=mno.pqr',
 };
 
 class RecordingMailer implements Mailer {
@@ -165,5 +185,99 @@ describe('mail templates', () => {
       expect(mail.text).not.toContain('/registrations/me');
       expect(mail.html).not.toContain('/registrations/me');
     }
+  });
+});
+describe('the invitation template (FR 2.4, E15)', () => {
+  it('sends the subject the organizer wrote, not one of its own', () => {
+    for (const locale of ['en', 'de']) {
+      const mail = mailTemplates(locale).invitation(INVITATION);
+
+      expect(mail.subject).toBe('You are invited: Democracy Days 2027');
+    }
+  });
+
+  it('carries the objection link in both parts and both languages (F58)', () => {
+    for (const locale of ['en', 'de']) {
+      const mail = mailTemplates(locale).invitation(INVITATION);
+
+      // Not optional and not the organizer's to write: without this link,
+      // writing to former participants would not be legitimate at all.
+      expect(mail.text).toContain(INVITATION.optOutUrl);
+      expect(mail.html).toContain(INVITATION.optOutUrl);
+    }
+  });
+
+  it('says why the mail arrived, naming the series', () => {
+    const mail = mailTemplates('en').invitation(INVITATION);
+
+    expect(mail.text).toContain('Bürgerräte');
+    expect(mail.text).toMatch(/registered for an event/i);
+  });
+
+  it('keeps the organizer’s paragraphs apart', () => {
+    const mail = mailTemplates('de').invitation(INVITATION);
+
+    expect(mail.text).toContain(
+      'we would love to see you again.\n\nRegistration is open.',
+    );
+  });
+
+  it('escapes what the organizer typed rather than sending it as markup', () => {
+    const mail = mailTemplates('en').invitation({
+      ...INVITATION,
+      paragraphs: ['<script>alert(1)</script>'],
+    });
+
+    expect(mail.html).not.toContain('<script>');
+    expect(mail.html).toContain('&lt;script&gt;');
+  });
+
+  it('names the event when the invitation invites to one', () => {
+    const mail = mailTemplates('en').invitation(INVITATION);
+
+    expect(mail.text).toContain('Kickoff in Köln');
+    expect(mail.text).toContain(CONTEXT.event.url);
+    // In the event's own zone (E8): 08:00 UTC is 10:00 in Cologne.
+    expect(mail.text).toContain('10:00');
+  });
+
+  it('goes out without an event block when none was named', () => {
+    const mail = mailTemplates('en').invitation({
+      ...INVITATION,
+      event: null,
+    });
+
+    expect(mail.text).not.toContain('Kickoff in Köln');
+    // But the objection link is still there — it never depends on anything.
+    expect(mail.text).toContain(INVITATION.optOutUrl);
+  });
+
+  it('loads nothing from anywhere when opened', () => {
+    const mail = mailTemplates('de').invitation(INVITATION);
+
+    expect(mail.html).not.toMatch(/<img|<link|@import|url\(/i);
+  });
+});
+
+describe('the cancellation notice (F59)', () => {
+  it('says which event and that it was the organizers, in both languages', () => {
+    for (const locale of ['en', 'de']) {
+      const mail = mailTemplates(locale).registrationCancelled(CONTEXT);
+
+      expect(mail.subject).toContain('Kickoff in Köln');
+      expect(mail.text).toMatch(/organizers|Veranstaltungsteam/);
+      // And the way back, because the usual reason to read this is a mistake.
+      expect(mail.text).toContain(CONTEXT.event.url);
+    }
+  });
+
+  it('carries no objection link — it is not an invitation', () => {
+    const mail = mailTemplates('en').registrationCancelled(CONTEXT);
+
+    // This message goes out whether or not the address objected to being
+    // invited (F59), so offering to stop it would be an offer this application
+    // does not make.
+    expect(mail.text).not.toContain('/invitations/unsubscribe');
+    expect(mail.html).not.toContain('/invitations/unsubscribe');
   });
 });

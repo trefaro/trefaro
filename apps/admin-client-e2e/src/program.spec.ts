@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   ADMIN_STORAGE_STATE,
   SERIES_SLUG_PREFIX,
+  fixtureLabel,
 } from './support/admin-session';
 
 /**
@@ -78,7 +79,7 @@ test.describe('the programme of an event', () => {
   let seeded: Seeded = { seriesId: '', eventId: '' };
 
   test.beforeEach(async ({ page }, testInfo) => {
-    seeded = await seed(page, `${testInfo.project.name} ${Date.now()}`);
+    seeded = await seed(page, fixtureLabel(testInfo.project.name));
   });
 
   test.afterEach(async ({ page }) => {

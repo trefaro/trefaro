@@ -22,6 +22,25 @@ export const ADMIN_STORAGE_STATE = join(
  */
 export const SERIES_SLUG_PREFIX = 'e2e-series-';
 
+/**
+ * A label that is unique across every worker of a run, without a clock.
+ *
+ * Fixture names — and therefore slugs — used to be `<engine> <Date.now()>`, and
+ * two workers seeding in the same millisecond then collided on the unique slug
+ * index. The failure read like a broken fixture and appeared perhaps one run in
+ * twenty, which is the worst kind. A worker is a process, so its pid separates
+ * it from every other; the counter separates repeated seeds inside it.
+ *
+ * `scope` is what the label is for — the engine, or the spec — so a name is
+ * still readable in the database while a run is going wrong.
+ */
+let sequence = 0;
+
+export function fixtureLabel(scope: string): string {
+  sequence += 1;
+  return `${scope}-${process.pid}-${sequence}`;
+}
+
 export const ADMIN_CREDENTIALS = {
   email: process.env['ADMIN_BOOTSTRAP_EMAIL'] ?? '',
   password: process.env['ADMIN_BOOTSTRAP_PASSWORD'] ?? '',

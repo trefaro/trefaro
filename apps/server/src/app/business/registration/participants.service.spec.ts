@@ -6,8 +6,11 @@ import type {
   RegistrationStatus,
   RegistrationWeek,
 } from '@trefaro/shared-models';
+import type { TrefaroEnv } from '../../core/config/env';
 import type { AttachmentsService } from '../attachments';
 import type { EventLocation, EventsService } from '../events';
+import { MailDeliveryError, MailService, PublicLinks } from '../mail';
+import type { RegistrationMailContext } from '../mail';
 import { ParticipantsService } from './participants.service';
 import type {
   RegistrationChanges,
@@ -15,6 +18,8 @@ import type {
   RegistrationRepository,
   RegistrationSearch,
   RegistrationSlice,
+  SeriesContactRecord,
+  SeriesContactSlice,
 } from './ports/registration.repository';
 
 const EVENT: OrganizerEvent = {
@@ -127,6 +132,20 @@ class RecordingRegistrationRepository implements RegistrationRepository {
     return this.weeks;
   }
 
+  // The audience of an invitation is read across a series, which is
+  // `ContactsService`'s job and `contacts.service.spec.ts`'s subject.
+  async searchSeriesContacts(): Promise<SeriesContactSlice> {
+    throw new Error('not used in this suite');
+  }
+
+  async findSeriesContacts(): Promise<readonly SeriesContactRecord[]> {
+    throw new Error('not used in this suite');
+  }
+
+  async optOutByEmail(): Promise<number> {
+    throw new Error('not used in this suite');
+  }
+
   get lastQuery(): RegistrationSearch {
     return this.queries[this.queries.length - 1];
   }
@@ -151,6 +170,24 @@ class FakeEventsService {
   }
 }
 
+/** The one message this service sends: the cancellation notice (F59). */
+class RecordingMailService {
+  readonly cancelled: { to: string; context: RegistrationMailContext }[] = [];
+  failing = false;
+
+  async sendRegistrationCancelled(
+    to: string,
+    context: RegistrationMailContext,
+  ): Promise<void> {
+    if (this.failing) throw new MailDeliveryError(new Error('SMTP is down'));
+    this.cancelled.push({ to, context });
+  }
+}
+
+const ENV = {
+  publicUserClientUrl: 'https://events.example.org/',
+} as TrefaroEnv;
+
 /** The files of one registration, as the detail panel asks for them (E9). */
 class FakeAttachmentsService {
   summaries: readonly AttachmentSummary[] = [];
@@ -168,16 +205,20 @@ describe('ParticipantsService', () => {
   let repository: RecordingRegistrationRepository;
   let events: FakeEventsService;
   let attachments: FakeAttachmentsService;
+  let mail: RecordingMailService;
   let service: ParticipantsService;
 
   beforeEach(() => {
     repository = new RecordingRegistrationRepository();
     events = new FakeEventsService();
     attachments = new FakeAttachmentsService();
+    mail = new RecordingMailService();
     service = new ParticipantsService(
       repository,
       events as unknown as EventsService,
       attachments as unknown as AttachmentsService,
+      mail as unknown as MailService,
+      new PublicLinks(ENV),
     );
   });
 
@@ -406,7 +447,11 @@ describe('ParticipantsService', () => {
       const confirmedAt = new Date('2026-08-24T10:00:00Z');
       stored({ status: 'confirmed', confirmedAt });
 
-      const row = await service.setStatus('registration-1', 'cancelled');
+      const row = await service.setStatus(
+        'registration-1',
+        'cancelled',
+        'organizer',
+      );
 
       expect(row.status).toBe('cancelled');
       // That somebody once confirmed is a fact, and cancelling is a new one.
@@ -416,7 +461,11 @@ describe('ParticipantsService', () => {
     it('does nothing when the status is already the one asked for', async () => {
       stored({ status: 'cancelled' });
 
-      const row = await service.setStatus('registration-1', 'cancelled');
+      const row = await service.setStatus(
+        'registration-1',
+        'cancelled',
+        'organizer',
+      );
 
       expect(row.status).toBe('cancelled');
       expect(repository.updates).toHaveLength(0);
@@ -428,7 +477,11 @@ describe('ParticipantsService', () => {
         confirmedAt: new Date('2026-08-24T10:00:00Z'),
       });
 
-      const row = await service.setStatus('registration-1', 'confirmed');
+      const row = await service.setStatus(
+        'registration-1',
+        'confirmed',
+        'organizer',
+      );
 
       expect(row.status).toBe('confirmed');
     });
@@ -436,7 +489,11 @@ describe('ParticipantsService', () => {
     it('refuses to confirm an address the participant never confirmed', async () => {
       stored({ status: 'pending', confirmedAt: null });
 
-      const failure = service.setStatus('registration-1', 'confirmed');
+      const failure = service.setStatus(
+        'registration-1',
+        'confirmed',
+        'organizer',
+      );
 
       // Nothing would tell a hand-set status from a real double opt-in
       // afterwards, so this would quietly devalue the consent record (E5, F23).
@@ -448,7 +505,11 @@ describe('ParticipantsService', () => {
     it('lets a cancelled registration that was never confirmed go back to pending', async () => {
       stored({ status: 'cancelled', confirmedAt: null });
 
-      const row = await service.setStatus('registration-1', 'pending');
+      const row = await service.setStatus(
+        'registration-1',
+        'pending',
+        'organizer',
+      );
 
       expect(row.status).toBe('pending');
     });
@@ -460,7 +521,7 @@ describe('ParticipantsService', () => {
       });
 
       await expect(
-        service.setStatus('registration-1', 'pending'),
+        service.setStatus('registration-1', 'pending', 'organizer'),
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
@@ -469,8 +530,83 @@ describe('ParticipantsService', () => {
         service.setStatus(
           'registration-404',
           'cancelled' as RegistrationStatus,
+          'organizer',
         ),
       ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+  describe('the notice a cancelled participant receives (F59)', () => {
+    const confirmed = () => {
+      repository.rows = [
+        record({
+          status: 'confirmed',
+          confirmedAt: new Date('2026-08-24T10:00:00Z'),
+        }),
+      ];
+    };
+
+    it('tells the participant when the organizer cancels', async () => {
+      confirmed();
+
+      await service.setStatus('registration-1', 'cancelled', 'organizer');
+
+      expect(mail.cancelled).toHaveLength(1);
+      expect(mail.cancelled[0].to).toBe('amina@example.org');
+      expect(mail.cancelled[0].context.firstName).toBe('Amina');
+      // The nested public address, built once and in one place (F28).
+      expect(mail.cancelled[0].context.event.url).toBe(
+        'https://events.example.org/series/climate-2027/events/kickoff',
+      );
+    });
+
+    it('says nothing when the participant cancelled it themselves', async () => {
+      confirmed();
+
+      await service.setStatus('registration-1', 'cancelled', 'participant');
+
+      // They read the answer on their own page; a mail about it is noise.
+      expect(mail.cancelled).toHaveLength(0);
+    });
+
+    it('does not write to an address that was never confirmed', async () => {
+      repository.rows = [record({ status: 'pending', confirmedAt: null })];
+
+      await service.setStatus('registration-1', 'cancelled', 'organizer');
+
+      // A pending registration's address has never been shown to belong to the
+      // person behind it (E5), so nothing but the confirmation request goes
+      // there.
+      expect(mail.cancelled).toHaveLength(0);
+    });
+
+    it('sends nothing when a registration is reinstated', async () => {
+      repository.rows = [
+        record({
+          status: 'cancelled',
+          confirmedAt: new Date('2026-08-24T10:00:00Z'),
+        }),
+      ];
+
+      await service.setStatus('registration-1', 'confirmed', 'organizer');
+
+      // A second mail saying "you are registered after all" would contradict
+      // the first without saying which one is current.
+      expect(mail.cancelled).toHaveLength(0);
+    });
+
+    it('cancels the registration even when the mail cannot be sent', async () => {
+      confirmed();
+      mail.failing = true;
+
+      const row = await service.setStatus(
+        'registration-1',
+        'cancelled',
+        'organizer',
+      );
+
+      // The organizer's decision has been written; a mail server that is down
+      // must not turn it into an error they retry.
+      expect(row.status).toBe('cancelled');
     });
   });
 });

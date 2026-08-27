@@ -35,6 +35,7 @@ export function mailTemplates(locale: string): MailTemplates {
 export { escapeHtml } from './html';
 export type {
   ConfirmationMailContext,
+  InvitationMailContext,
   MailEvent,
   MailTemplates,
   ReceiptMailContext,

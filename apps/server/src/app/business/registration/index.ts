@@ -1,6 +1,10 @@
 export { RegistrationModule } from './registration.module';
 export { RegistrationService } from './registration.service';
-export { ParticipantsService } from './participants.service';
+export {
+  ParticipantsService,
+  type StatusChangeActor,
+} from './participants.service';
+export { ContactsService } from './contacts.service';
 export { RegistrationFieldsService } from './registration-fields.service';
 export {
   REGISTRATION_REPOSITORY,
@@ -11,6 +15,9 @@ export {
   type RegistrationRepository,
   type RegistrationSearch,
   type RegistrationSlice,
+  type SeriesContactRecord,
+  type SeriesContactSearch,
+  type SeriesContactSlice,
 } from './ports/registration.repository';
 export {
   REGISTRATION_FIELD_REPOSITORY,

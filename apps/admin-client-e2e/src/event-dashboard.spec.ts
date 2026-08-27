@@ -1,5 +1,5 @@
 import { expect, request, test, type Page } from '@playwright/test';
-import { ADMIN_STORAGE_STATE } from './support/admin-session';
+import { ADMIN_STORAGE_STATE, fixtureLabel } from './support/admin-session';
 import {
   FILLER_ROWS,
   PARTICIPANTS,
@@ -42,9 +42,7 @@ test.describe('event dashboard', () => {
   let seeded: SeededEvent;
 
   test.beforeAll(async () => {
-    seeded = await seedParticipants(
-      `${test.info().project.name}-${Date.now()}`,
-    );
+    seeded = await seedParticipants(fixtureLabel(test.info().project.name));
 
     // Two sessions, one of which asks who is coming, and one required question:
     // enough for every tile to have something to say that is not a zero.

@@ -13,7 +13,9 @@ import { ENV } from '../../core/config/env.module';
  * and speaks for the registration the whole time (E11).
  */
 export type TokenPurpose =
-  'registration-confirmation' | 'registration-self-service';
+  | 'registration-confirmation'
+  | 'registration-self-service'
+  | 'invitation-opt-out';
 
 /** Fourteen days, per E5: long enough for someone who registers before a holiday. */
 export const CONFIRMATION_TOKEN_TTL_MS = 14 * 24 * 60 * 60 * 1000;
@@ -42,6 +44,21 @@ export function selfServiceTokenTtlMs(eventEndsAt: Date | string): number {
     (Number.isFinite(endsAt) ? endsAt : Date.now()) + SELF_SERVICE_GRACE_MS;
   return Math.max(SELF_SERVICE_GRACE_MS, until - Date.now());
 }
+
+/**
+ * How long the objection link in an invitation stays usable (E15, F58).
+ *
+ * Two years, which is long for a signed token and deliberately so: this is the
+ * link that lets somebody stop being written to, and a dead one would turn the
+ * promise of E15 into a promise the organization cannot keep. It is also the
+ * least dangerous link this application mints — the only thing it can do is
+ * *reduce* what happens to its holder.
+ *
+ * Rotating `AUTH_SECRET` invalidates it like every other token. That is the one
+ * case where an organization has to be able to say "reply to this mail", which
+ * is why the invitation templates name the organizer's address as well.
+ */
+export const INVITATION_OPT_OUT_TTL_MS = 2 * 365 * 24 * 60 * 60 * 1000;
 
 /** Separator inside the payload; neither a purpose nor a UUID contains it. */
 const FIELD_SEPARATOR = '|';

@@ -14,16 +14,10 @@ import type {
   RegistrationConfirmation,
   RegistrationInput,
 } from '@trefaro/shared-models';
-import {
-  SELF_SERVICE_PATH,
-  hasEnded,
-  publicEventPath,
-} from '@trefaro/shared-models';
-import type { TrefaroEnv } from '../../core/config/env';
-import { ENV } from '../../core/config/env.module';
+import { SELF_SERVICE_PATH, hasEnded } from '@trefaro/shared-models';
 import { AttachmentsService, type UploadedFile } from '../attachments';
 import { EventsService } from '../events';
-import { MailDeliveryError, MailService } from '../mail';
+import { MailDeliveryError, MailService, PublicLinks } from '../mail';
 import type { MailEvent, RegistrationMailContext } from '../mail';
 import {
   CONFIRMATION_TOKEN_TTL_MS,
@@ -75,7 +69,8 @@ export class RegistrationService {
     private readonly attachments: AttachmentsService,
     private readonly mail: MailService,
     private readonly tokens: TokenSigner,
-    @Inject(ENV) private readonly env: TrefaroEnv,
+    // Absolute addresses into the participant client; every mail needs them.
+    private readonly links: PublicLinks,
   ) {}
 
   async register(
@@ -255,7 +250,7 @@ export class RegistrationService {
     try {
       await this.mail.sendRegistrationConfirmation(registration.email, {
         ...this.context(registration, event, seriesSlug),
-        confirmUrl: `${this.clientUrl(CONFIRMATION_PATH)}?token=${encodeURIComponent(token)}`,
+        confirmUrl: this.links.token(CONFIRMATION_PATH, token),
       });
     } catch (error: unknown) {
       if (!(error instanceof MailDeliveryError)) throw error;
@@ -285,7 +280,7 @@ export class RegistrationService {
     try {
       await this.mail.sendRegistrationConfirmed(registration.email, {
         ...this.context(registration, event, seriesSlug),
-        selfServiceUrl: `${this.clientUrl(SELF_SERVICE_PATH)}?token=${encodeURIComponent(token)}`,
+        selfServiceUrl: this.links.token(SELF_SERVICE_PATH, token),
       });
     } catch (error: unknown) {
       if (!(error instanceof MailDeliveryError)) throw error;
@@ -305,7 +300,7 @@ export class RegistrationService {
       startsAt: event.startsAt,
       endsAt: event.endsAt,
       timezone: event.timezone,
-      url: this.clientUrl(publicEventPath(seriesSlug, event.slug)),
+      url: this.links.event(seriesSlug, event.slug),
     };
     return { firstName: registration.firstName, event: mailEvent };
   }
@@ -314,11 +309,6 @@ export class RegistrationService {
     const found = await this.registrations.findById(id);
     if (!found) throw new NotFoundException(GONE);
     return found;
-  }
-
-  /** Absolute, because it is read in a mail client and not in the app. */
-  private clientUrl(path: string): string {
-    return `${this.env.publicUserClientUrl.replace(/\/+$/, '')}${path}`;
   }
 }
 

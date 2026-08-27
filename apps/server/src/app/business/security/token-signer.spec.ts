@@ -97,6 +97,24 @@ describe('TokenSigner', () => {
     expect(signer.verify('registration-self-service', token)).toBe(SUBJECT);
   });
 
+  it('keeps the objection link out of every other purpose (F58)', () => {
+    const optOut = signer.sign('invitation-opt-out', SUBJECT, 60_000);
+
+    // The only link this application mints that can nothing but *reduce* what
+    // happens to its holder — and precisely therefore it must not be usable to
+    // do anything else.
+    expect(signer.verify('invitation-opt-out', optOut)).toBe(SUBJECT);
+    expect(signer.verify('registration-confirmation', optOut)).toBeNull();
+    expect(signer.verify('registration-self-service', optOut)).toBeNull();
+
+    const confirmation = signer.sign(
+      'registration-confirmation',
+      SUBJECT,
+      60_000,
+    );
+    expect(signer.verify('invitation-opt-out', confirmation)).toBeNull();
+  });
+
   it('rejects an expired token', () => {
     const token = signer.sign('registration-confirmation', SUBJECT, -1);
 

@@ -55,15 +55,20 @@ export async function removeRegistrations(
 async function seededEventIds(
   context: Awaited<ReturnType<typeof asAdmin>>,
 ): Promise<readonly string[]> {
-  const series = (await (
-    await context.get('/api/admin/series')
-  ).json()) as AdminSeries[];
+  const listed = await context.get('/api/admin/series');
+  if (!listed.ok()) return [];
+  const series = (await listed.json()) as AdminSeries[];
 
   const ids: string[] = [];
   for (const item of series.filter((entry) => entry.slug.startsWith('e2e-'))) {
-    const events = (await (
-      await context.get(`/api/admin/series/${item.id}/events`)
-    ).json()) as AdminEvent[];
+    // A series may be gone between the listing and this call: since AP 12 the
+    // invitation suite creates and deletes one per test, in parallel with this.
+    // A 404 answers with an object, and `.map` on it fails in the teardown of a
+    // test that had nothing to do with it.
+    const response = await context.get(`/api/admin/series/${item.id}/events`);
+    if (!response.ok()) continue;
+    const events = (await response.json()) as AdminEvent[];
+    if (!Array.isArray(events)) continue;
     ids.push(...events.map((event) => event.id));
   }
   return ids;

@@ -14,7 +14,7 @@ import type {
 import type { TrefaroEnv } from '../../core/config/env';
 import type { AttachmentsService, UploadedFile } from '../attachments';
 import type { EventLocation, EventsService } from '../events';
-import { MailDeliveryError, MailService } from '../mail';
+import { MailDeliveryError, MailService, PublicLinks } from '../mail';
 import type { ConfirmationMailContext, RegistrationMailContext } from '../mail';
 import { TokenSigner } from '../security';
 import type {
@@ -27,6 +27,8 @@ import {
   type RegistrationRecord,
   type RegistrationRepository,
   type RegistrationSlice,
+  type SeriesContactRecord,
+  type SeriesContactSlice,
 } from './ports/registration.repository';
 import { RegistrationService } from './registration.service';
 
@@ -116,6 +118,18 @@ class FakeRegistrationRepository implements RegistrationRepository {
   }
 
   async countByStatus(): Promise<RegistrationCounts> {
+    throw new Error('not used in this suite');
+  }
+
+  async searchSeriesContacts(): Promise<SeriesContactSlice> {
+    throw new Error('not used in this suite');
+  }
+
+  async findSeriesContacts(): Promise<readonly SeriesContactRecord[]> {
+    throw new Error('not used in this suite');
+  }
+
+  async optOutByEmail(): Promise<number> {
     throw new Error('not used in this suite');
   }
 
@@ -238,7 +252,7 @@ describe('RegistrationService', () => {
       attachments as unknown as AttachmentsService,
       mail as unknown as MailService,
       new TokenSigner(ENV),
-      ENV,
+      new PublicLinks(ENV),
     );
   });
 

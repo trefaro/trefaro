@@ -1,4 +1,7 @@
 import { request } from '@playwright/test';
+import { existsSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 /**
  * Event series the participant client's tests need to exist.
@@ -257,12 +260,37 @@ function credentials(): { email: string; password: string } {
 }
 
 /**
- * One logged-in API context, reused for every seed call.
+ * Where the administrative session of this run is kept.
  *
- * The login is rate limited per address and the whole suite shares one, so this
- * happens once per run.
+ * In the temporary directory rather than under `dist/`: the file holds a live
+ * session cookie, and `dist/.playwright` is what CI uploads as an artifact on
+ * failure. The organizer suite keeps its own state the same way.
+ */
+const ADMIN_STATE = join(tmpdir(), 'trefaro-user-e2e-admin-state.json');
+
+/**
+ * One logged-in API context — and one login per *run*, not per caller.
+ *
+ * The login allows twenty attempts per five minutes and per client address
+ * (`LOGIN_ATTEMPTS_PER_WINDOW`, E4), and every process of a run looks like the
+ * same address. Signing in per fixture worked while there were three callers;
+ * with the invitations suite of AP 12 there are more, and the run started
+ * failing with a 429 in the seed — a message that says nothing about what is
+ * being tested. So the first caller signs in and saves the session; everybody
+ * after it reads the file.
+ *
+ * The global setup is always the first caller, so the workers that come later
+ * find the file rather than racing for it. A worker that finds none — somebody
+ * running one spec directly — signs in itself, which is the same one login.
  */
 export async function asAdmin(clientUrl: string) {
+  if (existsSync(ADMIN_STATE)) {
+    return request.newContext({
+      baseURL: clientUrl,
+      storageState: ADMIN_STATE,
+    });
+  }
+
   const context = await request.newContext({ baseURL: clientUrl });
   const login = await context.post('/api/admin/auth/login', {
     data: credentials(),
@@ -273,7 +301,13 @@ export async function asAdmin(clientUrl: string) {
       `Signing in to seed the event series failed with status ${login.status()}.`,
     );
   }
+  await context.storageState({ path: ADMIN_STATE });
   return context;
+}
+
+/** Removes the saved session; the global teardown calls it last. */
+export function forgetAdminSession(): void {
+  rmSync(ADMIN_STATE, { force: true });
 }
 
 export async function seedSeries(clientUrl: string): Promise<void> {

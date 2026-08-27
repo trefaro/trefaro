@@ -115,7 +115,13 @@ export class SelfServiceService {
       });
     }
 
-    await this.participants.setStatus(registration.id, 'cancelled');
+    // The participant is cancelling on their own page and reads the answer
+    // there, so no notice goes out (F59).
+    await this.participants.setStatus(
+      registration.id,
+      'cancelled',
+      'participant',
+    );
 
     const cancelled = await this.registrations.findById(registration.id);
     if (!cancelled) throw new NotFoundException(GONE);

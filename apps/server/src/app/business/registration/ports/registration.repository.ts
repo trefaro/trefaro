@@ -110,6 +110,43 @@ export interface RegistrationSlice {
   readonly total: number;
 }
 
+/**
+ * What the audience of an invitation is drawn from (FR 2.4, F24).
+ *
+ * Three of the filters are not the caller's to choose and are therefore not in
+ * this type at all: confirmed only, this series only, and never an address that
+ * has objected (E15). They are the rule, not a parameter — a query object that
+ * could switch them off would be a query object somebody switches them off in.
+ */
+export interface SeriesContactSearch {
+  readonly seriesId: string;
+  /** Words that must *all* match, in first name, last name or address. */
+  readonly terms: readonly string[];
+  readonly offset: number;
+  readonly limit: number;
+}
+
+/**
+ * One address of a series, folded across every registration it has there.
+ *
+ * `registrationId` is the most recent of those registrations: the one whose
+ * first name greets the person and whose id the objection link speaks for.
+ */
+export interface SeriesContactRecord {
+  readonly registrationId: string;
+  readonly email: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  /** How many events of this series this address is confirmed for. */
+  readonly events: number;
+  readonly lastRegisteredAt: Date;
+}
+
+export interface SeriesContactSlice {
+  readonly rows: readonly SeriesContactRecord[];
+  readonly total: number;
+}
+
 export interface RegistrationRepository {
   findById(id: string): Promise<RegistrationRecord | null>;
   /** Case-insensitive; the caller passes a normalized address. */
@@ -142,6 +179,35 @@ export interface RegistrationRepository {
     eventId: string,
     timezone: string,
   ): Promise<readonly RegistrationWeek[]>;
+  /**
+   * One page of the addresses a series may invite, newest registration first.
+   *
+   * Folded by address rather than by row: somebody who attended three events of
+   * the series is one contact, because they are one person and would otherwise
+   * receive the invitation three times.
+   */
+  searchSeriesContacts(query: SeriesContactSearch): Promise<SeriesContactSlice>;
+  /**
+   * The subset of `registrationIds` that this series may actually invite.
+   *
+   * The same filter as {@link searchSeriesContacts}, without paging: what a
+   * selection sent by a client is checked against, so an id that names a
+   * registration of another series, an unconfirmed one or an address that has
+   * objected simply is not in the answer (F55).
+   */
+  findSeriesContacts(
+    seriesId: string,
+    registrationIds: readonly string[],
+  ): Promise<readonly SeriesContactRecord[]>;
+  /**
+   * Marks every registration of one address as not to be contacted again.
+   *
+   * Every row, across the whole instance (F57): the objection belongs to the
+   * person, and a flag set on one registration would let the next series write
+   * to them again. Returns how many rows were changed, which is how the caller
+   * can tell an objection from a repeated one.
+   */
+  optOutByEmail(email: string): Promise<number>;
 }
 
 export const REGISTRATION_REPOSITORY = Symbol(

@@ -114,6 +114,34 @@ export async function seedManyRegistrations(
 }
 
 /**
+ * Inserts `count` confirmed registrations in a single statement.
+ *
+ * Separate from {@link seedManyRegistrations}, whose statuses are mixed on
+ * purpose: the volume check of the invitations (FR 2.4) needs a known number of
+ * addresses that may actually be written to, and "roughly half of four hundred"
+ * would make the assertion about the send a guess.
+ */
+export async function seedManyConfirmedRegistrations(
+  eventId: string,
+  count: number,
+  emailPrefix: string,
+): Promise<void> {
+  await pool.query(
+    `INSERT INTO registration
+       (event_id, email, first_name, last_name, status, confirmed_at, created_at)
+     SELECT $1,
+            $2 || '-' || n || '@load.example.org',
+            'Invitee' || n,
+            'Load' || lpad(n::text, 5, '0'),
+            'confirmed',
+            now() - (n || ' minutes')::interval,
+            now() - (n || ' minutes')::interval
+       FROM generate_series(1, $3) AS n`,
+    [eventId, emailPrefix, count],
+  );
+}
+
+/**
  * Claims seats in a session directly (FR 3.10).
  *
  * The same deliberate exception as the registrations above: the real way to a

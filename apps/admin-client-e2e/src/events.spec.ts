@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ADMIN_STORAGE_STATE } from './support/admin-session';
+import { ADMIN_STORAGE_STATE, fixtureLabel } from './support/admin-session';
 
 /**
  * Managing events in the browser (UC 04, UC 05, FR 3.1, FR 3.2, FR 3.9).
@@ -37,7 +37,7 @@ test.describe('event administration', () => {
   let seriesId = '';
 
   test.beforeEach(async ({ page }, testInfo) => {
-    seriesId = await seedSeries(page, `${testInfo.project.name} ${Date.now()}`);
+    seriesId = await seedSeries(page, fixtureLabel(testInfo.project.name));
   });
 
   test.afterEach(async ({ page }) => {
