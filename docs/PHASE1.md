@@ -495,13 +495,13 @@ Feedbackrunde mit Democracy International auswerten.
 
 ## Risiken
 
-| Risiko                                                                                                     | Gegenmaßnahme                                                                                                             |
-| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Der Feld-Baukasten (F12) wächst zum eigenen Formularframework                                              | Vier Feldtypen, Ende. Kein Bedingungslogik-Editor, keine Mehrfachdateien, keine Feldgruppen in v1.                        |
-| Registrierung ohne Nutzer-Login (E11) wird in Phase 3 zur Altlast                                          | Der signierte Link bleibt gültig und wird in Phase 3 zusätzlich hinter den Login gelegt — kein Umbau, nur eine Ergänzung. |
-| Mail-Zustellung ist beim Pilotpartner unerprobt                                                            | In AP 4 gegen den echten SMTP-Server von Democracy International testen, nicht nur gegen Mailpit.                         |
-| Die Teilnehmerübersicht ist die wichtigste Funktion und wird zuerst am Datenvolumen scheitern              | Paginierung und Indizes von Anfang an, Lasttest mit 2 000 Anmeldungen in AP 5 statt in Phase 5.                           |
-| Die Zeitzonenentscheidung (E8) wird an einer Stelle vergessen und erzeugt Programmpunkte zur falschen Zeit | Eine Formatierungsfunktion in `libs/shared-models` bzw. der Client-Lib, kein `toLocaleString` an Ort und Stelle.          |
+| Risiko                                                                                                     | Gegenmaßnahme                                                                                                                                                                                               |
+| ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Der Feld-Baukasten (F12) wächst zum eigenen Formularframework                                              | Vier Feldtypen, Ende. Kein Bedingungslogik-Editor, keine Mehrfachdateien, keine Feldgruppen in v1.                                                                                                          |
+| Registrierung ohne Nutzer-Login (E11) wird in Phase 3 zur Altlast                                          | Der signierte Link bleibt gültig und wird in Phase 3 zusätzlich hinter den Login gelegt — kein Umbau, nur eine Ergänzung.                                                                                   |
+| Mail-Zustellung ist beim Pilotpartner unerprobt                                                            | Gegen den echten SMTP-Server von Democracy International testen, nicht nur gegen Mailpit. Zugangsdaten fehlen; von Marius am 27.08.2026 ohne Termin verschoben, spätestens in Phase 5 — steht in `todo.md`. |
+| Die Teilnehmerübersicht ist die wichtigste Funktion und wird zuerst am Datenvolumen scheitern              | Paginierung und Indizes von Anfang an, Lasttest mit 2 000 Anmeldungen in AP 5 statt in Phase 5.                                                                                                             |
+| Die Zeitzonenentscheidung (E8) wird an einer Stelle vergessen und erzeugt Programmpunkte zur falschen Zeit | Eine Formatierungsfunktion in `libs/shared-models` bzw. der Client-Lib, kein `toLocaleString` an Ort und Stelle.                                                                                            |
 
 ## Nachträge am Referenzdokument — erledigt
 

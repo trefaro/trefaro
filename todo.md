@@ -60,12 +60,14 @@ is assigned to one of its work packages.
       in three browsers — but Mailpit accepts everything. What it cannot show:
       authentication, TLS, SPF/DKIM alignment and whether the mail lands in an
       inbox rather than in spam. The phase plan assigned this to AP 4; it needs
-      credentials for a server this project does not have, so it moves to the
-      M1 feedback round with Democracy International (AP 5). Verify there:
-      `SMTP_SECURE=true` with real credentials, and a confirmation mail that
-      arrives without being filed as junk.
-      **Now due:** AP 5 is finished, so M1 is reached — this is the oldest open
-      item of phase 1 and the only one that needs someone outside the project.
+      credentials for a server this project does not have. Verify when it
+      happens: `SMTP_SECURE=true` with real credentials, and a confirmation mail
+      that arrives without being filed as junk.
+      **Deliberately deferred, no date yet** (Marius, 27.08.2026). It is not tied
+      to the M1 feedback round any more and does not block a work package —
+      but it must happen before a release: an instance whose mail lands in spam
+      cannot register anyone, and no test in this repository can find that out.
+      Latest point is the hardening of phase 5, together with TLS.
 - [ ] **Tell a participant when an organizer cancels their registration.** AP 5
       lets an organizer cancel and reinstate (F31), and the person concerned
       learns nothing — a silent cancellation is the kind of thing that turns into
