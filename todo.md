@@ -90,6 +90,15 @@ is assigned to one of its work packages.
       address it is given, so the number that matters is per recipient. Needs a
       second counter with its own key; belongs with the hardening of phase 5,
       together with the SMTP work.
+- [ ] **The browser suites still log in five times per run.** The API contract
+      suite shares one session since AP 7; `user-client-e2e` signs in for the
+      seed, for the teardown and once per browser project in
+      `removeRegistrations`, and `admin-client-e2e` once for its storage state.
+      That is about 10 of the 20 attempts the login allows in five minutes
+      (`LOGIN_ATTEMPTS_PER_WINDOW`), which is enough margin today and will not be
+      forever: this is exactly what broke the CI run of AP 7, one suite too late
+      to notice. The fix is the same shape — one storage state per Playwright
+      run, reused by the fixtures. Do it when the next package adds a suite.
 - [ ] **A sweep over the upload volume.** `AttachmentsService` compensates where
       the database and the volume can disagree, and it compensates towards
       keeping bytes rather than losing them — so a crash between two steps can

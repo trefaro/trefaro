@@ -1,4 +1,5 @@
-import { api, postJson } from '../support/api-client';
+import { api } from '../support/api-client';
+import { adminCookie } from '../support/admin-session';
 
 /**
  * Contract of the event endpoints (FR 3.1, FR 3.2, FR 3.9, FR 2.3).
@@ -10,13 +11,6 @@ import { api, postJson } from '../support/api-client';
  *
  * Logs in once; see `admin-access.spec.ts` for why that matters.
  */
-const SESSION_COOKIE = 'trefaro_admin_session';
-
-const credentials = {
-  email: process.env['ADMIN_BOOTSTRAP_EMAIL'] ?? '',
-  password: process.env['ADMIN_BOOTSTRAP_PASSWORD'] ?? '',
-};
-
 interface Series {
   id: string;
   slug: string;
@@ -40,16 +34,6 @@ interface Event {
   status: string;
   createdAt: string;
   updatedAt: string;
-}
-
-function cookieFrom(headers: Headers): string {
-  for (const header of headers.getSetCookie()) {
-    const [pair] = header.split(';');
-    const [key, ...rest] = pair.split('=');
-    if (key.trim() === SESSION_COOKIE)
-      return `${SESSION_COOKIE}=${rest.join('=')}`;
-  }
-  return '';
 }
 
 /** The minimum an on-site event needs, before any test twists one field. */
@@ -103,13 +87,7 @@ describe('events API', () => {
     ).then((response) => ({ status: response.status, body: response.body }));
 
   beforeAll(async () => {
-    if (!credentials.email || !credentials.password) {
-      throw new Error(
-        'ADMIN_BOOTSTRAP_EMAIL and ADMIN_BOOTSTRAP_PASSWORD must be set for the API contract tests.',
-      );
-    }
-    const login = await postJson('/api/admin/auth/login', credentials);
-    cookie = cookieFrom(login.headers);
+    cookie = adminCookie();
 
     publishedSeries = await createSeries({
       name: 'Events Contract Published Series',

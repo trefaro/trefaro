@@ -1,4 +1,5 @@
 import { api, postJson } from '../support/api-client';
+import { adminCookie } from '../support/admin-session';
 import {
   clearMailbox,
   confirmationTokenFrom,
@@ -18,13 +19,6 @@ import {
  * The mail is read out of Mailpit rather than mocked away — a double opt-in that
  * is only asserted at the mailer interface has not been tested where it matters.
  */
-const SESSION_COOKIE = 'trefaro_admin_session';
-
-const credentials = {
-  email: process.env['ADMIN_BOOTSTRAP_EMAIL'] ?? '',
-  password: process.env['ADMIN_BOOTSTRAP_PASSWORD'] ?? '',
-};
-
 interface Series {
   id: string;
   slug: string;
@@ -66,16 +60,6 @@ const APPLICANT = {
   origin: 'Cologne',
   newsletterOptIn: true,
 } as const;
-
-function cookieFrom(headers: Headers): string {
-  for (const header of headers.getSetCookie()) {
-    const [pair] = header.split(';');
-    const [key, ...rest] = pair.split('=');
-    if (key.trim() === SESSION_COOKIE)
-      return `${SESSION_COOKIE}=${rest.join('=')}`;
-  }
-  return '';
-}
 
 describe('registrations API', () => {
   let cookie = '';
@@ -138,16 +122,10 @@ describe('registrations API', () => {
   };
 
   beforeAll(async () => {
-    if (!credentials.email || !credentials.password) {
-      throw new Error(
-        'ADMIN_BOOTSTRAP_EMAIL and ADMIN_BOOTSTRAP_PASSWORD must be set for the API contract tests.',
-      );
-    }
     await waitForMailpit();
     await clearMailbox();
 
-    const login = await postJson('/api/admin/auth/login', credentials);
-    cookie = cookieFrom(login.headers);
+    cookie = adminCookie();
 
     series = (
       await api<Series>(

@@ -1,4 +1,5 @@
 import { api, postJson } from '../support/api-client';
+import { adminCookie } from '../support/admin-session';
 import {
   closeDatabase,
   deleteRegistrations,
@@ -26,8 +27,6 @@ import {
  * test still walks the whole real path, so the link between the two work
  * packages is asserted rather than assumed.
  */
-const SESSION_COOKIE = 'trefaro_admin_session';
-
 /**
  * What a page of the overview may take, in milliseconds.
  *
@@ -41,11 +40,6 @@ const BUDGET_MS = 1_500;
 
 /** The volume the phase plan names for this work package. */
 const LOAD_ROWS = 2_000;
-
-const credentials = {
-  email: process.env['ADMIN_BOOTSTRAP_EMAIL'] ?? '',
-  password: process.env['ADMIN_BOOTSTRAP_PASSWORD'] ?? '',
-};
 
 interface Series {
   id: string;
@@ -113,16 +107,6 @@ const WEEK_THREE_LATE = '2026-08-18T11:00:00.000Z';
 const WEEK_FOUR_EARLY = '2026-08-25T09:00:00.000Z';
 const WEEK_FOUR_LATE = '2026-08-25T11:00:00.000Z';
 
-function cookieFrom(headers: Headers): string {
-  for (const header of headers.getSetCookie()) {
-    const [pair] = header.split(';');
-    const [key, ...rest] = pair.split('=');
-    if (key.trim() === SESSION_COOKIE)
-      return `${SESSION_COOKIE}=${rest.join('=')}`;
-  }
-  return '';
-}
-
 describe('participant overview API', () => {
   let cookie = '';
   let series: Series;
@@ -149,15 +133,9 @@ describe('participant overview API', () => {
     );
 
   beforeAll(async () => {
-    if (!credentials.email || !credentials.password) {
-      throw new Error(
-        'ADMIN_BOOTSTRAP_EMAIL and ADMIN_BOOTSTRAP_PASSWORD must be set for the API contract tests.',
-      );
-    }
     await waitForMailpit();
 
-    const login = await postJson('/api/admin/auth/login', credentials);
-    cookie = cookieFrom(login.headers);
+    cookie = adminCookie();
 
     series = (
       await api<Series>(

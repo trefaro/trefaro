@@ -1,6 +1,7 @@
 import { readdir, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { api, postJson } from '../support/api-client';
+import { api } from '../support/api-client';
+import { adminCookie } from '../support/admin-session';
 import { waitForMailpit } from '../support/mailpit';
 
 /**
@@ -23,13 +24,6 @@ import { waitForMailpit } from '../support/mailpit';
  *    reason it can is that the contract suite runs on the same machine as the
  *    server it talks to.
  */
-const SESSION_COOKIE = 'trefaro_admin_session';
-
-const credentials = {
-  email: process.env['ADMIN_BOOTSTRAP_EMAIL'] ?? '',
-  password: process.env['ADMIN_BOOTSTRAP_PASSWORD'] ?? '',
-};
-
 /** The same directory the server writes to; see `UPLOAD_DIR` in `.env`. */
 const UPLOAD_DIR = resolve(
   __dirname,
@@ -95,16 +89,6 @@ const pdf = (bytes = 32): Buffer =>
 /** A real PNG header — used where a field accepts something else. */
 const png = (): Buffer =>
   Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00]);
-
-function cookieFrom(headers: Headers): string {
-  for (const header of headers.getSetCookie()) {
-    const [pair] = header.split(';');
-    const [key, ...rest] = pair.split('=');
-    if (key.trim() === SESSION_COOKIE)
-      return `${SESSION_COOKIE}=${rest.join('=')}`;
-  }
-  return '';
-}
 
 /** Every file in the upload volume, recursively — an empty list if it is bare. */
 async function storedFiles(directory = UPLOAD_DIR): Promise<string[]> {
@@ -224,15 +208,9 @@ describe('registration attachments API', () => {
     (await api<Detail>(`/api/admin/registrations/${id}`, asAdmin())).body;
 
   beforeAll(async () => {
-    if (!credentials.email || !credentials.password) {
-      throw new Error(
-        'ADMIN_BOOTSTRAP_EMAIL and ADMIN_BOOTSTRAP_PASSWORD must be set for the API contract tests.',
-      );
-    }
     await waitForMailpit();
 
-    const login = await postJson('/api/admin/auth/login', credentials);
-    cookie = cookieFrom(login.headers);
+    cookie = adminCookie();
 
     series = (
       await api<Series>(

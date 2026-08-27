@@ -1,4 +1,5 @@
 import { api, postJson } from '../support/api-client';
+import { adminCookie } from '../support/admin-session';
 import { waitForMailpit } from '../support/mailpit';
 
 /**
@@ -18,13 +19,6 @@ import { waitForMailpit } from '../support/mailpit';
  * point of this suite is the seam between the form an organizer built and the
  * form a participant fills in.
  */
-const SESSION_COOKIE = 'trefaro_admin_session';
-
-const credentials = {
-  email: process.env['ADMIN_BOOTSTRAP_EMAIL'] ?? '',
-  password: process.env['ADMIN_BOOTSTRAP_PASSWORD'] ?? '',
-};
-
 interface Series {
   id: string;
   slug: string;
@@ -73,16 +67,6 @@ const APPLICANT = {
   firstName: 'Amina',
   lastName: 'Okonkwo',
 } as const;
-
-function cookieFrom(headers: Headers): string {
-  for (const header of headers.getSetCookie()) {
-    const [pair] = header.split(';');
-    const [key, ...rest] = pair.split('=');
-    if (key.trim() === SESSION_COOKIE)
-      return `${SESSION_COOKIE}=${rest.join('=')}`;
-  }
-  return '';
-}
 
 describe('registration fields API', () => {
   let cookie = '';
@@ -164,17 +148,11 @@ describe('registration fields API', () => {
   };
 
   beforeAll(async () => {
-    if (!credentials.email || !credentials.password) {
-      throw new Error(
-        'ADMIN_BOOTSTRAP_EMAIL and ADMIN_BOOTSTRAP_PASSWORD must be set for the API contract tests.',
-      );
-    }
     // Every accepted registration sends a mail, and a failed delivery would be
     // reported as 503 rather than as the 400 this suite is about.
     await waitForMailpit();
 
-    const login = await postJson('/api/admin/auth/login', credentials);
-    cookie = cookieFrom(login.headers);
+    cookie = adminCookie();
 
     series = (
       await api<Series>(

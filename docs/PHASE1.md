@@ -1113,6 +1113,21 @@ Weitere Festlegungen, klein aber folgenreich:
 
 Was anders lief:
 
+- **Die achte Vertragssuite hat das Login-Limit gesprengt — in der CI, nicht
+  lokal.** Jede API-Suite meldete sich bisher selbst an; zusammen mit den
+  Browsersuiten lag der ganze e2e-Lauf damit einen Versuch unter der Grenze von
+  zwanzig je fünf Minuten (`LOGIN_ATTEMPTS_PER_WINDOW`, danach fünfzehn Minuten
+  Sperre). `attachments.spec.ts` war dieser eine Versuch: die Suite, die als
+  nächste lief, bekam auf ihren Login ein 429 und danach überall 401 — neun
+  Tests, die nichts mit Dateien zu tun haben. Das Limit **bleibt** wie es ist
+  (der Kommentar an `@Throttle` sagt, warum: ein Limit, das für Tests gelockert
+  wird, ist keins mehr). Stattdessen meldet sich die Vertragssuite jetzt **einmal**
+  im Global-Setup an und gibt die Sitzung über eine Datei weiter
+  (`src/support/admin-session.ts`). `admin-access.spec.ts` behält seinen eigenen
+  Login: es prüft die Login-Antwort selbst und beendet seine Sitzung per Logout.
+  Damit sind es 4 statt 9 Versuche in der Vertragssuite und rund 10 statt 14 im
+  ganzen Job. Wer eine Suite hinzufügt, sollte die Rechnung kennen — sie steht
+  jetzt in `admin-session.ts`.
 - **Umlaute im Dateinamen kamen doppelt kodiert an.** `multer` dekodiert den
   Namen eines Multipart-Teils standardmäßig als latin1, Browser schicken ihn als
   UTF-8 — „Grüße.pdf" wurde zu „GrÃ¼ÃŸe.pdf", bevor irgendetwas hier es sehen
