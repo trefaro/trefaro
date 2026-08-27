@@ -389,9 +389,15 @@ describe('program API', () => {
       const [item] = (await publicProgram(event.slug)).body;
 
       expect(Object.keys(item).sort()).toEqual([
+        // The three sign-up fields are public as of AP 9 (FR 3.10): whether a
+        // session needs a seat, and how many are left, is what somebody
+        // deciding whether to come has to see. Who took them is not here.
+        'capacity',
         'description',
         'endsAt',
         'id',
+        'registrationEnabled',
+        'signupCount',
         'speaker',
         'startsAt',
         'title',

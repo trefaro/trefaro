@@ -94,19 +94,29 @@ export {
 export {
   MAX_PROGRAM_DESCRIPTION_LENGTH,
   MAX_PROGRAM_ITEMS,
+  MAX_PROGRAM_ITEM_CAPACITY,
   MAX_PROGRAM_SPEAKER_LENGTH,
   MAX_PROGRAM_TITLE_LENGTH,
   formatProgramTime,
   groupProgramByDay,
+  isProgramItemFull,
   isWithinPeriod,
   overlappingProgramItems,
+  seatsLeft,
   sortProgram,
   type ProgramDay,
   type ProgramItem,
   type ProgramItemChange,
   type ProgramItemInput,
+  type ProgramItemLoad,
+  type ProgramItemSignup,
   type PublicProgramItem,
 } from './lib/program';
+export {
+  SELF_SERVICE_PATH,
+  type MyProgramItem,
+  type MyRegistration,
+} from './lib/self-service';
 export type {
   AppConfig,
   PluginDescriptor,

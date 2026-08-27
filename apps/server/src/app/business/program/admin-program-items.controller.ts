@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   HttpCode,
   HttpStatus,
   Param,
@@ -18,7 +19,9 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { UpdateProgramItemDto } from './dto/create-program-item.dto';
+import { ProgramItemLoadDto } from './dto/program-item-load.dto';
 import { ProgramItemDto } from './dto/program-item.dto';
+import { ProgramSignupsService } from './program-signups.service';
 import { ProgramService } from './program.service';
 
 /**
@@ -33,7 +36,26 @@ import { ProgramService } from './program.service';
 @ApiTags('program')
 @Controller('admin/program-items')
 export class AdminProgramItemsController {
-  constructor(private readonly program: ProgramService) {}
+  constructor(
+    private readonly program: ProgramService,
+    private readonly signups: ProgramSignupsService,
+  ) {}
+
+  @Get(':id/signups')
+  @ApiOperation({
+    summary: 'Who has signed up for this session (FR 3.10)',
+    description:
+      'The take-up of one session, with the addresses in the list. Answers for ' +
+      'a session whose sign-up was switched off as well: the seats people took ' +
+      'while it was on are still theirs, and hiding them would make the list ' +
+      'wrong rather than shorter.',
+  })
+  @ApiOkResponse({ type: ProgramItemLoadDto })
+  @ApiUnauthorizedResponse({ description: 'No administrative session.' })
+  @ApiNotFoundResponse({ description: 'No programme item with that id.' })
+  load(@Param('id', ParseUUIDPipe) id: string): Promise<ProgramItemLoadDto> {
+    return this.signups.load(id) as Promise<ProgramItemLoadDto>;
+  }
 
   @Patch(':id')
   @ApiOperation({
@@ -62,8 +84,8 @@ export class AdminProgramItemsController {
     summary: 'Remove a session from the programme',
     description:
       'No archiving and no confirmed-registration rule of its own (unlike an ' +
-      'event, E14): a programme item is a plan. From AP 9 its sign-ups go with ' +
-      'it through the database cascade.',
+      'event, E14): a programme item is a plan. Its sign-ups go with it through ' +
+      'the database cascade — a session that is not happening has no attendees.',
   })
   @ApiNoContentResponse({ description: 'Removed.' })
   @ApiUnauthorizedResponse({ description: 'No administrative session.' })

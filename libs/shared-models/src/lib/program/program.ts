@@ -26,6 +26,11 @@ import {
  *    what a two-track conference *is*. The organizer's view marks them; it does
  *    not refuse them. What is refused is an item outside its event's period —
  *    that one cannot be rendered on any timeline the event has.
+ * 4. **Sign-up is opt-in per item, and a capacity needs it** (FR 3.10, AP 9).
+ *    Most sessions are simply attended; only some — a workshop with twelve
+ *    chairs, a guided tour — ask who is coming. `capacity` without
+ *    `registrationEnabled` is refused rather than ignored, because a limit
+ *    nothing enforces reads like one that is enforced.
  */
 
 /** What a participant reads on the landing page. */
@@ -44,6 +49,23 @@ export interface PublicProgramItem {
    */
   readonly startsAt: string;
   readonly endsAt: string;
+  /**
+   * Whether this session asks who is coming (FR 3.10).
+   *
+   * Public, because it is what a participant has to know before the event: a
+   * workshop they have to claim a seat for looks different from a plenary they
+   * simply walk into.
+   */
+  readonly registrationEnabled: boolean;
+  /** Seats, or `null` for "as many as come". Only set when sign-up is on. */
+  readonly capacity: number | null;
+  /**
+   * How many have signed up.
+   *
+   * A number, never the names: the landing page is public, and who attends
+   * which workshop is not (the organizer sees that behind the admin guard).
+   */
+  readonly signupCount: number;
 }
 
 /** What an organizer manages. */
@@ -60,6 +82,8 @@ export interface ProgramItemInput {
   readonly speaker?: string | null;
   readonly startsAt: string;
   readonly endsAt: string;
+  readonly registrationEnabled?: boolean;
+  readonly capacity?: number | null;
 }
 
 /**
@@ -82,6 +106,62 @@ export const MAX_PROGRAM_ITEMS = 300;
 export const MAX_PROGRAM_TITLE_LENGTH = 200;
 export const MAX_PROGRAM_DESCRIPTION_LENGTH = 2_000;
 export const MAX_PROGRAM_SPEAKER_LENGTH = 200;
+
+/**
+ * Largest capacity a session may declare.
+ *
+ * The same bound the room plug-in puts on a room, and for the same reason: a
+ * typo of three extra digits produces a limit that never triggers, which is
+ * indistinguishable from having forgotten to set one.
+ */
+export const MAX_PROGRAM_ITEM_CAPACITY = 100_000;
+
+/**
+ * Seats still free, or `null` where the session has no limit.
+ *
+ * Never negative: a capacity an organizer lowered below the number of people
+ * already signed up is over-subscribed, not owed seats. That is a thing to show
+ * an organizer, not a number to compute with.
+ */
+export function seatsLeft(item: PublicProgramItem): number | null {
+  if (item.capacity === null) return null;
+  return Math.max(0, item.capacity - item.signupCount);
+}
+
+/**
+ * One person's seat, as the organizer's load view lists it (FR 3.10).
+ *
+ * The address belongs in the row rather than one click away — the single
+ * correction the usability test of the thesis produced, and it holds for every
+ * table an organizer reads participants from.
+ */
+export interface ProgramItemSignup {
+  readonly registrationId: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly email: string;
+  readonly signedUpAt: string;
+}
+
+/**
+ * Take-up of one session: the numbers, and who they are (FR 3.10).
+ *
+ * Behind the administrative guard, unlike the counts on {@link
+ * PublicProgramItem}: how many have signed up is public, who they are is not.
+ */
+export interface ProgramItemLoad {
+  readonly itemId: string;
+  readonly title: string;
+  readonly registrationEnabled: boolean;
+  readonly capacity: number | null;
+  readonly signupCount: number;
+  readonly participants: readonly ProgramItemSignup[];
+}
+
+/** Whether this session takes no further sign-up — the rule of AP 9. */
+export function isProgramItemFull(item: PublicProgramItem): boolean {
+  return item.capacity !== null && item.signupCount >= item.capacity;
+}
 
 /**
  * One day of the programme, as a timeline renders it.

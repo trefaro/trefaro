@@ -33,7 +33,9 @@ import { RegistrationService } from './registration.service';
  * live next to the registration rather than in it, and this module is what puts
  * them there and what takes them away again.
  *
- * Still to come: the participant's own view of their registration (AP 9, E11).
+ * The participant's own view of their registration lives in
+ * `business/self-service` (E11) and reuses two of the services above: it is a
+ * seam between a signed link and these rules, not a second set of them.
  */
 @Module({
   imports: [EventsModule, MailModule, SecurityModule, AttachmentsModule],

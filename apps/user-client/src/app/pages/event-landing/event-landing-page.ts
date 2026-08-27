@@ -20,6 +20,8 @@ import {
   formatProgramTime,
   groupProgramByDay,
   hasEnded,
+  isProgramItemFull,
+  seatsLeft,
 } from '@trefaro/shared-models';
 import { PluginSlot } from '@trefaro/shared-plugins';
 import { PublicEventsService } from '../../features/events/public-events.service';
@@ -43,6 +45,10 @@ import { PublicProgramService } from '../../features/program/public-program.serv
  * The programme is fetched separately from the event (FR 3.7). What the page
  * has to answer first is "what is this, when, where" — a conference with two
  * hundred sessions must not delay that.
+ *
+ * Sessions with a seat limit say how many are left (FR 3.10) but are not claimed
+ * here: claiming one needs a registration, and the page for it opens from the
+ * personal link in the confirmation mail (E11).
  *
  * Carries the second plug-in hook point: the programme, the room plan and the
  * forum mount here as web components once their modules are enabled.
@@ -103,6 +109,13 @@ import { PublicProgramService } from '../../features/program/public-program.serv
         @if (days().length > 0) {
           <section class="program" aria-labelledby="program-heading">
             <h2 id="program-heading">Programme</h2>
+            @if (hasSignups()) {
+              <p class="program__note">
+                Some sessions have a limited number of seats. You claim those
+                from your own page, which you reach through the link in the
+                confirmation e-mail after registering.
+              </p>
+            }
             @for (day of days(); track day.key) {
               <h3 class="program__day">{{ day.label }}</h3>
               <ol class="program__items">
@@ -118,6 +131,9 @@ import { PublicProgramService } from '../../features/program/public-program.serv
                       }
                       @if (session.description) {
                         <p class="session__text">{{ session.description }}</p>
+                      }
+                      @if (session.registrationEnabled) {
+                        <p class="session__seats">{{ seats(session) }}</p>
                       }
                     </div>
                   </li>
@@ -264,6 +280,17 @@ import { PublicProgramService } from '../../features/program/public-program.serv
       white-space: pre-line;
     }
 
+    .session__seats {
+      margin: 0.35rem 0 0;
+      font-weight: 600;
+    }
+
+    .program__note {
+      margin-block: 0 1rem;
+      color: color-mix(in oklab, currentColor 70%, transparent);
+      font-size: 0.9rem;
+    }
+
     .cta {
       display: flex;
       flex-direction: column;
@@ -318,6 +345,11 @@ export class EventLandingPage {
       : [];
   });
 
+  /** Whether any session asks who is coming — the note above the timeline. */
+  protected readonly hasSignups = computed(() =>
+    this.items().some((item) => item.registrationEnabled),
+  );
+
   protected readonly pluginContext = computed(() => ({
     eventId: this.event()?.id ?? '',
     locale: this.config.config()?.defaultLocale ?? 'en',
@@ -338,6 +370,21 @@ export class EventLandingPage {
   protected clock(item: PublicProgramItem): string {
     const event = this.event();
     return event ? formatProgramTime(item, event.timezone, this.locale()) : '';
+  }
+
+  /**
+   * What is left of a session with a seat limit (FR 3.10).
+   *
+   * A number, never a name: this page is public, and who attends which workshop
+   * is not. What it does say is whether it is worth registering for — a full
+   * session that looks open is the worse of the two mistakes.
+   */
+  protected seats(item: PublicProgramItem): string {
+    const left = seatsLeft(item);
+    if (left === null) return `Sign-up · ${item.signupCount} so far`;
+    return isProgramItemFull(item)
+      ? `Full · ${item.signupCount} of ${item.capacity} seats taken`
+      : `${left} of ${item.capacity} seats free`;
   }
 
   /** Spelled out rather than shown as a raw enum value. */

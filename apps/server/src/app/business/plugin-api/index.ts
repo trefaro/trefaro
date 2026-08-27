@@ -9,6 +9,11 @@ export {
   isCompatiblePluginApiVersion,
 } from './plugin-api-version';
 export { PLUGIN_PERSISTENCE_REGISTRY, SERVER_PLUGINS } from './plugin-tokens';
+export {
+  PLUGIN_PROGRAM_READS,
+  type PluginProgramItem,
+  type PluginProgramReads,
+} from './program-reads';
 export type {
   PluginClientContribution,
   PluginMountPoint,

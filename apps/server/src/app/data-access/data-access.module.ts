@@ -8,6 +8,7 @@ import { EVENT_REPOSITORY } from '../business/events/ports/event.repository';
 import { ADMIN_SESSION_REPOSITORY } from '../business/login/ports/admin-session.repository';
 import { ADMIN_USER_REPOSITORY } from '../business/login/ports/admin-user.repository';
 import { MODULE_CONFIG_REPOSITORY } from '../business/config/ports/module-config.repository';
+import { PROGRAM_ITEM_SIGNUP_REPOSITORY } from '../business/program/ports/program-item-signup.repository';
 import { PROGRAM_ITEM_REPOSITORY } from '../business/program/ports/program-item.repository';
 import { PUSH_SUBSCRIPTION_REPOSITORY } from '../business/push/ports/push-subscription.repository';
 import { REGISTRATION_TALLY } from '../business/registration/ports/registration-tally';
@@ -30,6 +31,7 @@ import { TypeormAttachmentRepository } from './repositories/typeorm-attachment.r
 import { TypeormEventSeriesRepository } from './repositories/typeorm-event-series.repository';
 import { TypeormEventRepository } from './repositories/typeorm-event.repository';
 import { TypeormModuleConfigRepository } from './repositories/typeorm-module-config.repository';
+import { TypeormProgramItemSignupRepository } from './repositories/typeorm-program-item-signup.repository';
 import { TypeormProgramItemRepository } from './repositories/typeorm-program-item.repository';
 import { TypeormPushSubscriptionRepository } from './repositories/typeorm-push-subscription.repository';
 import { TypeormRegistrationFieldRepository } from './repositories/typeorm-registration-field.repository';
@@ -74,6 +76,7 @@ export class DataAccessModule {
         TypeormEventRepository,
         TypeormModuleConfigRepository,
         TypeormProgramItemRepository,
+        TypeormProgramItemSignupRepository,
         TypeormPushSubscriptionRepository,
         TypeormRegistrationRepository,
         TypeormRegistrationFieldRepository,
@@ -116,6 +119,10 @@ export class DataAccessModule {
           useExisting: TypeormProgramItemRepository,
         },
         {
+          provide: PROGRAM_ITEM_SIGNUP_REPOSITORY,
+          useExisting: TypeormProgramItemSignupRepository,
+        },
+        {
           provide: PUSH_SUBSCRIPTION_REPOSITORY,
           useExisting: TypeormPushSubscriptionRepository,
         },
@@ -144,6 +151,7 @@ export class DataAccessModule {
         EVENT_REPOSITORY,
         MODULE_CONFIG_REPOSITORY,
         PROGRAM_ITEM_REPOSITORY,
+        PROGRAM_ITEM_SIGNUP_REPOSITORY,
         PUSH_SUBSCRIPTION_REPOSITORY,
         REGISTRATION_REPOSITORY,
         REGISTRATION_FIELD_REPOSITORY,

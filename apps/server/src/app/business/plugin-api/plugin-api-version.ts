@@ -10,8 +10,16 @@
  *
  * A plug-in declares the version it was built against; the plug-in manager
  * refuses to mount anything whose major version does not match.
+ *
+ * History, so a reader can see what a step means in practice:
+ *
+ * - **1.0.0** — the contract as phase 0 established it: descriptor, mount
+ *   points, persistence contribution.
+ * - **1.1.0** — adds {@link PluginProgramReads}, the read port the room planning
+ *   plug-in needs for the overbooking check (E12). An addition, so every 1.0
+ *   plug-in keeps working: it simply never asks.
  */
-export const PLUGIN_API_VERSION = '1.0.0';
+export const PLUGIN_API_VERSION = '1.1.0';
 
 interface SemanticVersion {
   major: number;

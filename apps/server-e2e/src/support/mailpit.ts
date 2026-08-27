@@ -87,6 +87,20 @@ export function confirmationTokenFrom(mail: CapturedMail): string {
   return decodeURIComponent(match[1]);
 }
 
+/**
+ * The `token` of the personal self-service link in a message (E11).
+ *
+ * Only the receipt carries one — the confirmation request deliberately does not,
+ * because before the address is confirmed there is nothing to self-serve.
+ */
+export function selfServiceTokenFrom(mail: CapturedMail): string {
+  const match = /registrations\/me\?token=([A-Za-z0-9_.%-]+)/.exec(mail.text);
+  if (!match) {
+    throw new Error(`No self-service link in "${mail.subject}"`);
+  }
+  return decodeURIComponent(match[1]);
+}
+
 async function findMailTo(address: string): Promise<CapturedMail | null> {
   const summary = (await list()).find((mail) => addressed(mail, address));
   if (!summary) return null;

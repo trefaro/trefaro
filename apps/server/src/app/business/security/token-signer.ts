@@ -8,13 +8,40 @@ import { ENV } from '../../core/config/env.module';
  *
  * Part of the signed payload and checked on verification, so a confirmation
  * link can never be replayed as a self-service link — the two have different
- * lifetimes and grant different things. AP 9 adds `registration-self-service`
- * (E11) and needs nothing but a second value here.
+ * lifetimes and grant different things. A confirmation link is spent in a day
+ * and confirms one address; a self-service link lives as long as the event does
+ * and speaks for the registration the whole time (E11).
  */
-export type TokenPurpose = 'registration-confirmation';
+export type TokenPurpose =
+  'registration-confirmation' | 'registration-self-service';
 
 /** Fourteen days, per E5: long enough for someone who registers before a holiday. */
 export const CONFIRMATION_TOKEN_TTL_MS = 14 * 24 * 60 * 60 * 1000;
+
+/**
+ * How long a self-service link outlives its event (E11).
+ *
+ * Thirty days after the event ends: long enough to look up what one attended and
+ * to give up a seat in the last session, short enough that a forwarded mail from
+ * two conferences ago grants nothing. Phase 3 puts the participant login in front
+ * of the same page and lets these links keep working.
+ */
+export const SELF_SERVICE_GRACE_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * The lifetime of a self-service token for an event ending at `eventEndsAt`.
+ *
+ * Never zero or negative: a link into a past event still has to be *readable*,
+ * or somebody who confirmed on the last day would receive a mail whose link was
+ * dead on arrival. What the link can still change is decided by the rules on
+ * each action, not by the token's lifetime.
+ */
+export function selfServiceTokenTtlMs(eventEndsAt: Date | string): number {
+  const endsAt = new Date(eventEndsAt).getTime();
+  const until =
+    (Number.isFinite(endsAt) ? endsAt : Date.now()) + SELF_SERVICE_GRACE_MS;
+  return Math.max(SELF_SERVICE_GRACE_MS, until - Date.now());
+}
 
 /** Separator inside the payload; neither a purpose nor a UUID contains it. */
 const FIELD_SEPARATOR = '|';

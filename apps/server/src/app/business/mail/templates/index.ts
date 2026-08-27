@@ -37,6 +37,7 @@ export type {
   ConfirmationMailContext,
   MailEvent,
   MailTemplates,
+  ReceiptMailContext,
   RegistrationMailContext,
   RenderedMail,
 } from './types';

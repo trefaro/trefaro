@@ -3,6 +3,7 @@ import { escapeHtml, htmlAction, htmlBody, htmlLink } from './html';
 import type {
   ConfirmationMailContext,
   MailTemplates,
+  ReceiptMailContext,
   RegistrationMailContext,
   RenderedMail,
 } from './types';
@@ -51,8 +52,8 @@ export const germanMailTemplates: MailTemplates = {
     };
   },
 
-  registrationConfirmed(context: RegistrationMailContext): RenderedMail {
-    const { event, firstName } = context;
+  registrationConfirmed(context: ReceiptMailContext): RenderedMail {
+    const { event, firstName, selfServiceUrl } = context;
     return {
       subject: `Deine Anmeldung zu ${event.name} ist bestätigt`,
       text: [
@@ -63,6 +64,13 @@ export const germanMailTemplates: MailTemplates = {
         `Wann: ${period(context)}`,
         `Alle Infos: ${event.url}`,
         '',
+        'Deine persönliche Seite — für einzelne Programmpunkte anmelden, deine ' +
+          'Angaben ansehen oder absagen:',
+        '',
+        selfServiceUrl,
+        '',
+        'Gib diesen Link nicht weiter: wer ihn hat, kann deine Anmeldung ändern.',
+        '',
         'Wir freuen uns auf dich.',
       ].join('\n'),
       html: htmlBody(
@@ -70,6 +78,10 @@ export const germanMailTemplates: MailTemplates = {
         `deine Anmeldung zu <strong>${escapeHtml(event.name)}</strong> ist bestätigt.`,
         `Wann: ${escapeHtml(period(context))}<br />` +
           `Alle Infos: ${htmlLink(event.url, event.url)}`,
+        'Auf deiner persönlichen Seite kannst du dich für einzelne ' +
+          'Programmpunkte anmelden, deine Angaben ansehen oder absagen.',
+        htmlAction(selfServiceUrl, 'Meine Anmeldung öffnen'),
+        'Gib diesen Link nicht weiter: wer ihn hat, kann deine Anmeldung ändern.',
         'Wir freuen uns auf dich.',
       ),
     };

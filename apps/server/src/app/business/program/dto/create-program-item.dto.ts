@@ -5,15 +5,20 @@ import type {
 } from '@trefaro/shared-models';
 import {
   MAX_PROGRAM_DESCRIPTION_LENGTH,
+  MAX_PROGRAM_ITEM_CAPACITY,
   MAX_PROGRAM_SPEAKER_LENGTH,
   MAX_PROGRAM_TITLE_LENGTH,
 } from '@trefaro/shared-models';
 import {
+  IsBoolean,
   IsDateString,
+  IsInt,
   IsOptional,
   IsString,
   Length,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
 
 /**
@@ -24,8 +29,10 @@ import {
  * lie inside the event and that the item has a length are product rules and
  * belong in the service, which enforces them on update as well.
  *
- * No room and no capacity here: the room belongs to the room planning plug-in
- * (F21), and capacity arrives with the per-item sign-up in AP 9.
+ * No room here, in any phase: the room a session happens in belongs to the room
+ * planning plug-in's own join table (F21), and this endpoint would be the wrong
+ * place to accept it even if it existed — a core DTO that knows about rooms is
+ * the coupling the decision was made to avoid.
  */
 export class CreateProgramItemDto implements ProgramItemInput {
   @ApiProperty({ example: 'Keynote: Citizens’ initiatives in 2027' })
@@ -69,6 +76,31 @@ export class CreateProgramItemDto implements ProgramItemInput {
   @ApiProperty({ format: 'date-time', example: '2027-06-14T08:30:00.000Z' })
   @IsDateString()
   endsAt!: string;
+
+  @ApiProperty({
+    required: false,
+    default: false,
+    description:
+      'Whether this session asks who is coming (FR 3.10). Off for the plenary ' +
+      'everybody attends, on for the workshop with twelve chairs.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  registrationEnabled?: boolean;
+
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    example: 12,
+    description:
+      'Seats, or absent for "as many as come". Refused without ' +
+      '`registrationEnabled`: a limit nothing enforces reads like one that is.',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(MAX_PROGRAM_ITEM_CAPACITY)
+  capacity?: number | null;
 }
 
 /**

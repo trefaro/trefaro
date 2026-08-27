@@ -123,8 +123,16 @@ them checkable.
 F21 in `Anforderungsanalyse_und_Umsetzungsplan.md`, whose §5.3 schema draft has
 been corrected accordingly. The table is named `program_item_room` there; the
 plug-in creates it as `plugin_room_planning_program_item_room`, following the
-`plugin_<key>_` prefix every plug-in table carries. Nothing is implemented yet —
-that is phase 1 work.
+`plugin_<key>_` prefix every plug-in table carries.
+
+**Implemented in AP 9** (27.08.2026), together with the two things the decision
+implied and left open: the plug-in reads programme items and their sign-up counts
+through a versioned read port in the plug-in contract (`PluginProgramReads`,
+plug-in API 1.1.0, E12/F45) rather than from a core table, and the foreign key on
+`plugin_room_planning_room.event_id` — missing since phase 0 because `event` did
+not exist yet, and the very integrity gap this decision turned on — has been
+added by the same migration (F46). Verified against a running instance by
+`tools/spike-verification/verify-plugin-toggle.mjs`.
 
 The question, for the record: §5.3 originally gave the core `program_item` table
 a `room_id` referencing the room planning plug-in's `room` table, while

@@ -90,3 +90,21 @@ export function confirmationPathFrom(mail: CapturedMail): string {
   const url = new URL(match[0]);
   return `${url.pathname}${url.search}`;
 }
+
+/**
+ * The personal self-service link from the receipt (E11), as a path.
+ *
+ * Relative for the same reason as the confirmation path above: the server puts
+ * its own configured client URL in the mail, which need not be the address the
+ * browser reaches the client on.
+ */
+export function selfServicePathFrom(mail: CapturedMail): string {
+  const match = /https?:\/\/[^\s]*\/registrations\/me\?token=[^\s]+/.exec(
+    mail.text,
+  );
+  if (!match) {
+    throw new Error(`No personal link in "${mail.subject}"`);
+  }
+  const url = new URL(match[0]);
+  return `${url.pathname}${url.search}`;
+}

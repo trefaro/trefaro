@@ -4,6 +4,7 @@ import type {
   ProgramItem,
   ProgramItemChange,
   ProgramItemInput,
+  ProgramItemLoad,
 } from '@trefaro/shared-models';
 import { firstValueFrom } from 'rxjs';
 
@@ -41,5 +42,19 @@ export class ProgramAdminService {
 
   remove(id: string): Promise<void> {
     return firstValueFrom(this.api.delete<void>(`admin/program-items/${id}`));
+  }
+
+  /**
+   * Who has signed up for one session (FR 3.10).
+   *
+   * Its own request, made when an organizer opens one session's list: the
+   * programme view carries the counts, and fetching every attendee of every
+   * session to show a number would be the load rule of FR 3.3 broken in a new
+   * place.
+   */
+  signups(id: string): Promise<ProgramItemLoad> {
+    return firstValueFrom(
+      this.api.get<ProgramItemLoad>(`admin/program-items/${id}/signups`),
+    );
   }
 }

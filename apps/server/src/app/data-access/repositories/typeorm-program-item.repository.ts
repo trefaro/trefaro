@@ -63,6 +63,8 @@ function toRecord(row: ProgramItemEntity): ProgramItemRecord {
     speaker: row.speaker,
     startsAt: row.startsAt,
     endsAt: row.endsAt,
+    registrationEnabled: row.registrationEnabled,
+    capacity: row.capacity,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

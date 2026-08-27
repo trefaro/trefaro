@@ -2,8 +2,10 @@ import type { PublicProgramItem } from './program';
 import {
   formatProgramTime,
   groupProgramByDay,
+  isProgramItemFull,
   isWithinPeriod,
   overlappingProgramItems,
+  seatsLeft,
   sortProgram,
 } from './program';
 
@@ -26,6 +28,20 @@ const item = (
   speaker: null,
   startsAt,
   endsAt,
+  registrationEnabled: false,
+  capacity: null,
+  signupCount: 0,
+});
+
+/** A session that asks who is coming, with `taken` seats already claimed. */
+const limited = (
+  capacity: number | null,
+  taken: number,
+): PublicProgramItem => ({
+  ...item('workshop', '2027-06-14T09:00:00.000Z', '2027-06-14T11:00:00.000Z'),
+  registrationEnabled: true,
+  capacity,
+  signupCount: taken,
 });
 
 describe('sortProgram', () => {
@@ -243,5 +259,32 @@ describe('isWithinPeriod', () => {
         event,
       ),
     ).toBe(false);
+  });
+});
+
+describe('seatsLeft', () => {
+  it('counts down from the capacity', () => {
+    expect(seatsLeft(limited(12, 5))).toBe(7);
+  });
+
+  it('is null where the session has no limit', () => {
+    expect(seatsLeft(limited(null, 40))).toBeNull();
+  });
+
+  it('never goes negative, so a lowered capacity does not owe seats', () => {
+    // An organizer who moves a workshop into a smaller room is over-subscribed,
+    // and that is something to show them — not minus three seats to compute with.
+    expect(seatsLeft(limited(10, 14))).toBe(0);
+  });
+});
+
+describe('isProgramItemFull', () => {
+  it('is true once the seats are taken — the rule of AP 9', () => {
+    expect(isProgramItemFull(limited(12, 12))).toBe(true);
+    expect(isProgramItemFull(limited(12, 11))).toBe(false);
+  });
+
+  it('is never true without a capacity, however many have signed up', () => {
+    expect(isProgramItemFull(limited(null, 900))).toBe(false);
   });
 });

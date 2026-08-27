@@ -31,6 +31,24 @@ export class PublicProgramItemDto implements PublicProgramItem {
 
   @ApiProperty({ format: 'date-time' })
   endsAt!: string;
+
+  @ApiProperty({ description: 'Whether this session asks who is coming.' })
+  registrationEnabled!: boolean;
+
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    type: Number,
+    description: 'Seats, or `null` for "as many as come".',
+  })
+  capacity!: number | null;
+
+  @ApiProperty({
+    description:
+      'How many have signed up — a number, never the names. Who attends which ' +
+      'session is behind the administrative guard.',
+  })
+  signupCount!: number;
 }
 
 export class ProgramItemDto

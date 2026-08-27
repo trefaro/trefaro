@@ -9,6 +9,11 @@
  * - **No reorder.** A programme is ordered by the clock, not by a position
  *   somebody maintains (F40) — moving a session means changing its time, which
  *   is an ordinary update.
+ *
+ * The sign-ups of an item are a port of their own
+ * ({@link ProgramItemSignupRepository}): counting seats and reading sessions are
+ * separate reads with separate consumers, and the public landing page needs the
+ * counts without ever touching a participant row.
  */
 
 /** A programme item in business-layer terms — no ORM types. */
@@ -20,6 +25,10 @@ export interface ProgramItemRecord {
   readonly speaker: string | null;
   readonly startsAt: Date;
   readonly endsAt: Date;
+  /** Whether this session asks who is coming (FR 3.10). */
+  readonly registrationEnabled: boolean;
+  /** Seats, or `null` for "as many as come". Only set with sign-up on. */
+  readonly capacity: number | null;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 }
@@ -31,6 +40,8 @@ export interface NewProgramItem {
   readonly speaker: string | null;
   readonly startsAt: Date;
   readonly endsAt: Date;
+  readonly registrationEnabled: boolean;
+  readonly capacity: number | null;
 }
 
 /** Only the fields actually given are written. */
@@ -40,6 +51,8 @@ export interface ProgramItemChanges {
   readonly speaker?: string | null;
   readonly startsAt?: Date;
   readonly endsAt?: Date;
+  readonly registrationEnabled?: boolean;
+  readonly capacity?: number | null;
 }
 
 export interface ProgramItemRepository {

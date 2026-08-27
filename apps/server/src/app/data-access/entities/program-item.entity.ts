@@ -22,9 +22,9 @@ import { EventEntity } from './event.entity';
  *   beside `starts_at` would be a second ordering that can disagree with the
  *   first.
  *
- * `registration_enabled` and `capacity` arrive with the per-item sign-up in
- * AP 9, together with the table that gives them a meaning. A flag nothing reads
- * looks like a feature that exists.
+ * `registration_enabled` and `capacity` arrived in AP 9 with
+ * `program_item_signup`, the table that gives them a meaning — deliberately not
+ * before it, because a flag nothing reads looks like a feature that exists.
  */
 @Entity({ name: 'program_item' })
 @Index(['eventId', 'startsAt', 'endsAt', 'id'])
@@ -61,6 +61,19 @@ export class ProgramItemEntity {
 
   @Column({ name: 'ends_at', type: 'timestamptz' })
   endsAt!: Date;
+
+  /** Whether this session asks who is coming (FR 3.10). Off by default. */
+  @Column({ name: 'registration_enabled', type: 'boolean', default: false })
+  registrationEnabled!: boolean;
+
+  /**
+   * Seats, or `null` for "as many as come".
+   *
+   * A `CHECK` ties it to the flag: a capacity without sign-up would be a limit
+   * nothing enforces, which reads exactly like one that is enforced.
+   */
+  @Column({ type: 'integer', nullable: true })
+  capacity!: number | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;

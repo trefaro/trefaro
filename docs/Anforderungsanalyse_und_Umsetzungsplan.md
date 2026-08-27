@@ -3,7 +3,7 @@
 ## Anforderungsanalyse und Umsetzungsplan (abgeleitet aus der Masterthesis von Marius Schulze)
 
 **Projektname:** **Trefaro** (Kunstwort: deutsch „Treff" + Esperanto-Sammelsuffix „-aro" = „Sammlung von Treffen" ≙ Veranstaltungsreihe)
-**Version:** 1.10 (Entscheidungen F21–F41 ergänzt: F21 nach den Phase-0-Spikes, F22–F24 bei der Planung von Phase 1, F25–F27 bei der Umsetzung der Events in AP 3, F28–F30 bei der Registrierung in AP 4, F31–F33 bei der Teilnehmerübersicht in AP 5, F34–F36 beim Feld-Baukasten in AP 6, F37–F39 beim Datei-Upload in AP 7, F40–F41 bei der Programmplanung in AP 8, siehe Kapitel 7; Schemaentwurf 5.3 bei den bereits umgesetzten Tabellen an den Ist-Stand angeglichen) · **Datum:** 27.08.2026
+**Version:** 1.11 (Entscheidungen F21–F46 ergänzt: F21 nach den Phase-0-Spikes, F22–F24 bei der Planung von Phase 1, F25–F27 bei der Umsetzung der Events in AP 3, F28–F30 bei der Registrierung in AP 4, F31–F33 bei der Teilnehmerübersicht in AP 5, F34–F36 beim Feld-Baukasten in AP 6, F37–F39 beim Datei-Upload in AP 7, F40–F41 bei der Programmplanung in AP 8, F42–F46 bei der Programmpunkt-Anmeldung, der Selbstbedienung und F21 in AP 9, siehe Kapitel 7; Schemaentwurf 5.3 bei den bereits umgesetzten Tabellen an den Ist-Stand angeglichen) · **Datum:** 27.08.2026
 **Grundlage:** Masterthesis „Konzeption einer Whitelabel-Anwendung für effizientes Eventmanagement und Community-Bildung in gemeinnützigen Organisationen" (WBH, 2024) inkl. aller Drawio-Diagramme (Bausteinsicht, Laufzeitsicht, Verteilungssicht, Use-Case-Diagramm) und Design-Mockups.
 
 ---
@@ -223,9 +223,14 @@ program_item      (id, event_id → event [ON DELETE CASCADE], title, descriptio
                      die der ersten widersprechen kann; Gleichstand (Parallel-Sessions)
                      bricht `(starts_at, ends_at, id)` — dieselbe Regel wie in jeder
                      anderen Liste der Anwendung
-                   ← `registration_enabled` und `capacity` kommen erst in AP 9, zusammen
-                     mit `program_item_signup`, das ihnen eine Bedeutung gibt. Ein Flag,
-                     das nichts liest, sieht aus wie eine Funktion, die es gibt
+                   ← `registration_enabled` (bool, Standard false) und `capacity` (int?)
+                     sind in AP 9 entstanden, zusammen mit `program_item_signup`, das
+                     ihnen Bedeutung gibt — vorher nicht, denn ein Flag, das nichts liest,
+                     sieht aus wie eine Funktion, die es gibt (F42)
+                   ← `CHK_program_item_capacity`: `capacity IS NULL OR capacity >= 1`
+                   ← `CHK_program_item_capacity_needs_signup`: eine Kapazität ohne
+                     `registration_enabled` ist ausgeschlossen — eine Grenze, die nichts
+                     durchsetzt, sieht aus wie eine, die durchgesetzt wird (F42)
                    ← `CHK_program_item_period`: `ends_at > starts_at`, **strikt** — anders
                      als beim Event, das als einzelner Zeitpunkt gebucht werden darf,
                      solange die Details offen sind. Ein Programmpunkt ohne Dauer ist auf
@@ -322,7 +327,21 @@ attachment        (id, registration_id → registration [ON DELETE CASCADE],
 user_profile      (id, email, password_hash, first_name, last_name, avatar_path,
                    preferred_locale, activity_areas, custom_fields_json [JSONB],
                    searchable [bool, default false])              ← Sichtbarkeits-Opt-in (F13)
-program_item_signup (registration_id/user_id, program_item_id)     ← FR 3.10
+program_item_signup (id, program_item_id → program_item [ON DELETE CASCADE],
+                   registration_id → registration [ON DELETE CASCADE], created_at)
+                   unique (program_item_id, registration_id)          ← FR 3.10, seit AP 9
+                   ← Eine Zeile je Mensch je Session, ohne Statusspalte: ein Platz
+                     existiert oder nicht. Abmelden löscht die Zeile — ein „storniert",
+                     das sichtbar bliebe, wäre ein Platz, den der Nächste nicht bekommt
+                   ← Beide Kaskaden sind der Zweck des Paars: eine gelöschte Session gibt
+                     ihre Plätze frei, eine gelöschte Anmeldung nimmt die Plätze dieses
+                     Menschen mit — Vorarbeit für die Löschfunktionen der Phase 5
+                   ← Die Platzgrenze entscheidet die Datenbank in einer Anweisung, unter
+                     einer Sperre auf der Programmpunkt-Zeile (F43); den doppelten Klick
+                     entscheidet der eindeutige Index
+                   ← `registration_id`, **nicht** `user_id`: in Phase 1 gibt es keinen
+                     Nutzer-Login, und ein Platz gehört zu einer Anmeldung für **dieses**
+                     Event. Phase 3 legt den Login davor, ohne diese Spalte zu ändern (E11)
 conversation      (id, event_id?, type [direct|group|organizer_contact], topic,
                    guest_email?)   ← Gruppenchats (F9); Interessenten ohne Account
                                      antworten per E-Mail (F11)
@@ -341,18 +360,27 @@ newsletter_subscription (email, event_series_id?, double_opt_in_confirmed_at)
 -- Plug-in-eigene Tabellen (per Migration des jeweiligen Plug-ins):
 room              (id, event_id, name, capacity, floor?, description)    [Raumplanung, strukturiert (F14)]
                    → migriert als plugin_room_planning_room (Präfix plugin_<key>_ für alle
-                     Plug-in-Tabellen). event_id ist dort seit Phase 0 ein uuid **ohne**
-                     Fremdschlüssel, weil die Kerntabelle event noch nicht existierte; die
-                     Einschränkung wird in Phase 1 nachgezogen, sobald event angelegt ist
+                     Plug-in-Tabellen). event_id war seit Phase 0 ein uuid **ohne**
+                     Fremdschlüssel, weil die Kerntabelle event noch nicht existierte; in
+                     AP 9 ist er nachgezogen (ON DELETE CASCADE, F46). Verwaiste Räume
+                     löscht dieselbe Migration — anzeigbar waren sie nie, und die
+                     Alternative ist eine Instanz, die nicht startet
 program_item_room (program_item_id → program_item, room_id → room)       [Raumplanung]
-                   → Die Raumzuordnung liegt in dieser plug-in-eigenen Join-Tabelle und
-                     nicht als Spalte in program_item (F21). Der Fremdschlüssel auf
-                     program_item liegt auf der Plug-in-Tabelle (ON DELETE CASCADE) und
-                     verändert die Kerntabelle nicht.
+                   → migriert als plugin_room_planning_program_item_room, seit AP 9.
+                     Die Raumzuordnung liegt in dieser plug-in-eigenen Join-Tabelle und
+                     nicht als Spalte in program_item (F21). Beide Fremdschlüssel liegen
+                     auf der Plug-in-Tabelle (ON DELETE CASCADE) und verändern die
+                     Kerntabelle nicht; ihr Migrations-Zeitstempel liegt deshalb hinter
+                     dem der Kernmigration, die program_item anlegt.
+                   → Primärschlüssel ist das Paar: eine Session darf zwei Räume belegen
+                     und ein Raum viele Sessions, dasselbe Paar zweimal ist dieselbe
+                     Aussage zweimal
+                   → Ein Raum nimmt nur Sessions **seines** Events auf (409, F46)
                    → Überbuchungsprüfung = Anmeldungen (program_item_signup) vs.
-                     room.capacity. Die Anmeldezahlen liest das Plug-in über eine
-                     Lese-Schnittstelle des Plug-in-Vertrags, nicht direkt aus der
-                     Kerntabelle; OSM-Karte Ausbaustufe
+                     room.capacity. Die Anmeldezahlen liest das Plug-in über den
+                     versionierten Lese-Port des Plug-in-Vertrags (F45, `PluginProgramReads`,
+                     Plug-in-API 1.1.0), nicht direkt aus der Kerntabelle. Die Prüfung
+                     selbst ist Phase 4; OSM-Karte Ausbaustufe
 forum_thread / forum_post (…, approved_by?, status)                      [Diskussionsforum]
 program_proposal  (id, event_id, user_id, title, description, status)    [Programmvorschläge]
 checkin           (id, registration_id, checked_in_at, qr_token)         [QR-Check-In]
@@ -447,6 +475,11 @@ Usability-Test mit Democracy International (Wiederholung der 7 Aufgaben + bislan
 | F39 | Was heißt „Pflichtfeld" bei einer Datei, und wie kommt sie überhaupt herein?              | **Pflicht heißt: bei jeder Absendung.** Es gibt keine Ausnahme „liegt schon vor" — sie würde vom Zustand einer bestehenden Anmeldung abhängen und damit über das öffentliche Formular verraten, ob eine Adresse angemeldet ist (E10). Der Weg herein ist **eine** Anfrage: das Formular wird als `multipart/form-data` abgeschickt, die Felder als JSON im Teil `payload`, jede Datei in einem Teil, der nach ihrem Feldschlüssel benannt ist. Die naheliegende Alternative (erst hochladen, dann anmelden) bräuchte einen Endpunkt, der von jedem Dateien annimmt, ohne eine Anmeldung zu haben, an die sie gehören — und würde bei jedem abgebrochenen Formular eine Waise hinterlassen. Geschrieben wird erst, wenn **alles** geprüft ist: eine abgelehnte Anmeldung hinterlässt keine Zeile, keine Mail und kein Byte. Größenlimit **je Feld**, dazu eine serverweite Obergrenze (10 MB je Datei, 20 MB je Absendung), die kein Feld anheben kann, weil der Endpunkt öffentlich ist; die Absendungsgrenze liegt bewusst **unter** dem `client_max_body_size` des Reverse Proxy, damit die Antwort von der Anwendung kommt und nicht von einer Fehlerseite des Proxy. Eine erneute Absendung **ersetzt** die Datei desselben Feldes (Unique-Index) — eine Korrektur ist keine Version |
 | F40 | Wie ist ein Programm sortiert?                                                            | **Nach der Uhr, ohne `sort`-Spalte.** Der Schemaentwurf 5.3 gab `program_item` eine Positionsspalte; sie entfällt. Ein Programm hat genau eine natürliche Ordnung, und zwei Ordnungsmechanismen nebeneinander können sich widersprechen — ein Veranstalter, der eine Session verschiebt, müsste dann zwei Dinge ändern und würde eines vergessen. Gleichstand entsteht real (Parallel-Sessions zur selben Minute) und wird mit `(starts_at, ends_at, id)` gebrochen, derselben Regel wie in jeder anderen Liste. Folgen, bewusst akzeptiert: es gibt kein „nach oben" im Programm-Editor — eine Session verschiebt man, indem man ihre Zeit ändert, was auch das Einzige ist, was damit gemeint sein kann; und ein Programm lässt sich nicht in eine Reihenfolge bringen, die von der Zeit abweicht (etwa „Vorträge zuerst, Workshops danach") — dafür wäre eine Gruppierung nach Art die ehrlichere Lösung als eine Handsortierung                                                                                                                                                                                                                                                                                                                                                      |
 | F41 | Was ist ein Fehler am Zeitraum eines Programmpunkts, und was nur eine Auffälligkeit?      | **Außerhalb des Eventzeitraums ist ein Fehler (400), eine Überschneidung nicht.** Ein Programmpunkt außerhalb des Events ist auf keiner Timeline darstellbar, die das Event hat — das ist ein Tippfehler im Datumsfeld, keine Aussage. Überschneidungen dagegen **sind** das normale Bild eines zweigleisigen Kongresses; eine Regel gegen sie machte Parallel-Tracks unmöglich. Nur ein Mensch unterscheidet einen Parallel-Track von „Keynote und Workshop stehen beide versehentlich um 09:00", also markiert der Veranstalter-Client sie und lehnt sie nicht ab. Dritte Konsequenz, die sich daraus zwingend ergibt: wird der **Eventzeitraum** verschoben, bleiben die Programmpunkte stehen, wo sie sind. Die Verschiebung zu verweigern wäre eine Sackgasse, denn der Weg heraus führt über das Verschieben der Programmpunkte — deshalb wird der Zeitraum eines Programmpunkts nur geprüft, wenn er **geschrieben** wird, und der Editor zeigt die außerhalb liegenden Punkte an, statt sie zu sperren                                                                                                                                                                                                                                                                           |
+| F42 | Wer entscheidet, ob ein Programmpunkt eine Anmeldung braucht?                             | **Der Veranstalter, je Punkt, und standardmäßig nein.** `program_item.registration_enabled` ist `false`, `capacity` ist `NULL`-fähig („so viele, wie kommen"). Eine Kapazität **ohne** Anmeldung wird abgelehnt, nicht ignoriert — als `CHECK` in der Datenbank _und_ in der Geschäftslogik: eine Grenze, die nichts durchsetzt, sieht genauso aus wie eine, die durchgesetzt wird, und das ist der schlimmere der beiden Fehler. Anmeldung nachträglich abschalten setzt die Kapazität zurück und **löscht keine Anmeldungen**: die Plätze, die Menschen genommen haben, bleiben ihre, und abmelden bleibt möglich (sonst wäre die Liste falsch statt kürzer). Beide Spalten sind bewusst erst in AP 9 entstanden, zusammen mit `program_item_signup`, das ihnen Bedeutung gibt.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| F43 | Wo wird die Platzgrenze durchgesetzt?                                                     | **In einer Anweisung, unter einer Sperre auf der Programmpunkt-Zeile.** Zählen und dann Einfügen überlebt zwei Menschen nicht, die im selben Moment den letzten Platz nehmen: beide lesen „einer frei". Der Port nimmt deshalb die Kapazität mit und antwortet mit einem Ergebnis (`created` / `already-signed-up` / `full`) — die **Regel** bleibt in der Geschäftslogik, die **Unteilbarkeit** ist Sache der Datenzugriffsschicht, und nur dort kann sie eingehalten werden. Den einfacheren Wettlauf, denselben Menschen zweimal, entscheidet der eindeutige Index (wie bei E10).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| F44 | Wie legitimiert sich die Teilnehmenden-Selbstbedienung, und wo steht das Token?           | **Signierter Link (E11), Token beim Lesen in der Query, beim Ändern im Rumpf.** Lesen ist, was der Link in der Mail tut — dort steht das Token ohnehin in der Adresse. Ändern nicht: ein Linkvorschau-Dienst, der URLs abruft, darf keinen Platz belegen und keine Anmeldung stornieren (dieselbe Begründung wie E5b). Nur eine **bestätigte** Anmeldung hat eine Selbstbedienungsseite; eine storniert die Seite selbst, und danach sagt der Link, dass storniert wurde. Stornieren gibt **alle** Plätze zurück — wer nicht kommt, kommt auch nicht zum Workshop. Der Datensatz bleibt (F23), Löschen ist eine andere Bitte.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| F45 | Wie kommt das Raumplanungs-Plug-in an Anmeldezahlen?                                      | **Über einen schmalen, versionierten Lese-Port (E12), nicht über `program_item_signup`.** `PluginProgramReads` liefert je Programmpunkt genau fünf Felder — Id, Event, Beginn, Ende, Kapazität — und Anmeldezahlen zu einer Liste von Ids. Kein Titel, kein Sprecher, keine Person: ein Raumplan muss nicht wissen, **wer** kommt, nur **wie viele**. `PLUGIN_API_VERSION` steigt auf **1.1.0**; ein Plug-in gegen 1.0.0 läuft weiter und fragt einfach nicht. Bereitgestellt wird der Port von einem globalen `PluginHostModule`, damit ein Plug-in weiterhin nur aus `plugin-api` importiert.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| F46 | Was passiert mit `plugin_room_planning_room.event_id`?                                    | **Der Fremdschlüssel wird nachgezogen, in der Migration des Plug-ins, mit `ON DELETE CASCADE`.** Die Spalte war seit Phase 0 ein `uuid` ohne Einschränkung, weil `event` damals nicht existierte — genau die Integritätslücke, mit der F21 gegen eine Kernspalte entschieden wurde; sie offen zu lassen wäre inkonsequent. **Verwaiste Räume löscht die Migration**, bewusst und eng begrenzt: ein Raum, dessen Event es nicht gibt, ist nirgends anzeigbar (Räume werden je Event gelesen), und die Alternative ist eine Instanz, die nicht startet. Zusätzlich prüft das Plug-in, dass ein Raum nur Sessions **seines** Events aufnimmt (409) — sonst verglichen die Überbuchungsprüfungen in Phase 4 Zahlen, die nichts miteinander zu tun haben.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
 ---
 
@@ -461,4 +494,6 @@ Usability-Test mit Democracy International (Wiederholung der 7 Aufgaben + bislan
 7. **Individueller Programmplan als Plug-in** — die Thesis nennt ihn als Plug-in-Beispiel (für Democracy International relevant, Umfrage 2,48); so übernommen.
 8. **Raumzuordnung über eine Join-Tabelle statt einer Kernspalte** (F21) — Korrektur eines Widerspruchs im Schemaentwurf 5.3 gegen Architekturregel 2, aufgefallen beim Server-Plug-in-Spike in Phase 0.
 9. **Programm ohne Positionsspalte** (F40) — der Schemaentwurf 5.3 gab `program_item` ein `sort`; die Reihenfolge eines Programms ist die Uhr, und eine zweite Ordnung daneben kann der ersten widersprechen. Aufgefallen bei der Umsetzung in AP 8.
-10. Keine inhaltlichen Anforderungen wurden entfernt oder umpriorisiert; die Prioritäten P1–P3 entsprechen exakt Tabelle 20 der Thesis.
+10. **Teilnehmenden-Selbstbedienung über einen signierten Link** (E11, F44) — die Thesis setzt FR 3.10 hinter einen Nutzer-Login (FR 4.1, P2). Weil FR 3.10 P1 ist und der Login P2, überbrückt Phase 1 die Lücke mit dem personalisierten Link aus der Bestätigungsmail; Phase 3 stellt den Login davor und lässt die Links funktionieren. Keine Anforderung verschoben, nur ihre Reihenfolge möglich gemacht.
+11. **Plug-in-Vertrag mit Lese-Port** (E12, F45) — die Thesis beschreibt Plug-ins als Lieferanten von drei Teilen, sagt aber nicht, wie ein Plug-in Kerndaten _liest_. Ergänzt als schmale, versionierte Schnittstelle (Plug-in-API 1.1.0), damit die Überbuchungsprüfung aus FR 3.11 ohne Zugriff auf Kerntabellen möglich ist.
+12. Keine inhaltlichen Anforderungen wurden entfernt oder umpriorisiert; die Prioritäten P1–P3 entsprechen exakt Tabelle 20 der Thesis.

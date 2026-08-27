@@ -8,6 +8,7 @@ export {
   type ConfirmationMailContext,
   type MailEvent,
   type MailTemplates,
+  type ReceiptMailContext,
   type RegistrationMailContext,
   type RenderedMail,
 } from './templates';

@@ -13,11 +13,20 @@ import type {
   PublicEvent,
   PublicProgramItem,
 } from '@trefaro/shared-models';
-import { MAX_PROGRAM_ITEMS, formatEventPeriod } from '@trefaro/shared-models';
+import {
+  MAX_PROGRAM_ITEMS,
+  MAX_PROGRAM_ITEM_CAPACITY,
+  formatEventPeriod,
+} from '@trefaro/shared-models';
 import { EventsService } from '../events';
+import {
+  PROGRAM_ITEM_SIGNUP_REPOSITORY,
+  type ProgramItemSignupRepository,
+} from './ports/program-item-signup.repository';
 import {
   PROGRAM_ITEM_REPOSITORY,
   type NewProgramItem,
+  type ProgramItemChanges,
   type ProgramItemRecord,
   type ProgramItemRepository,
 } from './ports/program-item.repository';
@@ -47,12 +56,27 @@ const GONE = 'This programme item no longer exists.';
  *    refusing that shift would be a dead end, since the way out of it is to
  *    move the items. So an item already outside stays editable; a period that is
  *    being *set* has to land inside.
+ * 4. **A capacity needs sign-up** (AP 9). Setting one without switching sign-up
+ *    on is refused rather than ignored, and switching sign-up off drops the
+ *    limit — a number that nothing enforces is worse than no number, because it
+ *    reads like one that is enforced. The sign-ups themselves survive both:
+ *    turning the flag off closes the session for new seats and leaves the people
+ *    who already have one (and their way of giving it up).
+ *
+ * Every list carries the seat counts, fetched in one query for the whole
+ * programme. Cheap enough to be unconditional, and the alternative — a second
+ * request the participant client would have to make — is how a landing page ends
+ * up rendering a programme without its "full" markers.
  */
 @Injectable()
 export class ProgramService {
   constructor(
     @Inject(PROGRAM_ITEM_REPOSITORY)
     private readonly items: ProgramItemRepository,
+    // Counts only. Who signed up is the sign-up service's business; a list of
+    // sessions never needs a participant row (FR 3.10).
+    @Inject(PROGRAM_ITEM_SIGNUP_REPOSITORY)
+    private readonly signups: ProgramItemSignupRepository,
     private readonly events: EventsService,
   ) {}
 
@@ -61,7 +85,9 @@ export class ProgramService {
     // Resolving the event first turns an unknown id into a 404 rather than an
     // empty list, which would read as "this event has no programme".
     await this.events.getForOrganizer(eventId);
-    return (await this.items.findByEvent(eventId)).map(toProgramItem);
+    const items = await this.items.findByEvent(eventId);
+    const counts = await this.countsFor(items);
+    return items.map((item) => toProgramItem(item, counts));
   }
 
   /**
@@ -75,7 +101,25 @@ export class ProgramService {
     eventSlug: string,
   ): Promise<readonly PublicProgramItem[]> {
     const event = await this.events.getPublic(seriesSlug, eventSlug);
-    return (await this.items.findByEvent(event.id)).map(toPublicProgramItem);
+    const items = await this.items.findByEvent(event.id);
+    const counts = await this.countsFor(items);
+    return items.map((item) => toPublicProgramItem(item, counts));
+  }
+
+  /**
+   * The programme of one event, without a visibility check of its own.
+   *
+   * For flows a signed link already authorizes — the participant self-service of
+   * E11. Deliberately not through the public lookup: an organizer who unpublishes
+   * an event while confirmations are in people's inboxes must not turn a
+   * self-service link into an error, exactly as {@link EventsService.locate} does
+   * not. The caller has established the right to see this event; what it gets is
+   * the participant's shape of the programme, nothing more.
+   */
+  async listForEvent(eventId: string): Promise<readonly PublicProgramItem[]> {
+    const items = await this.items.findByEvent(eventId);
+    const counts = await this.countsFor(items);
+    return items.map((item) => toPublicProgramItem(item, counts));
   }
 
   async create(eventId: string, input: ProgramItemInput): Promise<ProgramItem> {
@@ -92,14 +136,18 @@ export class ProgramService {
     const period = this.period(input.startsAt, input.endsAt);
     this.assertWithinEvent(event, period);
 
+    const registrationEnabled = input.registrationEnabled ?? false;
     const item: NewProgramItem = {
       eventId,
       title: this.title(input.title),
       description: optional(input.description),
       speaker: optional(input.speaker),
       ...period,
+      registrationEnabled,
+      capacity: this.capacity(input.capacity ?? null, registrationEnabled),
     };
-    return toProgramItem(await this.items.create(item));
+    // A new session has no sign-ups, so no count query for a known zero.
+    return toProgramItem(await this.items.create(item), new Map());
   }
 
   /**
@@ -141,19 +189,22 @@ export class ProgramService {
         ? {}
         : { speaker: optional(change.speaker) }),
       ...(period ?? {}),
+      ...this.signupChanges(existing, change),
     });
     if (!updated) throw new NotFoundException(GONE);
-    return toProgramItem(updated);
+    return toProgramItem(updated, await this.countsFor([updated]));
   }
 
   /**
    * Removes a programme item.
    *
    * No archiving and no confirmation rule of its own (unlike E14 for an event):
-   * a programme item is a plan, not somebody's statement of intent. From AP 9
-   * the sign-ups of an item go with it through the database cascade — which is
-   * why that package, not this one, is where the question of what a sign-up is
-   * worth gets asked.
+   * a programme item is a plan, not somebody's statement of intent. Its
+   * sign-ups go with it through the database cascade, and that is the right way
+   * round — a workshop that is not happening has no attendees, and refusing to
+   * delete a session people signed up for would leave an organizer who cancelled
+   * it with no way to say so. What the organizer's view owes them instead is the
+   * number: the confirmation names how many seats are about to be released.
    */
   async delete(id: string): Promise<void> {
     if (!(await this.items.delete(id))) throw new NotFoundException(GONE);
@@ -163,6 +214,74 @@ export class ProgramService {
     const found = await this.items.findById(id);
     if (!found) throw new NotFoundException(GONE);
     return found;
+  }
+
+  /** Seat counts for a whole programme, in one query. */
+  private async countsFor(
+    items: readonly ProgramItemRecord[],
+  ): Promise<ReadonlyMap<string, number>> {
+    return this.signups.countByItems(items.map((item) => item.id));
+  }
+
+  /**
+   * What a change does to sign-up and capacity.
+   *
+   * The one rule with a side effect: switching sign-up off drops the limit with
+   * it. Leaving a capacity behind would be a limit on a session that does not
+   * ask who is coming — which the database refuses outright, and rightly so.
+   */
+  private signupChanges(
+    existing: ProgramItemRecord,
+    change: ProgramItemChange,
+  ): ProgramItemChanges {
+    const enabled = change.registrationEnabled ?? existing.registrationEnabled;
+    if (!enabled) {
+      // `undefined` would leave the stored capacity in place; `null` is the
+      // change that has to be written.
+      return change.registrationEnabled === undefined &&
+        change.capacity === undefined
+        ? {}
+        : { registrationEnabled: false, capacity: null };
+    }
+
+    const capacity =
+      change.capacity === undefined ? existing.capacity : change.capacity;
+    return {
+      registrationEnabled: true,
+      capacity: this.capacity(capacity, true),
+    };
+  }
+
+  /**
+   * A capacity, checked against the flag that gives it meaning.
+   *
+   * Also checked here and not only in the DTO: the rule is a product decision,
+   * and a second entry point — a plug-in, an import — must not be able to write
+   * a limit nothing enforces.
+   */
+  private capacity(
+    capacity: number | null,
+    registrationEnabled: boolean,
+  ): number | null {
+    if (capacity === null) return null;
+    if (!registrationEnabled) {
+      throw new BadRequestException(
+        'A capacity only means something where sign-up is switched on. Enable ' +
+          'sign-up for this session, or leave the capacity empty.',
+      );
+    }
+    if (!Number.isInteger(capacity) || capacity < 1) {
+      throw new BadRequestException(
+        'A capacity is a whole number of seats, at least one.',
+      );
+    }
+    if (capacity > MAX_PROGRAM_ITEM_CAPACITY) {
+      throw new BadRequestException(
+        `A capacity of more than ${MAX_PROGRAM_ITEM_CAPACITY} is not a limit ` +
+          'anybody meant to set.',
+      );
+    }
+    return capacity;
   }
 
   /**
@@ -228,7 +347,14 @@ function optional(value: string | null | undefined): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function toPublicProgramItem(record: ProgramItemRecord): PublicProgramItem {
+/**
+ * @param counts sign-ups per item id; a session without any is simply absent,
+ * which is why the default is spelled out here rather than in the query.
+ */
+function toPublicProgramItem(
+  record: ProgramItemRecord,
+  counts: ReadonlyMap<string, number>,
+): PublicProgramItem {
   return {
     id: record.id,
     title: record.title,
@@ -236,12 +362,18 @@ function toPublicProgramItem(record: ProgramItemRecord): PublicProgramItem {
     speaker: record.speaker,
     startsAt: record.startsAt.toISOString(),
     endsAt: record.endsAt.toISOString(),
+    registrationEnabled: record.registrationEnabled,
+    capacity: record.capacity,
+    signupCount: counts.get(record.id) ?? 0,
   };
 }
 
-function toProgramItem(record: ProgramItemRecord): ProgramItem {
+function toProgramItem(
+  record: ProgramItemRecord,
+  counts: ReadonlyMap<string, number>,
+): ProgramItem {
   return {
-    ...toPublicProgramItem(record),
+    ...toPublicProgramItem(record, counts),
     eventId: record.eventId,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),

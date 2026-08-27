@@ -34,11 +34,28 @@ export interface ConfirmationMailContext extends RegistrationMailContext {
   readonly confirmUrl: string;
 }
 
+/**
+ * The receipt, which is also where self-service begins (E11).
+ *
+ * The personal link is only in this message and not in the confirmation
+ * request: before the address is confirmed there is nothing to self-serve, and a
+ * link that granted sign-ups before the double opt-in would make the opt-in
+ * decorative.
+ */
+export interface ReceiptMailContext extends RegistrationMailContext {
+  /**
+   * "My registration" for this one registration, valid until thirty days after
+   * the event (E11). Re-issued whenever this mail is sent again, so "I lost the
+   * link" is answered by submitting the registration form once more.
+   */
+  readonly selfServiceUrl: string;
+}
+
 export interface MailTemplates {
   /** BCP 47 tag this set is written in, so a caller can log what it sent. */
   readonly locale: string;
   /** Asks the participant to confirm their address (double opt-in). */
   registrationConfirmation(context: ConfirmationMailContext): RenderedMail;
-  /** The receipt afterwards: confirmed, and here is what you signed up for. */
-  registrationConfirmed(context: RegistrationMailContext): RenderedMail;
+  /** The receipt afterwards: confirmed, what you signed up for, and the link. */
+  registrationConfirmed(context: ReceiptMailContext): RenderedMail;
 }

@@ -221,15 +221,28 @@ attachment             (id uuid pk, owner_type [registration|…], owner_id, fil
 
 program_item           (id uuid pk, event_id fk→event ON DELETE CASCADE, title,
                         description?, speaker?, starts_at, ends_at,
-                        created_at, updated_at)
+                        registration_enabled, capacity?, created_at, updated_at)
                         ← ohne room_id (F21) und ohne sort (F40): die Uhr ist die
                           Reihenfolge, Gleichstand bricht (starts_at, ends_at, id)
-                        ← registration_enabled und capacity kommen mit AP 9, zusammen
-                          mit program_item_signup, das ihnen eine Bedeutung gibt
                         ← CHK_program_item_period: ends_at > starts_at, strikt
+                        ← CHK_program_item_capacity: capacity IS NULL OR capacity >= 1
+                        ← CHK_program_item_capacity_needs_signup: eine Kapazität ohne
+                          registration_enabled ist ausgeschlossen (F42)
 program_item_signup    (id uuid pk, program_item_id fk→program_item ON DELETE CASCADE,
                         registration_id fk→registration ON DELETE CASCADE, created_at)
                         unique (program_item_id, registration_id)
+                        ← beide Kaskaden sind der Zweck des Paars: eine gelöschte Session
+                          gibt ihre Plätze frei, eine gelöschte Anmeldung nimmt die Plätze
+                          dieses Menschen mit
+                        ← IDX_program_item_signup_registration für „was habe ich belegt"
+plugin_room_planning_program_item_room
+                        (program_item_id fk→program_item ON DELETE CASCADE,
+                         room_id fk→plugin_room_planning_room ON DELETE CASCADE,
+                         created_at, pk (program_item_id, room_id))
+                        ← plug-in-eigen (F21), Migration des Raumplanungs-Plug-ins mit
+                          Zeitstempel hinter der Kernmigration von program_item
+                        ← dieselbe Migration zieht den fehlenden Fremdschlüssel auf
+                          plugin_room_planning_room.event_id nach (F46)
 media_link             (id uuid pk, event_id fk→event ON DELETE CASCADE,
                         program_item_id? fk→program_item ON DELETE CASCADE, title, url,
                         kind [stream|recording|material], sort)
@@ -260,34 +273,37 @@ Zwei Regeln, die sich aus Phase 0 ergeben und hier greifen:
 `/api/user/**` ist teilnehmendenseitig und in Phase 1 durchgehend
 unauthentifiziert; `/api/admin/**` verlangt eine Sitzung (E16).
 
-| Methode + Pfad                                          | Zweck                                                        | AP  |
-| ------------------------------------------------------- | ------------------------------------------------------------ | --- |
-| `POST /api/admin/auth/login` · `logout` · `GET auth/me` | UC 01                                                        | 1   |
-| `GET/POST/DELETE /api/admin/admins`                     | FR 1.2                                                       | 1   |
-| `GET/POST/PATCH/DELETE /api/admin/series[/:id]`         | FR 2.1, 2.2                                                  | 2   |
-| `GET/POST/PATCH/DELETE /api/admin/events[/:id]`         | FR 3.1, 3.2                                                  | 3   |
-| `GET /api/admin/events/:id/dashboard`                   | FR 3.8                                                       | 10  |
-| `GET/POST /api/admin/events/:id/registration-fields`    | F12, Formular je Event                                       | 6   |
-| `PUT /api/admin/events/:id/registration-fields/order`   | Reihenfolge als Ganzes (F35)                                 | 6   |
-| `PATCH/DELETE /api/admin/registration-fields/:id`       | Frage ändern, entfernen (F34)                                | 6   |
-| `GET /api/admin/events/:id/registrations`               | FR 3.3, mit Suche und Paginierung                            | 5   |
-| `GET /api/admin/events/:id/registrations/statistics`    | Wochen-Anmeldegrafik                                         | 5   |
-| `GET/PATCH/DELETE /api/admin/registrations/:id`         | Detail, Stornieren, Löschen (E14)                            | 5   |
-| `GET /api/admin/attachments/:id`                        | Anhang herunterladen (E9)                                    | 7   |
-| `GET/POST /api/admin/events/:id/program-items`          | FR 3.7, Programm je Event                                    | 8   |
-| `PATCH/DELETE /api/admin/program-items/:id`             | Session ändern, entfernen (F40)                              | 8   |
-| `GET /api/admin/program-items/:id/signups`              | Auslastung, FR 3.10                                          | 9   |
-| `… /api/admin/events/:id/media-links`                   | FR 3.6, F10                                                  | 11  |
-| `GET /api/admin/series/:id/former-participants`         | FR 2.4                                                       | 12  |
-| `POST /api/admin/series/:id/invitations`                | FR 2.4                                                       | 12  |
-| `GET /api/user/series[/:slug]`                          | Startseite, Reihenseite                                      | 2   |
-| `GET /api/user/series/:reihe/events[/:event]`           | Event-Landingpage                                            | 3   |
-| `GET /api/user/series/:reihe/events/:event/program`     | Programmplan                                                 | 8   |
-| `… /events/:event/registration-fields`                  | Feldsatz des Formulars                                       | 6   |
-| `POST /… /events/:event/registrations`                  | FR 3.5, gedrosselt; ab AP 7 auch `multipart/form-data` (F39) | 4   |
-| `POST /api/user/registrations/confirm`                  | Double-Opt-In (E5b)                                          | 4   |
-| `GET /api/user/registrations/me`                        | „Meine Anmeldung" (E11)                                      | 9   |
-| `PUT/DELETE /api/user/program-items/:id/signup`         | FR 3.10 (E11)                                                | 9   |
+| Methode + Pfad                                                       | Zweck                                                        | AP  |
+| -------------------------------------------------------------------- | ------------------------------------------------------------ | --- |
+| `POST /api/admin/auth/login` · `logout` · `GET auth/me`              | UC 01                                                        | 1   |
+| `GET/POST/DELETE /api/admin/admins`                                  | FR 1.2                                                       | 1   |
+| `GET/POST/PATCH/DELETE /api/admin/series[/:id]`                      | FR 2.1, 2.2                                                  | 2   |
+| `GET/POST/PATCH/DELETE /api/admin/events[/:id]`                      | FR 3.1, 3.2                                                  | 3   |
+| `GET /api/admin/events/:id/dashboard`                                | FR 3.8                                                       | 10  |
+| `GET/POST /api/admin/events/:id/registration-fields`                 | F12, Formular je Event                                       | 6   |
+| `PUT /api/admin/events/:id/registration-fields/order`                | Reihenfolge als Ganzes (F35)                                 | 6   |
+| `PATCH/DELETE /api/admin/registration-fields/:id`                    | Frage ändern, entfernen (F34)                                | 6   |
+| `GET /api/admin/events/:id/registrations`                            | FR 3.3, mit Suche und Paginierung                            | 5   |
+| `GET /api/admin/events/:id/registrations/statistics`                 | Wochen-Anmeldegrafik                                         | 5   |
+| `GET/PATCH/DELETE /api/admin/registrations/:id`                      | Detail, Stornieren, Löschen (E14)                            | 5   |
+| `GET /api/admin/attachments/:id`                                     | Anhang herunterladen (E9)                                    | 7   |
+| `GET/POST /api/admin/events/:id/program-items`                       | FR 3.7, Programm je Event                                    | 8   |
+| `PATCH/DELETE /api/admin/program-items/:id`                          | Session ändern, entfernen (F40)                              | 8   |
+| `GET /api/admin/program-items/:id/signups`                           | Auslastung mit Namen und Adressen, FR 3.10                   | 9   |
+| `… /api/admin/events/:id/media-links`                                | FR 3.6, F10                                                  | 11  |
+| `GET /api/admin/series/:id/former-participants`                      | FR 2.4                                                       | 12  |
+| `POST /api/admin/series/:id/invitations`                             | FR 2.4                                                       | 12  |
+| `GET /api/user/series[/:slug]`                                       | Startseite, Reihenseite                                      | 2   |
+| `GET /api/user/series/:reihe/events[/:event]`                        | Event-Landingpage                                            | 3   |
+| `GET /api/user/series/:reihe/events/:event/program`                  | Programmplan                                                 | 8   |
+| `… /events/:event/registration-fields`                               | Feldsatz des Formulars                                       | 6   |
+| `POST /… /events/:event/registrations`                               | FR 3.5, gedrosselt; ab AP 7 auch `multipart/form-data` (F39) | 4   |
+| `POST /api/user/registrations/confirm`                               | Double-Opt-In (E5b)                                          | 4   |
+| `GET /api/user/registrations/me?token=…`                             | „Meine Anmeldung" (E11)                                      | 9   |
+| `POST /api/user/registrations/me/cancellation`                       | Selbst absagen (E11, E14)                                    | 9   |
+| `PUT/DELETE /api/user/program-items/:id/signup`                      | FR 3.10 (E11), Token im Rumpf (F44)                          | 9   |
+| `… /api/admin/plugins/room-planning/program-items/:id/rooms/:roomId` | Raumzuordnung, `PUT`/`DELETE` (F21)                          | 9   |
+| `GET /api/admin/plugins/room-planning/rooms/:id/schedule`            | Belegung eines Raums mit Anmeldezahlen (F45)                 | 9   |
 
 Die öffentlichen Pfade sind geschachtelt, weil ein Slug je Reihe eindeutig ist
 und nicht je Instanz (E7, F28) — die Zeilen oben nennen sie in der Form, in der
@@ -1263,6 +1279,111 @@ Events) und die Timeline auf der Landingpage.
   Landingpage.** Die Mockups nennen eine Kachel „Programmplan" in der
   Event-Detailansicht; die Kacheln gehören zum Modul-/Plug-in-Einhängepunkt und
   damit zu Phase 2. Steht in `todo.md`.
+
+### AP 9 — Programmpunkt-Anmeldung, Lese-Schnittstelle, F21 (erledigt)
+
+Stand 27.08.2026. Drei Dinge, die zusammengehören, und jetzt zusammen da sind:
+ein Programmpunkt kann **fragen, wer kommt** (FR 3.10), ein Teilnehmender kann
+das **ohne Konto** beantworten (E11), und das Raumplanungs-Plug-in bekommt seine
+**eigene Raumzuordnung** samt einem schmalen Blick auf die Anmeldezahlen (F21,
+E12). Damit ist die Kernschleife des Eventmanagements nicht mehr nur „anmelden
+und gezählt werden", sondern „sich für den Workshop mit zwölf Stühlen
+eintragen" — und der Veranstalter sieht, wer drin ist.
+
+Belegt: 560 Unit-Tests (Server 408, `admin-client` 44, `shared-models` 45,
+`shared-http` 14, `shared-theming` 14, `shared-plugins` 13, `user-client` 11,
+`shared-config` 8, `plugin-room-planning` 3), 203 API-Vertragstests (+27), 123
+Veranstalter-Browsertests (+12), 102 Nutzer-Browsertests (+12). Beide neuen
+Migrationen liefen gegen die echte Datenbank; ihre `down`-Richtung wurde in einer
+Transaktion mitgeprüft und danach zurückgerollt — der Spaltenvergleich über
+`event`, `registration` und `program_item` ergab null Unterschiede. Die drei neuen
+Einschränkungen sind mit den Fällen belegt, die sie ablehnen sollen (Kapazität
+ohne Anmeldung, null Plätze, derselbe Mensch zweimal), plus die Kaskade beim
+Löschen einer Anmeldung. `tools/spike-verification/verify-plugin-toggle.mjs`
+prüft die Plug-in-Seite gegen eine laufende Instanz: 25 Checks, alle grün.
+
+**Die Abnahmekriterien.** Fünf Stück, in vier Schichten — deshalb wird jedes da
+geprüft, wo es durchgesetzt ist:
+
+| Kriterium                                                  | Wo es durchgesetzt ist                                                                                                               | Wo es bewiesen ist                                                                                                                                                   |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ein voller Programmpunkt nimmt keine weitere Anmeldung     | `TypeormProgramItemSignupRepository.signUp` — zählen und einfügen in **einer** Transaktion, `FOR UPDATE` auf der Programmpunkt-Zeile | `apps/server-e2e/src/api/program-signups.spec.ts` („takes no further sign-up once its seats are gone") gegen die echte DB; die Regel selbst zusätzlich als Unit-Test |
+| Löschen eines Programmpunkts nimmt seine Raumzuordnung mit | `FK_plugin_room_planning_program_item_room_item … ON DELETE CASCADE` in der Plug-in-Migration                                        | `verify-plugin-toggle.mjs` („deleting a session takes its room assignment with it"), gegen die laufende Instanz                                                      |
+| Ein Raum für ein unbekanntes Event ist nicht anlegbar      | `FK_plugin_room_planning_room_event`, in AP 9 nachgezogen (F46); das Plug-in übersetzt den Verstoß in ein 404                        | `verify-plugin-toggle.mjs` („a room for an event that does not exist is refused") und `room-planning.service.spec.ts`                                                |
+| `down` des Plug-ins lässt das Kernschema unberührt         | Die Plug-in-Migration legt nur eigene Tabellen an und nimmt nur sie zurück                                                           | Direkt gegen die DB: `down` in einer Transaktion, Spaltenvergleich über `event`, `registration`, `program_item` → 0 Unterschiede, danach `ROLLBACK`                  |
+| Der Lese-Port funktioniert ohne ORM-Import im Plug-in      | `PluginProgramReads` im Plug-in-Vertrag, gebunden von `PluginHostModule`; die ESLint-Layer-Regeln halten es                          | `room-planning.service.spec.ts` (Fake gegen das Interface, keine DB) und `verify-plugin-toggle.mjs` („the room schedule reads the session through the host port")    |
+
+**Die Entscheidungen dieses Pakets** stehen als **F42–F46** im
+Entscheidungsprotokoll. Kurz, weil sie die Form des Pakets erklären:
+
+- **F42** — Anmeldung ist je Programmpunkt und standardmäßig aus; eine Kapazität
+  ohne Anmeldung wird abgelehnt, nicht ignoriert. Abschalten nimmt die Grenze,
+  nie die Plätze.
+- **F43** — Die Platzgrenze entscheidet die Datenbank in einer Anweisung. Der
+  Port nimmt die Kapazität mit und antwortet mit einem Ergebnis; die Regel bleibt
+  in der Geschäftslogik, die Unteilbarkeit in der Datenzugriffsschicht.
+- **F44** — Selbstbedienung über den signierten Link: Token beim Lesen in der
+  Query, beim Ändern im Rumpf. Nur eine bestätigte Anmeldung; Absagen nimmt alle
+  Plätze mit.
+- **F45** — Das Plug-in liest Anmeldezahlen über einen schmalen, versionierten
+  Port (Plug-in-API **1.1.0**), nie aus `program_item_signup`.
+- **F46** — Der fehlende Fremdschlüssel auf `plugin_room_planning_room.event_id`
+  ist nachgezogen; verwaiste Räume löscht dieselbe Migration.
+
+**Was entstanden ist.** Im Kern: zwei Spalten an `program_item`, die Tabelle
+`program_item_signup`, ein zweiter Port neben dem Programm-Port (`countByItems`,
+`signUp`, `signOff`, `findParticipants`), `ProgramSignupsService` mit den sechs
+Regeln der Anmeldung, `GET /api/admin/program-items/:id/signups` mit Namen **und
+Adressen** in der Zeile (die Usability-Korrektur der Thesis, an einer weiteren
+Stelle). Neu als eigenes Modul: `business/self-service` — die Naht zwischen einem
+signierten Link und einer Anmeldung, drei Endpunkte, keine eigene Regel außer
+„welcher Link gilt". Die Bestätigungs-Quittung trägt den persönlichen Link, in
+beiden Sprachen. Im Vertrag: `PluginProgramReads` plus das globale
+`PluginHostModule`, das ihn bereitstellt, damit ein Plug-in weiterhin nur aus
+`plugin-api` importiert. Im Plug-in: Join-Tabelle, Port, Repository, Zuordnen und
+Lösen, und die Belegung eines Raums mit Anmeldezahlen daneben — **ohne** Urteil
+darüber, das ist Phase 4. In den Clients: Anmelde-Schalter, Platzzahl und
+Auslastung im Programm-Editor, „Meine Anmeldung" im Nutzer-Client, und die
+Landingpage sagt bei begrenzten Sessions, wie viele Plätze frei sind.
+
+**Was anders lief als geplant:**
+
+- **`ProgramItemLoad` musste nach `shared-models`.** Erst lag der Typ in der
+  Geschäftslogik des Servers — wo er hingehört, solange nur der Server ihn liest.
+  Sobald der Admin-Client die Auslastung anzeigt, ist er ein Payload-Typ, und
+  Payload-Typen liegen in `libs/shared-models`, sonst bricht ein Vertragsbruch
+  einen Request statt den Build.
+- **Der Programm-Service brauchte einen zweiten Port, nicht ein zweites Modul.**
+  Jede Liste trägt jetzt Anmeldezahlen — eine Abfrage für das ganze Programm.
+  Die Alternative (der Client fragt nach) hätte eine Landingpage erzeugt, die ein
+  Programm ohne „voll"-Markierung rendert.
+- **Ein `<input type="number">` schreibt eine Zahl in ein `string`-Control.**
+  Angulars `NumberValueAccessor` konvertiert, `tsc` sieht davon nichts: das
+  Hinzufügen-Formular schickte die Kapazität durch eine Funktion, die `.trim()`
+  aufrief, und starb still. Gefunden hat es der Browsertest, nicht der Compiler.
+- **Die Selbstbedienung liest das Programm über die Event-Id**, nicht über die
+  öffentliche Adresse. Sonst wäre ein Link tot, sobald der Veranstalter das Event
+  auf Entwurf zurücksetzt — dieselbe Überlegung, aus der `EventsService.locate`
+  entstanden ist.
+- **Absagen läuft über `ParticipantsService.setStatus`.** Die
+  Statusübergänge aus E14 sollen an einer Stelle liegen: ein Veranstalter, der
+  storniert, und ein Teilnehmender, der absagt, dürfen nicht zwei verschiedene
+  Dinge bedeuten.
+- **`verify-plugin-toggle.mjs` war seit AP 1 kaputt** und niemandem aufgefallen:
+  das Skript rief `/api/admin/**` ohne Sitzung auf und hätte überall 401
+  bekommen. Mit AP 9 wäre es zusätzlich am neuen Fremdschlüssel gescheitert. Es
+  ist jetzt aktuell, meldet sich an, legt sich eine echte Reihe samt Event an und
+  prüft die F21-Kriterien mit.
+- **Das Limit des Bestätigungs-Endpunkts steht jetzt auf 60 je fünf Minuten**
+  (vorher 30), gleichauf mit dem Anmelde-Endpunkt. Begründung: der Endpunkt ist
+  idempotent, ändert nach dem ersten Aufruf nichts, und gegen das Erraten eines
+  HMAC sind 30 und 60 gleich hoffnungslos — getroffen hat das alte Limit ein
+  Büro hinter einer Adresse und die Testsuiten. Steht als zu bestätigender Punkt
+  in `todo.md`, wie das Anmelde-Limit aus AP 7.
+- **Die Teilnehmer-Browsersuite antwortet die Formularfragen aus ihren
+  Definitionen**, statt sie zu kennen: das Fixture-Event hat seit AP 6/7 ein
+  Pflicht-Auswahlfeld, ein Pflicht-Ankreuzfeld und ein Pflicht-Dateifeld, und ein
+  Test, der das fest verdrahtet, bricht beim nächsten Feld.
 
 ## Definition of Done für Phase 1
 

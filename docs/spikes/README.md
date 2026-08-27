@@ -32,7 +32,7 @@ node dist/apps/server/main.js
 
 # In a second shell
 node tools/spike-verification/verify-api.mjs
-node tools/spike-verification/verify-plugin-toggle.mjs
+node tools/spike-verification/verify-plugin-toggle.mjs   # needs the admin credentials
 node tools/spike-verification/verify-socket.mjs
 node tools/spike-verification/verify-push.mjs   # needs VAPID keys in .env
 ```

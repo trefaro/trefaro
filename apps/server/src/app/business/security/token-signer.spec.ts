@@ -1,8 +1,9 @@
 import type { TrefaroEnv } from '../../core/config/env';
 import {
   CONFIRMATION_TOKEN_TTL_MS,
+  SELF_SERVICE_GRACE_MS,
   TokenSigner,
-  type TokenPurpose,
+  selfServiceTokenTtlMs,
 } from './token-signer';
 
 const SUBJECT = '11111111-2222-3333-4444-555555555555';
@@ -81,12 +82,19 @@ describe('TokenSigner', () => {
   it('rejects a token issued for another purpose', () => {
     const token = signer.sign('registration-confirmation', SUBJECT, 60_000);
 
-    // Cast because there is only one purpose today; the check is what makes
-    // adding the self-service link of AP 9 safe, so it is tested before it has
-    // a second caller.
-    expect(
-      signer.verify('registration-self-service' as TokenPurpose, token),
-    ).toBeNull();
+    // The rule that keeps a confirmation link from being replayed as a
+    // self-service link (E11): the two grant different things, and the purpose
+    // is inside the signature rather than beside it.
+    expect(signer.verify('registration-self-service', token)).toBeNull();
+  });
+
+  it('does not accept a self-service token as a confirmation either', () => {
+    const token = signer.sign('registration-self-service', SUBJECT, 60_000);
+
+    // Both directions, because only one of them would be the dangerous one and
+    // a test that pins the harmless direction proves nothing.
+    expect(signer.verify('registration-confirmation', token)).toBeNull();
+    expect(signer.verify('registration-self-service', token)).toBe(SUBJECT);
   });
 
   it('rejects an expired token', () => {
@@ -99,5 +107,33 @@ describe('TokenSigner', () => {
     for (const value of ['', '.', 'no-dot', 'a.b', '$$$.$$$']) {
       expect(signer.verify('registration-confirmation', value)).toBeNull();
     }
+  });
+});
+
+describe('selfServiceTokenTtlMs', () => {
+  it('reaches thirty days past the end of the event (E11)', () => {
+    const endsAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+
+    const ttl = selfServiceTokenTtlMs(endsAt);
+
+    // Ten days until the event ends plus the grace period, give or take the
+    // milliseconds this assertion took.
+    expect(ttl).toBeGreaterThan(SELF_SERVICE_GRACE_MS + 9 * 86_400_000);
+    expect(ttl).toBeLessThanOrEqual(SELF_SERVICE_GRACE_MS + 10 * 86_400_000);
+  });
+
+  it('still grants the full grace period for an event long past', () => {
+    // Somebody who confirms on the last day gets a link that works. What they
+    // may still change is decided by the rules on each action, not by the
+    // lifetime of the token.
+    expect(selfServiceTokenTtlMs('2020-01-01T00:00:00.000Z')).toBe(
+      SELF_SERVICE_GRACE_MS,
+    );
+  });
+
+  it('falls back to the grace period for a date it cannot read', () => {
+    expect(selfServiceTokenTtlMs('not a date')).toBeGreaterThanOrEqual(
+      SELF_SERVICE_GRACE_MS,
+    );
   });
 });

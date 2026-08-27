@@ -14,14 +14,18 @@ import type {
   RegistrationConfirmation,
   RegistrationInput,
 } from '@trefaro/shared-models';
-import { hasEnded } from '@trefaro/shared-models';
+import { SELF_SERVICE_PATH, hasEnded } from '@trefaro/shared-models';
 import type { TrefaroEnv } from '../../core/config/env';
 import { ENV } from '../../core/config/env.module';
 import { AttachmentsService, type UploadedFile } from '../attachments';
 import { EventsService } from '../events';
 import { MailDeliveryError, MailService } from '../mail';
 import type { MailEvent, RegistrationMailContext } from '../mail';
-import { CONFIRMATION_TOKEN_TTL_MS, TokenSigner } from '../security';
+import {
+  CONFIRMATION_TOKEN_TTL_MS,
+  TokenSigner,
+  selfServiceTokenTtlMs,
+} from '../security';
 import { RegistrationFieldsService } from './registration-fields.service';
 import {
   REGISTRATION_REPOSITORY,
@@ -46,7 +50,11 @@ const CONFIRMATION_PATH = '/registrations/confirm';
  *    confirms nothing, and the participant gets an actual answer (E5b).
  * 3. **A second registration attempt never creates a second row.** The unique
  *    index decides that (E10); this service reacts by sending the mail that
- *    fits the state the registration is already in.
+ *    fits the state the registration is already in — which, for an address that
+ *    is already confirmed, is the receipt with a fresh self-service link (E11).
+ *    That is deliberate and it is the whole recovery path for "I lost my
+ *    personal link": the token is signed rather than stored, so producing a
+ *    working one again costs nothing and needs nobody.
  */
 @Injectable()
 export class RegistrationService {
@@ -261,11 +269,20 @@ export class RegistrationService {
     event: PublicEvent,
     seriesSlug: string,
   ): Promise<void> {
+    // Minted fresh on every receipt (E11): the token is signed rather than
+    // stored, so re-sending this mail is how somebody who lost their personal
+    // link gets a working one back — without an organizer being involved.
+    const token = this.tokens.sign(
+      'registration-self-service',
+      registration.id,
+      selfServiceTokenTtlMs(event.endsAt),
+    );
+
     try {
-      await this.mail.sendRegistrationConfirmed(
-        registration.email,
-        this.context(registration, event, seriesSlug),
-      );
+      await this.mail.sendRegistrationConfirmed(registration.email, {
+        ...this.context(registration, event, seriesSlug),
+        selfServiceUrl: `${this.clientUrl(SELF_SERVICE_PATH)}?token=${encodeURIComponent(token)}`,
+      });
     } catch (error: unknown) {
       if (!(error instanceof MailDeliveryError)) throw error;
       this.logger.warn(

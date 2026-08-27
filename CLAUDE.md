@@ -115,9 +115,12 @@ Registrierung mit Double-Opt-In und Mail-Modul · **AP 5** Teilnehmerübersicht
 → damit ist **M1** erreicht (Kernschleife lauffähig, erste Feedbackrunde mit
 Democracy International fällig) · **AP 6** Feld-Baukasten (Text, Auswahl,
 Ankreuzfeld) · **AP 7** Feldtyp Datei-Upload, `attachment`, Download nur für
-Admins · **AP 8** Programmplanung, `program_item`, Timeline auf der Landingpage.
-Als nächstes AP 9 (Programmpunkt-Anmeldung, Lese-Schnittstelle im
-Plug-in-Vertrag, F21).
+Admins · **AP 8** Programmplanung, `program_item`, Timeline auf der Landingpage
+· **AP 9** Programmpunkt-Anmeldung (`program_item_signup`), Selbstbedienung über
+den signierten Link (`business/self-service`), Lese-Port im Plug-in-Vertrag
+(Plug-in-API **1.1.0**) und F21 (plug-in-eigene Raumzuordnung + der nachgezogene
+Fremdschlüssel auf `plugin_room_planning_room.event_id`). Als nächstes AP 10
+(Event-Dashboard, FR 3.8).
 
 Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
 
@@ -208,6 +211,36 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
 - **Keine Backticks in Angular-Template-Kommentaren.** Sie beenden das
   Template-Literal, und der Compiler meldet die Folgefehler an ganz anderen
   Stellen.
+- **Anmeldung ist je Programmpunkt, aus, und eine Kapazität braucht sie** (F42).
+  `capacity` ohne `registration_enabled` ist ein 400 _und_ ein `CHECK` —
+  eine Grenze, die nichts durchsetzt, sieht aus wie eine, die durchgesetzt wird.
+  Abschalten setzt die Kapazität zurück und löscht **keine** Anmeldungen; abmelden
+  bleibt danach möglich, sonst wäre die Liste falsch statt kürzer.
+- **Die Platzgrenze entscheidet die Datenbank** (F43), in einer Anweisung, unter
+  `FOR UPDATE` auf der Programmpunkt-Zeile. Der Port nimmt die Kapazität mit und
+  antwortet mit `created`/`already-signed-up`/`full`: die Regel bleibt in der
+  Geschäftslogik, die Unteilbarkeit in der Datenzugriffsschicht. Wer eine zweite
+  Grenze braucht, zieht denselben Schnitt — nicht „erst zählen, dann schreiben".
+- **Ein Platz existiert oder nicht.** `program_item_signup` hat keine
+  Statusspalte; abmelden löscht die Zeile. Abmelden ist **immer** erlaubt, auch
+  nach dem Abschalten und nach Beginn — eine Regel, die Menschen in einer Liste
+  festhält, macht die Liste falsch.
+- **Das Selbstbedienungs-Token steht beim Lesen in der Query, beim Ändern im
+  Rumpf** (F44). Lesen ist, was der Link in der Mail tut; ändern darf kein
+  Linkvorschau-Dienst können (dieselbe Begründung wie E5b). Nur eine
+  **bestätigte** Anmeldung hat eine Selbstbedienungsseite.
+- **Selbstbedienung liest über die Event-Id, nicht über die öffentliche
+  Adresse.** Sonst wäre jeder Link tot, sobald das Event auf Entwurf zurückgeht —
+  `ProgramService.listForEvent` und `EventsService.locate` sind genau dafür da.
+- **Ein Plug-in liest Kerndaten nur über den Vertrag** (E12, F45).
+  `PluginProgramReads` liefert fünf Felder je Programmpunkt und Anmeldezahlen,
+  nichts sonst. Bereitgestellt vom globalen `PluginHostModule`; ein Plug-in
+  importiert weiterhin ausschließlich aus `plugin-api`. Neue Fähigkeit = Minor am
+  `PLUGIN_API_VERSION` plus ein Fall im Kompatibilitätstest.
+- **Ein `<input type="number">` schreibt eine Zahl in ein `string`-Control.**
+  Angulars `NumberValueAccessor` konvertiert, `tsc` merkt nichts. Wer den Wert
+  weiterverarbeitet, nimmt `string | number` an — sonst stirbt `.trim()` still
+  und nur der Browsertest sieht es.
 
 ## Betriebskontext
 

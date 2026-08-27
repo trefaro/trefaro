@@ -5,12 +5,17 @@ import {
 } from './support/admin-session';
 
 /**
- * Planning an event's programme in the browser (FR 3.7) — AP 8.
+ * Planning an event's programme in the browser (FR 3.7, FR 3.10) — AP 8 and AP 9.
  *
  * What this suite is for, beyond the API contract suite that already covers the
  * rules: the times an organizer types are read in the *event's* zone, not their
  * own browser's (E8). A server test cannot show that — it sends instants, and
  * the conversion is exactly the step in between.
+ *
+ * The sign-up block at the end is here for the same kind of reason: the seat
+ * field only exists while the switch is on, and switching it off clears the
+ * seats. Both are things the page does before anything is sent, so only a
+ * browser can show them.
  *
  * The series and the event are seeded through the API with the browser's own
  * session; creating them through the UI is what `events.spec.ts` covers.
@@ -258,6 +263,106 @@ test.describe('the programme of an event', () => {
     );
     // The card is still the one that was there — nothing was half-written.
     await expect(session(page, '11:00–12:00')).toBeVisible();
+  });
+
+  test('turns sign-up on with a seat limit, and off again', async ({
+    page,
+  }) => {
+    await open(page);
+    await fillSaved(page, 'Workshop', '2027-09-14T13:00', '2027-09-14T14:00');
+
+    const card = session(page, '13:00–14:00');
+    // No seat field while the session is simply attended: a limit without
+    // sign-up is refused by the server and would be a field with no meaning.
+    await expect(card.getByLabel('Seats')).toBeHidden();
+
+    await card.getByLabel('Ask who is coming').check();
+    await card.getByLabel('Seats').fill('12');
+    await card.getByRole('button', { name: 'Save' }).click();
+
+    await expect(
+      session(page, '13:00–14:00').getByText('0 of 12 seats taken'),
+    ).toBeVisible();
+
+    // Switching it off takes the limit with it, on the page as on the server.
+    await session(page, '13:00–14:00')
+      .getByLabel('Ask who is coming')
+      .uncheck();
+    await expect(session(page, '13:00–14:00').getByLabel('Seats')).toBeHidden();
+    await session(page, '13:00–14:00')
+      .getByRole('button', { name: 'Save' })
+      .click();
+
+    await expect(page.getByRole('alert')).toBeHidden();
+    await expect(
+      session(page, '13:00–14:00').getByText('seats taken'),
+    ).toBeHidden();
+  });
+
+  test('adds a session that asks who is coming straight away', async ({
+    page,
+  }) => {
+    await open(page);
+
+    const form = addForm(page);
+    await form.getByLabel('Topic').fill('Guided tour');
+    await form.getByLabel('Starts').fill('2027-09-14T15:00');
+    await form.getByLabel('Ends').fill('2027-09-14T16:00');
+    await expect(form.getByLabel('Seats')).toBeHidden();
+    await form.getByLabel('Ask who is coming').check();
+    await form.getByLabel('Seats').fill('8');
+    await form.getByRole('button', { name: 'Add session' }).click();
+
+    await expect(
+      session(page, '15:00–16:00').getByText('0 of 8 seats taken'),
+    ).toBeVisible();
+  });
+
+  test('shows who signed up, with the address in the row', async ({ page }) => {
+    await open(page);
+    await fillSaved(page, 'Workshop', '2027-09-14T13:00', '2027-09-14T14:00');
+
+    const card = session(page, '13:00–14:00');
+    await card.getByLabel('Ask who is coming').check();
+    await card.getByRole('button', { name: 'Save' }).click();
+    // The whole line, not just "signed up": the button beside it says the same
+    // two words, and a locator that matches both is a strict-mode violation.
+    await expect(
+      session(page, '13:00–14:00').getByText('0 signed up · no limit'),
+    ).toBeVisible();
+
+    await session(page, '13:00–14:00')
+      .getByRole('button', { name: 'Who signed up' })
+      .click();
+
+    // Nobody yet, said as such rather than as an empty table.
+    await expect(page.getByText('Nobody has signed up yet')).toBeVisible();
+
+    await session(page, '13:00–14:00')
+      .getByRole('button', { name: 'Hide the list' })
+      .click();
+    await expect(page.getByText('Nobody has signed up yet')).toBeHidden();
+  });
+
+  test('asks before deleting, naming the session', async ({ page }) => {
+    await open(page);
+    await fillSaved(page, 'Workshop', '2027-09-14T13:00', '2027-09-14T14:00');
+
+    let asked = '';
+    page.once('dialog', (dialog) => {
+      asked = dialog.message();
+      void dialog.dismiss();
+    });
+    await session(page, '13:00–14:00')
+      .getByRole('button', { name: 'Delete' })
+      .click();
+
+    // Dismissed, so nothing is gone — and the question named the session. With
+    // sign-ups the message also says how many seats are about to be released;
+    // that half is not assertable from here, because only a participant can
+    // create a sign-up and only through their own link (E11).
+    expect(asked).toContain('Workshop');
+    await expect(sessions(page)).toHaveCount(1);
   });
 
   test('removes a session after asking', async ({ page }) => {

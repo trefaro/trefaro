@@ -56,3 +56,45 @@ export class RoomDto {
   @ApiProperty({ nullable: true, type: String })
   description!: string | null;
 }
+
+/** One session in a room, with the numbers the phase 4 check will compare. */
+export class RoomBookingDto {
+  @ApiProperty({ format: 'uuid' })
+  programItemId!: string;
+
+  @ApiProperty({ format: 'date-time' })
+  startsAt!: string;
+
+  @ApiProperty({ format: 'date-time' })
+  endsAt!: string;
+
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    type: Number,
+    description: 'The session’s own limit, if it set one — not the room’s.',
+  })
+  itemCapacity!: number | null;
+
+  @ApiProperty({
+    description:
+      'Sign-ups, read through the versioned plug-in port (E12) rather than from ' +
+      'the core table.',
+  })
+  signupCount!: number;
+}
+
+/**
+ * What a room is used for (F21).
+ *
+ * Reports the numbers side by side and judges none of them: whether more
+ * sign-ups than chairs is a problem, and what an organizer should be told about
+ * it, is the overbooking check of phase 4.
+ */
+export class RoomScheduleDto {
+  @ApiProperty({ type: RoomDto })
+  room!: RoomDto;
+
+  @ApiProperty({ type: [RoomBookingDto] })
+  bookings!: RoomBookingDto[];
+}

@@ -2,7 +2,7 @@ import type { AppConfigRecord } from '../config/ports/app-config.repository';
 import { MailDeliveryError, MailService } from './mail.service';
 import type { Mailer, OutgoingMail } from './ports/mailer';
 import { mailTemplates } from './templates';
-import type { ConfirmationMailContext } from './templates';
+import type { ConfirmationMailContext, ReceiptMailContext } from './templates';
 
 const CONTEXT: ConfirmationMailContext = {
   firstName: 'Amina',
@@ -14,6 +14,19 @@ const CONTEXT: ConfirmationMailContext = {
     timezone: 'Europe/Berlin',
     url: 'https://events.example.org/series/buergerraete/events/kickoff',
   },
+};
+
+/**
+ * The receipt carries one thing the request does not: the personal link (E11).
+ *
+ * Two different contexts rather than one optional field, so a template that
+ * forgot the link would not compile — the link is what makes FR 3.10 reachable
+ * without a participant login.
+ */
+const RECEIPT: ReceiptMailContext = {
+  firstName: CONTEXT.firstName,
+  event: CONTEXT.event,
+  selfServiceUrl: 'https://events.example.org/registrations/me?token=ghi.jkl',
 };
 
 class RecordingMailer implements Mailer {
@@ -80,7 +93,7 @@ describe('MailService', () => {
     const service = serviceFor('en');
 
     await service.sendRegistrationConfirmation('a@example.org', CONTEXT);
-    await service.sendRegistrationConfirmed('a@example.org', CONTEXT);
+    await service.sendRegistrationConfirmed('a@example.org', RECEIPT);
 
     for (const mail of mailer.sent) {
       expect(mail.text.trim().length).toBeGreaterThan(0);
@@ -101,7 +114,7 @@ describe('MailService', () => {
 describe('mail templates', () => {
   it('name the event and its time in both languages', () => {
     for (const locale of ['en', 'de']) {
-      const mail = mailTemplates(locale).registrationConfirmed(CONTEXT);
+      const mail = mailTemplates(locale).registrationConfirmed(RECEIPT);
 
       expect(mail.subject).toContain('Kickoff in Köln');
       // Rendered in the event's zone, not the server's (E8): 08:00 UTC is 10:00
@@ -124,10 +137,33 @@ describe('mail templates', () => {
   });
 
   it('put no remotely loaded asset in the body', () => {
-    const mail = mailTemplates('de').registrationConfirmed(CONTEXT);
+    const mail = mailTemplates('de').registrationConfirmed(RECEIPT);
 
     // No image, no stylesheet, no font: opening the mail must not tell anyone
     // that it was opened (NFR 9).
     expect(mail.html).not.toMatch(/<img|<link|@import|url\(/i);
+  });
+
+  it('carry the personal link in the receipt, in both languages (E11)', () => {
+    for (const locale of ['en', 'de']) {
+      const mail = mailTemplates(locale).registrationConfirmed(RECEIPT);
+
+      expect(mail.text).toContain(RECEIPT.selfServiceUrl);
+      expect(mail.html).toContain(RECEIPT.selfServiceUrl);
+      // And it says what the link is worth: whoever holds it can change this
+      // registration, which is the trade-off of not having a login yet.
+      expect(mail.text).toMatch(/weiter|yourself/i);
+    }
+  });
+
+  it('keep the personal link out of the confirmation request', () => {
+    // Before the address is confirmed there is nothing to self-serve, and a link
+    // that granted sign-ups beforehand would make the double opt-in decorative.
+    for (const locale of ['en', 'de']) {
+      const mail = mailTemplates(locale).registrationConfirmation(CONTEXT);
+
+      expect(mail.text).not.toContain('/registrations/me');
+      expect(mail.html).not.toContain('/registrations/me');
+    }
   });
 });

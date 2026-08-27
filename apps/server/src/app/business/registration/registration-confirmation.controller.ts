@@ -8,6 +8,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Throttle, minutes } from '@nestjs/throttler';
+import { CONFIRMATIONS_PER_WINDOW } from './public-registrations.controller';
 import { ConfirmRegistrationDto } from './dto/create-registration.dto';
 import { RegistrationConfirmationDto } from './dto/registration.dto';
 import { RegistrationService } from './registration.service';
@@ -21,7 +22,12 @@ import { RegistrationService } from './registration.service';
  * confirm registrations nobody asked to confirm — and a GET that changes state
  * also breaks the `SameSite=Lax` reasoning the session cookie rests on (E2).
  *
- * Throttled because the token is guessable in principle, if not in practice.
+ * Throttled because the token is guessable in principle, if not in practice —
+ * and generously, at the same sixty per five minutes as registering itself: this
+ * endpoint is idempotent, changes nothing after the first call, and the only
+ * thing the limit defends against is guessing an HMAC, where thirty attempts and
+ * sixty are equally hopeless. What a tight limit does hit is a household behind
+ * one address confirming several registrations, and the test suites.
  */
 @ApiTags('registrations')
 @Controller('user/registrations')
@@ -30,7 +36,7 @@ export class RegistrationConfirmationController {
 
   @Post('confirm')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 30, ttl: minutes(5) } })
+  @Throttle({ default: { limit: CONFIRMATIONS_PER_WINDOW, ttl: minutes(5) } })
   @ApiOperation({
     summary: 'Confirm a registration with the token from the mailed link',
     description:

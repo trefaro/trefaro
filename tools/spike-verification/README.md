@@ -51,7 +51,11 @@ default port — because they are the WebSocket origin allow-list.
 - `verify-plugin-toggle.mjs` changes `module_config` through
   `docker exec trefaro-postgres psql`, standing in for the module administration
   UI that arrives in phase 2. It takes up to 15 seconds for the change to be
-  picked up, which is the server's configuration refresh interval.
+  picked up, which is the server's configuration refresh interval. Since AP 9 it
+  also needs `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD` in the
+  environment: every `/api/admin/**` route needs a session (E16), and a room
+  needs an event that exists (F46), so the script signs in and creates a series
+  and an event of its own — and removes them again at the end.
 - Every script exits non-zero on the first failed check, so they can be chained
   in a shell or a pipeline.
 - These are deliberately plain Node scripts rather than an Nx target: they test a

@@ -157,6 +157,24 @@ export const PROGRAM_ITEMS = [
     startsAt: at(92, 8),
     endsAt: at(92, 9),
   },
+  /**
+   * The one session that asks who is coming (FR 3.10, AP 9).
+   *
+   * Deliberately without a seat limit: three browser engines run this suite
+   * against one instance, each as its own participant, and a capacity of one
+   * would mean the second and third engine can only fail. That a full session
+   * refuses the next sign-up is proven in `apps/server-e2e`, where the seats can
+   * be counted without a race.
+   */
+  {
+    title: 'E2E Guided tour',
+    description: null,
+    speaker: null,
+    startsAt: at(90, 14),
+    endsAt: at(90, 15),
+    registrationEnabled: true,
+    capacity: null,
+  },
 ] as const;
 
 interface AdminSeries {

@@ -9,12 +9,16 @@ import { LoginModule } from './business/login';
 import { MailModule } from './business/mail';
 import { MediaLinksModule } from './business/media-links/media-links.module';
 import { ParticipantsModule } from './business/participants/participants.module';
-import { PluginManagerModule } from './business/plugin-manager';
+import {
+  PluginHostModule,
+  PluginManagerModule,
+} from './business/plugin-manager';
 import { ProfileSearchModule } from './business/profile-search/profile-search.module';
 import { ProfilesModule } from './business/profiles/profiles.module';
 import { ProgramModule } from './business/program';
 import { PushModule } from './business/push';
 import { RegistrationModule } from './business/registration';
+import { SelfServiceModule } from './business/self-service';
 import { CoreModule } from './core/core.module';
 import { HealthController } from './core/health/health.controller';
 import { DataAccessModule } from './data-access/data-access.module';
@@ -28,11 +32,17 @@ import { DataAccessModule } from './data-access/data-access.module';
  * which database is in use — that knowledge lives in `DataAccessModule` alone.
  *
  * `PluginManagerModule` is listed before `DataAccessModule` because the data
- * source needs the mounted plug-ins' entities and migrations.
+ * source needs the mounted plug-ins' entities and migrations, and
+ * `PluginHostModule` before both because it publishes what the mounted plug-ins
+ * are allowed to read (E12).
  */
 @Module({
   imports: [
     CoreModule,
+    // What plug-ins may read from the core (E12), before the plug-ins that read
+    // it are mounted. Global, so a plug-in injects a token from `plugin-api`
+    // and imports no core module.
+    PluginHostModule,
     PluginManagerModule.forPlugins(CURATED_PLUGINS),
     DataAccessModule.forRoot(),
 
@@ -49,6 +59,10 @@ import { DataAccessModule } from './data-access/data-access.module';
     // already import it, so the composition root stays the place where the
     // module map can be read.
     AttachmentsModule,
+    // What a participant may do with their own registration before there is a
+    // participant login (E11): sign up for sessions, look at their answers,
+    // cancel. Authorized by the signed link, not by a session.
+    SelfServiceModule,
     ParticipantsModule,
     MediaLinksModule,
     MailModule,

@@ -5,6 +5,7 @@ import { AttachmentEntity } from './attachment.entity';
 import { EventSeriesEntity } from './event-series.entity';
 import { EventEntity } from './event.entity';
 import { ModuleConfigEntity } from './module-config.entity';
+import { ProgramItemSignupEntity } from './program-item-signup.entity';
 import { ProgramItemEntity } from './program-item.entity';
 import { PushSubscriptionEntity } from './push-subscription.entity';
 import { RegistrationFieldEntity } from './registration-field.entity';
@@ -17,6 +18,7 @@ export { AttachmentEntity } from './attachment.entity';
 export { EventSeriesEntity } from './event-series.entity';
 export { EventEntity } from './event.entity';
 export { ModuleConfigEntity } from './module-config.entity';
+export { ProgramItemSignupEntity } from './program-item-signup.entity';
 export { ProgramItemEntity } from './program-item.entity';
 export { PushSubscriptionEntity } from './push-subscription.entity';
 export { RegistrationFieldEntity } from './registration-field.entity';
@@ -34,6 +36,7 @@ export const CORE_ENTITIES = [
   EventEntity,
   ModuleConfigEntity,
   ProgramItemEntity,
+  ProgramItemSignupEntity,
   PushSubscriptionEntity,
   RegistrationEntity,
   RegistrationFieldEntity,

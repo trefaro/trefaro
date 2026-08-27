@@ -1,8 +1,37 @@
 import { execFileSync } from 'node:child_process';
 
-const BASE = 'http://127.0.0.1:3000';
-const EVENT = '11111111-1111-4111-8111-111111111111';
+/**
+ * Verifies the server plug-in mechanism against a *running* instance (F6, F21,
+ * E12).
+ *
+ * Two things only a live instance can show, which is why this script exists next
+ * to the automated suites:
+ *
+ * 1. **Runtime activation.** A plug-in is switched on by changing
+ *    `module_config` — no restart, no deployment. The server re-reads the flags
+ *    on a timer, so this waits rather than restarting.
+ * 2. **The plug-in's own tables and their keys.** Since AP 9 the room plan owns
+ *    the link between a session and a room (F21) and reads sessions through the
+ *    host's versioned port (E12). Those are its whole reason to exist, and both
+ *    of them cross the seam between core and plug-in.
+ *
+ *   node tools/spike-verification/verify-plugin-toggle.mjs
+ *
+ * Reads ADMIN_BOOTSTRAP_EMAIL and ADMIN_BOOTSTRAP_PASSWORD from the
+ * environment — the same pair the server booted with. Since AP 1 every
+ * `/api/admin/**` route needs a session (E16), and since AP 9 a room needs an
+ * event that exists, so this script signs in and creates one.
+ */
+const BASE = process.env.TREFARO_BASE_URL ?? 'http://127.0.0.1:3000';
+const SESSION_COOKIE = 'trefaro_admin_session';
+const EMAIL = process.env.ADMIN_BOOTSTRAP_EMAIL;
+const PASSWORD = process.env.ADMIN_BOOTSTRAP_PASSWORD;
+
+/** An id in the right shape that nothing will ever have. */
+const NO_SUCH_EVENT = 'ffffffff-0000-4000-8000-000000000000';
+
 let failures = 0;
+let cookie = '';
 
 function check(name, condition, detail = '') {
   const ok = Boolean(condition);
@@ -14,7 +43,13 @@ function check(name, condition, detail = '') {
 
 /** Stands in for the module administration UI, which arrives in phase 2. */
 function setEnabled(moduleKey, enabled) {
-  execFileSync('docker', [
+  psql(
+    `update module_config set enabled = ${enabled} where module_key = '${moduleKey}'`,
+  );
+}
+
+function psql(sql) {
+  return execFileSync('docker', [
     'exec',
     'trefaro-postgres',
     'psql',
@@ -22,14 +57,19 @@ function setEnabled(moduleKey, enabled) {
     'trefaro',
     '-d',
     'trefaro',
-    '-q',
+    '-At',
     '-c',
-    `update module_config set enabled = ${enabled} where module_key = '${moduleKey}'`,
-  ]);
+    sql,
+  ])
+    .toString()
+    .trim();
 }
 
-async function call(path, init) {
-  const response = await fetch(`${BASE}${path}`, init);
+async function call(path, init = {}) {
+  const response = await fetch(`${BASE}${path}`, {
+    ...init,
+    headers: { ...(init.headers ?? {}), ...(cookie ? { cookie } : {}) },
+  });
   const text = await response.text();
   let body = text;
   try {
@@ -37,8 +77,15 @@ async function call(path, init) {
   } catch {
     /* not json */
   }
-  return { status: response.status, body };
+  return { status: response.status, body, headers: response.headers };
 }
+
+const send = (method, path, payload) =>
+  call(path, {
+    method,
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
 
 /** The server re-reads the flags on a timer; wait for it rather than restarting. */
 async function waitForPluginVisibility(shouldBeVisible, timeoutMs = 30_000) {
@@ -53,6 +100,100 @@ async function waitForPluginVisibility(shouldBeVisible, timeoutMs = 30_000) {
   }
   return false;
 }
+
+if (!EMAIL || !PASSWORD) {
+  console.error(
+    'ADMIN_BOOTSTRAP_EMAIL and ADMIN_BOOTSTRAP_PASSWORD must be set — the same ' +
+      'values the server booted with, so this script can sign in.',
+  );
+  process.exit(1);
+}
+
+console.log('--- signing in ---');
+const login = await send('POST', '/api/admin/auth/login', {
+  email: EMAIL,
+  password: PASSWORD,
+});
+for (const header of login.headers.getSetCookie()) {
+  const [pair] = header.split(';');
+  const [key, ...rest] = pair.split('=');
+  if (key.trim() === SESSION_COOKIE)
+    cookie = `${SESSION_COOKIE}=${rest.join('=')}`;
+}
+check(
+  'an administrative session is established',
+  Boolean(cookie),
+  `status ${login.status}`,
+);
+if (!cookie) process.exit(1);
+
+console.log('--- a series and an event to plan rooms for ---');
+const stamp = Date.now();
+const series = await send('POST', '/api/admin/series', {
+  name: `Room Planning Spike ${stamp}`,
+  description: 'Created by verify-plugin-toggle.mjs.',
+  status: 'published',
+});
+check('the series is created', series.status === 201, `got ${series.status}`);
+const seriesId = series.body?.id;
+
+const eventPayload = {
+  description: 'The event whose rooms this script plans.',
+  eventType: 'onsite',
+  startsAt: '2099-06-14T06:00:00.000Z',
+  endsAt: '2099-06-14T16:00:00.000Z',
+  timezone: 'Europe/Berlin',
+  venueName: 'Bürgerhaus Kalk',
+  languages: ['de'],
+  status: 'published',
+};
+const event = await send('POST', `/api/admin/series/${seriesId}/events`, {
+  ...eventPayload,
+  name: `Room Planning Spike Event ${stamp}`,
+});
+check('the event is created', event.status === 201, `got ${event.status}`);
+const EVENT = event.body?.id;
+
+const otherEvent = await send('POST', `/api/admin/series/${seriesId}/events`, {
+  ...eventPayload,
+  name: `Room Planning Spike Other Event ${stamp}`,
+});
+const OTHER_EVENT = otherEvent.body?.id;
+
+const session = await send('POST', `/api/admin/events/${EVENT}/program-items`, {
+  title: 'Spike session',
+  startsAt: '2099-06-14T07:00:00.000Z',
+  endsAt: '2099-06-14T08:30:00.000Z',
+  registrationEnabled: true,
+  capacity: 10,
+});
+check(
+  'a programme item is planned',
+  session.status === 201,
+  `got ${session.status}`,
+);
+const SESSION = session.body?.id;
+
+const elsewhere = await send(
+  'POST',
+  `/api/admin/events/${OTHER_EVENT}/program-items`,
+  {
+    title: 'Session of another event',
+    startsAt: '2099-06-14T07:00:00.000Z',
+    endsAt: '2099-06-14T08:30:00.000Z',
+  },
+);
+const OTHER_SESSION = elsewhere.body?.id;
+
+console.log('--- while the plug-in is off ---');
+const offBefore = await call(
+  `/api/admin/plugins/room-planning/events/${EVENT}/rooms`,
+);
+check(
+  'its API answers 404 while it is disabled',
+  offBefore.status === 404,
+  `got ${offBefore.status}`,
+);
 
 const started = Date.now();
 console.log(
@@ -105,17 +246,10 @@ check(
 );
 check('a fresh event has no rooms', JSON.stringify(empty.body) === '[]');
 
-const created = await call(
+const created = await send(
+  'POST',
   `/api/admin/plugins/room-planning/events/${EVENT}/rooms`,
-  {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      name: 'Room A',
-      capacity: 40,
-      floor: 'Ground floor',
-    }),
-  },
+  { name: 'Room A', capacity: 40, floor: 'Ground floor' },
 );
 check('a room is created', created.status === 201, `got ${created.status}`);
 check(
@@ -126,14 +260,12 @@ check(
   'the room belongs to the event from the route',
   created.body?.eventId === EVENT,
 );
+const ROOM = created.body?.id;
 
-const duplicate = await call(
+const duplicate = await send(
+  'POST',
   `/api/admin/plugins/room-planning/events/${EVENT}/rooms`,
-  {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ name: '  room a  ', capacity: 10 }),
-  },
+  { name: '  room a  ', capacity: 10 },
 );
 check(
   'a duplicate room name is rejected regardless of case',
@@ -141,13 +273,10 @@ check(
   `got ${duplicate.status}`,
 );
 
-const noSeats = await call(
+const noSeats = await send(
+  'POST',
   `/api/admin/plugins/room-planning/events/${EVENT}/rooms`,
-  {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ name: 'Broom cupboard', capacity: 0 }),
-  },
+  { name: 'Broom cupboard', capacity: 0 },
 );
 check(
   'a room without seats is rejected',
@@ -155,13 +284,78 @@ check(
   `got ${noSeats.status}`,
 );
 
-const listed = await call(
-  `/api/admin/plugins/room-planning/events/${EVENT}/rooms`,
+// AP 9 (F21): `event_id` finally carries a foreign key, so this is the database
+// answering rather than the plug-in hoping.
+const orphan = await send(
+  'POST',
+  `/api/admin/plugins/room-planning/events/${NO_SUCH_EVENT}/rooms`,
+  { name: 'Room in nowhere', capacity: 10 },
 );
 check(
-  'exactly the one valid room was stored',
-  Array.isArray(listed.body) && listed.body.length === 1,
-  JSON.stringify(listed.body),
+  'a room for an event that does not exist is refused',
+  orphan.status === 404,
+  `got ${orphan.status}`,
+);
+
+console.log('--- the room a session happens in (F21) ---');
+const assigned = await send(
+  'PUT',
+  `/api/admin/plugins/room-planning/program-items/${SESSION}/rooms/${ROOM}`,
+);
+check(
+  'a session is put in a room',
+  assigned.status === 204,
+  `got ${assigned.status}`,
+);
+
+const twice = await send(
+  'PUT',
+  `/api/admin/plugins/room-planning/program-items/${SESSION}/rooms/${ROOM}`,
+);
+check(
+  'assigning the same pair again changes nothing',
+  twice.status === 204,
+  `got ${twice.status}`,
+);
+check(
+  'and there is exactly one row for it',
+  psql(
+    `select count(*) from plugin_room_planning_program_item_room where room_id = '${ROOM}'`,
+  ) === '1',
+);
+
+const crossEvent = await send(
+  'PUT',
+  `/api/admin/plugins/room-planning/program-items/${OTHER_SESSION}/rooms/${ROOM}`,
+);
+check(
+  'a session of another event is refused',
+  crossEvent.status === 409,
+  `got ${crossEvent.status}`,
+);
+
+const schedule = await call(
+  `/api/admin/plugins/room-planning/rooms/${ROOM}/schedule`,
+);
+check(
+  'the room schedule reads the session through the host port (E12)',
+  schedule.body?.bookings?.length === 1 &&
+    schedule.body.bookings[0].programItemId === SESSION,
+  JSON.stringify(schedule.body?.bookings),
+);
+check(
+  'and it carries the sign-up count, without touching a core table itself',
+  schedule.body?.bookings?.[0]?.signupCount === 0 &&
+    schedule.body.bookings[0].itemCapacity === 10,
+);
+
+console.log('--- what the cascades take ---');
+await call(`/api/admin/program-items/${SESSION}`, { method: 'DELETE' });
+check(
+  'deleting a session takes its room assignment with it',
+  psql(
+    `select count(*) from plugin_room_planning_program_item_room where room_id = '${ROOM}'`,
+  ) === '0',
 );
 
 console.log('--- disabling it again ---');
@@ -178,24 +372,27 @@ check(
   `got ${blocked.status}`,
 );
 
-const rows = execFileSync('docker', [
-  'exec',
-  'trefaro-postgres',
-  'psql',
-  '-U',
-  'trefaro',
-  '-d',
-  'trefaro',
-  '-At',
-  '-c',
-  'select count(*) from plugin_room_planning_room',
-])
-  .toString()
-  .trim();
 check(
   'disabling a plug-in keeps the organization’s data',
-  rows === '1',
-  `${rows} row(s)`,
+  psql(
+    `select count(*) from plugin_room_planning_room where id = '${ROOM}'`,
+  ) === '1',
+);
+
+console.log('--- cleaning up ---');
+const removed = await call(`/api/admin/series/${seriesId}`, {
+  method: 'DELETE',
+});
+check(
+  'the series this script created is removed',
+  removed.status === 204,
+  `got ${removed.status}`,
+);
+check(
+  'and the event took the plug-in’s rooms with it — the key added in AP 9',
+  psql(
+    `select count(*) from plugin_room_planning_room where id = '${ROOM}'`,
+  ) === '0',
 );
 
 console.log(

@@ -125,26 +125,34 @@ is assigned to one of its work packages.
       JSONB predicate that no index of ours covers, so it is not a small
       addition — and nobody has asked for it yet. Revisit if the pilot partner
       does.
-- [ ] **Constrain `plugin_room_planning_room.event_id`.** It has been an
-      unconstrained `uuid` since phase 0, because the core `event` table did not
-      exist yet — the very integrity gap that decided F21 against a `room_id`
-      column. That precondition is met: `event` exists since AP 3. Deliberately
-      still open, and assigned to AP 9 rather than AP 3, because every room
-      fixture in the spike scripts and the API contract suite currently points at
-      an invented event id; the foreign key has to arrive together with pointing
-      them at real events. A plug-in migration adds it with `ON DELETE CASCADE`,
-      timestamped after the core migration. Verify: inserting a room for an
-      unknown event fails, and deleting an event removes its rooms.
-- [ ] **Implement F21 — the room link as a plug-in-owned join table.** Decided
-      26.08.2026; nothing is built yet. `program_item` gets **no** `room_id`
-      column; the room planning plug-in creates
-      `plugin_room_planning_program_item_room (program_item_id, room_id)` with a
-      foreign key to each side and `ON DELETE CASCADE` on the programme item.
-      Its migration has to be timestamped after the core migration that creates
-      `program_item` — which exists since AP 8 as `1787789600000-ProgramItems`,
-      so the plug-in's has to carry a higher stamp than that. Verify: deleting a programme item removes its room
-      assignment, and dropping the plug-in leaves the core schema untouched.
-      → [`02-server-plugin.md`](docs/spikes/02-server-plugin.md#who-owns-the-link-between-a-programme-item-and-a-room--decided)
+- [ ] **Build the overbooking check** (FR 3.11, phase 4). Everything it needs
+      exists since AP 9: the room's capacity, the sessions assigned to it, and
+      their sign-up counts — the last of those through the plug-in's read port
+      (F45), which is why the plug-in still touches no core table. What is
+      deliberately _not_ built is the judgement: whether more sign-ups than
+      chairs is a warning, a refusal or a hint, and where an organizer should see
+      it. `GET …/rooms/:id/schedule` reports the numbers side by side and decides
+      nothing. Ask the pilot partner before inventing a rule.
+- [ ] **Two sessions in one room at the same time** is not refused either, for
+      the same reason: the schedule carries `startsAt`/`endsAt` per booking, and
+      what a double booking should _do_ is a phase 4 product decision.
+- [ ] **Confirm the confirmation rate limit.** Sixty attempts per five minutes
+      per address (`CONFIRMATIONS_PER_WINDOW`), raised from thirty in AP 9 to
+      match the registration endpoint. The endpoint is idempotent and changes
+      nothing after the first call, and against guessing an HMAC thirty and sixty
+      are equally hopeless — what the tighter number did hit was an office behind
+      one address and the test suites. Say the word and it goes back.
+- [ ] **Decide what a participant may change about their own registration.**
+      "My registration" (E11) currently shows the answers to the event's own
+      questions read-only and offers cancelling; changing a name or an answer is
+      a mail to the organizer. That is deliberate for phase 1 — the endpoint is
+      unauthenticated apart from the link — but worth asking the pilot partner
+      about before phase 3 puts a login in front of it.
+- [ ] **A participant may hold seats in two parallel sessions.** Nothing refuses
+      it: overlapping sessions are legitimate (F41), and only the person knows
+      whether they mean to split their morning. If the pilot partner wants it
+      refused, the check belongs in `ProgramSignupsService` and needs the
+      programme of the event, not just the one session.
 
 ## Checkable after phase 2 — whitelabel, module administration, i18n, PWA
 
@@ -155,6 +163,11 @@ is assigned to one of its work packages.
       criterion asked for it. The tiles belong to the module and plug-in hook
       point, so this is phase 2 — and once they exist, the timeline is what the
       tile links to rather than a second rendering of it.
+- [ ] **"My registration" is not linked from anywhere.** The page exists (E11)
+      and is only reachable through the personal link in the receipt, which is
+      correct as long as there is no participant login: a link in the navigation
+      would lead to a page that asks for a token. Once phase 3 has the login, the
+      navigation gets the entry and the link keeps working.
 - [ ] **No content translations for programme items.** `program_item_translation`
       is in the schema draft and not built: FR 3.12 is phase 2, and AP 8 would
       have had to invent the translation mechanism for one table. Whatever
@@ -187,6 +200,17 @@ is assigned to one of its work packages.
       Fonts CDN (NFR 9).
 
 ## Checkable after phase 3 — profiles, messaging, chat, push
+
+- [ ] **Put the participant login in front of "my registration"** (E11's second
+      half). The signed link stays valid — that is what was promised — and the
+      login becomes a second way to resolve the same registration.
+      `SelfServiceService.require` is the one place that has to learn it, and
+      nothing below it changes. Verify: an old link from an inbox still works
+      after the login exists, and a logged-in participant needs no link.
+- [ ] **A sign-up belongs to a registration, not to a person** (`program_item_signup.registration_id`).
+      Once `user_profile` exists, decide whether a participant sees their seats
+      across events — that needs a join over `registration`, not a second column
+      here.
 
 - [ ] **Mail in the participant's own language.** AP 4 sends every mail in the
       locale the instance is configured with (`app_config.default_locale`),

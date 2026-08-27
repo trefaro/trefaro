@@ -57,6 +57,15 @@ import { RegistrationService } from './registration.service';
 export const REGISTRATIONS_PER_WINDOW = 60;
 
 /**
+ * How many confirmations one address may attempt per five minutes.
+ *
+ * The same number, for the same reason: the two belong to one flow, and a
+ * household or an office behind a single address has to be able to complete as
+ * many opt-ins as it started.
+ */
+export const CONFIRMATIONS_PER_WINDOW = 60;
+
+/**
  * What the multipart parser accepts, and how it reads a file name.
  *
  * The limits are the bound on what one request of a public, unauthenticated

@@ -7,7 +7,7 @@ import { MAILER, type Mailer } from './ports/mailer';
 import { mailTemplates } from './templates';
 import type {
   ConfirmationMailContext,
-  RegistrationMailContext,
+  ReceiptMailContext,
   RenderedMail,
 } from './templates';
 
@@ -50,10 +50,17 @@ export class MailService {
     );
   }
 
-  /** The receipt after a successful confirmation. @throws MailDeliveryError */
+  /**
+   * The receipt after a successful confirmation. @throws MailDeliveryError
+   *
+   * Also the message that carries the self-service link (E11), which is why it
+   * is sent again when somebody re-submits the form for an address that is
+   * already confirmed: "I lost my link" needs an answer that does not involve
+   * the organizer.
+   */
   async sendRegistrationConfirmed(
     to: string,
-    context: RegistrationMailContext,
+    context: ReceiptMailContext,
   ): Promise<void> {
     const templates = await this.templates();
     await this.deliver(

@@ -4,8 +4,11 @@ import { Route } from '@angular/router';
  * Routes of the participant client.
  *
  * The start page, a series and an event landing page are all reachable without
- * a login — the low entry barrier the thesis asks for. Everything about
- * participants comes later and behind authentication.
+ * a login — the low entry barrier the thesis asks for. So are the two pages a
+ * mailed link opens: confirming a registration (E5b) and "my registration"
+ * (E11), both authorized by a signed token rather than by a session. The
+ * participant login of phase 3 goes in front of the second one and leaves the
+ * links already in people's inboxes working.
  */
 export const appRoutes: Route[] = [
   {
@@ -34,6 +37,17 @@ export const appRoutes: Route[] = [
         (m) => m.RegistrationConfirmPage,
       ),
     title: 'Confirm registration',
+  },
+  {
+    // The personal link in the confirmation receipt points here (E11); the token
+    // arrives as a query parameter and is bound to the page's input, exactly as
+    // for the confirmation above.
+    path: 'registrations/me',
+    loadComponent: () =>
+      import('./pages/my-registration/my-registration-page').then(
+        (m) => m.MyRegistrationPage,
+      ),
+    title: 'My registration',
   },
   {
     // Before `series/:slug`, so the more specific route wins rather than

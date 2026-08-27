@@ -2,8 +2,10 @@ import {
   PLUGIN_API_VERSION,
   type ServerPlugin,
 } from '../../app/business/plugin-api';
+import { ProgramItemRoomEntity } from './data-access/entities/program-item-room.entity';
 import { RoomEntity } from './data-access/entities/room.entity';
 import { CreateRoomPlanningSchema1787702500000 } from './data-access/migrations/1787702500000-CreateRoomPlanningSchema';
+import { ProgramItemRooms1787876000000 } from './data-access/migrations/1787876000000-ProgramItemRooms';
 import { RoomPlanningModule } from './room-planning.module';
 import { ROOM_PLANNING_PLUGIN_KEY } from './room-planning.plugin-key';
 
@@ -13,6 +15,11 @@ import { ROOM_PLANNING_PLUGIN_KEY } from './room-planning.plugin-key';
  * The one place the plug-in declares all three of its parts to the host: the
  * module carrying its API and business logic, and the entities and migrations
  * making up its data access contribution.
+ *
+ * Since AP 9 it also owns the link between a session and a room (F21) and reads
+ * sessions through the host's port, so it declares plug-in API 1.1.0 by way of
+ * {@link PLUGIN_API_VERSION} — a plug-in that did not need the port would still
+ * be mounted while declaring 1.0.0.
  */
 export const roomPlanningPlugin: ServerPlugin = {
   key: ROOM_PLANNING_PLUGIN_KEY,
@@ -21,8 +28,14 @@ export const roomPlanningPlugin: ServerPlugin = {
   titleKey: 'plugins.roomPlanning.title',
   module: RoomPlanningModule,
   persistence: {
-    entities: [RoomEntity],
-    migrations: [CreateRoomPlanningSchema1787702500000],
+    entities: [RoomEntity, ProgramItemRoomEntity],
+    // In order, and the second one has to come after the core migration that
+    // creates `program_item`: both streams are ordered together by timestamp,
+    // and the join table references it (F21).
+    migrations: [
+      CreateRoomPlanningSchema1787702500000,
+      ProgramItemRooms1787876000000,
+    ],
   },
   client: {
     elementName: 'trefaro-plugin-room-planning',

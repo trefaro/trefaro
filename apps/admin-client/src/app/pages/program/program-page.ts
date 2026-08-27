@@ -15,19 +15,24 @@ import type {
   OrganizerEvent,
   ProgramDay,
   ProgramItem,
+  ProgramItemLoad,
   PublicProgramItem,
 } from '@trefaro/shared-models';
 import {
   MAX_PROGRAM_DESCRIPTION_LENGTH,
   MAX_PROGRAM_ITEMS,
+  MAX_PROGRAM_ITEM_CAPACITY,
   MAX_PROGRAM_SPEAKER_LENGTH,
   MAX_PROGRAM_TITLE_LENGTH,
   formatEventPeriod,
+  formatInstant,
   formatProgramTime,
   groupProgramByDay,
   instantToWallClock,
+  isProgramItemFull,
   isWithinPeriod,
   overlappingProgramItems,
+  seatsLeft,
   wallClockToInstant,
 } from '@trefaro/shared-models';
 import { EventsAdminService } from '../../features/events/events-admin.service';
@@ -41,6 +46,9 @@ interface ItemDraft {
   /** Wall-clock values, read in the event's zone — never the organizer's. */
   startsAt: string;
   endsAt: string;
+  registrationEnabled: boolean;
+  /** As the number input holds it: empty means "as many as come". */
+  capacity: string;
 }
 
 /**
@@ -62,6 +70,12 @@ interface ItemDraft {
  *
  * There is no "move up": the clock is the order (F40). Changing a session's time
  * is what moves it, which is also the only thing that could have been meant.
+ *
+ * Sign-up (FR 3.10) is per session and off by default: most sessions are simply
+ * attended, and only some — a workshop with twelve chairs — ask who is coming.
+ * The seat field appears with the switch, because a limit without sign-up is
+ * refused rather than ignored. Who signed up is one request per session, made
+ * when an organizer opens that one list.
  */
 @Component({
   selector: 'trefaro-program-page',
@@ -183,6 +197,85 @@ interface ItemDraft {
                 </label>
               </div>
 
+              <div class="signup">
+                <label class="signup__switch">
+                  <input
+                    type="checkbox"
+                    [checked]="draft(item.id).registrationEnabled"
+                    (change)="toggleRegistration(item.id, $event)"
+                  />
+                  <span>Ask who is coming</span>
+                </label>
+
+                @if (draft(item.id).registrationEnabled) {
+                  <label class="signup__seats">
+                    <span>Seats</span>
+                    <input
+                      type="number"
+                      min="1"
+                      [attr.max]="maxCapacity"
+                      placeholder="No limit"
+                      [value]="draft(item.id).capacity"
+                      (input)="edit(item.id, { capacity: value($event) })"
+                    />
+                  </label>
+                }
+
+                @if (item.registrationEnabled) {
+                  <p class="signup__load">
+                    <span>{{ takeUp(item) }}</span>
+                    @if (sessionFull(item)) {
+                      <span class="badge badge--warn">full</span>
+                    }
+                  </p>
+                  <button
+                    type="button"
+                    class="signup__who"
+                    (click)="toggleSignups(item)"
+                  >
+                    {{
+                      openSignups() === item.id
+                        ? 'Hide the list'
+                        : 'Who signed up'
+                    }}
+                  </button>
+
+                  @if (openSignups() === item.id) {
+                    @if (signups(); as list) {
+                      @if (list.participants.length === 0) {
+                        <p class="meta">Nobody has signed up yet.</p>
+                      } @else {
+                        <table class="who">
+                          <thead>
+                            <tr>
+                              <th scope="col">Name</th>
+                              <th scope="col">E-mail</th>
+                              <th scope="col">Signed up</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (
+                              person of list.participants;
+                              track person.registrationId
+                            ) {
+                              <tr>
+                                <td>
+                                  {{ person.firstName }} {{ person.lastName }}
+                                </td>
+                                <td>{{ person.email }}</td>
+                                <td>{{ signedUp(person.signedUpAt) }}</td>
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                      }
+                    } @else {
+                      <p class="meta">Loading…</p>
+                    }
+                  }
+                }
+              </div>
+
               <div class="item__actions">
                 <button
                   type="button"
@@ -257,6 +350,25 @@ interface ItemDraft {
                 <span>Ends</span>
                 <input formControlName="endsAt" type="datetime-local" />
               </label>
+            </div>
+
+            <div class="signup">
+              <label class="signup__switch">
+                <input type="checkbox" formControlName="registrationEnabled" />
+                <span>Ask who is coming</span>
+              </label>
+              @if (form.controls.registrationEnabled.value) {
+                <label class="signup__seats">
+                  <span>Seats</span>
+                  <input
+                    formControlName="capacity"
+                    type="number"
+                    min="1"
+                    [attr.max]="maxCapacity"
+                    placeholder="No limit"
+                  />
+                </label>
+              }
             </div>
 
             <button type="submit">Add session</button>
@@ -410,6 +522,56 @@ interface ItemDraft {
       font: inherit;
     }
 
+    .signup {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      padding-block-start: 0.6rem;
+      border-block-start: 1px solid
+        color-mix(in oklab, currentColor 15%, transparent);
+    }
+
+    .signup__switch {
+      flex-direction: row;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .signup__switch > span {
+      font-weight: 600;
+    }
+
+    .signup__seats {
+      max-inline-size: 9rem;
+    }
+
+    .signup__load {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0;
+      font-size: 0.9rem;
+      color: color-mix(in oklab, currentColor 75%, transparent);
+    }
+
+    .signup__who {
+      align-self: start;
+    }
+
+    .who {
+      border-collapse: collapse;
+      inline-size: 100%;
+      font-size: 0.9rem;
+    }
+
+    .who th,
+    .who td {
+      padding: 0.3rem 0.5rem 0.3rem 0;
+      text-align: start;
+      border-block-end: 1px solid
+        color-mix(in oklab, currentColor 12%, transparent);
+    }
+
     .item__actions {
       display: flex;
       gap: 0.5rem;
@@ -450,6 +612,7 @@ export class ProgramPage {
   protected readonly maxSpeakerLength = MAX_PROGRAM_SPEAKER_LENGTH;
   protected readonly maxDescriptionLength = MAX_PROGRAM_DESCRIPTION_LENGTH;
   protected readonly maxItems = MAX_PROGRAM_ITEMS;
+  protected readonly maxCapacity = MAX_PROGRAM_ITEM_CAPACITY;
 
   private readonly program = inject(ProgramAdminService);
   private readonly events = inject(EventsAdminService);
@@ -463,6 +626,10 @@ export class ProgramPage {
 
   /** What the card inputs hold, keyed by item id, until Save is pressed. */
   private readonly drafts = signal<Record<string, ItemDraft>>({});
+
+  /** Which session's attendee list is open, and what it holds (FR 3.10). */
+  protected readonly openSignups = signal<string | null>(null);
+  protected readonly signups = signal<ProgramItemLoad | null>(null);
 
   protected readonly full = computed(
     () => this.items().length >= MAX_PROGRAM_ITEMS,
@@ -497,6 +664,9 @@ export class ProgramPage {
     description: [''],
     startsAt: ['', Validators.required],
     endsAt: ['', Validators.required],
+    registrationEnabled: [false],
+    /** A string, as the number input holds it: empty means "as many as come". */
+    capacity: [''],
   });
 
   constructor() {
@@ -525,6 +695,67 @@ export class ProgramPage {
     return this.drafts()[id] ?? blankDraft();
   }
 
+  /**
+   * Switching sign-up off clears the seats with it.
+   *
+   * The server does the same thing to the stored row, and for the same reason: a
+   * limit on a session that does not ask who is coming is a limit nothing
+   * enforces. Doing it here too means the card shows what will be saved.
+   */
+  protected toggleRegistration(id: string, event: Event): void {
+    const enabled = (event.target as HTMLInputElement).checked;
+    this.edit(id, {
+      registrationEnabled: enabled,
+      capacity: enabled ? this.draft(id).capacity : '',
+    });
+  }
+
+  /** "7 of 12 seats taken", or the count alone where there is no limit. */
+  protected takeUp(item: ProgramItem): string {
+    const left = seatsLeft(item);
+    if (left === null) {
+      return `${item.signupCount} signed up · no limit`;
+    }
+    return `${item.signupCount} of ${item.capacity} seats taken · ${left} free`;
+  }
+
+  /** Named for the session, not the programme: `full()` above is the item cap. */
+  protected sessionFull(item: ProgramItem): boolean {
+    return isProgramItemFull(item);
+  }
+
+  /** In the event's zone (E8), like every other time on this page. */
+  protected signedUp(instant: string): string {
+    const event = this.event();
+    return event ? formatInstant(instant, event.timezone, this.locale()) : '';
+  }
+
+  /**
+   * Opens or closes one session's attendee list.
+   *
+   * One request per session and only on demand: the programme carries the
+   * numbers, and loading every attendee of every session to show a count would
+   * break the load rule of FR 3.3 in a new place.
+   */
+  protected async toggleSignups(item: ProgramItem): Promise<void> {
+    if (this.openSignups() === item.id) {
+      this.openSignups.set(null);
+      return;
+    }
+
+    this.openSignups.set(item.id);
+    this.signups.set(null);
+    try {
+      const load = await this.program.signups(item.id);
+      // Still the session the organizer asked about: a second click while this
+      // was in flight must not fill the new panel with the old list.
+      if (this.openSignups() === item.id) this.signups.set(load);
+    } catch (error: unknown) {
+      this.openSignups.set(null);
+      this.report(error, 'The sign-ups could not be loaded.');
+    }
+  }
+
   protected edit(id: string, patch: Partial<ItemDraft>): void {
     this.drafts.update((drafts) => ({
       ...drafts,
@@ -541,7 +772,9 @@ export class ProgramPage {
       draft.speaker !== saved.speaker ||
       draft.description !== saved.description ||
       draft.startsAt !== saved.startsAt ||
-      draft.endsAt !== saved.endsAt
+      draft.endsAt !== saved.endsAt ||
+      draft.registrationEnabled !== saved.registrationEnabled ||
+      draft.capacity !== saved.capacity
     );
   }
 
@@ -561,6 +794,8 @@ export class ProgramPage {
         // Read in the event's zone, not the organizer's browser's (E8).
         startsAt: wallClockToInstant(raw.startsAt, zone),
         endsAt: wallClockToInstant(raw.endsAt, zone),
+        registrationEnabled: raw.registrationEnabled,
+        capacity: capacityOf(raw.capacity, raw.registrationEnabled),
       });
       this.form.reset();
     });
@@ -578,12 +813,20 @@ export class ProgramPage {
         description: draft.description.trim() || null,
         startsAt: wallClockToInstant(draft.startsAt, zone),
         endsAt: wallClockToInstant(draft.endsAt, zone),
+        registrationEnabled: draft.registrationEnabled,
+        capacity: capacityOf(draft.capacity, draft.registrationEnabled),
       }),
     );
   }
 
   protected async remove(item: ProgramItem): Promise<void> {
-    if (!confirm(`Remove "${item.title}" from the programme?`)) return;
+    // The number is part of the question: deleting a session releases the seats
+    // people claimed in it, and an organizer should not learn that afterwards.
+    const seats =
+      item.signupCount > 0
+        ? ` ${item.signupCount} sign-up${item.signupCount === 1 ? '' : 's'} will be released.`
+        : '';
+    if (!confirm(`Remove "${item.title}" from the programme?${seats}`)) return;
     await this.change(() => this.program.remove(item.id));
   }
 
@@ -634,6 +877,8 @@ export class ProgramPage {
       description: item.description ?? '',
       startsAt: zone ? instantToWallClock(item.startsAt, zone) : '',
       endsAt: zone ? instantToWallClock(item.endsAt, zone) : '',
+      registrationEnabled: item.registrationEnabled,
+      capacity: item.capacity === null ? '' : String(item.capacity),
     };
   }
 
@@ -646,6 +891,12 @@ export class ProgramPage {
       // Read back rather than patched in place: the server owns the order, and
       // the order is the clock.
       this.apply(await this.program.list(this.eventId()));
+      // A session whose sign-up was just switched off, or which is gone: an open
+      // list of its attendees would be describing something that changed.
+      const open = this.openSignups();
+      if (open && !this.items().some((item) => item.id === open)) {
+        this.openSignups.set(null);
+      }
     } catch (error: unknown) {
       this.report(error, 'The change could not be saved.');
     } finally {
@@ -665,5 +916,30 @@ function blankDraft(): ItemDraft {
     description: '',
     startsAt: '',
     endsAt: '',
+    registrationEnabled: false,
+    capacity: '',
   };
+}
+
+/**
+ * The seats an input holds, as the API takes them.
+ *
+ * `null` for an empty field and for a session that does not ask who is coming:
+ * the server refuses a capacity without sign-up, so sending one would turn a
+ * cleared checkbox into an error message instead of a saved session.
+ *
+ * `string | number`, and that is not defensive: an `<input type="number">` bound
+ * with `formControlName` writes a **number** into the control, whatever the form
+ * declares — Angular's `NumberValueAccessor` does the conversion, and `tsc` sees
+ * none of it. The card inputs on this page hand over a string. Both arrive here.
+ */
+function capacityOf(
+  value: string | number,
+  registrationEnabled: boolean,
+): number | null {
+  if (!registrationEnabled) return null;
+  const raw = String(value).trim();
+  if (raw === '') return null;
+  const seats = Number(raw);
+  return Number.isFinite(seats) ? seats : null;
 }
