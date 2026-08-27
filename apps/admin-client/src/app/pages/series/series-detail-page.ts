@@ -42,7 +42,10 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
           </p>
         </div>
         <div class="head__actions">
-          <a class="button" [routerLink]="['/series', item.id, 'events', 'new']">
+          <a
+            class="button"
+            [routerLink]="['/series', item.id, 'events', 'new']"
+          >
             New event
           </a>
           <a [routerLink]="['/series', item.id, 'edit']">Edit series</a>

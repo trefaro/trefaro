@@ -191,11 +191,8 @@ describe('events API', () => {
       (await api(`/api/user/series/${draftSeries.slug}/events`)).status,
     ).toBe(404);
     expect(
-      (
-        await api(
-          `/api/user/series/${draftSeries.slug}/events/${body.slug}`,
-        )
-      ).status,
+      (await api(`/api/user/series/${draftSeries.slug}/events/${body.slug}`))
+        .status,
     ).toBe(404);
   });
 
@@ -402,8 +399,8 @@ describe('events API', () => {
     );
 
     expect(removed.status).toBe(204);
-    expect(
-      (await api(`/api/admin/events/${body.id}`, asAdmin())).status,
-    ).toBe(404);
+    expect((await api(`/api/admin/events/${body.id}`, asAdmin())).status).toBe(
+      404,
+    );
   });
 });

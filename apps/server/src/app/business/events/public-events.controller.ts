@@ -23,7 +23,8 @@ export class PublicEventsController {
   @Get()
   @ApiOperation({
     summary: 'Published events of a published series, in date order',
-    description: 'Requires no authentication. Upcoming and past together (FR 2.3).',
+    description:
+      'Requires no authentication. Upcoming and past together (FR 2.3).',
   })
   @ApiOkResponse({ type: [PublicEventDto] })
   @ApiNotFoundResponse({ description: 'No published series at that address.' })
@@ -48,6 +49,9 @@ export class PublicEventsController {
     @Param('seriesSlug') seriesSlug: string,
     @Param('eventSlug') eventSlug: string,
   ): Promise<PublicEventDto> {
-    return this.events.getPublic(seriesSlug, eventSlug) as Promise<PublicEventDto>;
+    return this.events.getPublic(
+      seriesSlug,
+      eventSlug,
+    ) as Promise<PublicEventDto>;
   }
 }

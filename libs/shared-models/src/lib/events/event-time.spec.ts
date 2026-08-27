@@ -71,9 +71,7 @@ describe('event time', () => {
         timezone: 'Europe/Berlin',
       });
 
-      expect(text).toBe(
-        'March 14, 2027, 09:00 – March 16, 2027, 16:00 GMT+1',
-      );
+      expect(text).toBe('March 14, 2027, 09:00 – March 16, 2027, 16:00 GMT+1');
     });
 
     it('renders in the event zone, not the reader zone', () => {

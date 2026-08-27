@@ -193,7 +193,10 @@ export class SeriesDetailPage {
   }
 
   protected when(event: PublicEvent): string {
-    return formatEventPeriod(event, this.config.config()?.defaultLocale ?? 'en');
+    return formatEventPeriod(
+      event,
+      this.config.config()?.defaultLocale ?? 'en',
+    );
   }
 
   protected where(event: PublicEvent): string {

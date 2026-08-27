@@ -1,8 +1,5 @@
 import { expect, test } from '@playwright/test';
-import {
-  PUBLISHED_SERIES,
-  UPCOMING_EVENT,
-} from './support/series-fixtures';
+import { PUBLISHED_SERIES, UPCOMING_EVENT } from './support/series-fixtures';
 
 /**
  * The participant client's start sequence, end to end.

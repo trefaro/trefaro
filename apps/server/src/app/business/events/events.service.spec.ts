@@ -43,9 +43,8 @@ class FakeEventRepository implements EventRepository {
     slug: string,
   ): Promise<EventRecord | null> {
     return (
-      this.rows.find(
-        (row) => row.seriesId === seriesId && row.slug === slug,
-      ) ?? null
+      this.rows.find((row) => row.seriesId === seriesId && row.slug === slug) ??
+      null
     );
   }
 
@@ -64,10 +63,7 @@ class FakeEventRepository implements EventRepository {
     return created;
   }
 
-  async update(
-    id: string,
-    changes: EventChanges,
-  ): Promise<EventRecord | null> {
+  async update(id: string, changes: EventChanges): Promise<EventRecord | null> {
     const index = this.rows.findIndex((row) => row.id === id);
     if (index < 0) return null;
     this.rows[index] = {

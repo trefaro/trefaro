@@ -256,7 +256,10 @@ export class EventsService {
     }
   }
 
-  private period(startsAt: string, endsAt: string): {
+  private period(
+    startsAt: string,
+    endsAt: string,
+  ): {
     startsAt: Date;
     endsAt: Date;
   } {
@@ -331,7 +334,9 @@ export class EventsService {
 
   private translate(error: unknown): unknown {
     return error instanceof EventSlugTakenError
-      ? new ConflictException(`${error.message} — please choose another address`)
+      ? new ConflictException(
+          `${error.message} — please choose another address`,
+        )
       : error;
   }
 }

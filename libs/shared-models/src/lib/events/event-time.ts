@@ -43,7 +43,10 @@ export function localTimeZone(): string {
  * Without the second pass an event starting the morning a zone switches to
  * summer time would land an hour off.
  */
-export function wallClockToInstant(wallClock: string, timeZone: string): string {
+export function wallClockToInstant(
+  wallClock: string,
+  timeZone: string,
+): string {
   if (!WALL_CLOCK.test(wallClock)) {
     throw new RangeError(`Not a wall-clock value: "${wallClock}"`);
   }
@@ -104,7 +107,10 @@ export function zoneLabel(period: EventPeriod, locale = 'en'): string {
  * Keyed on the end, not the start: a conference is not "past" on its second
  * morning. Both values are absolute instants, so no zone enters this comparison.
  */
-export function hasEnded(period: Pick<EventPeriod, 'endsAt'>, now = Date.now()): boolean {
+export function hasEnded(
+  period: Pick<EventPeriod, 'endsAt'>,
+  now = Date.now(),
+): boolean {
   return Date.parse(period.endsAt) < now;
 }
 

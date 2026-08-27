@@ -33,10 +33,7 @@ test.describe('event administration', () => {
   let seriesId = '';
 
   test.beforeEach(async ({ page }, testInfo) => {
-    seriesId = await seedSeries(
-      page,
-      `${testInfo.project.name} ${Date.now()}`,
-    );
+    seriesId = await seedSeries(page, `${testInfo.project.name} ${Date.now()}`);
   });
 
   test.afterEach(async ({ page }) => {

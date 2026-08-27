@@ -66,7 +66,8 @@ export class CreateEventDto {
   endsAt!: string;
 
   @ApiProperty({
-    description: 'IANA zone of the venue — the zone times are rendered in (E8).',
+    description:
+      'IANA zone of the venue — the zone times are rendered in (E8).',
     example: 'Europe/Berlin',
   })
   @IsString()
@@ -87,7 +88,8 @@ export class CreateEventDto {
   @ApiProperty({
     required: false,
     nullable: true,
-    description: 'Free text: address formats differ too much per country to split.',
+    description:
+      'Free text: address formats differ too much per country to split.',
   })
   @IsOptional()
   @IsString()

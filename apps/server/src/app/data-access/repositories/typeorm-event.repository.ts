@@ -70,10 +70,7 @@ export class TypeormEventRepository implements EventRepository {
     }
   }
 
-  async update(
-    id: string,
-    changes: EventChanges,
-  ): Promise<EventRecord | null> {
+  async update(id: string, changes: EventChanges): Promise<EventRecord | null> {
     // `languages` is pulled out of the spread because the port declares it
     // readonly and TypeORM's update type does not accept a readonly array.
     const { languages, ...rest } = changes;

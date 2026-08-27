@@ -227,8 +227,9 @@ export class EventFormPage {
    * Every zone the runtime knows, so an organization anywhere finds its own.
    * The fallback covers a browser without `supportedValuesOf`.
    */
-  protected readonly zones: readonly string[] =
-    Intl.supportedValuesOf?.('timeZone') ?? [localTimeZone(), 'UTC'];
+  protected readonly zones: readonly string[] = Intl.supportedValuesOf?.(
+    'timeZone',
+  ) ?? [localTimeZone(), 'UTC'];
 
   protected readonly isNew = computed(() => !this.eventId());
   protected readonly busy = signal(false);

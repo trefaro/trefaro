@@ -35,7 +35,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 const at = (offsetDays: number, hour: number): string =>
   new Date(
-    Date.UTC(1970, 0, 1, hour) + Math.trunc(Date.now() / DAY_MS + offsetDays) * DAY_MS,
+    Date.UTC(1970, 0, 1, hour) +
+      Math.trunc(Date.now() / DAY_MS + offsetDays) * DAY_MS,
   ).toISOString();
 
 /** Hybrid, published, still to come — the acceptance criterion of AP 3. */

@@ -88,7 +88,9 @@ test.describe('the event landing page', () => {
     await page.goto(landingPage(PUBLISHED_SERIES.slug, PAST_EVENT.slug));
 
     await expect(page.getByText('This event has ended')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Register now' })).toBeHidden();
+    await expect(
+      page.getByRole('button', { name: 'Register now' }),
+    ).toBeHidden();
   });
 
   test('announces registration on an upcoming event', async ({ page }) => {

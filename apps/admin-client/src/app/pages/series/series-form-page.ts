@@ -136,7 +136,6 @@ export class SeriesFormPage {
   /** Absent on `/series/new`; bound from the route otherwise. */
   readonly id = input<string | undefined>(undefined);
 
-
   protected readonly statuses = EVENT_SERIES_STATUSES;
   protected readonly isNew = computed(() => !this.id());
   protected readonly busy = signal(false);
