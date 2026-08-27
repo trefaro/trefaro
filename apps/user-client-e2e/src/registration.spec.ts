@@ -1,9 +1,5 @@
 import { expect, test } from '@playwright/test';
-import {
-  confirmationPathFrom,
-  registrationIdFromPath,
-  waitForMailTo,
-} from './support/mail';
+import { confirmationPathFrom, waitForMailTo } from './support/mail';
 import { removeRegistrations } from './support/registration-clean-up';
 import {
   PAST_EVENT,
@@ -29,7 +25,11 @@ const CLIENT_URL =
 
 const LANDING_PAGE = `/series/${PUBLISHED_SERIES.slug}/events/${UPCOMING_EVENT.slug}`;
 
-/** Removed after the run: a confirmed registration would pin its series (E14). */
+/**
+ * Addresses this run registered, removed again afterwards.
+ *
+ * A confirmed registration would otherwise pin its series for good (E14).
+ */
 const created: string[] = [];
 
 test.afterAll(async () => {
@@ -42,6 +42,7 @@ test.describe('registering for an event', () => {
     page,
   }, testInfo) => {
     const email = `e2e-${testInfo.project.name}-${Date.now()}@registrations.example.org`;
+    created.push(email);
 
     await page.goto(LANDING_PAGE);
     await page.getByRole('link', { name: 'Register now' }).click();
@@ -63,7 +64,6 @@ test.describe('registering for an event', () => {
     const mail = await waitForMailTo(email);
     expect(mail.subject).toContain(UPCOMING_EVENT.name);
     const confirmationPath = confirmationPathFrom(mail);
-    created.push(registrationIdFromPath(confirmationPath));
 
     // A click, not the mere opening of the link: a mail scanner that prefetches
     // links must not be able to confirm anything (E5b).

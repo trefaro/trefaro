@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   input,
   signal,
@@ -49,7 +50,7 @@ import { RegistrationsService } from '../../features/registrations/registration.
             Back to the event
           </a>
         </p>
-      } @else if (!token()) {
+      } @else if (!tokenValue()) {
         <h1>Confirm your registration</h1>
         <p class="notice" role="alert">
           This address is missing its confirmation token. Please open the link
@@ -102,7 +103,16 @@ export class RegistrationConfirmPage {
    * broke the link across two lines is the usual reason, so the page says which
    * part is missing rather than reporting a failure.
    */
-  readonly token = input<string>('');
+  readonly token = input<string>();
+
+  /**
+   * The token as a string, present or not.
+   *
+   * The router binds a query parameter that is not in the URL as `undefined`,
+   * which overrides an `input()` default — so the default would look like a
+   * guarantee it is not.
+   */
+  protected readonly tokenValue = computed(() => this.token() ?? '');
 
   private readonly registrations = inject(RegistrationsService);
 
@@ -116,7 +126,7 @@ export class RegistrationConfirmPage {
     this.error.set(null);
 
     try {
-      this.result.set(await this.registrations.confirm(this.token()));
+      this.result.set(await this.registrations.confirm(this.tokenValue()));
     } catch (error: unknown) {
       this.error.set(
         (error as ApiError)?.message ??

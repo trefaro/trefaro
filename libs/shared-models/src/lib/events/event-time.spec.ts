@@ -1,5 +1,6 @@
 import {
   formatEventPeriod,
+  formatInstant,
   hasEnded,
   instantToWallClock,
   isTimeZone,
@@ -98,6 +99,24 @@ describe('event time', () => {
     it('is true once the end has passed', () => {
       expect(hasEnded(period, Date.parse('2027-03-14T16:00:01.000Z'))).toBe(
         true,
+      );
+    });
+  });
+
+  describe('formatInstant', () => {
+    it("reads a registration's timestamp in the event's zone, not the reader's", () => {
+      const arrived = '2026-08-24T22:30:00.000Z';
+
+      // Half past midnight on the 25th in Berlin, half past one in the morning
+      // on the 25th in Nairobi — and still the 24th in New York. The organizer
+      // is entitled to the event's clock (E8).
+      expect(formatInstant(arrived, 'Europe/Berlin')).toContain('25');
+      expect(formatInstant(arrived, 'America/New_York')).toContain('24');
+    });
+
+    it('spells out date and time without a weekday', () => {
+      expect(formatInstant('2026-08-24T09:30:00.000Z', 'UTC')).toBe(
+        'Aug 24, 2026, 09:30',
       );
     });
   });

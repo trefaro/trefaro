@@ -6,3 +6,21 @@ export {
   type RegistrationInput,
   type RegistrationStatus,
 } from './registration';
+export {
+  DEFAULT_PARTICIPANT_PAGE_SIZE,
+  DEFAULT_PARTICIPANT_SORT,
+  DEFAULT_SORT_DIRECTION,
+  MAX_PARTICIPANT_PAGE_SIZE,
+  PARTICIPANT_SORTS,
+  pageCount,
+  type ParticipantDetail,
+  type ParticipantPage,
+  type ParticipantQuery,
+  type ParticipantRow,
+  type ParticipantSort,
+  type RegistrationCounts,
+  type RegistrationStatistics,
+  type RegistrationStatusChange,
+  type RegistrationWeek,
+  type SortDirection,
+} from './participant';

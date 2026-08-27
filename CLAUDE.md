@@ -74,7 +74,7 @@ Wichtigste Funktionen laut Empirie: Teilnehmerübersicht (3,86/4) > Nachhaltigke
 
 Monorepo, Server mit erzwungener Schichtentrennung, Plug-in-Mechanik auf beiden
 Seiten, 5-Container-Stack und CI stehen; alle vier Spikes sind verifiziert
-(`docs/spikes/`). Fachlich existiert noch nichts — das ist Phase 1.
+(`docs/spikes/`). Fachlich baut darauf Phase 1 auf — Stand unten.
 
 Entscheidungen aus Phase 0, die nicht erneut aufgerollt werden sollten:
 
@@ -102,10 +102,45 @@ Entscheidungen aus Phase 0, die nicht erneut aufgerollt werden sollten:
 **Offene Punkte** stehen in `todo.md`, nach der Phase gruppiert, ab der sie
 prüfbar werden — nach jeder Phase durchgehen.
 
-**Phase 1 startet nur auf ausdrückliches Go von Marius.** Stand 26.08.2026 ist
-das Go noch nicht erteilt; bis dahin keine fachliche Implementierung beginnen.
-Der Plan liegt vor (`docs/PHASE1.md`, Arbeitspakete AP 1–13 und die
-Entscheidungen E1–E16); er ist Planung, keine Freigabe.
+## Stand in Phase 1 (laufend, Stand 27.08.2026)
+
+Plan und Protokoll: `docs/PHASE1.md` (Arbeitspakete AP 1–13, Entscheidungen
+E1–E16, je Paket ein Abschnitt „erledigt" mit dem, was tatsächlich passierte).
+Marius gibt jedes Paket einzeln frei — **nicht** ohne Aufforderung mit dem
+nächsten anfangen.
+
+Erledigt: **AP 1** Login, Admin-Zugänge, Guard über `/api/admin` · **AP 2**
+Veranstaltungsreihen · **AP 3** Events und öffentliche Landingpage · **AP 4**
+Registrierung mit Double-Opt-In und Mail-Modul · **AP 5** Teilnehmerübersicht
+→ damit ist **M1** erreicht (Kernschleife lauffähig, erste Feedbackrunde mit
+Democracy International fällig). Als nächstes AP 6 (Feld-Baukasten).
+
+Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
+
+- **Der Admin-Schutz hängt am URL-Präfix** (E16), nicht an einem Dekorator: ein
+  vergessenes `@UseGuards` in einem Plug-in wäre ein offener Endpunkt.
+- **Slugs sind je Elternteil eindeutig** (E7), nicht je Instanz. Öffentliche
+  Adressen sind deshalb geschachtelt: `/series/:reihe/events/:event` — und die
+  API-Pfade folgen dem (F28).
+- **Zeiten sind absolute Zeitpunkte, die Zone hängt am Event** (E8). Formatiert
+  wird ausschließlich über die Helfer in `shared-models`, auch beim Aggregieren
+  (F33).
+- **Der Double-Opt-In ist der Einwilligungsnachweis.** Das Token ist signiert,
+  nicht gespeichert (F23); bestätigen kann nur der Mensch hinter der Adresse —
+  ein Veranstalter darf stornieren und wiederherstellen, nicht bestätigen (F31).
+- **Das öffentliche Registrierungsformular antwortet immer gleich** (E10), sonst
+  wird es zur Abfrage über die Teilnehmerliste.
+- **Löschen ist die Ausnahme, Archivieren die Regel** (E14). Reihe/Event mit
+  bestätigten Anmeldungen: 409. Eine einzelne Anmeldung ist immer löschbar
+  (DSGVO-Vorarbeit).
+- **Zählen statt Lesen:** Wer nur Zahlen braucht, bekommt einen eigenen schmalen
+  Port (`RegistrationTally`) statt Zugriff auf die Zeilen.
+- **Listen sind serverseitig gefiltert, sortiert und paginiert**, mit der ID als
+  letztem Sortierkriterium. Kein Endpunkt liefert „alles".
+- **Keine Datenbankerweiterung** für Suche (F32) — Installierbarkeit vor
+  Mikrooptimierung.
+- **Query-Parameter kommen als `undefined` an**, auch wenn ein
+  Angular-`input()` einen Standardwert hat. Nie darauf verlassen.
 
 ## Betriebskontext
 

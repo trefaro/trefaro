@@ -92,6 +92,17 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
                     </span>
                   </td>
                   <td class="actions">
+                    <a
+                      [routerLink]="[
+                        '/series',
+                        item.id,
+                        'events',
+                        event.id,
+                        'participants',
+                      ]"
+                    >
+                      Participants
+                    </a>
                     @if (event.status === 'published') {
                       <button type="button" (click)="setStatus(event, 'draft')">
                         Unpublish
@@ -125,6 +136,7 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
                 <th>When</th>
                 <th>Type</th>
                 <th>Status</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -141,6 +153,21 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
                     <span class="status" [class]="'status--' + event.status">
                       {{ event.status }}
                     </span>
+                  </td>
+                  <td class="actions">
+                    <!-- Past events are where the participant list matters most:
+                         the follow-up mail of AP 11 is written from it. -->
+                    <a
+                      [routerLink]="[
+                        '/series',
+                        item.id,
+                        'events',
+                        event.id,
+                        'participants',
+                      ]"
+                    >
+                      Participants
+                    </a>
                   </td>
                 </tr>
               }

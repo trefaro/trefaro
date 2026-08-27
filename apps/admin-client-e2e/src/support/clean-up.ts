@@ -11,6 +11,31 @@ interface AdminSeries {
   slug: string;
 }
 
+interface AdminEvent {
+  id: string;
+}
+
+/** Through the participant overview AP 5 added — one page is plenty here. */
+async function removeRegistrationsOf(
+  context: Awaited<ReturnType<typeof request.newContext>>,
+  seriesId: string,
+): Promise<void> {
+  const response = await context.get(`/api/admin/series/${seriesId}/events`);
+  if (!response.ok()) return;
+
+  const events: AdminEvent[] = await response.json();
+  for (const event of events) {
+    const listed = await context.get(
+      `/api/admin/events/${event.id}/registrations?pageSize=200`,
+    );
+    if (!listed.ok()) continue;
+    const { rows = [] } = (await listed.json()) as { rows?: { id: string }[] };
+    for (const row of rows) {
+      await context.delete(`/api/admin/registrations/${row.id}`);
+    }
+  }
+}
+
 /**
  * Removes the event series the suite created.
  *
@@ -34,9 +59,11 @@ export default async function globalTeardown(): Promise<void> {
 
     const series: AdminSeries[] = await response.json();
     for (const item of series) {
-      if (item.slug.startsWith(SERIES_SLUG_PREFIX)) {
-        await context.delete(`/api/admin/series/${item.id}`);
-      }
+      if (!item.slug.startsWith(SERIES_SLUG_PREFIX)) continue;
+      // Registrations first: a confirmed one blocks deleting the series (E14),
+      // so a series seeded with participants would otherwise stay for good.
+      await removeRegistrationsOf(context, item.id);
+      await context.delete(`/api/admin/series/${item.id}`);
     }
   } finally {
     await context.dispose();

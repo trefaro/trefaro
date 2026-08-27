@@ -90,18 +90,3 @@ export function confirmationPathFrom(mail: CapturedMail): string {
   const url = new URL(match[0]);
   return `${url.pathname}${url.search}`;
 }
-
-/**
- * The registration's own id, out of the token in the link.
- *
- * The token is signed, not encrypted (E5) — its payload is deliberately
- * readable, and reading it is what lets this suite remove the row it created.
- * AP 5 brings the participant overview, and with it a proper way to look one up.
- */
-export function registrationIdFromPath(path: string): string {
-  const token = new URL(path, 'http://localhost').searchParams.get('token');
-  if (!token) throw new Error(`No token in "${path}"`);
-  return Buffer.from(token.split('.')[0], 'base64url')
-    .toString('utf8')
-    .split('|')[1];
-}

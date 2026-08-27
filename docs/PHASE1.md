@@ -266,7 +266,7 @@ unauthentifiziert; `/api/admin/**` verlangt eine Sitzung (E16).
 | `… /api/admin/events/:id/registration-fields`           | F12                               | 6   |
 | `GET /api/admin/events/:id/registrations`               | FR 3.3, mit Suche und Paginierung | 5   |
 | `GET /api/admin/events/:id/registrations/statistics`    | Wochen-Anmeldegrafik              | 5   |
-| `PATCH/DELETE /api/admin/registrations/:id`             | Stornieren, Löschen (E14)         | 5   |
+| `GET/PATCH/DELETE /api/admin/registrations/:id`         | Detail, Stornieren, Löschen (E14) | 5   |
 | `GET /api/admin/attachments/:id`                        | Anhang herunterladen (E9)         | 7   |
 | `… /api/admin/events/:id/program-items`                 | FR 3.7                            | 8   |
 | `GET /api/admin/program-items/:id/signups`              | Auslastung, FR 3.10               | 9   |
@@ -768,6 +768,129 @@ Entscheidungen und Abweichungen:
   beweist deshalb nichts über Authentifizierung, TLS, SPF/DKIM und den
   Spam-Ordner. Dafür fehlen Zugangsdaten; verschoben auf die M1-Feedbackrunde und
   in `todo.md` vermerkt.
+
+### AP 5 — Teilnehmerübersicht (erledigt) → **Meilenstein M1**
+
+Stand 27.08.2026. Die höchstbewertete Funktion der Umfrage (3,86/4) steht: eine
+Tabelle je Event mit Suche, Statusfilter, Sortierung und Paginierung, die
+**E-Mail-Adresse in der Zeile** (E13), eine Detailansicht je Anmeldung, Stornieren
+und Wiederherstellen (E14) sowie die Wochenstatistik als Grafik. Damit ist die
+Kernschleife vollständig — Reihe anlegen, Event anlegen, Anmeldungen einsammeln,
+Teilnehmende überblicken — und **M1** erreicht.
+
+Belegt: 343 Unit-Tests (+44: Server 244, `admin-client` 37, `shared-models` 15,
+`shared-http` 12), 106 API-Vertragstests (+32), 60 Veranstalter-Browsertests
+(+15), 72 Nutzer-Browsertests (unverändert).
+
+Das Abnahmekriterium ist gemessen, nicht behauptet. Mit **2 000 Anmeldungen** auf
+einem Event (per SQL in einem Statement gesät) antwortet der Endpunkt — ein
+lokaler Lauf, über mehrere Läufe lagen alle Werte zwischen 9 und 17 ms:
+
+| Abfrage                                           |  Zeit |
+| ------------------------------------------------- | ----: |
+| erste Seite (25 Zeilen)                           | 12 ms |
+| Seite 60 von 80                                   | 12 ms |
+| Suche nach einer Person                           | 11 ms |
+| Suche, die _jede_ Zeile trifft (schlimmster Fall) | 13 ms |
+| Sortierung nach Name über die ganze Tabelle       | 17 ms |
+| Statusfilter                                      | 11 ms |
+| Wochenstatistik                                   | 11 ms |
+
+Die Zahlen stehen im Buildlog jedes Laufs (`process.stdout`), damit ein
+schleichender Trend sichtbar wird, bevor er zum Fehler wird; die Zusicherung im
+Test ist mit 1 500 ms bewusst großzügig — ein geteilter CI-Runner ist kein
+Benchmark, und was hier auffallen soll, ist eine Größenordnung, kein Prozent.
+
+Entscheidungen und Abweichungen:
+
+- **Ein Veranstalter kann stornieren und wiederherstellen, aber nicht bestätigen**
+  (F31). `cancelled` ist aus jedem Zustand erlaubt und behält den Datensatz;
+  `confirmed` wird nur zurückgegeben, wenn die Adresse irgendwann selbst
+  bestätigt wurde (`confirmed_at` steht dann noch); `pending` nur zurück aus
+  `cancelled` und nur, wenn nie bestätigt wurde. Grund: es gibt keine Spalte, die
+  einen handgesetzten Status hinterher von einem echten Double-Opt-In
+  unterscheidet — die Erlaubnis würde also klammheimlich den einzigen
+  Einwilligungsnachweis dieser Anwendung entwerten (E5, F23). Der Fall „die Mail
+  kam nie an" braucht sie nicht: das Formular erneut abzuschicken sendet sie
+  erneut und erzeugt keine zweite Zeile (E10, in AP 4 geprüft).
+- **Die Volltextsuche kommt ohne Datenbankerweiterung** (F32). `ILIKE '%wort%'`
+  kann keinen B-Tree nutzen; die Alternative wäre ein Trigramm-Index und damit
+  `pg_trgm` — eine Erweiterung, für die eine kleine Organisation auf einer
+  gemanagten PostgreSQL nicht unbedingt die Rechte hat. Innerhalb eines Events
+  filtert die Suche Tausende Zeilen, nicht Millionen, und die Messung oben zeigt
+  den schlimmsten Fall. Ein Installationshindernis gegen einen unmerklichen
+  Gewinn zu tauschen wäre der falsche Handel (NFR 12).
+- **Die Wochen werden in der Zeitzone des Events geschnitten** (F33), in SQL
+  (`created_at AT TIME ZONE …`, als Datumszeichenkette formatiert) und nicht im
+  Client: ein zonenloser Zeitstempel durch den Treiber wäre eine Einladung, ihn
+  als Serverzeit zu lesen — genau das, was diese Abfrage vermeidet (E8). Wochen
+  ohne Anmeldung werden aufgefüllt, weil eine Kurve, die stille Wochen weglässt,
+  aus einer Flaute ein Plateau macht.
+- **Jede Suche, jeder Filter, jede Seite ist eine `WHERE`-Klausel.** Nichts wird
+  im Browser gefiltert oder sortiert, und es gibt bewusst **keinen** Endpunkt, der
+  alle Anmeldungen eines Events liefert. Die Sortierung hat immer die ID als
+  letztes Kriterium — ohne eindeutigen Tiebreaker können zwei gleichrangige
+  Zeilen zwischen zwei Seiten die Plätze tauschen, und eine Teilnehmerin
+  verschwindet aus einer Liste, auf der sie steht. Ein Test prüft genau das.
+- **Der Zustand der Ansicht liegt in der URL** — Suche, Filter, Sortierung, Seite
+  und die geöffnete Anmeldung sind Query-Parameter. Eine Kollegin kann bekommen,
+  was man gerade ansieht, und der Zurück-Knopf nimmt einen Filter zurück statt
+  die Seite zu verlassen.
+- **`GET /api/admin/registrations/:id` ist neu in der API-Oberfläche.** Die
+  Tabelle im Plan nannte nur `PATCH/DELETE`; die Detailansicht ist ohne Lesen
+  nicht verlinkbar. Sie antwortet auch, wenn das Event zurück auf `draft`
+  gesetzt wurde: eine Anmeldung ist eine Verpflichtung gegenüber einem Menschen
+  und keine Eigenschaft einer veröffentlichten Seite.
+- **`ParticipantsService` ist ein eigener Service**, getrennt vom
+  `RegistrationService`. Dieselbe Tabelle von zwei Enden: einmal öffentlich,
+  unauthentifiziert und so wortkarg wie möglich (E10), einmal hinter dem
+  Admin-Guard und vollständig. Ein Service, der beides ist, würde die
+  Vertraulichkeitsregel irgendwann verlieren.
+- **Zwei neue Indizes, kein neuer Spaltenzustand.** `(event_id, lower(last_name),
+lower(first_name))` für die Namenssortierung und `(event_id, status,
+created_at DESC)` für Filter und Zählungen. Die Migration wurde einmal
+  angewandt, zurückgenommen und erneut angewandt.
+- **Die geteilte HTTP-Bibliothek kann jetzt Query-Parameter** (`ApiClient.get`
+  mit `params`). Kodierung an einer Stelle statt in jedem Aufrufer: ein Name mit
+  `&` darin darf nicht zu einem zweiten Parameter werden. Nicht gesetzte Werte
+  fallen raus, damit eine Tabelle in den Standardeinstellungen eine kurze,
+  teilbare URL erzeugt.
+- **Die Behelfe aus AP 4 sind weg.** Beide E2E-Suiten lesen die
+  Registrierungs-ID nicht mehr aus der Token-Nutzlast, sondern über
+  `GET /api/admin/events/:id/registrations`. Der Teardown des
+  Veranstalter-Clients entfernt jetzt zuerst die Anmeldungen und dann die Reihe —
+  sonst hätte eine bestätigte Anmeldung ihre Testreihe für immer festgenagelt
+  (E14).
+- **Die Fixtures der Übersicht kommen per SQL**, anders als sonst in diesem
+  Projekt. Zwei Gründe, beide benannt: der öffentliche Endpunkt verschickt pro
+  Versuch eine Mail und ist absichtlich gedrosselt, und die Zustände, die diese
+  Suiten brauchen (storniert, storniert-nach-Bestätigung, nie bestätigt), sind
+  von außen gar nicht herstellbar — per Entscheidung F31. Dass das echte
+  Formular solche Zeilen erzeugt, prüft ein Test, der den ganzen Weg geht:
+  Anmeldung, Mail aus Mailpit, Bestätigung, Auftauchen in der Übersicht.
+- **Die API-Vertragssuite läuft jetzt mit einem Worker.** Zwei Suiten, die
+  denselben Briefkasten leeren, sind ein Rennen, gegen das kein Test sich wehren
+  kann.
+
+Was anders lief:
+
+- **Ein fehlender Query-Parameter kommt als `undefined` an, nicht als der
+  `input()`-Standard.** Die Seite rendete ihr statisches Gerüst und sonst nichts:
+  der erste Effekt warf, bevor die Bindungen ausgewertet wurden — und erst eine
+  Navigation reparierte die Ansicht. Gefunden über die Browserkonsole in einem
+  Wegwerftest, behoben durch Eingaben ohne Standardwert plus einen `text()`-Helfer
+  an jeder Leseseite. Dieselbe Falle lag in der Bestätigungsseite aus AP 4 (ohne
+  sichtbare Folge, weil der Zweig ohne Token abgefangen war); sie ist mit
+  behoben.
+- **Die Fixtures der Browsersuite lagen zuerst auf Seite 2.** Die Füllzeilen
+  waren _jünger_ als die vier benannten Teilnehmenden, und bei „neueste zuerst"
+  standen die interessanten Zeilen dadurch nicht auf der ersten Seite. Jetzt ist
+  die Füllung älter — sonst hängt jeder Locator an der Seitengröße.
+- **Zwei Namenskollisionen in Locators**, beide echte Zeichen dafür, dass
+  Rollenabfragen die richtige Wahl sind: ein Event, das „Participants …" hieß,
+  kollidierte mit dem Link „Participants" in derselben Zeile, und das
+  Detail-Panel (`<aside>`) kollidierte mit der Seitenleiste des Arbeitsbereichs.
+  Beide sind jetzt über ihren zugänglichen Namen adressiert.
 
 ## Definition of Done für Phase 1
 

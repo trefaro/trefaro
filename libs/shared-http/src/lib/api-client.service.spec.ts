@@ -40,6 +40,50 @@ describe('ApiClient', () => {
     http.expectOne('/api/config').flush({});
   });
 
+  it('encodes query parameters instead of leaving that to the caller', () => {
+    configure();
+    client
+      .get('admin/events/1/registrations', {
+        search: 'Okonkwo & Co',
+        page: 2,
+        pageSize: 25,
+      })
+      .subscribe();
+
+    const request = http.expectOne(
+      (candidate) =>
+        candidate.url === '/api/admin/events/1/registrations' &&
+        candidate.params.get('search') === 'Okonkwo & Co' &&
+        candidate.params.get('page') === '2',
+    );
+    // A name with an ampersand in it must not turn into a second parameter.
+    expect(request.request.urlWithParams).toContain(
+      'search=Okonkwo%20%26%20Co',
+    );
+    request.flush({});
+  });
+
+  it('leaves unset parameters out of the URL', () => {
+    configure();
+    client
+      .get('admin/events/1/registrations', {
+        search: '',
+        status: undefined,
+        sort: null,
+        page: 1,
+      })
+      .subscribe();
+
+    const request = http.expectOne(
+      (candidate) => candidate.url === '/api/admin/events/1/registrations',
+    );
+    // So a table showing its defaults produces a short, shareable URL.
+    expect(request.request.urlWithParams).toBe(
+      '/api/admin/events/1/registrations?page=1',
+    );
+    request.flush({});
+  });
+
   it('sends a body on delete, which unsubscribing from push needs', () => {
     configure();
     client
@@ -58,15 +102,13 @@ describe('ApiClient', () => {
       client.get('config').subscribe({ error: resolve });
     });
 
-    http
-      .expectOne('/api/config')
-      .flush(
-        {
-          statusCode: 503,
-          message: 'Web Push is not configured on this instance',
-        },
-        { status: 503, statusText: 'Service Unavailable' },
-      );
+    http.expectOne('/api/config').flush(
+      {
+        statusCode: 503,
+        message: 'Web Push is not configured on this instance',
+      },
+      { status: 503, statusText: 'Service Unavailable' },
+    );
 
     await expect(failure).resolves.toEqual({
       status: 503,

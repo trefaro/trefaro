@@ -41,7 +41,22 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, RouterLink],
   template: `
-    <h1>{{ isNew() ? 'New event' : 'Edit event' }}</h1>
+    <header class="head">
+      <h1>{{ isNew() ? 'New event' : 'Edit event' }}</h1>
+      @if (!isNew()) {
+        <a
+          [routerLink]="[
+            '/series',
+            seriesId(),
+            'events',
+            eventId(),
+            'participants',
+          ]"
+        >
+          Participants
+        </a>
+      }
+    </header>
 
     @if (error()) {
       <p class="error" role="alert">{{ error() }}</p>
@@ -150,6 +165,14 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
     </form>
   `,
   styles: `
+    .head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 1rem;
+      inline-size: min(34rem, 100%);
+    }
+
     form {
       display: flex;
       flex-direction: column;

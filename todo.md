@@ -48,13 +48,13 @@ is assigned to one of its work packages.
       The plug-in must not query core tables directly — this needs a read
       capability in `business/plugin-api`, which is a versioned contract change.
       → implement the check itself in phase 4
-- [ ] **Look a registration up without decoding its token.** AP 4 creates rows
-      that the API can delete (`DELETE /api/admin/registrations/:id`) but not
-      list. Both e2e suites therefore read the registration id out of the
-      confirmation token's payload — which is signed, not encrypted (E5), so it
-      is legitimate but temporary. AP 5's participant overview
-      (`GET /api/admin/events/:id/registrations`) replaces the helpers
-      `registrationIdFromPath` and `idFromToken` in the two suites.
+- [x] **Look a registration up without decoding its token.** ~~AP 4 creates rows
+      that the API can delete but not list, so both e2e suites read the id out of
+      the confirmation token's payload.~~ Closed in AP 5: both suites use
+      `GET /api/admin/events/:id/registrations?search=<address>`, and the helpers
+      `registrationIdFromPath` and `idFromToken` are gone. The organizer client's
+      teardown now removes an event's registrations before its series, which is
+      what E14 requires of anything that seeds a confirmed one.
 - [ ] **Mail against the pilot partner's real SMTP server.** AP 4 proves the
       double opt-in against Mailpit, in unit tests, in the API contract suite and
       in three browsers — but Mailpit accepts everything. What it cannot show:
@@ -64,6 +64,15 @@ is assigned to one of its work packages.
       M1 feedback round with Democracy International (AP 5). Verify there:
       `SMTP_SECURE=true` with real credentials, and a confirmation mail that
       arrives without being filed as junk.
+      **Now due:** AP 5 is finished, so M1 is reached — this is the oldest open
+      item of phase 1 and the only one that needs someone outside the project.
+- [ ] **Tell a participant when an organizer cancels their registration.** AP 5
+      lets an organizer cancel and reinstate (F31), and the person concerned
+      learns nothing — a silent cancellation is the kind of thing that turns into
+      somebody standing at a door. AP 11 builds the follow-up mail on top of the
+      same participant list; the message belongs there rather than in a fourth
+      mail template written in isolation. Verify: cancelling produces one mail,
+      reinstating does not produce a second one that contradicts it.
 - [ ] **The uploads volume is finally used.** The registration field kit (F12)
       introduces file uploads. Verify: type and size validation, and that a
       stored file is only reachable by an authorized request.
@@ -177,6 +186,15 @@ is assigned to one of its work packages.
 
 ## Checkable after phase 5 — hardening and release
 
+- [ ] **Re-measure the participant overview at a size no pilot event reaches.**
+      AP 5 proved the acceptance criterion at 2 000 registrations per event, in
+      the API contract suite, with the numbers in the build log — worst case
+      13 ms for a substring search that matches every row. What that measurement
+      does _not_ cover is an organization whose events run an order of magnitude
+      larger. If one ever appears, the answer is `pg_trgm` (deliberately avoided
+      in F32 because the extension needs rights a managed PostgreSQL may not
+      grant), and the decision has to be made with a real database in front of
+      it, not from the plan.
 - [ ] **Plug-in SDK documentation.** Three things phase 0 learned that a
       third-party plug-in author has to be told:
   - bundles are loaded same-origin and run with full page access, so plug-in

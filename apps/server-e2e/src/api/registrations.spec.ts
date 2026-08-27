@@ -111,23 +111,29 @@ describe('registrations API', () => {
     );
 
   /**
-   * The registration's own id, taken from the token in its confirmation mail.
+   * The registration's own id, looked up through the participant overview.
    *
-   * The token is signed, not encrypted (E5) — its payload is deliberately
-   * readable, and reading it here is what lets the teardown remove the rows
-   * again. The participant overview of AP 5 replaces this with a list endpoint.
+   * Until AP 5 this suite read the id out of the confirmation token's payload,
+   * which is signed rather than encrypted (E5) and therefore legible — a
+   * legitimate but temporary trick, because AP 4 could delete a registration and
+   * not find one. `GET /api/admin/events/:id/registrations` replaced it.
    */
-  const idFromToken = (token: string): string =>
-    Buffer.from(token.split('.')[0], 'base64url')
-      .toString('utf8')
-      .split('|')[1];
+  const idOf = async (email: string): Promise<string> => {
+    const found = await api<{ rows: { id: string }[] }>(
+      `/api/admin/events/${event.id}/registrations?search=${encodeURIComponent(email)}`,
+      asAdmin(),
+    );
+    const [row] = found.body.rows;
+    if (!row) throw new Error(`No registration for ${email} in the overview.`);
+    return row.id;
+  };
 
   /** Registers, reads the mail, and returns the token the link carried. */
   const registerAndCollectToken = async (email: string): Promise<string> => {
     const response = await register(email);
     expect(response.status).toBe(202);
     const token = confirmationTokenFrom(await waitForMailTo(email));
-    registrations.push(idFromToken(token));
+    registrations.push(await idOf(email));
     return token;
   };
 
@@ -205,7 +211,7 @@ describe('registrations API', () => {
     expect(response.body).toEqual({ email });
 
     const mail = await waitForMailTo(email);
-    registrations.push(idFromToken(confirmationTokenFrom(mail)));
+    registrations.push(await idOf(email));
     expect(mail.subject).toContain('Registration Contract Event');
     // The link points at the participant client, not at the API (E5b).
     expect(mail.text).toContain('/registrations/confirm?token=');
@@ -217,11 +223,8 @@ describe('registrations API', () => {
     const response = await register(email);
 
     expect(response.body.email).toBe(email.toLowerCase());
-    registrations.push(
-      idFromToken(
-        confirmationTokenFrom(await waitForMailTo(email.toLowerCase())),
-      ),
-    );
+    await waitForMailTo(email.toLowerCase());
+    registrations.push(await idOf(email.toLowerCase()));
   });
 
   it('confirms with the token from the mail, and says so on the second click', async () => {

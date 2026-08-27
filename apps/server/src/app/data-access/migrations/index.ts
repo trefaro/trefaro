@@ -3,6 +3,7 @@ import { AdminIdentity1787788800000 } from './1787788800000-AdminIdentity';
 import { EventSeries1787788900000 } from './1787788900000-EventSeries';
 import { Events1787789000000 } from './1787789000000-Events';
 import { Registrations1787789100000 } from './1787789100000-Registrations';
+import { ParticipantOverview1787789200000 } from './1787789200000-ParticipantOverview';
 
 /**
  * Core migrations, in the order they must run.
@@ -16,4 +17,5 @@ export const CORE_MIGRATIONS = [
   EventSeries1787788900000,
   Events1787789000000,
   Registrations1787789100000,
+  ParticipantOverview1787789200000,
 ];

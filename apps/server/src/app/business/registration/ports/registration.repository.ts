@@ -1,4 +1,10 @@
-import type { RegistrationStatus } from '@trefaro/shared-models';
+import type {
+  ParticipantSort,
+  RegistrationCounts,
+  RegistrationStatus,
+  RegistrationWeek,
+  SortDirection,
+} from '@trefaro/shared-models';
 
 /**
  * Port for event registrations (FR 3.5).
@@ -70,6 +76,34 @@ export class RegistrationExistsError extends Error {
   }
 }
 
+/**
+ * What the participant overview asks the database for (FR 3.3).
+ *
+ * Deliberately not the client's query object: the service has already resolved
+ * the defaults, clamped the page size and split the search into words, so the
+ * data access layer receives something it can translate into SQL without making
+ * a single product decision.
+ */
+export interface RegistrationSearch {
+  readonly eventId: string;
+  /**
+   * Words that must *all* match, each of them in first name, last name or
+   * e-mail. Already trimmed and lower-cased; an empty array means no filter.
+   */
+  readonly terms: readonly string[];
+  readonly status: RegistrationStatus | null;
+  readonly sort: ParticipantSort;
+  readonly direction: SortDirection;
+  readonly offset: number;
+  readonly limit: number;
+}
+
+/** One page, plus how many rows the filter matched in total. */
+export interface RegistrationSlice {
+  readonly rows: readonly RegistrationRecord[];
+  readonly total: number;
+}
+
 export interface RegistrationRepository {
   findById(id: string): Promise<RegistrationRecord | null>;
   /** Case-insensitive; the caller passes a normalized address. */
@@ -86,6 +120,22 @@ export interface RegistrationRepository {
   ): Promise<RegistrationRecord | null>;
   /** False when the registration was already gone. */
   delete(id: string): Promise<boolean>;
+  /** One page of one event's registrations, filtered, sorted and counted. */
+  search(query: RegistrationSearch): Promise<RegistrationSlice>;
+  /** All four numbers of one event in one query, whatever the table filter is. */
+  countByStatus(eventId: string): Promise<RegistrationCounts>;
+  /**
+   * Registrations per calendar week, oldest first, weeks without any omitted.
+   *
+   * The week is cut in `timezone`, the event's own zone (E8): an organizer in
+   * Cologne reading a graph of a Nairobi event still wants the weeks the event
+   * lives in, and a registration at 00:30 local time must not count towards the
+   * previous week because the server happens to run on UTC.
+   */
+  weeklyTotals(
+    eventId: string,
+    timezone: string,
+  ): Promise<readonly RegistrationWeek[]>;
 }
 
 export const REGISTRATION_REPOSITORY = Symbol(

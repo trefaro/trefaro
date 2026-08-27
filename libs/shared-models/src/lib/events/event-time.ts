@@ -90,6 +90,30 @@ export function formatEventPeriod(period: EventPeriod, locale = 'en'): string {
     : `${day.format(start)}, ${clock.format(start)} – ${day.format(end)}, ${clock.format(end)} ${zoneLabel(period, locale)}`;
 }
 
+/**
+ * A single instant, spelled out in a given zone.
+ *
+ * For the timestamps around an event rather than the event itself — when a
+ * registration arrived, when an address was confirmed. Both belong in the
+ * event's zone (E8): an organizer comparing "registered at" against the
+ * programme is comparing two clocks, and they have to be the same one.
+ *
+ * A short date, because these appear in table cells: the year matters, the
+ * weekday does not.
+ */
+export function formatInstant(
+  iso: string,
+  timeZone: string,
+  locale = 'en',
+): string {
+  return new Intl.DateTimeFormat(locale, {
+    timeZone,
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    hourCycle: 'h23',
+  }).format(new Date(iso));
+}
+
 /** `CET`, `GMT+5:30` — whatever the locale calls the zone at that instant. */
 export function zoneLabel(period: EventPeriod, locale = 'en'): string {
   const named = new Intl.DateTimeFormat(locale, {

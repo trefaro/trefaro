@@ -4,7 +4,12 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import type { PublicEvent, RegistrationInput } from '@trefaro/shared-models';
+import type {
+  PublicEvent,
+  RegistrationCounts,
+  RegistrationInput,
+  RegistrationWeek,
+} from '@trefaro/shared-models';
 import type { TrefaroEnv } from '../../core/config/env';
 import type { EventLocation, EventsService } from '../events';
 import { MailDeliveryError, MailService } from '../mail';
@@ -15,6 +20,7 @@ import {
   type RegistrationChanges,
   type RegistrationRecord,
   type RegistrationRepository,
+  type RegistrationSlice,
 } from './ports/registration.repository';
 import { RegistrationService } from './registration.service';
 
@@ -94,6 +100,20 @@ class FakeRegistrationRepository implements RegistrationRepository {
     if (index < 0) return false;
     this.rows.splice(index, 1);
     return true;
+  }
+
+  // The three reads of the participant overview are not part of the double
+  // opt-in flow this suite covers; `participants.service.spec.ts` exercises them.
+  async search(): Promise<RegistrationSlice> {
+    throw new Error('not used in this suite');
+  }
+
+  async countByStatus(): Promise<RegistrationCounts> {
+    throw new Error('not used in this suite');
+  }
+
+  async weeklyTotals(): Promise<readonly RegistrationWeek[]> {
+    throw new Error('not used in this suite');
   }
 }
 

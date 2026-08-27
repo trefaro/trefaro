@@ -2,7 +2,9 @@ import { Module } from '@nestjs/common';
 import { EventsModule } from '../events';
 import { MailModule } from '../mail';
 import { SecurityModule } from '../security';
+import { AdminEventRegistrationsController } from './admin-event-registrations.controller';
 import { AdminRegistrationsController } from './admin-registrations.controller';
+import { ParticipantsService } from './participants.service';
 import { PublicRegistrationsController } from './public-registrations.controller';
 import { RegistrationConfirmationController } from './registration-confirmation.controller';
 import { RegistrationService } from './registration.service';
@@ -15,9 +17,13 @@ import { RegistrationService } from './registration.service';
  * module for the two messages of the opt-in, and the security module for the
  * signature that makes the confirmation link self-contained (E5).
  *
- * Still to come: the configurable field kit (AP 6, AP 7), the participant
- * overview built on these rows (AP 5) and the participant's own view of their
- * registration (AP 9, E11).
+ * Two services read the same table from opposite ends: `RegistrationService` is
+ * the participant's own double opt-in flow, public and deliberately taciturn
+ * (E10); `ParticipantsService` is the organizer's overview (FR 3.3), behind the
+ * administrative guard and complete.
+ *
+ * Still to come: the configurable field kit (AP 6, AP 7) and the participant's
+ * own view of their registration (AP 9, E11).
  */
 @Module({
   imports: [EventsModule, MailModule, SecurityModule],
@@ -25,8 +31,9 @@ import { RegistrationService } from './registration.service';
     PublicRegistrationsController,
     RegistrationConfirmationController,
     AdminRegistrationsController,
+    AdminEventRegistrationsController,
   ],
-  providers: [RegistrationService],
-  exports: [RegistrationService],
+  providers: [RegistrationService, ParticipantsService],
+  exports: [RegistrationService, ParticipantsService],
 })
 export class RegistrationModule {}

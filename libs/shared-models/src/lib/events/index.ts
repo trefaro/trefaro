@@ -16,6 +16,7 @@ export {
 } from './event';
 export {
   formatEventPeriod,
+  formatInstant,
   hasEnded,
   instantToWallClock,
   isTimeZone,

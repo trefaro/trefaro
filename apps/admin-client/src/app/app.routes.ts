@@ -54,6 +54,16 @@ export const appRoutes: Route[] = [
         title: 'New event — Trefaro',
       },
       {
+        // Before `series/:seriesId/events/:eventId`, so "participants" is not
+        // read as part of the event's own route.
+        path: 'series/:seriesId/events/:eventId/participants',
+        loadComponent: () =>
+          import('./pages/participants/participants-page').then(
+            (m) => m.ParticipantsPage,
+          ),
+        title: 'Participants — Trefaro',
+      },
+      {
         path: 'series/:seriesId/events/:eventId',
         loadComponent: () =>
           import('./pages/events/event-form-page').then((m) => m.EventFormPage),
