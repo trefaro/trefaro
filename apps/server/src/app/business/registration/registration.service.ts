@@ -8,6 +8,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import type {
+  CustomFieldValues,
   PublicEvent,
   RegistrationAcknowledgement,
   RegistrationConfirmation,
@@ -20,6 +21,7 @@ import { EventsService } from '../events';
 import { MailDeliveryError, MailService } from '../mail';
 import type { MailEvent, RegistrationMailContext } from '../mail';
 import { CONFIRMATION_TOKEN_TTL_MS, TokenSigner } from '../security';
+import { RegistrationFieldsService } from './registration-fields.service';
 import {
   REGISTRATION_REPOSITORY,
   type RegistrationRecord,
@@ -53,6 +55,9 @@ export class RegistrationService {
     @Inject(REGISTRATION_REPOSITORY)
     private readonly registrations: RegistrationRepository,
     private readonly events: EventsService,
+    // The field kit (F12): what an answer has to look like follows from the
+    // definitions, so the service that owns them is what checks it.
+    private readonly fields: RegistrationFieldsService,
     private readonly mail: MailService,
     private readonly tokens: TokenSigner,
     @Inject(ENV) private readonly env: TrefaroEnv,
@@ -71,13 +76,20 @@ export class RegistrationService {
     }
 
     const email = normalizeEmail(input.email);
+    // Before anything is written: a form missing a required answer must not
+    // leave a pending row behind, and must not send a mail either.
+    const customFields = await this.fields.validateAnswers(
+      event.id,
+      input.customFields,
+    );
+
     const existing = await this.registrations.findByEventAndEmail(
       event.id,
       email,
     );
     const registration = existing
-      ? await this.reuse(existing, input)
-      : await this.add(event.id, email, input);
+      ? await this.reuse(existing, input, customFields)
+      : await this.add(event.id, email, input, customFields);
 
     await this.notify(registration, event, seriesSlug);
     return { email };
@@ -150,11 +162,13 @@ export class RegistrationService {
     eventId: string,
     email: string,
     input: RegistrationInput,
+    customFields: CustomFieldValues,
   ): Promise<RegistrationRecord> {
     return this.registrations.create({
       eventId,
       email,
       status: 'pending',
+      customFields,
       ...personalDetails(input),
     });
   }
@@ -167,19 +181,22 @@ export class RegistrationService {
    * cancelled one comes back as pending, because someone submitting the form
    * again is saying they changed their mind.
    *
-   * A **confirmed** registration is left untouched. This endpoint is public and
-   * unauthenticated: anyone who knows a participant's address could otherwise
-   * rewrite their name, and there is nothing here to authorize that.
+   * A **confirmed** registration is left untouched, answers included. This
+   * endpoint is public and unauthenticated: anyone who knows a participant's
+   * address could otherwise rewrite their name — or their dietary requirements —
+   * and there is nothing here to authorize that.
    */
   private async reuse(
     existing: RegistrationRecord,
     input: RegistrationInput,
+    customFields: CustomFieldValues,
   ): Promise<RegistrationRecord> {
     if (existing.status === 'confirmed') return existing;
 
     return (
       (await this.registrations.update(existing.id, {
         status: 'pending',
+        customFields,
         ...personalDetails(input),
       })) ?? existing
     );

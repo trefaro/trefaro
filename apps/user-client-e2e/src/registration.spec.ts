@@ -53,6 +53,16 @@ test.describe('registering for an event', () => {
     await page.getByLabel('E-mail').fill(email);
     await page.getByLabel('Phone').fill('+49 221 123456');
     await page.getByLabel('Where are you coming from?').fill('Cologne');
+
+    // The configurable fields of this event (F12) — one per type, built from the
+    // definitions the fixture seeded rather than written into the template.
+    await page.getByLabel('Dietary requirements').fill('No nuts, please');
+    await expect(
+      page.getByText('So the caterer knows what to plan for.'),
+    ).toBeVisible();
+    await page.getByLabel('Meal *').selectOption('Vegan');
+    await page.getByLabel('I have read the code of conduct *').check();
+
     await page.getByRole('button', { name: 'Register' }).click();
 
     // Nothing is registered yet, and the page says so rather than congratulating.
@@ -93,6 +103,31 @@ test.describe('registering for an event', () => {
 
     // FR 3.5 makes first name, last name and e-mail mandatory; the form must not
     // post a half-filled registration.
+    await expect(
+      page.getByRole('heading', { name: 'Almost done' }),
+    ).toBeHidden();
+  });
+
+  test('does not send anything while a required question is unanswered', async ({
+    page,
+  }, testInfo) => {
+    await page.goto(`${LANDING_PAGE}/register`);
+    await page.getByLabel('First name').fill('Unanswered');
+    await page.getByLabel('Last name').fill('Participant');
+    await page
+      .getByLabel('E-mail')
+      .fill(
+        `e2e-unanswered-${testInfo.project.name}@registrations.example.org`,
+      );
+    // The optional question is answered, the two required ones are not.
+    await page.getByLabel('Dietary requirements').fill('Nothing special');
+
+    await page.getByRole('button', { name: 'Register' }).click();
+
+    // The browser half of the acceptance criterion of AP 6. The server refuses
+    // the same registration with 400, which the API contract suite asserts —
+    // this is the courtesy that keeps the participant from finding out by mail
+    // that nothing happened.
     await expect(
       page.getByRole('heading', { name: 'Almost done' }),
     ).toBeHidden();

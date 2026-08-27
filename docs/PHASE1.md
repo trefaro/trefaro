@@ -263,7 +263,9 @@ unauthentifiziert; `/api/admin/**` verlangt eine Sitzung (E16).
 | `GET/POST/PATCH/DELETE /api/admin/series[/:id]`         | FR 2.1, 2.2                       | 2   |
 | `GET/POST/PATCH/DELETE /api/admin/events[/:id]`         | FR 3.1, 3.2                       | 3   |
 | `GET /api/admin/events/:id/dashboard`                   | FR 3.8                            | 10  |
-| `… /api/admin/events/:id/registration-fields`           | F12                               | 6   |
+| `GET/POST /api/admin/events/:id/registration-fields`    | F12, Formular je Event            | 6   |
+| `PUT /api/admin/events/:id/registration-fields/order`   | Reihenfolge als Ganzes (F35)      | 6   |
+| `PATCH/DELETE /api/admin/registration-fields/:id`       | Frage ändern, entfernen (F34)     | 6   |
 | `GET /api/admin/events/:id/registrations`               | FR 3.3, mit Suche und Paginierung | 5   |
 | `GET /api/admin/events/:id/registrations/statistics`    | Wochen-Anmeldegrafik              | 5   |
 | `GET/PATCH/DELETE /api/admin/registrations/:id`         | Detail, Stornieren, Löschen (E14) | 5   |
@@ -274,13 +276,17 @@ unauthentifiziert; `/api/admin/**` verlangt eine Sitzung (E16).
 | `GET /api/admin/series/:id/former-participants`         | FR 2.4                            | 12  |
 | `POST /api/admin/series/:id/invitations`                | FR 2.4                            | 12  |
 | `GET /api/user/series[/:slug]`                          | Startseite, Reihenseite           | 2   |
-| `GET /api/user/events/:slug`                            | Event-Landingpage                 | 3   |
-| `GET /api/user/events/:slug/program`                    | Programmplan                      | 8   |
-| `GET /api/user/events/:slug/registration-form`          | Feldsatz des Formulars            | 6   |
-| `POST /api/user/events/:slug/registrations`             | FR 3.5, gedrosselt                | 4   |
+| `GET /api/user/series/:reihe/events[/:event]`           | Event-Landingpage                 | 3   |
+| `GET /api/user/series/:reihe/events/:event/program`     | Programmplan                      | 8   |
+| `… /events/:event/registration-fields`                  | Feldsatz des Formulars            | 6   |
+| `POST /… /events/:event/registrations`                  | FR 3.5, gedrosselt                | 4   |
 | `POST /api/user/registrations/confirm`                  | Double-Opt-In (E5b)               | 4   |
 | `GET /api/user/registrations/me`                        | „Meine Anmeldung" (E11)           | 9   |
 | `PUT/DELETE /api/user/program-items/:id/signup`         | FR 3.10 (E11)                     | 9   |
+
+Die öffentlichen Pfade sind geschachtelt, weil ein Slug je Reihe eindeutig ist
+und nicht je Instanz (E7, F28) — die Zeilen oben nennen sie in der Form, in der
+sie tatsächlich existieren.
 
 Jeder Payload-Typ liegt in `libs/shared-models`, damit ein Vertragsbruch den
 Build bricht und nicht einen Request.
@@ -892,6 +898,111 @@ Was anders lief:
   kollidierte mit dem Link „Participants" in derselben Zeile, und das
   Detail-Panel (`<aside>`) kollidierte mit der Seitenleiste des Arbeitsbereichs.
   Beide sind jetzt über ihren zugänglichen Namen adressiert.
+
+### AP 6 — Feld-Baukasten (erledigt)
+
+Stand 27.08.2026. Das Anmeldeformular ist konfigurierbar: je Event beliebig viele
+eigene Fragen der Typen **Text, Auswahl, Ankreuzfeld** (F12, Teil 1) — anlegen,
+umformulieren, als Pflichtfeld markieren, umsortieren, löschen. Der Nutzer-Client
+baut das Formular aus den Definitionen, der Server validiert die Antworten gegen
+dieselben Definitionen, und die Antworten stehen im Detail-Panel der
+Teilnehmerübersicht.
+
+Belegt: 392 Unit-Tests (+35: Server 276, `admin-client` 40 — die 343 im Eintrag zu
+AP 5 waren 14 zu niedrig, `shared-theming` fehlte in der Summe), 129
+API-Vertragstests (+23), 78 Veranstalter-Browsertests (+18), 75 Nutzer-Browsertests
+(+3).
+
+**Das Abnahmekriterium, beide Hälften.** Ein neu definiertes Pflichtfeld lehnt eine
+Anmeldung ohne diesen Wert mit 400 ab, und ein unbekannter Feldschlüssel
+verschwindet nicht stillschweigend. Die zwei Hälften sind an verschiedenen Stellen
+durchgesetzt, und genau deshalb prüft die Vertragssuite beide:
+
+| Fall                                            | Antwort | durchgesetzt von                                 |
+| ----------------------------------------------- | ------- | ------------------------------------------------ |
+| Pflichtfeld nicht beantwortet                   | 400     | `RegistrationFieldsService.validateAnswers`      |
+| `customFields` gar nicht mitgeschickt           | 400     | dieselbe Prüfung — Auslassung ist Auslassung     |
+| unbekannter **Feldschlüssel** in `customFields` | 400     | dieselbe Prüfung, gegen die Definitionen         |
+| unbekannte **Eigenschaft** des Requests         | 400     | globale `ValidationPipe`, `forbidNonWhitelisted` |
+| Auswahlwert, den das Feld nicht anbietet        | 400     | Prüfung gegen `options_json`                     |
+| Pflicht-Ankreuzfeld auf `false`                 | 400     | F36                                              |
+
+Der Nutzer-Client verhindert dieselben Fälle vorher im Browser — als Höflichkeit,
+nicht als Regel: entschieden wird auf dem Server, und ein Browsertest belegt, dass
+das Formular bei offener Pflichtfrage nichts abschickt.
+
+Was dabei entschieden wurde (im Referenzdokument als F34–F36 protokolliert):
+
+- **Eine gelöschte Frage löscht keine Antworten** (F34). Löschen ist immer
+  erlaubt, auch wenn schon geantwortet wurde; die Werte bleiben in
+  `custom_fields_json` und das Detail-Panel zeigt sie unter ihrem bloßen
+  Schlüssel als „no longer asked for". Die naheliegende Alternative — 409, solange
+  Antworten existieren — wäre eine Sackgasse, weil es kein Archiv-Flag für eine
+  Frage gibt, die einfach nicht mehr gestellt wird.
+- **Schlüssel und Typ sind unveränderlich, die Formulierung nicht** (F35). Der
+  Schlüssel entsteht aus der Beschriftung über dieselbe `slugify`-Funktion, die
+  aus einem Eventnamen eine Adresse macht, samt numerierter Variante bei
+  Kollision; sechs Schlüssel sind für den Kern reserviert. Ein _mitgeschickter_
+  Schlüssel wird wörtlich genommen und abgelehnt, wenn er keiner ist — man
+  schickt ihn, damit er zu etwas außerhalb passt.
+- **„Pflicht" heißt bei einem Ankreuzfeld angehakt** (F36), nicht bloß
+  beantwortet. Bei einem optionalen Ankreuzfeld ist `false` dagegen eine
+  gespeicherte Antwort; nur ein fehlender Schlüssel heißt „nicht beantwortet".
+
+Weitere Festlegungen, klein aber folgenreich:
+
+- **Die Reihenfolge wird als Ganzes geschrieben**, nie als „dieses Feld nach
+  unten": `PUT …/registration-fields/order` nimmt jede Id des Events genau
+  einmal und vergibt `sort` in einer Transaktion neu (0…n-1). Zwei Veranstalter,
+  die gleichzeitig je ein Feld verschieben, würden sonst zu einer Reihenfolge
+  verschmelzen, die keiner von beiden wollte. `sort` ist deshalb bewusst nicht
+  eindeutig je Event — ein Unique-Constraint würde beim Umnummerieren mit sich
+  selbst kollidieren.
+- **Eine Option ist ihr eigener Wert.** Auswahlfelder halten reine Zeichenketten,
+  keine Wert-Beschriftung-Paare: was der Teilnehmende gewählt hat und was die
+  Übersicht zeigt, sind derselbe Text, und es gibt keine Zuordnungstabelle, die
+  veralten kann. Im Veranstalter-Client sind die Optionen **ein Textfeld, eine
+  Wahl pro Zeile** — eine Liste aus Eingabefeldern mit Hinzufügen- und
+  Entfernen-Knöpfen ist mehr Mechanik für weniger Gewinn.
+- **Eine Textantwort hat eine feste Obergrenze** (500 Zeichen) statt einer
+  Einstellung je Feld. Ein Absatz passt, und ein Veranstalter, der für jede Frage
+  eine Zahl wählen soll, wird nach etwas gefragt, das er nicht beantworten kann.
+- **Die Antworten stehen im Detail-Panel, nicht als Tabellenspalten.** Die
+  Übersicht muss bei 2 000 Zeilen lesbar bleiben (AP 5); N zusätzliche Spalten
+  wären genau das, was sie kaputt macht. Jede definierte Frage wird aufgeführt,
+  auch die unbeantwortete: eine Zeile, die stillschweigend verschwindet, sieht
+  aus wie eine Frage, die nie gestellt wurde. Ob das für die Feedbackrunde mit
+  Democracy International reicht, ist eine der Fragen an M1.
+- **`custom_fields_json` gab es von der ersten Migration an**, deshalb brauchte
+  AP 6 nur die Definitionstabelle und keine Migration auf einer Tabelle, die
+  schon Anmeldungen hält.
+- **Validieren passiert vor dem Schreiben.** Eine Anmeldung mit fehlender
+  Pflichtantwort hinterlässt keine `pending`-Zeile und verschickt keine Mail —
+  sonst hätte der Teilnehmende eine Anmeldung, die er weder abschließen noch
+  sehen kann. Ein Unit-Test hält genau diese Reihenfolge fest.
+
+Was anders lief:
+
+- **Ein `readonly string[]` im Port kollidiert mit TypeORMs Teilentität.** Der
+  Port gibt Optionen bewusst unveränderlich heraus; TypeORM schreibt in das, was
+  es bekommt. Die Kopie steht jetzt im Repository, nicht im Port.
+- **Das Template las `form.controls.type.value` direkt** — und ein Formularwert
+  ist kein Signal. Das Auswahlfeld für die Optionen erschien dadurch nicht
+  zuverlässig. Jetzt wird der Wert über `valueChanges` in ein Signal gespiegelt,
+  genau wie die Event-Typ-Umschaltung in AP 3.
+- **`private` reicht für ein Template nicht**, und der reine `tsc`-Lauf merkt es
+  nicht: erst der Angular-Compiler im Testbuild meldete `TS2341`. Ein
+  Type-Check ohne Template-Prüfung ist für diese Clients kein Beweis.
+- **Zwei Locator-Fallen.** Der zugängliche Name eines `<select>` enthält seine
+  Optionstexte, weshalb „Choices" auch das Feld „Kind of answer" traf
+  (`{ exact: true }` löst es). Und die Frageformulierung steht in einem
+  Eingabewert, ist also kein Text, den ein Locator finden kann — die Karten der
+  Browsersuite werden deshalb über ihren Schlüssel adressiert, das einzige an
+  einem Feld, was sich nicht ändert (F35).
+- **Ein Ableitungsfehler beim Reservierungs-Check.** „E-Mail" wird zu `e-mail`
+  und kollidiert damit gar nicht mit `email` — der erste Test dazu prüfte etwas
+  anderes als er behauptete. Die Liste trifft die abgeleiteten Schlüssel, nicht
+  die Beschriftungen, und der Test sagt es jetzt auch.
 
 ## Definition of Done für Phase 1
 

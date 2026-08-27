@@ -5,6 +5,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import type {
+  CustomFieldValues,
   PublicEvent,
   RegistrationCounts,
   RegistrationInput,
@@ -15,6 +16,7 @@ import type { EventLocation, EventsService } from '../events';
 import { MailDeliveryError, MailService } from '../mail';
 import type { ConfirmationMailContext, RegistrationMailContext } from '../mail';
 import { TokenSigner } from '../security';
+import type { RegistrationFieldsService } from './registration-fields.service';
 import {
   type NewRegistration,
   type RegistrationChanges,
@@ -143,6 +145,27 @@ class RecordingMailService {
   }
 }
 
+/**
+ * Stands in for the field kit (F12).
+ *
+ * What a valid answer is belongs to `registration-fields.service.spec.ts`, which
+ * has the definitions to check against. What belongs here is the *order*: the
+ * validation runs before anything is written, so a refused answer leaves no
+ * pending row and sends no mail.
+ */
+class FakeRegistrationFieldsService {
+  /** Set to make the next validation fail the way a missing answer would. */
+  rejecting = false;
+  answers: CustomFieldValues = {};
+
+  async validateAnswers(): Promise<CustomFieldValues> {
+    if (this.rejecting) {
+      throw new BadRequestException('"Dietary requirements" is required.');
+    }
+    return this.answers;
+  }
+}
+
 class FakeEventsService {
   event: PublicEvent = EVENT;
   /** Set to make the public lookup behave like a draft or unknown event. */
@@ -172,15 +195,18 @@ describe('RegistrationService', () => {
   let repository: FakeRegistrationRepository;
   let mail: RecordingMailService;
   let events: FakeEventsService;
+  let fields: FakeRegistrationFieldsService;
   let service: RegistrationService;
 
   beforeEach(() => {
     repository = new FakeRegistrationRepository();
     mail = new RecordingMailService();
     events = new FakeEventsService();
+    fields = new FakeRegistrationFieldsService();
     service = new RegistrationService(
       repository,
       events as unknown as EventsService,
+      fields as unknown as RegistrationFieldsService,
       mail as unknown as MailService,
       new TokenSigner(ENV),
       ENV,
@@ -210,6 +236,36 @@ describe('RegistrationService', () => {
       expect(row.email).toBe('amina@example.org');
       expect(row.phone).toBe('+49 221 12345');
       expect(row.origin).toBeNull();
+    });
+
+    it('stores the answers the field kit accepted (F12)', async () => {
+      fields.answers = { 'dietary-requirements': 'vegan', visa: true };
+
+      await service.register('buergerraete', 'kickoff', {
+        ...INPUT,
+        customFields: { 'dietary-requirements': ' vegan ', visa: true },
+      });
+
+      const [row] = repository.rows;
+      // What the field service returned, not what the request contained: the
+      // trimming and the dropping of unanswered fields happen there.
+      expect(row.customFields).toEqual({
+        'dietary-requirements': 'vegan',
+        visa: true,
+      });
+    });
+
+    it('writes nothing and sends nothing when an answer is refused', async () => {
+      fields.rejecting = true;
+
+      await expect(
+        service.register('buergerraete', 'kickoff', INPUT),
+      ).rejects.toThrow(BadRequestException);
+
+      // The order matters: a pending row plus no mail would be a registration
+      // the participant can neither complete nor see.
+      expect(repository.rows).toHaveLength(0);
+      expect(mail.recipients).toEqual([]);
     });
 
     it('links to the participant client, not to the API (E5b)', async () => {

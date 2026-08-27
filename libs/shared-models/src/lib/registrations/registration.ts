@@ -1,3 +1,5 @@
+import type { CustomFieldValues } from './field';
+
 /**
  * Registering for an event with double opt-in (FR 3.5, UC 07).
  *
@@ -28,8 +30,7 @@ export const REGISTRATION_STATUSES: readonly RegistrationStatus[] = [
  *
  * Mandatory: first name, last name, e-mail. Phone and origin are asked for
  * because organizers need them for visa letters and travel planning, but an
- * event that does not need them must not turn them into a barrier. The
- * configurable fields of the field kit (F12) join this in AP 6.
+ * event that does not need them must not turn them into a barrier.
  */
 export interface RegistrationInput {
   readonly firstName: string;
@@ -39,6 +40,14 @@ export interface RegistrationInput {
   /** Free text: country, city or organization — the organizer decides what to ask. */
   readonly origin?: string | null;
   readonly newsletterOptIn?: boolean;
+  /**
+   * Answers to the fields this event defines (F12).
+   *
+   * Keyed by field key. Validated against the definitions rather than against a
+   * fixed shape, and an unknown key is refused instead of dropped: a typo in a
+   * key would otherwise cost an answer without anybody noticing.
+   */
+  readonly customFields?: CustomFieldValues;
 }
 
 /**

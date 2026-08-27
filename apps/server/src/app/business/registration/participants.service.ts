@@ -214,6 +214,7 @@ function toRow(record: RegistrationRecord): ParticipantRow {
     contactOptOut: record.contactOptOut,
     registeredAt: record.createdAt.toISOString(),
     confirmedAt: record.confirmedAt?.toISOString() ?? null,
+    customFields: record.customFields,
   };
 }
 

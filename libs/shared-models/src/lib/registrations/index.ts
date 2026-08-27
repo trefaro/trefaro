@@ -1,4 +1,23 @@
 export {
+  MAX_CUSTOM_TEXT_LENGTH,
+  MAX_FIELD_HELP_LENGTH,
+  MAX_FIELD_KEY_LENGTH,
+  MAX_FIELD_LABEL_LENGTH,
+  MAX_FIELD_OPTIONS,
+  MAX_FIELD_OPTION_LENGTH,
+  MAX_REGISTRATION_FIELDS,
+  REGISTRATION_FIELD_TYPES,
+  formatAnswer,
+  type CustomFieldValue,
+  type CustomFieldValues,
+  type RegistrationField,
+  type RegistrationFieldChange,
+  type RegistrationFieldInput,
+  type RegistrationFieldOrder,
+  type RegistrationFieldPublic,
+  type RegistrationFieldType,
+} from './field';
+export {
   REGISTRATION_STATUSES,
   type ConfirmationState,
   type RegistrationAcknowledgement,

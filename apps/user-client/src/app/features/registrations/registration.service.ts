@@ -3,6 +3,7 @@ import { ApiClient } from '@trefaro/shared-http';
 import type {
   RegistrationAcknowledgement,
   RegistrationConfirmation,
+  RegistrationFieldPublic,
   RegistrationInput,
 } from '@trefaro/shared-models';
 import { firstValueFrom } from 'rxjs';
@@ -27,6 +28,23 @@ export class RegistrationsService {
       this.api.post<RegistrationAcknowledgement>(
         `user/series/${encodeURIComponent(seriesSlug)}/events/${encodeURIComponent(eventSlug)}/registrations`,
         input,
+      ),
+    );
+  }
+
+  /**
+   * The extra questions this event's form asks (F12).
+   *
+   * Its own request rather than part of the event: only the form needs them, and
+   * the landing page would carry them for nothing.
+   */
+  fields(
+    seriesSlug: string,
+    eventSlug: string,
+  ): Promise<readonly RegistrationFieldPublic[]> {
+    return firstValueFrom(
+      this.api.get<RegistrationFieldPublic[]>(
+        `user/series/${encodeURIComponent(seriesSlug)}/events/${encodeURIComponent(eventSlug)}/registration-fields`,
       ),
     );
   }

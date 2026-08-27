@@ -16,6 +16,7 @@ import type {
   ParticipantQuery,
   ParticipantRow,
   ParticipantSort,
+  RegistrationField,
   RegistrationStatistics,
   RegistrationStatus,
   RegistrationWeek,
@@ -26,11 +27,13 @@ import {
   DEFAULT_SORT_DIRECTION,
   PARTICIPANT_SORTS,
   REGISTRATION_STATUSES,
+  formatAnswer,
   formatInstant,
   pageCount,
 } from '@trefaro/shared-models';
 import { EventsAdminService } from '../../features/events/events-admin.service';
 import { ParticipantsAdminService } from '../../features/registrations/participants-admin.service';
+import { RegistrationFieldsAdminService } from '../../features/registrations/registration-fields-admin.service';
 
 /** Long enough to finish typing a name, short enough to feel immediate. */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -291,6 +294,32 @@ interface Bar extends RegistrationWeek {
           <dt>Invitations</dt>
           <dd>{{ person.contactOptOut ? 'objected' : 'allowed' }}</dd>
         </dl>
+
+        @if (answers().length > 0) {
+          <h3>Answers</h3>
+          <dl>
+            @for (answer of answers(); track answer.label) {
+              <dt>{{ answer.label }}</dt>
+              <dd>{{ answer.value }}</dd>
+            }
+          </dl>
+        }
+
+        @if (leftovers().length > 0) {
+          <h3>No longer asked for</h3>
+          <dl>
+            @for (answer of leftovers(); track answer.key) {
+              <dt>
+                <code>{{ answer.key }}</code>
+              </dt>
+              <dd>{{ answer.value }}</dd>
+            }
+          </dl>
+          <p class="meta">
+            The question was removed from the form. What people answered is
+            kept.
+          </p>
+        }
         <div class="detail__actions">
           @if (person.status === 'cancelled') {
             <button type="button" (click)="reinstate(person)">Reinstate</button>
@@ -515,6 +544,15 @@ interface Bar extends RegistrationWeek {
       font-weight: 600;
     }
 
+    .detail h3 {
+      margin-block: 1rem 0.4rem;
+      font-size: 1rem;
+    }
+
+    .detail code {
+      font-size: 0.9rem;
+    }
+
     .detail__actions {
       display: flex;
       gap: 0.6rem;
@@ -552,6 +590,7 @@ export class ParticipantsPage {
   protected readonly chartHeight = CHART.height;
 
   private readonly participants = inject(ParticipantsAdminService);
+  private readonly registrationFields = inject(RegistrationFieldsAdminService);
   private readonly events = inject(EventsAdminService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -560,6 +599,8 @@ export class ParticipantsPage {
   protected readonly result = signal<ParticipantPage | null>(null);
   protected readonly statistics = signal<RegistrationStatistics | null>(null);
   protected readonly detail = signal<ParticipantDetail | null>(null);
+  /** The event's configurable questions (F12) — what the answers are labelled by. */
+  protected readonly fields = signal<readonly RegistrationField[]>([]);
   protected readonly error = signal<string | null>(null);
   protected readonly loading = signal(true);
 
@@ -676,6 +717,38 @@ export class ParticipantsPage {
     });
   });
 
+  /**
+   * The open registration's answers to the questions this event asks (F12).
+   *
+   * Every defined field, answered or not: an empty answer to a question the
+   * organizer asked is information too, and a field that silently disappears
+   * from the panel looks like it was never asked.
+   */
+  protected readonly answers = computed(() => {
+    const person = this.detail();
+    if (!person) return [];
+    return this.fields().map((field) => ({
+      label: field.label,
+      value: formatAnswer(person.customFields[field.key]),
+    }));
+  });
+
+  /**
+   * Answers to questions the form no longer asks (F34).
+   *
+   * Deleting a definition does not delete what people wrote, so these are shown
+   * under their bare key rather than dropped — the organizer removed the
+   * question, not the answers.
+   */
+  protected readonly leftovers = computed(() => {
+    const person = this.detail();
+    if (!person) return [];
+    const known = new Set(this.fields().map((field) => field.key));
+    return Object.entries(person.customFields)
+      .filter(([key]) => !known.has(key))
+      .map(([key, value]) => ({ key, value: formatAnswer(value) }));
+  });
+
   /** What a screen reader is told instead of the bars. */
   protected readonly chartLabel = computed(() => {
     const weeks = this.statistics()?.weeks ?? [];
@@ -704,6 +777,10 @@ export class ParticipantsPage {
     effect(() => {
       this.revision();
       void this.loadStatistics(this.eventId());
+    });
+
+    effect(() => {
+      void this.loadFields(this.eventId());
     });
 
     effect(() => {
@@ -856,6 +933,16 @@ export class ParticipantsPage {
     } catch {
       // A missing graph must not hide the table, which is the actual function.
       this.statistics.set(null);
+    }
+  }
+
+  private async loadFields(eventId: string): Promise<void> {
+    try {
+      this.fields.set(await this.registrationFields.list(eventId));
+    } catch {
+      // The table is the function of this page; unlabelled answers are a worse
+      // outcome than none, and the leftover block still shows them by key.
+      this.fields.set([]);
     }
   }
 

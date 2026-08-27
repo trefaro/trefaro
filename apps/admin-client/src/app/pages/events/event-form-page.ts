@@ -44,17 +44,30 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
     <header class="head">
       <h1>{{ isNew() ? 'New event' : 'Edit event' }}</h1>
       @if (!isNew()) {
-        <a
-          [routerLink]="[
-            '/series',
-            seriesId(),
-            'events',
-            eventId(),
-            'participants',
-          ]"
-        >
-          Participants
-        </a>
+        <nav class="head__links">
+          <a
+            [routerLink]="[
+              '/series',
+              seriesId(),
+              'events',
+              eventId(),
+              'participants',
+            ]"
+          >
+            Participants
+          </a>
+          <a
+            [routerLink]="[
+              '/series',
+              seriesId(),
+              'events',
+              eventId(),
+              'registration-form',
+            ]"
+          >
+            Registration form
+          </a>
+        </nav>
       }
     </header>
 
@@ -171,6 +184,12 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
       justify-content: space-between;
       gap: 1rem;
       inline-size: min(34rem, 100%);
+    }
+
+    .head__links {
+      display: flex;
+      gap: 1rem;
+      white-space: nowrap;
     }
 
     form {

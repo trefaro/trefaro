@@ -75,9 +75,26 @@ is assigned to one of its work packages.
       same participant list; the message belongs there rather than in a fourth
       mail template written in isolation. Verify: cancelling produces one mail,
       reinstating does not produce a second one that contradicts it.
-- [ ] **The uploads volume is finally used.** The registration field kit (F12)
-      introduces file uploads. Verify: type and size validation, and that a
-      stored file is only reachable by an authorized request.
+- [ ] **The uploads volume is finally used.** AP 7 adds the `file` field type to
+      the kit AP 6 built. Two things are easy to lose: the check constraint
+      `CHK_registration_field_type` currently allows `text`, `select` and
+      `checkbox` only and has to be widened by that migration, and
+      `RegistrationFieldsService.validateAnswers` needs a branch for a value
+      that is a reference to a stored file rather than a string or a boolean.
+      Verify: type and size validation, that a stored file is only reachable by
+      an authorized request, and that deleting a registration deletes its files.
+- [ ] **Two questions about the field kit for the M1 feedback round.** Both were
+      decided deliberately in AP 6 and both are cheap to change if Democracy
+      International says otherwise. First: there is **no multi-line text type** —
+      a text field holds 500 characters, which is a paragraph, but it renders as
+      a single line. Second: the answers appear in the **detail panel only, not
+      as table columns**, because the overview has to stay readable and fast at
+      two thousand rows (AP 5). Ask before building either.
+- [ ] **The participant search does not look into the answers.** It covers first
+      name, last name and e-mail (F32). Searching `custom_fields_json` means a
+      JSONB predicate that no index of ours covers, so it is not a small
+      addition — and nobody has asked for it yet. Revisit if the pilot partner
+      does.
 - [ ] **Constrain `plugin_room_planning_room.event_id`.** It has been an
       unconstrained `uuid` since phase 0, because the core `event` table did not
       exist yet — the very integrity gap that decided F21 against a `room_id`

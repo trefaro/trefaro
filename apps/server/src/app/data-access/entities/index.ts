@@ -5,6 +5,7 @@ import { EventSeriesEntity } from './event-series.entity';
 import { EventEntity } from './event.entity';
 import { ModuleConfigEntity } from './module-config.entity';
 import { PushSubscriptionEntity } from './push-subscription.entity';
+import { RegistrationFieldEntity } from './registration-field.entity';
 import { RegistrationEntity } from './registration.entity';
 
 export { AdminSessionEntity } from './admin-session.entity';
@@ -14,6 +15,7 @@ export { EventSeriesEntity } from './event-series.entity';
 export { EventEntity } from './event.entity';
 export { ModuleConfigEntity } from './module-config.entity';
 export { PushSubscriptionEntity } from './push-subscription.entity';
+export { RegistrationFieldEntity } from './registration-field.entity';
 export { RegistrationEntity } from './registration.entity';
 
 /**
@@ -29,4 +31,5 @@ export const CORE_ENTITIES = [
   ModuleConfigEntity,
   PushSubscriptionEntity,
   RegistrationEntity,
+  RegistrationFieldEntity,
 ];

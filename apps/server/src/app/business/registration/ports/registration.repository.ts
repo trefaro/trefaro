@@ -1,4 +1,5 @@
 import type {
+  CustomFieldValues,
   ParticipantSort,
   RegistrationCounts,
   RegistrationStatus,
@@ -29,6 +30,8 @@ export interface RegistrationRecord {
   readonly newsletterOptIn: boolean;
   /** Set once the participant objects to being invited again (E15). */
   readonly contactOptOut: boolean;
+  /** Answers to the event's configurable fields (F12), keyed by field key. */
+  readonly customFields: CustomFieldValues;
   readonly confirmedAt: Date | null;
   readonly createdAt: Date;
   readonly updatedAt: Date;
@@ -51,6 +54,8 @@ export interface NewRegistration {
   readonly origin: string | null;
   readonly status: RegistrationStatus;
   readonly newsletterOptIn: boolean;
+  /** Already validated against this event's field definitions (F12). */
+  readonly customFields: CustomFieldValues;
 }
 
 /** Only the fields actually given are written. */
@@ -62,6 +67,7 @@ export interface RegistrationChanges {
   readonly status?: RegistrationStatus;
   readonly newsletterOptIn?: boolean;
   readonly contactOptOut?: boolean;
+  readonly customFields?: CustomFieldValues;
   readonly confirmedAt?: Date | null;
 }
 

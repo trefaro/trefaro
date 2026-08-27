@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import type {
+  CustomFieldValues,
   ParticipantDetail,
   ParticipantPage,
   ParticipantRow,
@@ -63,6 +64,17 @@ export class ParticipantRowDto implements ParticipantRow {
       'it decides whether reinstating may restore `confirmed`.',
   })
   confirmedAt!: string | null;
+
+  @ApiProperty({
+    type: Object,
+    additionalProperties: { oneOf: [{ type: 'string' }, { type: 'boolean' }] },
+    example: { 'dietary-requirements': 'vegan' },
+    description:
+      'Answers to the configurable fields of this event (F12). May hold keys ' +
+      'no field defines any more: deleting a definition does not delete what ' +
+      'people wrote (F34).',
+  })
+  customFields!: CustomFieldValues;
 }
 
 export class RegistrationCountsDto implements RegistrationCounts {

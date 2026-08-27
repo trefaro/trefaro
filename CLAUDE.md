@@ -113,7 +113,8 @@ Erledigt: **AP 1** Login, Admin-Zugänge, Guard über `/api/admin` · **AP 2**
 Veranstaltungsreihen · **AP 3** Events und öffentliche Landingpage · **AP 4**
 Registrierung mit Double-Opt-In und Mail-Modul · **AP 5** Teilnehmerübersicht
 → damit ist **M1** erreicht (Kernschleife lauffähig, erste Feedbackrunde mit
-Democracy International fällig). Als nächstes AP 6 (Feld-Baukasten).
+Democracy International fällig) · **AP 6** Feld-Baukasten (Text, Auswahl,
+Ankreuzfeld). Als nächstes AP 7 (Feldtyp Datei-Upload).
 
 Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
 
@@ -141,6 +142,21 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
   Mikrooptimierung.
 - **Query-Parameter kommen als `undefined` an**, auch wenn ein
   Angular-`input()` einen Standardwert hat. Nie darauf verlassen.
+- **Der Feldschlüssel ist nicht die Beschriftung** (F35). Er wird aus ihr
+  abgeleitet, ist je Event eindeutig und danach unveränderlich — genau deshalb
+  lässt sich eine Frage umformulieren, ohne die Antworten von ihr zu lösen. Typ
+  ebenfalls fest. Sechs Schlüssel sind für den Kern reserviert.
+- **Eine gelöschte Formularfrage löscht keine Antworten** (F34). Die Werte
+  bleiben in `custom_fields_json`; die Übersicht zeigt sie unter ihrem
+  Schlüssel. Kein 409 — das wäre eine Sackgasse ohne Archiv-Flag.
+- **Die Reihenfolge des Formulars wird als Ganzes geschrieben**, nie als „ein
+  Feld nach unten": eine Liste aller Ids, `sort` in einer Transaktion neu
+  vergeben. Deshalb ist `sort` bewusst nicht eindeutig.
+- **Antworten werden gegen die Definitionen geprüft, nicht gegen ein DTO** —
+  und vor dem Schreiben. Ein unbekannter Feldschlüssel ist ein 400, kein
+  stilles Verwerfen.
+- **`private` reicht für ein Angular-Template nicht**, und `tsc --noEmit` merkt
+  das nicht: Template-Prüfung passiert erst im Testbuild des Clients.
 
 ## Betriebskontext
 

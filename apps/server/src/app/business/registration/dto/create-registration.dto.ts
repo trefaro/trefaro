@@ -1,8 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type { RegistrationInput } from '@trefaro/shared-models';
+import type {
+  CustomFieldValues,
+  RegistrationInput,
+} from '@trefaro/shared-models';
 import {
   IsBoolean,
   IsEmail,
+  IsObject,
   IsOptional,
   IsString,
   Length,
@@ -20,9 +24,12 @@ const MAX_ORIGIN_LENGTH = 200;
  * What the registration form sends (FR 3.5, mockups 5.4).
  *
  * Mandatory: first name, last name, e-mail — the three fields FR 3.5 names.
- * The configurable fields of the field kit (F12) arrive in AP 6; until then an
- * unknown key is rejected rather than dropped, because the global validation
- * pipe runs with `forbidNonWhitelisted`.
+ * Everything the organizer added beyond them travels in `customFields` (F12).
+ *
+ * An unknown property of this class is rejected rather than dropped, because the
+ * global validation pipe runs with `forbidNonWhitelisted`. An unknown *field
+ * key* inside `customFields` is rejected too — but by the service, against the
+ * definitions of that event, because nothing else knows them.
  */
 export class CreateRegistrationDto implements RegistrationInput {
   @ApiProperty({ example: 'Amina' })
@@ -76,6 +83,21 @@ export class CreateRegistrationDto implements RegistrationInput {
   @IsOptional()
   @IsBoolean()
   newsletterOptIn?: boolean;
+
+  @ApiProperty({
+    required: false,
+    type: Object,
+    additionalProperties: { oneOf: [{ type: 'string' }, { type: 'boolean' }] },
+    example: { 'dietary-requirements': 'vegan', 'code-of-conduct': true },
+    description:
+      "Answers to the fields this event defines (F12), keyed by the field's " +
+      'key. Deliberately not validated structurally here: what is acceptable ' +
+      'follows from the definitions, and a second copy of those rules in a DTO ' +
+      'would be the copy that drifts.',
+  })
+  @IsOptional()
+  @IsObject()
+  customFields?: CustomFieldValues;
 }
 
 /** The token from the confirmation link, posted by the page it points at (E5b). */

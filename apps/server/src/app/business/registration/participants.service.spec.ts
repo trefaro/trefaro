@@ -56,6 +56,7 @@ function record(
     status: 'pending',
     newsletterOptIn: true,
     contactOptOut: false,
+    customFields: {},
     confirmedAt: null,
     createdAt: new Date('2026-08-24T09:30:00Z'),
     updatedAt: new Date('2026-08-24T09:30:00Z'),

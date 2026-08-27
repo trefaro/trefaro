@@ -8,6 +8,7 @@ import { ADMIN_USER_REPOSITORY } from '../business/login/ports/admin-user.reposi
 import { MODULE_CONFIG_REPOSITORY } from '../business/config/ports/module-config.repository';
 import { PUSH_SUBSCRIPTION_REPOSITORY } from '../business/push/ports/push-subscription.repository';
 import { REGISTRATION_TALLY } from '../business/registration/ports/registration-tally';
+import { REGISTRATION_FIELD_REPOSITORY } from '../business/registration/ports/registration-field.repository';
 import { REGISTRATION_REPOSITORY } from '../business/registration/ports/registration.repository';
 import {
   PLUGIN_PERSISTENCE_REGISTRY,
@@ -25,6 +26,7 @@ import { TypeormEventSeriesRepository } from './repositories/typeorm-event-serie
 import { TypeormEventRepository } from './repositories/typeorm-event.repository';
 import { TypeormModuleConfigRepository } from './repositories/typeorm-module-config.repository';
 import { TypeormPushSubscriptionRepository } from './repositories/typeorm-push-subscription.repository';
+import { TypeormRegistrationFieldRepository } from './repositories/typeorm-registration-field.repository';
 import { TypeormRegistrationRepository } from './repositories/typeorm-registration.repository';
 
 /**
@@ -65,6 +67,7 @@ export class DataAccessModule {
         TypeormModuleConfigRepository,
         TypeormPushSubscriptionRepository,
         TypeormRegistrationRepository,
+        TypeormRegistrationFieldRepository,
         {
           provide: ADMIN_USER_REPOSITORY,
           useExisting: TypeormAdminUserRepository,
@@ -97,6 +100,10 @@ export class DataAccessModule {
           provide: REGISTRATION_REPOSITORY,
           useExisting: TypeormRegistrationRepository,
         },
+        {
+          provide: REGISTRATION_FIELD_REPOSITORY,
+          useExisting: TypeormRegistrationFieldRepository,
+        },
         // Same class, second port: the counts the events and series modules are
         // allowed to see, without the rows they are not (E14).
         {
@@ -113,6 +120,7 @@ export class DataAccessModule {
         MODULE_CONFIG_REPOSITORY,
         PUSH_SUBSCRIPTION_REPOSITORY,
         REGISTRATION_REPOSITORY,
+        REGISTRATION_FIELD_REPOSITORY,
         REGISTRATION_TALLY,
         TypeOrmModule,
       ],

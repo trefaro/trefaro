@@ -84,6 +84,37 @@ export const DRAFT_EVENT = {
 
 const EVENT_FIXTURES = [UPCOMING_EVENT, PAST_EVENT, DRAFT_EVENT];
 
+/**
+ * Extra questions on the upcoming event's registration form (F12).
+ *
+ * One field per type, because each renders as a different control and the
+ * browser is the only place where that can be asserted. The keys are given
+ * rather than derived, so the fixture stays the same across runs and can be
+ * brought back into shape instead of duplicated.
+ */
+export const REGISTRATION_FIELDS = [
+  {
+    key: 'dietary-requirements',
+    label: 'Dietary requirements',
+    type: 'text',
+    helpText: 'So the caterer knows what to plan for.',
+    required: false,
+  },
+  {
+    key: 'meal',
+    label: 'Meal',
+    type: 'select',
+    options: ['Vegan', 'Vegetarian', 'No preference'],
+    required: true,
+  },
+  {
+    key: 'code-of-conduct',
+    label: 'I have read the code of conduct',
+    type: 'checkbox',
+    required: true,
+  },
+] as const;
+
 interface AdminSeries {
   id: string;
   slug: string;
@@ -151,7 +182,10 @@ export async function seedSeries(clientUrl: string): Promise<void> {
       if (fixture.slug === PUBLISHED_SERIES.slug) publishedSeriesId = saved.id;
     }
 
-    await seedEvents(context, publishedSeriesId);
+    await seedRegistrationFields(
+      context,
+      await seedEvents(context, publishedSeriesId),
+    );
   } finally {
     await context.dispose();
   }
@@ -166,10 +200,11 @@ export async function seedSeries(clientUrl: string): Promise<void> {
 async function seedEvents(
   context: Awaited<ReturnType<typeof asAdmin>>,
   seriesId: string,
-): Promise<void> {
+): Promise<string> {
   const path = `/api/admin/series/${seriesId}/events`;
   const existing: AdminEvent[] = await (await context.get(path)).json();
 
+  let upcomingEventId = '';
   for (const fixture of EVENT_FIXTURES) {
     const match = existing.find((event) => event.slug === fixture.slug);
     const response = match
@@ -179,6 +214,49 @@ async function seedEvents(
     if (!response.ok()) {
       throw new Error(
         `Seeding the event "${fixture.slug}" failed with status ` +
+          `${response.status()}: ${await response.text()}`,
+      );
+    }
+    if (fixture.slug === UPCOMING_EVENT.slug) {
+      upcomingEventId = ((await response.json()) as AdminEvent).id;
+    }
+  }
+  return upcomingEventId;
+}
+
+/**
+ * The configurable fields of the upcoming event's form (F12).
+ *
+ * Removed with the event by the foreign key, so they need no teardown of their
+ * own — the same reason the events themselves have none.
+ */
+async function seedRegistrationFields(
+  context: Awaited<ReturnType<typeof asAdmin>>,
+  eventId: string,
+): Promise<void> {
+  const path = `/api/admin/events/${eventId}/registration-fields`;
+  const existing: { id: string; key: string }[] = await (
+    await context.get(path)
+  ).json();
+
+  for (const fixture of REGISTRATION_FIELDS) {
+    const match = existing.find((field) => field.key === fixture.key);
+    // A field's type and key never change, so an existing one is patched with
+    // what may change and created with everything otherwise.
+    const response = match
+      ? await context.patch(`/api/admin/registration-fields/${match.id}`, {
+          data: {
+            label: fixture.label,
+            helpText: 'helpText' in fixture ? fixture.helpText : null,
+            required: fixture.required,
+            ...('options' in fixture ? { options: fixture.options } : {}),
+          },
+        })
+      : await context.post(path, { data: fixture });
+
+    if (!response.ok()) {
+      throw new Error(
+        `Seeding the registration field "${fixture.key}" failed with status ` +
           `${response.status()}: ${await response.text()}`,
       );
     }

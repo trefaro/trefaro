@@ -1,3 +1,4 @@
+import type { CustomFieldValues } from './field';
 import type { RegistrationStatus } from './registration';
 
 /**
@@ -38,6 +39,18 @@ export interface ParticipantRow {
    * decides whether reinstating it may restore `confirmed`.
    */
   readonly confirmedAt: string | null;
+  /**
+   * The answers to this event's configurable fields (F12), keyed by field key.
+   *
+   * Part of the row rather than of the detail view alone: it is one JSONB column
+   * of the same query, and the detail panel would otherwise need a second
+   * request to show what somebody actually answered.
+   *
+   * May hold keys no field defines any more. Deleting a definition does not
+   * delete the answers people gave (F34), and the overview says so rather than
+   * hiding them.
+   */
+  readonly customFields: CustomFieldValues;
 }
 
 /** How many registrations an event has, by status — the whole event, unfiltered. */

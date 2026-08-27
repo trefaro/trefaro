@@ -1,4 +1,7 @@
-import type { RegistrationStatus } from '@trefaro/shared-models';
+import type {
+  CustomFieldValue,
+  RegistrationStatus,
+} from '@trefaro/shared-models';
 import {
   Column,
   CreateDateColumn,
@@ -50,13 +53,16 @@ export class RegistrationEntity {
   origin!: string | null;
 
   /**
-   * Values of the configurable fields (F12).
+   * Answers to the configurable fields (F12), keyed by field key.
    *
-   * The column exists from the start so AP 6 adds definitions rather than a
-   * migration on a table that already holds registrations.
+   * The column existed from the first migration on, so AP 6 added definitions
+   * rather than a migration on a table that already held registrations.
+   *
+   * May hold keys `registration_field_def` no longer defines: deleting a
+   * question does not delete the answers people gave (F34).
    */
   @Column({ name: 'custom_fields_json', type: 'jsonb', default: () => "'{}'" })
-  customFields!: Record<string, unknown>;
+  customFields!: Record<string, CustomFieldValue>;
 
   @Column({ type: 'varchar', length: 16 })
   status!: RegistrationStatus;

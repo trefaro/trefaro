@@ -7,11 +7,13 @@ import type {
   ParticipantQuery,
   ParticipantRow,
   ParticipantSort,
+  RegistrationField,
   RegistrationStatistics,
   RegistrationStatus,
 } from '@trefaro/shared-models';
 import { EventsAdminService } from '../../features/events/events-admin.service';
 import { ParticipantsAdminService } from '../../features/registrations/participants-admin.service';
+import { RegistrationFieldsAdminService } from '../../features/registrations/registration-fields-admin.service';
 import { ParticipantsPage } from './participants-page';
 
 const EVENT: OrganizerEvent = {
@@ -47,9 +49,35 @@ function row(overrides: Partial<ParticipantRow> = {}): ParticipantRow {
     contactOptOut: false,
     registeredAt: '2026-08-24T09:30:00.000Z',
     confirmedAt: null,
+    customFields: {},
     ...overrides,
   };
 }
+
+const FIELDS: readonly RegistrationField[] = [
+  {
+    id: 'field-1',
+    eventId: 'event-1',
+    key: 'dietary-requirements',
+    label: 'Dietary requirements',
+    type: 'text',
+    helpText: null,
+    options: [],
+    required: false,
+    sort: 0,
+  },
+  {
+    id: 'field-2',
+    eventId: 'event-1',
+    key: 'visa',
+    label: 'Needs a visa letter',
+    type: 'checkbox',
+    helpText: null,
+    options: [],
+    required: false,
+    sort: 1,
+  },
+];
 
 const PAGE: ParticipantPageModel = {
   rows: [row()],
@@ -107,6 +135,8 @@ class FakeParticipantsAdminService {
 
 /** The template drives protected members; the tests reach them the same way. */
 interface PageInternals {
+  answers: () => readonly { label: string; value: string }[];
+  leftovers: () => readonly { key: string; value: string }[];
   bars: () => readonly { totalHeight: number; confirmedHeight: number }[];
   chartLabel: () => string;
   pages: () => number;
@@ -125,13 +155,23 @@ interface Navigation {
   queryParams?: Record<string, unknown>;
 }
 
-async function render(params: Partial<Record<string, string>> = {}): Promise<{
+async function render(
+  params: Partial<Record<string, string>> = {},
+  seeded: {
+    fields?: readonly RegistrationField[];
+    detail?: ParticipantDetail;
+  } = {},
+): Promise<{
   page: PageInternals;
   participants: FakeParticipantsAdminService;
   navigations: Navigation[];
   settle: () => Promise<void>;
 }> {
   const participants = new FakeParticipantsAdminService();
+  // Before the component exists: the detail panel is loaded by an effect on the
+  // first change detection, and setting it afterwards would not re-run.
+  participants.detail = seeded.detail ?? null;
+  const fields = seeded.fields ?? FIELDS;
 
   TestBed.configureTestingModule({
     providers: [
@@ -140,6 +180,10 @@ async function render(params: Partial<Record<string, string>> = {}): Promise<{
       {
         provide: EventsAdminService,
         useValue: { get: () => Promise.resolve(EVENT) },
+      },
+      {
+        provide: RegistrationFieldsAdminService,
+        useValue: { list: () => Promise.resolve(fields) },
       },
     ],
   });
@@ -345,5 +389,49 @@ describe('ParticipantsPage', () => {
     const { page } = await render();
 
     expect(page.pages()).toBe(1);
+  });
+
+  describe('the answers to the configurable fields (F12)', () => {
+    const detail = (customFields: Record<string, string | boolean>) => ({
+      ...row({ customFields }),
+      eventId: 'event-1',
+      eventName: EVENT.name,
+    });
+
+    it('labels every question the event asks, answered or not', async () => {
+      const { page } = await render(
+        { selected: 'registration-1' },
+        { detail: detail({ 'dietary-requirements': 'vegan' }) },
+      );
+
+      // The unanswered field is listed too: an empty answer to a question the
+      // organizer asked is information, and a row that vanishes looks unasked.
+      expect(page.answers()).toEqual([
+        { label: 'Dietary requirements', value: 'vegan' },
+        { label: 'Needs a visa letter', value: '—' },
+      ]);
+    });
+
+    it('reads a checkbox answer as yes and no, not as true and false', async () => {
+      const { page } = await render(
+        { selected: 'registration-1' },
+        { detail: detail({ visa: false }) },
+      );
+
+      expect(page.answers().at(1)).toEqual({
+        label: 'Needs a visa letter',
+        value: 'no',
+      });
+    });
+
+    it('keeps showing an answer whose question was removed (F34)', async () => {
+      const { page } = await render(
+        { selected: 'registration-1' },
+        { detail: detail({ 'shirt-size': 'L' }) },
+      );
+
+      // The organizer removed the question, not the answer.
+      expect(page.leftovers()).toEqual([{ key: 'shirt-size', value: 'L' }]);
+    });
   });
 });

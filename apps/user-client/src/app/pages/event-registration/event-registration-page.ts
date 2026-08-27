@@ -7,12 +7,25 @@ import {
   input,
   signal,
 } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormControl,
+  FormBuilder,
+  FormRecord,
+  ReactiveFormsModule,
+  Validators,
+  type ValidatorFn,
+} from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AppConfigService } from '@trefaro/shared-config';
 import type { ApiError } from '@trefaro/shared-http';
-import type { PublicEvent } from '@trefaro/shared-models';
-import { formatEventPeriod } from '@trefaro/shared-models';
+import type {
+  PublicEvent,
+  RegistrationFieldPublic,
+} from '@trefaro/shared-models';
+import {
+  MAX_CUSTOM_TEXT_LENGTH,
+  formatEventPeriod,
+} from '@trefaro/shared-models';
 import { PublicEventsService } from '../../features/events/public-events.service';
 import { RegistrationsService } from '../../features/registrations/registration.service';
 
@@ -25,6 +38,12 @@ import { RegistrationsService } from '../../features/registrations/registration.
  * optional: an event that does not need them must not turn them into a barrier.
  * The newsletter box is never pre-checked — consent that was not given is not
  * consent (E15).
+ *
+ * Everything below those five is built from the event's own field definitions
+ * (F12): the form is read from the server on every visit, so a question an
+ * organizer added a minute ago is asked now. The client validates against the
+ * same definitions, which is a courtesy — the server validates again, and it is
+ * the server that decides.
  *
  * Nothing is registered when this form is submitted. The confirmation mail is,
  * which is why the page then says so in as many words instead of congratulating
@@ -93,6 +112,54 @@ import { RegistrationsService } from '../../features/registrations/registration.
           <input formControlName="origin" autocomplete="organization" />
         </label>
 
+        @if (fields().length > 0) {
+          <div class="custom" formGroupName="customFields">
+            @for (field of fields(); track field.key) {
+              <div class="custom__field">
+                @if (field.type === 'checkbox') {
+                  <label class="check">
+                    <input
+                      type="checkbox"
+                      [formControlName]="field.key"
+                      [attr.aria-describedby]="describedBy(field)"
+                    />
+                    <span>{{ labelOf(field) }}</span>
+                  </label>
+                } @else if (field.type === 'select') {
+                  <label>
+                    <span>{{ labelOf(field) }}</span>
+                    <select
+                      [formControlName]="field.key"
+                      [attr.aria-describedby]="describedBy(field)"
+                    >
+                      <!-- An empty first option, so nothing is answered by
+                           accident for somebody who scrolled past. -->
+                      <option value="">Please choose…</option>
+                      @for (option of field.options; track option) {
+                        <option [value]="option">{{ option }}</option>
+                      }
+                    </select>
+                  </label>
+                } @else {
+                  <label>
+                    <span>{{ labelOf(field) }}</span>
+                    <input
+                      [formControlName]="field.key"
+                      [attr.maxlength]="maxTextLength"
+                      [attr.aria-describedby]="describedBy(field)"
+                    />
+                  </label>
+                }
+                @if (field.helpText) {
+                  <small class="hint" [id]="hintId(field)">
+                    {{ field.helpText }}
+                  </small>
+                }
+              </div>
+            }
+          </div>
+        }
+
         <label class="check">
           <input formControlName="newsletterOptIn" type="checkbox" />
           <span>
@@ -140,11 +207,23 @@ import { RegistrationsService } from '../../features/registrations/registration.
       font-weight: 600;
     }
 
-    input {
+    input,
+    select {
       padding: 0.6rem;
       border: 1px solid color-mix(in oklab, currentColor 35%, transparent);
       border-radius: 0.4rem;
       font: inherit;
+    }
+
+    .custom,
+    .custom__field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+    }
+
+    .custom__field {
+      gap: 0.3rem;
     }
 
     .check {
@@ -206,6 +285,19 @@ export class EventRegistrationPage {
   protected readonly busy = signal(false);
   /** Set once the form went through; the address the link was sent to. */
   protected readonly sentTo = signal<string | null>(null);
+  /** The extra questions this event asks (F12), in form order. */
+  protected readonly fields = signal<readonly RegistrationFieldPublic[]>([]);
+
+  protected readonly maxTextLength = MAX_CUSTOM_TEXT_LENGTH;
+
+  /**
+   * The answers, one control per defined field.
+   *
+   * A `FormRecord` rather than a second typed group: the control names are not
+   * known until the definitions are read, which is exactly the case it exists
+   * for.
+   */
+  private readonly answers = new FormRecord<FormControl<string | boolean>>({});
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     firstName: ['', Validators.required],
@@ -214,6 +306,7 @@ export class EventRegistrationPage {
     phone: [''],
     origin: [''],
     newsletterOptIn: [false],
+    customFields: this.answers,
   });
 
   protected readonly when = computed(() => {
@@ -229,6 +322,23 @@ export class EventRegistrationPage {
     effect(() => {
       void this.load(this.seriesSlug(), this.eventSlug());
     });
+
+    effect(() => {
+      void this.loadFields(this.seriesSlug(), this.eventSlug());
+    });
+  }
+
+  /** The label as it is read, with the asterisk the mandatory fields carry. */
+  protected labelOf(field: RegistrationFieldPublic): string {
+    return field.required ? `${field.label} *` : field.label;
+  }
+
+  protected hintId(field: RegistrationFieldPublic): string {
+    return `hint-${field.key}`;
+  }
+
+  protected describedBy(field: RegistrationFieldPublic): string | null {
+    return field.helpText ? this.hintId(field) : null;
   }
 
   protected async submit(): Promise<void> {
@@ -252,6 +362,7 @@ export class EventRegistrationPage {
           phone: raw.phone.trim() || null,
           origin: raw.origin.trim() || null,
           newsletterOptIn: raw.newsletterOptIn,
+          customFields: raw.customFields,
         },
       );
       this.sentTo.set(answer.email);
@@ -274,4 +385,73 @@ export class EventRegistrationPage {
       this.event.set(null);
     }
   }
+
+  /**
+   * Reads the form definition and builds the controls for it.
+   *
+   * On failure the extra fields are left out rather than the page: the five
+   * fields FR 3.5 names always work, and a registration that is missing a
+   * required answer is refused by the server with the reason.
+   */
+  private async loadFields(
+    seriesSlug: string,
+    eventSlug: string,
+  ): Promise<void> {
+    let fields: readonly RegistrationFieldPublic[] = [];
+    try {
+      fields = await this.registrations.fields(seriesSlug, eventSlug);
+    } catch {
+      fields = [];
+    }
+    this.fields.set(fields);
+    this.syncAnswers(fields);
+  }
+
+  /**
+   * Brings the controls in line with the definitions.
+   *
+   * Existing controls are kept: this runs again when the route parameters are
+   * re-emitted, and rebuilding the record would throw away what somebody has
+   * already typed.
+   */
+  private syncAnswers(fields: readonly RegistrationFieldPublic[]): void {
+    const wanted = new Map(fields.map((field) => [field.key, field]));
+
+    for (const key of Object.keys(this.answers.controls)) {
+      if (!wanted.has(key)) this.answers.removeControl(key);
+    }
+    for (const [key, field] of wanted) {
+      if (this.answers.contains(key)) continue;
+      this.answers.addControl(
+        key,
+        new FormControl<string | boolean>(
+          field.type === 'checkbox' ? false : '',
+          {
+            nonNullable: true,
+            validators: validatorsFor(field),
+          },
+        ),
+      );
+    }
+  }
+}
+
+/**
+ * What the browser checks before the request goes out.
+ *
+ * A courtesy, not the rule: the server validates against the same definitions
+ * and is what decides. `requiredTrue` for a checkbox, because a required
+ * checkbox has to be ticked rather than merely answered.
+ */
+function validatorsFor(field: RegistrationFieldPublic): ValidatorFn[] {
+  const validators: ValidatorFn[] = [];
+  if (field.required) {
+    validators.push(
+      field.type === 'checkbox' ? Validators.requiredTrue : Validators.required,
+    );
+  }
+  if (field.type === 'text') {
+    validators.push(Validators.maxLength(MAX_CUSTOM_TEXT_LENGTH));
+  }
+  return validators;
 }

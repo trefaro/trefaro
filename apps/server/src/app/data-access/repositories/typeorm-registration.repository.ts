@@ -295,6 +295,7 @@ function toRecord(row: RegistrationEntity): RegistrationRecord {
     status: row.status,
     newsletterOptIn: row.newsletterOptIn,
     contactOptOut: row.contactOptOut,
+    customFields: row.customFields ?? {},
     confirmedAt: row.confirmedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
