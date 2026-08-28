@@ -203,15 +203,15 @@ answer, not an opinion.
       promises something no screen can set.
 
 - [ ] **The page titles still say "Trefaro".** Both `app.routes.ts` files carry
-      titles as literal strings — `'Event series — Trefaro'`, `'Sign in —
-    Trefaro'` — and AP 3 changed the headers of both clients to the
-      organization's name but left those alone. Two reasons to do it in one go
-      later rather than now: AP 6 turns exactly these strings into translation
-      keys, so changing them twice is changing them twice; and doing it properly
-      means a `TitleStrategy` that appends `AppConfigService.organizationName()`
-      instead of every route repeating it, which is a small piece of work with a
-      single owner. Verify: a browser tab of a branded instance names the
-      organization, in both clients, in every language.
+      their titles as literal strings, and every one of them ends in the product
+      name rather than the organization's. AP 3 changed the headers of both
+      clients and the sign-in page; these it left alone. Two reasons to do it in
+      one go later: AP 6 turns exactly these strings into translation keys, so
+      changing them now is changing them twice; and doing it properly means a
+      `TitleStrategy` that appends `AppConfigService.organizationName()` instead
+      of every route repeating it — a small piece of work with a single owner.
+      Verify: a browser tab of a branded instance names the organization, in both
+      clients, in every language.
 
 - [ ] **A programme tile in the participant's event detail view.** The mockups
       (chapter 5.2) put "Programmplan" on a tile beside the room plan, the forum
