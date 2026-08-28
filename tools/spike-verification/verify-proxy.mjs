@@ -113,6 +113,51 @@ check(
   serviceWorker.headers.get('cache-control') ?? 'none',
 );
 
+// The worker is served from the root, so its scope is the whole origin — the
+// organizer client under /admin/ included. Angular answers every navigation
+// inside the scope from its own cache unless `navigationUrls` excludes it, and
+// the participant client has no route for /admin/: its wildcard route redirects
+// to /. An organizer would then be unable to reach the organizer client at all,
+// and only in a production build — which is why this check belongs here and
+// cannot live in a unit test or in a `fetch`-based API check: neither runs a
+// service worker. Found by hand after phase 1 was closed.
+const swManifest = await call('/ngsw.json');
+check('the service worker manifest is served', swManifest.status === 200);
+
+/**
+ * Whether the worker would answer a navigation to `url` from its own cache.
+ *
+ * The same rule ngsw applies: at least one positive pattern matches and no
+ * negative one does. The patterns arrive as compiled regular expressions.
+ */
+function claimsNavigation(url) {
+  const rules = swManifest.body?.navigationUrls ?? [];
+  const matches = (rule) => new RegExp(rule.regex).test(url);
+  return (
+    rules.some((rule) => rule.positive && matches(rule)) &&
+    !rules.some((rule) => !rule.positive && matches(rule))
+  );
+}
+
+for (const path of [
+  '/admin/',
+  '/admin/series/new',
+  '/api/config',
+  '/socket.io/',
+]) {
+  check(
+    `the service worker leaves ${path} to the network`,
+    !claimsNavigation(path),
+    claimsNavigation(path)
+      ? 'the participant client would answer it from its own cache'
+      : 'left to the network',
+  );
+}
+check(
+  "the service worker does answer this client's own routes",
+  claimsNavigation('/') && claimsNavigation('/series/example/events/example'),
+);
+
 const deepLink = await call('/events/11111111-1111-4111-8111-111111111111');
 check(
   'a client-side route falls back to index.html rather than 404',

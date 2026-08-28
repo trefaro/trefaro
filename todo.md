@@ -193,11 +193,20 @@ go — ask before building any of them.
 - [ ] **`index.html` hard-codes the theme colour and the language.**
       `<meta name="theme-color">` and `<html lang="en">` must follow the
       configured theme and default locale.
-- [ ] **Re-check the service worker configuration.** `ngsw-config.json` excludes
-      `/api/**` and `/socket.io/**` from navigation handling; confirm that still
-      holds once the PWA is polished, and that a new deployment is actually
-      picked up by an installed client.
+- [ ] **Re-check the service worker configuration.** `ngsw-config.json` now
+      excludes `/admin`, `/admin/**`, `/api/**` and `/socket.io/**` from
+      navigation handling — `/admin` was **missing until 28.08.2026**, and the
+      consequence was as bad as it gets: the worker is served from the root, so
+      its scope is the whole origin, and it answered navigations to `/admin/` from
+      the participant client's cache. That client has no route for `/admin/`, so
+      its wildcard route redirected to `/` — **an organizer could not reach the
+      organizer client at all**, in the container stack, in any browser that had
+      once loaded the participant client. `verify-proxy.mjs` now replays ngsw's
+      own selection rule against the built `ngsw.json` and would have caught it.
+      What is still open here: that a new deployment is actually picked up by an
+      **installed** client, which needs a device and an installed PWA.
       → [`03-web-push.md`](docs/spikes/03-web-push.md#open-items)
+      → see also the entry about a CI job that starts the stack, phase 5
 - [ ] **The module administration has to refresh both registries.** Switching a
       module on or off in phase 2's UI writes `module_config`; the flags are
       cached and re-read every 15 s (`ModuleFlagCache`), so without a call to
@@ -477,6 +486,21 @@ go — ask before building any of them.
       AP 12: one-click unsubscribe from a header is exactly the request E5b says
       a link previewer must not be able to make, so the endpoint needs its own
       reasoning rather than a copy of this one. Phase 5, with the SMTP work.
+- [ ] **Nothing in CI starts the containers and drives a browser.** The
+      test pyramid has a hole exactly the shape of the bug found on 28.08.2026: a
+      service worker misconfiguration that made the organizer client unreachable
+      in the production stack. Unit tests do not see it, the API contract suite
+      uses `fetch` (which runs no service worker), the Playwright suites run
+      against `nx serve` (where Angular registers no service worker at all), and
+      the `images` job builds the three images without ever starting them
+      together. Every one of them was green. What would close it: a CI job that
+      brings `infra/docker-compose.yml` up from an empty volume and runs
+      `tools/spike-verification/verify-proxy.mjs` plus a handful of Playwright
+      tests against port 8080 — production builds, real service worker, real
+      NGINX. Cost is one more job of a few minutes; the class of bug it catches is
+      "works in development, broken as shipped", which is the worst class this
+      project can produce. Phase 5, with the rest of the hardening — but it is the
+      first item there, not the last.
 - [ ] **Usability test with Democracy International**: the thesis' seven tasks
       repeated, plus the use cases it never tested.
 

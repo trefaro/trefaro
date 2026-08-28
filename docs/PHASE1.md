@@ -1884,6 +1884,25 @@ die CI — die Lektion aus AP 12.
 Was AP 13 **nicht** konnte: die Feedbackrunde mit Democracy International. Sie ist
 Punkt 5 der Definition of Done und der einzige offene Punkt der Phase.
 
+**Nachtrag vom selben Tag, gefunden von Marius beim Klicken:** der
+Veranstalter-Client war im Containerbetrieb **nicht erreichbar**. `ngsw-config.json`
+schloss `/admin` nicht von der Navigationsbehandlung aus, und der Service Worker
+des Nutzer-Clients hat Scope `/` — er beantwortete `/admin/` aus seinem Cache mit
+dem `index.html` des Nutzer-Clients, dessen Wildcard-Route auf `/` weiterleitet.
+Behoben; `verify-proxy.mjs` prüft es jetzt gegen das gebaute `ngsw.json`, mit
+ngsws eigener Auswahlregel statt mit einem Textvergleich.
+
+Das ist derselbe blinde Fleck wie beim Bootstrap-Admin, eine Ebene weiter: **keine
+Suite dieses Repositories fährt die Container hoch und bedient sie mit einem
+Browser.** Angular registriert den Service Worker nur im Produktionsbuild, die
+Playwright-Suiten fahren `nx serve`, die Vertragssuite benutzt `fetch` (das keinen
+Service Worker ausführt), und der `images`-Job baut die drei Images, ohne sie je
+zusammen zu starten — alle waren grün. Der Punkt steht als erster Eintrag der
+Phase-5-Härtung in `todo.md`: ein CI-Job, der `infra/docker-compose.yml` aus einem
+leeren Volume hochfährt und `verify-proxy.mjs` plus eine Handvoll Playwright-Tests
+gegen Port 8080 laufen lässt. Die Prüfung, die AP 13 von Hand gemacht hat, gehört
+in die CI — sonst findet sie nur, wer zufällig hinsieht.
+
 ## Was anders lief
 
 Der Plan dieses Dokuments ist an zwölf Stellen von der Umsetzung korrigiert

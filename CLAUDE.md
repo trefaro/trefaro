@@ -369,6 +369,22 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
   `docker compose -f infra/docker-compose.yml up -d --build` gegen ein leeres
   Volume, mit eigenem `-p`-Projektnamen, danach `down -v`. Das ist die einzige
   Prüfung, die NFR 15 belegt, und sie gehört an das Ende jeder Phase.
+- **Der Service Worker des Nutzer-Clients hat Scope `/` — also auch `/admin/`.**
+  `ngsw-worker.js` liegt im Wurzelverzeichnis, und Angulars Service Worker
+  beantwortet **jede** Navigation in seinem Scope aus dem eigenen Cache, sofern
+  `navigationUrls` sie nicht ausschließt. Bis 28.08.2026 fehlte `/admin` dort:
+  wer den Nutzer-Client einmal geladen hatte, bekam unter `/admin/` dessen
+  `index.html`, und die Wildcard-Route schickte ihn auf `/` — der
+  Veranstalter-Client war im Containerbetrieb **nicht erreichbar**. Wer eine
+  Adresse ergänzt, die nicht diesem Client gehört, ergänzt sie dort. Geprüft wird
+  es in `verify-proxy.mjs` gegen das gebaute `ngsw.json`, mit ngsws eigener
+  Auswahlregel — ein Unit-Test und jede `fetch`-Prüfung sind dafür blind.
+- **Was nur im Produktionsbuild passiert, sieht keine Suite dieses Repositories.**
+  Angular registriert den Service Worker nur dort, die Playwright-Suiten fahren
+  `nx serve`, die Vertragssuite benutzt `fetch`, und die CI baut die Images ohne
+  sie je zusammen zu starten. Für diese Klasse von Fehlern ist
+  `tools/spike-verification/` gegen einen laufenden Stack das einzige Netz —
+  benutzen, bevor man „grün" sagt.
 - **Ohne TLS ist der Produktionsstack nur auf `localhost` bedienbar.** Das
   Sitzungscookie trägt `Secure`, sobald `NODE_ENV=production` (E2), und ein
   Browser speichert ein `Secure`-Cookie nur über HTTPS. TLS gehört damit zur
