@@ -248,9 +248,11 @@ answer, not an opinion.
       `titleKey` and `labelKey`, and `CORE_MODULES` carries `titleKey`; Transloco
       is not installed yet, so nothing resolves them. Verify: switching language
       at runtime renames modules and plug-ins in both clients.
-- [ ] **Self-host the fonts.** Nothing to host yet (`system-ui`), but as soon as
-      the font is configurable it must be served from the instance — no Google
-      Fonts CDN (NFR 9). Phase 2 does this with a bundled catalogue (E18).
+- [x] **Self-host the fonts.** Done in phase 2, AP 1: four OFL families plus
+      `system-ui` ship in `libs/shared-theming/assets/fonts/`, are declared in
+      `fonts.css` and are emitted as hashed build assets by both client builds.
+      Nothing is fetched from a foreign origin, which is what NFR 9 asked for.
+      A test in `shared-models` keeps the catalogue and the stylesheet in step.
 - [ ] **Decide whether an organization may upload its own font.** E18 ships a
       catalogue of four self-hosted OFL families plus `system-ui`, and Marius
       confirmed it on 28.08.2026 as a starting point — "erstmal ein

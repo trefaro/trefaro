@@ -11,6 +11,8 @@ import type { Theme } from './theme';
  * privacy-sensitive belongs in this payload.
  */
 export interface AppConfig {
+  /** What the instance calls itself — page titles, mails, the PWA manifest. */
+  readonly organizationName: string;
   readonly theme: Theme;
   /** BCP 47 tag used when the visitor has expressed no preference. */
   readonly defaultLocale: string;
@@ -22,4 +24,43 @@ export interface AppConfig {
   readonly plugins: readonly PluginDescriptor[];
   /** Base64url VAPID public key, or `null` when push is not configured. */
   readonly webPushPublicKey: string | null;
+  /**
+   * Where the participant client answers, so the organizer client can link to a
+   * public event page.
+   *
+   * It comes from the environment rather than from the database: the two clients
+   * are separate origins behind a proxy, and only the deployment knows which
+   * address the outside world uses. The organizer client cannot derive it — its
+   * own origin is a different one.
+   */
+  readonly publicUserClientUrl: string;
 }
+
+/** Longest instance name; matches `app_config.organization_name`. */
+export const MAX_ORGANIZATION_NAME_LENGTH = 128;
+
+/** What a fresh instance calls itself until somebody says otherwise. */
+export const DEFAULT_ORGANIZATION_NAME = 'Trefaro';
+
+/**
+ * The whitelabel settings an administrator may write (FR 1.4).
+ *
+ * Deliberately smaller than {@link AppConfig}: that payload also carries what
+ * the deployment decides (`publicUserClientUrl`, the push key) and what other
+ * tables decide (enabled modules, plug-ins). Only these four values are edited
+ * on the design page.
+ *
+ * `fontFamily` is a key of `FONT_FAMILIES`, not a CSS stack — the clients get
+ * the stack in `AppConfig.theme`. Both colours are hexadecimal (E17). The
+ * locales stay out until phase 2's AP 7 gives them a language administration
+ * that reads them; a settable value nothing reads looks like a feature.
+ */
+export interface AppConfigSettings {
+  readonly organizationName: string;
+  readonly primaryColor: string;
+  readonly accentColor: string;
+  readonly fontFamily: string;
+}
+
+/** A `PATCH` on the settings: only what is sent gets written. */
+export type AppConfigChange = Partial<AppConfigSettings>;

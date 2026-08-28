@@ -15,6 +15,10 @@ export class AppConfigEntity {
   @PrimaryColumn({ type: 'smallint' })
   id!: number;
 
+  /** What the organization calls itself — not the name of this software. */
+  @Column({ name: 'organization_name', type: 'varchar', length: 128 })
+  organizationName!: string;
+
   @Column({ name: 'primary_color', type: 'varchar', length: 32 })
   primaryColor!: string;
 
@@ -25,7 +29,11 @@ export class AppConfigEntity {
   @Column({ name: 'logo_path', type: 'varchar', length: 512, nullable: true })
   logoPath!: string | null;
 
-  @Column({ name: 'font_family', type: 'varchar', length: 256 })
+  /**
+   * A key of `FONT_FAMILIES`, not a CSS stack: the stack is derived in the
+   * business layer, so it can be corrected without touching stored rows.
+   */
+  @Column({ name: 'font_family', type: 'varchar', length: 64 })
   fontFamily!: string;
 
   @Column({ name: 'default_locale', type: 'varchar', length: 16 })

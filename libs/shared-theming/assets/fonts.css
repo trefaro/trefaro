@@ -1,0 +1,140 @@
+/* The bundled font catalogue (FR 1.4, E18) — self-hosted, never a CDN.
+ *
+ * NFR 9 rules out third-party services, and a webfont loaded from a foreign
+ * origin hands that origin the IP address of every visitor of a page that
+ * promises the opposite. So every family an organization can choose ships in
+ * this repository, is served from this instance, and is declared here.
+ *
+ * Both client builds include this file in their `styles`, which is what makes
+ * the bundler emit the `.woff2` files as hashed build assets. Declarations
+ * alone cost about two kilobytes; a browser fetches a file only when text is
+ * actually rendered in that family — so an instance using `system-ui` (the
+ * default) downloads no font at all.
+ *
+ * The keys of `FONT_FAMILIES` in `@trefaro/shared-models` name these families.
+ * Adding one means: the `.woff2` files, its licence text under `licenses/`, an
+ * entry there, and a `@font-face` block here.
+ *
+ * Three properties of every block below are deliberate:
+ *
+ * - **Variable fonts, weight axis only.** One file covers 100–900, so a heading
+ *   at 600 and body text at 400 are the same download. The optical-size axis
+ *   (Inter has one) is left out: a second axis is a second file for a difference
+ *   nobody in this application asked for.
+ * - **Upright only.** The clients set no `font-style: italic` anywhere; a
+ *   browser synthesises an oblique where a document needs one. Shipping italic
+ *   faces would roughly double the vendored bytes for text that is not there.
+ * - **`latin` and `latin-ext` as separate files with `unicode-range`.** German
+ *   fits in `latin`; a language an organization adds later (E22 — Polish, Czech,
+ *   Turkish) needs `latin-ext`, and the browser fetches it only if such a
+ *   character appears. Neither subset covers Greek, Cyrillic or Vietnamese —
+ *   that is a known limit of the catalogue, not of the mechanism.
+ *
+ * Provenance and the exact versions are in `fonts/README.md`.
+ */
+
+/* Inter — https://github.com/rsms/inter, SIL OFL 1.1 */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/inter-latin-wght-normal.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/inter-latin-ext-wght-normal.woff2') format('woff2');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Source Sans 3 — https://github.com/adobe-fonts/source-sans, SIL OFL 1.1 */
+@font-face {
+  font-family: 'Source Sans 3';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/source-sans-3-latin-wght-normal.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Source Sans 3';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/source-sans-3-latin-ext-wght-normal.woff2') format('woff2');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Atkinson Hyperlegible Next — Braille Institute, SIL OFL 1.1.
+   In the catalogue for NFR 4: its letterforms are drawn to be told apart by
+   readers with low vision. */
+@font-face {
+  font-family: 'Atkinson Hyperlegible Next';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/atkinson-hyperlegible-next-latin-wght-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Atkinson Hyperlegible Next';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/atkinson-hyperlegible-next-latin-ext-wght-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Lora — https://github.com/cyrealtype/Lora-Cyrillic, SIL OFL 1.1.
+   The one serif in the catalogue, for organizations whose brand is not a
+   sans-serif. */
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/lora-latin-wght-normal.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/lora-latin-ext-wght-normal.woff2') format('woff2');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}

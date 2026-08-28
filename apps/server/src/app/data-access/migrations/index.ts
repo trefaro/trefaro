@@ -11,6 +11,7 @@ import { ProgramItems1787789600000 } from './1787789600000-ProgramItems';
 import { ProgramItemSignups1787789700000 } from './1787789700000-ProgramItemSignups';
 import { MediaLinksAndFollowUp1787789800000 } from './1787789800000-MediaLinksAndFollowUp';
 import { Invitations1787789900000 } from './1787789900000-Invitations';
+import { InstanceIdentity1787790000000 } from './1787790000000-InstanceIdentity';
 
 /**
  * Core migrations, in the order they must run.
@@ -32,4 +33,5 @@ export const CORE_MIGRATIONS = [
   ProgramItemSignups1787789700000,
   MediaLinksAndFollowUp1787789800000,
   Invitations1787789900000,
+  InstanceIdentity1787790000000,
 ];

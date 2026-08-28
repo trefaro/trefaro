@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AdminConfigController } from './admin-config.controller';
 import { ConfigurationController } from './configuration.controller';
 import { ConfigurationService } from './configuration.service';
 import { CoreModuleEnabledGuard } from './core-module-enabled.guard';
@@ -20,7 +21,7 @@ import { CoreModuleRegistryService } from './core-module-registry.service';
  * from the plug-in manager.
  */
 @Module({
-  controllers: [ConfigurationController],
+  controllers: [ConfigurationController, AdminConfigController],
   providers: [
     ConfigurationService,
     CoreModuleRegistryService,

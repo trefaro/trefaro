@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   APP_CONFIG_REPOSITORY,
-  type AppConfigRepository,
+  type AppConfigReader,
 } from '../config/ports/app-config.repository';
 import { MAILER, type Mailer } from './ports/mailer';
 import { mailTemplates } from './templates';
@@ -36,7 +36,7 @@ export class MailService {
   constructor(
     @Inject(MAILER) private readonly mailer: Mailer,
     @Inject(APP_CONFIG_REPOSITORY)
-    private readonly appConfig: AppConfigRepository,
+    private readonly appConfig: AppConfigReader,
   ) {}
 
   /** The double opt-in request. @throws MailDeliveryError */

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import type { AppConfigChange } from '@trefaro/shared-models';
 import { Repository } from 'typeorm';
 import type {
   AppConfigRecord,
@@ -21,6 +22,32 @@ export class TypeormAppConfigRepository implements AppConfigRepository {
   ) {}
 
   async load(): Promise<AppConfigRecord> {
+    return this.toRecord(await this.findRow());
+  }
+
+  async save(change: AppConfigChange): Promise<AppConfigRecord> {
+    const row = await this.findRow();
+
+    // Only the keys that were sent, so a `PATCH` cannot blank a value by
+    // omitting it. `undefined` is "not mentioned"; none of these columns is
+    // nullable, so there is no third state to express.
+    if (change.organizationName !== undefined) {
+      row.organizationName = change.organizationName;
+    }
+    if (change.primaryColor !== undefined) {
+      row.primaryColor = change.primaryColor;
+    }
+    if (change.accentColor !== undefined) {
+      row.accentColor = change.accentColor;
+    }
+    if (change.fontFamily !== undefined) {
+      row.fontFamily = change.fontFamily;
+    }
+
+    return this.toRecord(await this.repository.save(row));
+  }
+
+  private async findRow(): Promise<AppConfigEntity> {
     const row = await this.repository.findOneBy({
       id: APP_CONFIG_SINGLETON_ID,
     });
@@ -34,7 +61,12 @@ export class TypeormAppConfigRepository implements AppConfigRepository {
       );
     }
 
+    return row;
+  }
+
+  private toRecord(row: AppConfigEntity): AppConfigRecord {
     return {
+      organizationName: row.organizationName,
       primaryColor: row.primaryColor,
       accentColor: row.accentColor,
       logoPath: row.logoPath,

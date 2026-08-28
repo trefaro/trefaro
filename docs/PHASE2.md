@@ -1,8 +1,8 @@
 # Phase 2 — Whitelabel, Konfiguration, Mehrsprachigkeit, PWA
 
-**Status: geplant** (28.08.2026). Kein Arbeitspaket ist begonnen; die Abschnitte
-oberhalb von _Fortschritt_ sind Plan, nicht Protokoll. Wie in Phase 1 gibt
-Marius jedes Paket einzeln frei.
+**Status: in Arbeit** (28.08.2026). **AP 1 ist erledigt** (siehe _Fortschritt_);
+die Abschnitte oberhalb davon sind Plan, nicht Protokoll. Wie in Phase 1 gibt
+Marius jedes Paket einzeln frei — AP 2 wartet auf seine Freigabe.
 
 **Die Entscheidungen E17–E29 sind am 28.08.2026 von Marius bestätigt** — sie
 werden nicht erneut aufgerollt, sondern nur gegen die Umsetzung geprüft (wie
@@ -637,5 +637,81 @@ auf „umgesetzt" gezogen.
 
 ## Fortschritt
 
-Noch nichts begonnen. Je Paket kommt hier ein Abschnitt „erledigt" mit dem, was
-tatsächlich passierte — wie in [`PHASE1.md`](PHASE1.md).
+Je Paket ein Abschnitt „erledigt" mit dem, was tatsächlich passierte — wie in
+[`PHASE1.md`](PHASE1.md). Abweichungen vom Plan stehen hier, damit AP 13 sie
+nicht rekonstruieren muss.
+
+### AP 1 — Konfiguration schreibbar machen (erledigt)
+
+Umgesetzt:
+
+- **`shared-models`** — `FONT_FAMILIES` mit fünf Einträgen (`system-ui`, Inter,
+  Source Sans 3, Atkinson Hyperlegible Next, Lora), `fontFamilyStack`,
+  `isFontFamilyKey`, `HEX_COLOR_PATTERN`/`isHexColor` (E17), `AppConfigSettings`
+  und `AppConfigChange`; `AppConfig` trägt jetzt `organizationName` und
+  `publicUserClientUrl`.
+- **`shared-theming`** — die acht `woff2`-Dateien (vier Familien × `latin` und
+  `latin-ext`, Gewichtsachse variabel, aufrecht), die vier OFL-Texte, ein
+  `fonts.css` mit den `@font-face`-Blöcken und ein `fonts/README.md` mit der
+  Herkunft. Beide Client-Builds nehmen `fonts.css` in ihre `styles` — dadurch
+  emittiert der Bundler die Dateien gehasht, und sie landen in der
+  `assets`-Gruppe von `ngsw.json`.
+- **Server** — Migration `InstanceIdentity`, `AdminConfigController`
+  (`GET`/`PATCH /api/admin/config`), `ConfigurationService.getSettings` und
+  `.updateSettings` mit beiden Prüfungen, `AppConfigRepository.save`,
+  `AppConfigSettingsDto`/`UpdateAppConfigDto`. `/api/config` liefert
+  `organizationName`, `publicUserClientUrl` und den **expandierten** Stack.
+
+Nachweise: 12 neue Unit-Tests (`shared-models`, `ConfigurationService`), 8 neue
+API-Vertragstests, 3 neue Browser-Tests über alle drei Engines. `down` der
+Migration einmal wirklich ausgeführt und wieder hochgezogen. F60 und F65 stehen
+im Referenzdokument, Anhangspunkt 19 dazu.
+
+Abweichungen und ihre Gründe:
+
+- **Die Migration ändert zwei Dinge, nicht eines.** Geplant war nur
+  `organization_name`. E18 sagt aber, dass der Katalog die Schriftart entscheidet,
+  und damit hält `font_family` einen **Schlüssel** statt eines CSS-Stacks — sonst
+  wäre die Prüfung ein Vergleich gegen Stack-Zeichenketten, und ein korrigierter
+  Fallback würde gespeicherte Zeilen ungültig machen. Also im selben Paket: ein
+  pauschales `UPDATE` (Phase 1 hatte keinen Schreibweg, der Wert _ist_ auf jeder
+  existierenden Instanz der gesäte Stack) und `varchar(64)` statt 256. Kein
+  `CHECK` — dieselbe Linie wie `kind` in `media_link` (F52).
+- **Die Locales bleiben draußen.** `AppConfigSettings` hat vier Felder, nicht
+  sechs: eine Sprachliste, die kein Modul liest, wäre ein Schalter ohne Wirkung.
+  `default_locale`/`active_locales` werden in AP 7 schreibbar, zusammen mit der
+  Sprachverwaltung, die sie braucht.
+- **Der Katalog liefert `Atkinson Hyperlegible Next`, nicht `Atkinson
+Hyperlegible`.** Die Variable-Font-Fassung der Familie; der Schlüssel heißt
+  deshalb `atkinson-hyperlegible-next`, weil der Schlüssel das ist, was in der
+  Datenbank stehen bleibt.
+- **Kein Italic, und nur `latin`/`latin-ext`.** Die Clients setzen nirgends
+  `font-style: italic` (geprüft), also synthetisiert der Browser bei Bedarf eine
+  Kursive statt acht weitere Dateien mitzubringen. Griechisch, Kyrillisch und
+  Vietnamesisch fehlen im Katalog — eine bekannte Grenze, notiert in
+  `fonts.css`, keine Grenze des Mechanismus.
+- **Der Beweis der Kette liegt in zwei Suiten, nicht in einer.** `app_config` ist
+  eine einzige Zeile, die die ganze Instanz liest, und Playwright fährt seine
+  Dateien parallel: eine Browsersuite, die die Instanz umfärbt, hätte eine
+  fremde Suite an der Farbe scheitern lassen, die sie prüft. Also: das
+  **Schreiben** in `apps/server-e2e/src/api/app-config.spec.ts`, das **Rendern**
+  in `apps/user-client-e2e/src/theming.spec.ts` gegen ein abgefangenes
+  `/api/config`. Die Abfangvariante prüft zusätzlich, was eine gesäte Instanz
+  nicht gleichzeitig sein kann: dunkle Primär- **und** helle Akzentfarbe.
+- **Die Prüfung „innerhalb der Webkomponente" läuft gegen einen Shadow Root, den
+  der Test selbst anlegt** — nicht gegen die Raumplanung. Das Plug-in ist in
+  dieser Suite nicht aktiv, und einschalten kann man es erst mit der
+  Modulverwaltung aus AP 4; dort bekommt es seine eigene Prüfung. Getestet ist
+  damit genau der Mechanismus, auf dem die Regel „Plug-ins bringen kein CSS mit"
+  beruht.
+- **WebKit normalisiert die Anführungszeichen** einer Custom Property beim
+  Zurücklesen (`"Lora"` für `'Lora'`), Chromium und Firefox nicht. Der
+  Browsertest prüft deshalb Familie und generischen Fallback, nicht die
+  Zeichenkette.
+- **Das Mail-Modul hängt jetzt an einem Lesetyp** (`AppConfigReader =
+Pick<AppConfigRepository, 'load'>`). Es braucht die Standardsprache, nicht die
+  Fähigkeit, die Marke zu ändern — dieselbe Linie wie die zählenden Ports.
+
+Was AP 1 **nicht** enthält: die Oberfläche. Farben, Schrift und Name sind über
+die API einstellbar; die Design-Seite im Veranstalter-Client ist AP 3, und bis
+dahin ist `PATCH /api/admin/config` der Weg.

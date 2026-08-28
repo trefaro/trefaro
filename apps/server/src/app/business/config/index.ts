@@ -9,6 +9,7 @@ export { ConfigurationModule } from './configuration.module';
 export { ConfigurationService } from './configuration.service';
 export {
   APP_CONFIG_REPOSITORY,
+  type AppConfigReader,
   type AppConfigRecord,
   type AppConfigRepository,
 } from './ports/app-config.repository';

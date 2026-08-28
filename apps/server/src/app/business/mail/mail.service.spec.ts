@@ -61,6 +61,7 @@ class RecordingMailer implements Mailer {
 
 const configWith = (defaultLocale: string) => ({
   load: async (): Promise<AppConfigRecord> => ({
+    organizationName: 'Democracy International e.V.',
     primaryColor: '#1c4b8c',
     accentColor: '#e8a33d',
     logoPath: null,

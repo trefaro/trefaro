@@ -21,7 +21,10 @@
             "input": "apps/admin-client/public"
           }
         ],
-        "styles": ["apps/admin-client/src/styles.scss"]
+        "styles": [
+          "libs/shared-theming/assets/fonts.css",
+          "apps/admin-client/src/styles.scss"
+        ]
       },
       "configurations": {
         "production": {

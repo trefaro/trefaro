@@ -25,7 +25,12 @@ export class ThemeDto implements Theme {
   @ApiProperty({ nullable: true, type: String, example: '/api/media/logo.svg' })
   logoUrl!: string | null;
 
-  @ApiProperty({ example: "'Inter', system-ui, sans-serif" })
+  @ApiProperty({
+    example: "'Inter', system-ui, sans-serif",
+    description:
+      'The CSS stack, expanded from the stored catalogue key — the value the ' +
+      'clients publish as `--trefaro-font-family`.',
+  })
   fontFamily!: string;
 }
 
@@ -57,6 +62,9 @@ export class PluginDescriptorDto implements PluginDescriptor {
 }
 
 export class AppConfigDto implements AppConfig {
+  @ApiProperty({ example: 'Democracy International e.V.' })
+  organizationName!: string;
+
   @ApiProperty({ type: ThemeDto })
   theme!: ThemeDto;
 
@@ -79,4 +87,12 @@ export class AppConfigDto implements AppConfig {
       'Base64url VAPID public key for Web Push, or null when the instance has no key pair configured.',
   })
   webPushPublicKey!: string | null;
+
+  @ApiProperty({
+    example: 'https://events.example.org',
+    description:
+      'Where the participant client answers, so the organizer client can link ' +
+      'to a public event page. From the environment, not the database.',
+  })
+  publicUserClientUrl!: string;
 }

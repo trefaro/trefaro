@@ -24,6 +24,7 @@ function descriptor(
 
 function config(plugins: readonly PluginDescriptor[]): AppConfig {
   return {
+    organizationName: 'Democracy International e.V.',
     theme: {
       primaryColor: '#1f6f5c',
       accentColor: '#e8a33d',
@@ -35,6 +36,7 @@ function config(plugins: readonly PluginDescriptor[]): AppConfig {
     enabledModules: [],
     plugins,
     webPushPublicKey: null,
+    publicUserClientUrl: 'http://localhost:4200',
   };
 }
 

@@ -1,3 +1,4 @@
+import type { AppConfigChange } from '@trefaro/shared-models';
 import type { TrefaroEnv } from '../../core/config/env';
 import { loadEnv } from '../../core/config/env';
 import type { PluginRegistryService } from '../plugin-manager';
@@ -9,17 +10,31 @@ import type {
 } from './ports/app-config.repository';
 
 const storedConfig: AppConfigRecord = {
+  organizationName: 'Democracy International e.V.',
   primaryColor: '#1f6f5c',
   accentColor: '#e8a33d',
   logoPath: 'branding/logo.svg',
-  fontFamily: "'Inter', system-ui, sans-serif",
+  fontFamily: 'inter',
   defaultLocale: 'de',
   availableLocales: ['en', 'de'],
 };
 
 class FakeAppConfigRepository implements AppConfigRepository {
-  constructor(private readonly record: AppConfigRecord = storedConfig) {}
+  private record: AppConfigRecord;
+  /** What `save` was handed, so a test can assert what never reached the port. */
+  written: AppConfigChange | null = null;
+
+  constructor(record: AppConfigRecord = storedConfig) {
+    this.record = record;
+  }
+
   async load(): Promise<AppConfigRecord> {
+    return this.record;
+  }
+
+  async save(change: AppConfigChange): Promise<AppConfigRecord> {
+    this.written = change;
+    this.record = { ...this.record, ...change };
     return this.record;
   }
 }
@@ -124,5 +139,122 @@ describe('ConfigurationService', () => {
 
     expect(config.webPushPublicKey).toBe('public-key');
     expect(JSON.stringify(config)).not.toContain('private-key');
+  });
+
+  it('expands the stored font key into the stack the clients publish', async () => {
+    // The row says `inter`; `--trefaro-font-family` needs a CSS value, and it
+    // must be the same one in both clients — so the server expands it (E18).
+    const config = await serviceWith({}).getAppConfig();
+
+    expect(config.theme.fontFamily).toBe("'Inter', system-ui, sans-serif");
+  });
+
+  it('falls back to the default stack for a font that is no longer shipped', async () => {
+    const service = serviceWith({
+      appConfig: new FakeAppConfigRepository({
+        ...storedConfig,
+        fontFamily: 'a-family-we-withdrew',
+      }),
+    });
+
+    // Renders in the system font rather than not rendering. The design page
+    // then shows the fallback, which is a correctable state.
+    expect((await service.getAppConfig()).theme.fontFamily).toBe(
+      'system-ui, sans-serif',
+    );
+  });
+
+  it('names the organization, not this software', async () => {
+    expect((await serviceWith({}).getAppConfig()).organizationName).toBe(
+      'Democracy International e.V.',
+    );
+  });
+
+  it('tells the organizer client where the participant client answers', async () => {
+    const service = serviceWith({
+      env: loadEnv({ PUBLIC_USER_CLIENT_URL: 'https://events.example.org' }),
+    });
+
+    // From the environment: the organizer client is a different origin and
+    // cannot derive this, and only the deployment knows it.
+    expect((await service.getAppConfig()).publicUserClientUrl).toBe(
+      'https://events.example.org',
+    );
+  });
+});
+
+describe('ConfigurationService.updateSettings', () => {
+  it('returns the stored values, with the font as its key', async () => {
+    const settings = await serviceWith({}).getSettings();
+
+    // Not the expanded stack: a `<select>` has to send back what it was given.
+    expect(settings).toEqual({
+      organizationName: 'Democracy International e.V.',
+      primaryColor: '#1f6f5c',
+      accentColor: '#e8a33d',
+      fontFamily: 'inter',
+    });
+  });
+
+  it('writes only what was sent', async () => {
+    const appConfig = new FakeAppConfigRepository();
+    const settings = await serviceWith({ appConfig }).updateSettings({
+      primaryColor: '#123456',
+    });
+
+    expect(appConfig.written).toEqual({ primaryColor: '#123456' });
+    expect(settings.accentColor).toBe('#e8a33d');
+    expect(settings.organizationName).toBe('Democracy International e.V.');
+  });
+
+  it('refuses a colour it cannot weigh for contrast (E17)', async () => {
+    for (const color of ['red', 'rgba(0, 0, 0, .5)', 'oklch(55% .1 160)']) {
+      const appConfig = new FakeAppConfigRepository();
+      const service = serviceWith({ appConfig });
+
+      await expect(
+        service.updateSettings({ primaryColor: color }),
+      ).rejects.toMatchObject({ status: 400 });
+      // The point of checking here and not only in the DTO: nothing reached the
+      // port, so an import or a seed script cannot store it either.
+      expect(appConfig.written).toBeNull();
+    }
+  });
+
+  it('stores a colour in one spelling', async () => {
+    const settings = await serviceWith({}).updateSettings({
+      accentColor: '#ABCDEF',
+    });
+
+    expect(settings.accentColor).toBe('#abcdef');
+  });
+
+  it('refuses a font this instance does not ship (E18)', async () => {
+    const appConfig = new FakeAppConfigRepository();
+    const service = serviceWith({ appConfig });
+
+    await expect(
+      service.updateSettings({ fontFamily: 'Comic Sans MS' }),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(appConfig.written).toBeNull();
+  });
+
+  it('refuses a name that is empty once trimmed, and trims the rest', async () => {
+    await expect(
+      serviceWith({}).updateSettings({ organizationName: '   ' }),
+    ).rejects.toMatchObject({ status: 400 });
+
+    const settings = await serviceWith({}).updateSettings({
+      organizationName: '  Democracy International e.V.  ',
+    });
+    expect(settings.organizationName).toBe('Democracy International e.V.');
+  });
+
+  it('accepts an empty change without touching anything', async () => {
+    const appConfig = new FakeAppConfigRepository();
+    const settings = await serviceWith({ appConfig }).updateSettings({});
+
+    expect(appConfig.written).toEqual({});
+    expect(settings.primaryColor).toBe('#1f6f5c');
   });
 });

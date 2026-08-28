@@ -169,9 +169,22 @@ export {
   type MyProgramItem,
   type MyRegistration,
 } from './lib/self-service';
-export type {
-  AppConfig,
-  PluginDescriptor,
-  PluginMountPoint,
-  Theme,
+export {
+  DEFAULT_FONT_FAMILY_KEY,
+  DEFAULT_FONT_FAMILY_STACK,
+  DEFAULT_ORGANIZATION_NAME,
+  FONT_FAMILIES,
+  FONT_FAMILY_KEYS,
+  HEX_COLOR_PATTERN,
+  MAX_ORGANIZATION_NAME_LENGTH,
+  fontFamilyStack,
+  isFontFamilyKey,
+  isHexColor,
+  type AppConfig,
+  type AppConfigChange,
+  type AppConfigSettings,
+  type FontFamilyOption,
+  type PluginDescriptor,
+  type PluginMountPoint,
+  type Theme,
 } from './lib/config';

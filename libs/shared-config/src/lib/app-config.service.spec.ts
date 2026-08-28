@@ -9,6 +9,7 @@ import { AppConfigService } from './app-config.service';
 import { STARTUP_TIMEOUT_MS } from './startup-timeout';
 
 const config: AppConfig = {
+  organizationName: 'Democracy International e.V.',
   theme: {
     primaryColor: '#1f6f5c',
     accentColor: '#e8a33d',
@@ -39,6 +40,7 @@ const config: AppConfig = {
     },
   ],
   webPushPublicKey: 'vapid-public-key',
+  publicUserClientUrl: 'http://localhost:4200',
 };
 
 describe('AppConfigService', () => {

@@ -9,8 +9,6 @@ import type { Theme } from '@trefaro/shared-models';
  *
  * - the browser mixes in a perceptual space (oklab), which keeps a light and a
  *   dark brand colour equally usable — naive RGB interpolation does not;
- * - the organization may enter any CSS colour notation and it still works, so
- *   nobody has to convert a brand colour to hex first;
  * - a shade stays derived. Change `--trefaro-color-primary` at runtime and every
  *   step follows, including inside plug-in web components.
  *
@@ -74,7 +72,15 @@ interface Srgb {
   b: number;
 }
 
-/** Parses the notations an organization realistically pastes in. */
+/**
+ * Parses the notations that can reach this function.
+ *
+ * A stored brand colour is hexadecimal since E17 — `isHexColor` is what the API
+ * accepts — so the `rgb()` branch is for the fallback theme and for anything a
+ * caller hands in directly. It stays because dropping it would silently turn a
+ * readable button white, which is the failure this whole function exists to
+ * avoid.
+ */
 function parseSrgb(color: string): Srgb | null {
   const value = color.trim().toLowerCase();
 
