@@ -417,12 +417,15 @@ Installations-Story mit geführter Ersteinrichtung und TLS-Overlay (FR 1.1,
 NFR 15) · AP 6–10 Transloco, pflegbare Sprachen, beide Clients, die Mails ·
 AP 11 Inhaltsübersetzungen (FR 3.12) · AP 12 PWA · AP 13 Abschluss.
 
-Die Entscheidungen stehen ausführlich in `docs/PHASE2.md`; diese sechs würden
-sonst in einer frischen Sitzung improvisiert:
+**E17–E29 sind am 28.08.2026 von Marius bestätigt** und werden nicht erneut
+aufgerollt. Sie stehen ausführlich in `docs/PHASE2.md`; diese sechs würden sonst
+in einer frischen Sitzung improvisiert:
 
 - **Farben nur als Hex** (E17) — `readableTextColor` muss den Kontrast
   entscheiden können; was es nicht parst, bekommt Weiß.
-- **Schriftarten sind ein mitgelieferter Katalog, kein Upload** (E18).
+- **Schriftarten sind ein mitgelieferter Katalog, kein Upload** (E18) — vorerst:
+  ausdrücklich als Startpunkt bestätigt, der Upload ist zurückgestellt und steht
+  in `todo.md`, nicht verworfen.
 - **`/api/media/branding/…` nimmt keinen Pfad vom Aufrufer** (E19). Branding ist
   öffentlich, Anhänge nicht (E9) — die zwei Dateiarten dürfen nicht in einer
   URL verwechselbar sein.

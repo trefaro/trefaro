@@ -4,6 +4,11 @@
 oberhalb von _Fortschritt_ sind Plan, nicht Protokoll. Wie in Phase 1 gibt
 Marius jedes Paket einzeln frei.
 
+**Die Entscheidungen E17–E29 sind am 28.08.2026 von Marius bestätigt** — sie
+werden nicht erneut aufgerollt, sondern nur gegen die Umsetzung geprüft (wie
+F22–F24 in AP 13 der Phase 1). Eine davon trägt eine ausdrückliche Ausbaustufe:
+E18.
+
 Grundlage: Kapitel 6, Phase 2 in
 [`Anforderungsanalyse_und_Umsetzungsplan.md`](Anforderungsanalyse_und_Umsetzungsplan.md).
 Dieses Dokument übersetzt sie in Arbeitspakete, legt die Entscheidungen fest, die
@@ -136,6 +141,14 @@ einen woff2-Upload: er stellt eine Lizenzfrage, die das Produkt für den Betreib
 nicht beantworten kann, und braucht ein `@font-face` je Instanz. Ein neuer Eintrag
 im Katalog braucht **die Datei und** einen Test, der sie in beiden Bundles findet
 — dieselbe Linie wie F38 (Typ ohne Signatur gibt es nicht).
+
+Bestätigt am 28.08.2026 mit einer ausdrücklichen Ausbaustufe: „erstmal ein
+mitgelieferter Katalog, das kann im Zweifelsfall noch ausgebaut werden." Der
+Upload ist damit nicht verworfen, sondern zurückgestellt — und der Katalog ist
+die Stelle, an der er andockt: `font_family` bliebe, dazu käme ein `font_source`
+für die ausgelieferte Datei. Steht in `todo.md`, zu entscheiden, sobald eine
+Organisation ihre Hausschrift wirklich vermisst; der Preis ist dann die
+Lizenzfrage, nicht der Code.
 
 **E19 — Das Logo ist öffentlich, und deshalb liegt es nicht bei den Anhängen.**
 E9 sagt: das Upload-Volume wird nie statisch ausgeliefert, Anhänge nur über

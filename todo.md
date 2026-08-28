@@ -250,7 +250,20 @@ answer, not an opinion.
       at runtime renames modules and plug-ins in both clients.
 - [ ] **Self-host the fonts.** Nothing to host yet (`system-ui`), but as soon as
       the font is configurable it must be served from the instance — no Google
-      Fonts CDN (NFR 9).
+      Fonts CDN (NFR 9). Phase 2 does this with a bundled catalogue (E18).
+- [ ] **Decide whether an organization may upload its own font.** E18 ships a
+      catalogue of four self-hosted OFL families plus `system-ui`, and Marius
+      confirmed it on 28.08.2026 as a starting point — "erstmal ein
+      mitgelieferter Katalog, das kann im Zweifelsfall noch ausgebaut werden".
+      So this is deferred, not refused. What it would cost: a `woff2` upload is
+      four bytes of signature check and a `@font-face` served per instance —
+      cheap. What it would cost the operator is the licence question, which the
+      product cannot answer for them, and that is the reason it is not in
+      phase 2. Where it goes: `FONT_FAMILIES` in `shared-models` keeps the
+      choice, `font_family` keeps its meaning, and a `font_source` column names
+      the served file. Revisit when an organization actually misses its house
+      typeface — an NGO whose brand font is commercial cannot match its own
+      branding today, and that is worth knowing before the pilot round.
 - [ ] **The organizer client cannot link to the public page.** AP 10 shows an
       event's public address as text (`/series/…/events/…`) rather than as a
       link, because the participant client is a different origin and nothing
