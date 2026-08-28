@@ -72,8 +72,9 @@ services:
       ADMIN_SESSION_TTL_HOURS: ${ADMIN_SESSION_TTL_HOURS:-12}
       # DATABASE_SYNCHRONIZE is deliberately not passed through: migrations are
       # the only authority over the schema, and the server refuses to start with
-      # it on in production anyway. UPLOAD_DIR and PLUGIN_BUNDLE_DIR belong to
-      # the image (see infra/docker/server.Dockerfile) and not to the operator.
+      # it on in production anyway. UPLOAD_DIR, PLUGIN_BUNDLE_DIR and
+      # I18N_CATALOGUE_DIR belong to the image (see
+      # infra/docker/server.Dockerfile) and not to the operator.
 
       # The organization's own mail server (no third-party mail service).
       SMTP_HOST: ${SMTP_HOST:-}

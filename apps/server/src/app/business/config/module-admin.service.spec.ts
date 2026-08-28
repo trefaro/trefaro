@@ -45,10 +45,10 @@ class FakeModuleConfigRepository implements ModuleConfigRepository {
 const CORE: readonly CoreModuleDescriptor[] = [
   {
     key: 'media-links',
-    titleKey: 'modules.mediaLinks',
+    titleKey: 'modules.mediaLinks.title',
     enabledByDefault: true,
   },
-  { key: 'push', titleKey: 'modules.push', enabledByDefault: false },
+  { key: 'push', titleKey: 'modules.push.title', enabledByDefault: false },
 ];
 
 const ROOM_PLANNING = {

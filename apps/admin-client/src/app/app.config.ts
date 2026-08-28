@@ -9,6 +9,7 @@ import {
 } from '@angular/common/http';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideTrefaroConfig } from '@trefaro/shared-config';
+import { provideTrefaroTranslations } from '@trefaro/shared-i18n';
 import { provideTrefaroPlugins } from '@trefaro/shared-plugins';
 import { appRoutes } from './app.routes';
 import { provideAdminSession } from './features/auth/provide-admin-session';
@@ -33,6 +34,10 @@ export const appConfig: ApplicationConfig = {
     ),
     provideRouter(appRoutes, withComponentInputBinding()),
     provideTrefaroConfig(),
+    // The interface's own text, from the server rather than from this image
+    // (E22). Behind the configuration, which is what says which languages
+    // exist; ahead of the first render, so no screen paints its keys first.
+    provideTrefaroTranslations(),
     provideAdminSession(),
     provideTrefaroPlugins(),
   ],

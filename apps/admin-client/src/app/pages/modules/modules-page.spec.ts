@@ -1,5 +1,7 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AppConfigService } from '@trefaro/shared-config';
+import { TranslationService } from '@trefaro/shared-i18n';
 import type { ModuleSummary } from '@trefaro/shared-models';
 import {
   PluginLoaderService,
@@ -16,11 +18,61 @@ import { ModulesPage } from './modules-page';
  * re-reads its own configuration afterwards (the navigation and every
  * `isModuleEnabled` read it), and that a plug-in whose bundle failed says so.
  */
+/**
+ * The catalogue, as this page sees it: a name per key per language.
+ *
+ * A fake rather than Transloco with a stub loader, because what the page has to
+ * get right is not the lookup — it is that a name follows the active language.
+ *
+ * The shape matters and is copied from the real service deliberately:
+ * {@link locale} is a signal, and {@link translate} is **not reactive**. That is
+ * how Transloco works — `translate()` reads a plain map — so a component that
+ * only calls `translate()` has registered no dependency on anything, and a
+ * language change repaints nothing. A fake whose `translate()` read the signal
+ * would pass whether or not the page gets this right, which is how the defect
+ * reached the browser in the first place.
+ */
+const NAMES: Record<string, Record<string, string>> = {
+  en: {
+    'modules.mediaLinks.title': 'Media links',
+    'plugins.roomPlanning.title': 'Room planning',
+  },
+  de: {
+    'modules.mediaLinks.title': 'Medien-Links',
+    'plugins.roomPlanning.title': 'Raumplanung',
+  },
+};
+
+class FakeTranslations {
+  readonly locale = signal('en');
+  /** What `translate` reads: a plain field, exactly as Transloco's does. */
+  private language = 'en';
+
+  translate(key: string): string {
+    return NAMES[this.language]?.[key] ?? key;
+  }
+
+  use(locale: string): void {
+    this.language = locale;
+    this.locale.set(locale);
+  }
+}
+
+/**
+ * The key segment a descriptor would declare for a module key.
+ *
+ * Spelled out in the fixture because the real descriptors spell it out too: a
+ * key segment is `lowerCamelCase`, so `media-links` cannot be one.
+ */
+function camel(key: string): string {
+  return key.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
+}
+
 function core(key: string, enabled: boolean): ModuleSummary {
   return {
     key,
     family: 'core',
-    titleKey: `modules.${key}`,
+    titleKey: `modules.${camel(key)}.title`,
     enabled,
     enabledByDefault: true,
     version: null,
@@ -33,7 +85,7 @@ function plugin(key: string, enabled: boolean): ModuleSummary {
   return {
     key,
     family: 'plugin',
-    titleKey: `plugins.${key}.title`,
+    titleKey: `plugins.${camel(key)}.title`,
     enabled,
     enabledByDefault: false,
     version: '0.1.0',
@@ -51,7 +103,7 @@ function loadResult(
     plugin: {
       key,
       version: '0.1.0',
-      labelKey: `plugins.${key}`,
+      labelKey: `plugins.${camel(key)}.label`,
       elementName: `trefaro-plugin-${key}`,
       bundleUrl: `/api/plugins/${key}/main.js`,
       mountPoints: ['event-detail'],
@@ -83,15 +135,19 @@ class FakeModulesAdminService {
 }
 
 describe('ModulesPage', () => {
+  let translations: FakeTranslations;
+
   function render(options: {
     modules?: readonly ModuleSummary[];
     plugins?: readonly PluginLoadResult[];
   }) {
     const admin = new FakeModulesAdminService(options.modules ?? []);
+    translations = new FakeTranslations();
     let reloads = 0;
 
     TestBed.configureTestingModule({
       providers: [
+        { provide: TranslationService, useValue: translations },
         { provide: ModulesAdminService, useValue: admin },
         {
           provide: AppConfigService,
@@ -135,7 +191,8 @@ describe('ModulesPage', () => {
     const text = page.text();
     expect(text).toContain('media-links');
     expect(text).toContain('room-planning');
-    // Humanised until the catalogue arrives (AP 6); the key stays in the row.
+    // Resolved from the catalogue; the key stays in the row beside it, because
+    // that is what the API and `module_config` call the thing.
     expect(text).toContain('Room planning');
     expect(text).toContain('disabled');
     expect(page.buttons().map((button) => button.textContent?.trim())).toEqual([
@@ -225,5 +282,25 @@ describe('ModulesPage', () => {
     await page.settle();
 
     expect(page.text()).toContain('ships no optional module');
+  });
+
+  it('renames every module when the language changes', async () => {
+    const page = render({
+      modules: [core('media-links', true), plugin('room-planning', false)],
+    });
+    await page.settle();
+    expect(page.text()).toContain('Media links');
+
+    translations.use('de');
+    await page.settle();
+
+    // The guard for the defect the browser walk of AP 6 found: the names were
+    // resolved in a method the template called, so a language change repainted
+    // nothing — this page is `OnPush` and the client is zoneless, and neither a
+    // method call nor `<html lang>` marks a view for a new check. Reading the
+    // language signal in the computed that builds the rows is what does.
+    expect(page.text()).toContain('Medien-Links');
+    expect(page.text()).toContain('Raumplanung');
+    expect(page.text()).not.toContain('Media links');
   });
 });

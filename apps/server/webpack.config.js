@@ -15,7 +15,20 @@ module.exports = {
       compiler: 'tsc',
       main: './src/main.ts',
       tsConfig: './tsconfig.app.json',
-      assets: ['./src/assets'],
+      assets: [
+        './src/assets',
+        // The shipped translation catalogues (E22). Copied rather than
+        // imported: the server compiles against `@trefaro/shared-models` and
+        // nothing else shared, and client text is not a contract layer. The
+        // three places this path lives are here, `I18N_CATALOGUE_DIR` in
+        // `env.ts`, and the `COPY` in `infra/docker/server.Dockerfile` - a
+        // missing one of the three is an instance whose interface renders keys.
+        {
+          input: '../../libs/shared-i18n/catalogues',
+          glob: '*.json',
+          output: 'assets/i18n',
+        },
+      ],
       optimization: false,
       outputHashing: 'none',
       generatePackageJson: true,

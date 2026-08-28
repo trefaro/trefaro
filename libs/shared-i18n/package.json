@@ -1,0 +1,13 @@
+{
+  "name": "@trefaro/shared-i18n",
+  "version": "0.0.1",
+  "peerDependencies": {
+    "@angular/core": "^22.0.0",
+    "@jsverse/transloco": "^8.4.0",
+    "@trefaro/shared-config": "0.0.1",
+    "@trefaro/shared-http": "0.0.1",
+    "@trefaro/shared-models": "0.0.1",
+    "rxjs": "^7.8.0"
+  },
+  "sideEffects": false
+}

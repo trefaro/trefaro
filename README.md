@@ -23,9 +23,17 @@ invitations to former participants — and administrator accounts with a login i
 front of all of it. An organization can run its event work on an instance today.
 The record, decision by decision, is in [`docs/PHASE1.md`](docs/PHASE1.md).
 
-**Not built yet:** whitelabel settings, module administration, runtime language
-switching, content translations and the PWA polish (phase 2 — planned in
-[`docs/PHASE2.md`](docs/PHASE2.md)); participant login, profiles, messaging,
+**Phase 2 is under way.** An instance already carries the organization's name,
+colours, logo and app icon, switches its optional modules and plug-ins on and
+off, walks an operator through its own first-run setup (with TLS as a compose
+overlay), and speaks English and German with a switch that takes effect without a
+reload. The interface text is **data the instance serves**, not strings baked into
+a client — so an organization can correct a word, or add a language, without
+rebuilding anything.
+
+**Not built yet:** the language administration, the rest of the text extraction,
+translated mails, content translations and the PWA polish (phase 2 — planned and
+recorded in [`docs/PHASE2.md`](docs/PHASE2.md)); participant login, profiles, messaging,
 real-time chat and push (phase 3); the four curated plug-ins — programme
 proposals, forum, room planning, QR check-in (phase 4). What is deferred and why
 is in [`todo.md`](todo.md).

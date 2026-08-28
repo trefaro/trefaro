@@ -13,6 +13,7 @@ import { ProgramItemEntity } from './program-item.entity';
 import { PushSubscriptionEntity } from './push-subscription.entity';
 import { RegistrationFieldEntity } from './registration-field.entity';
 import { RegistrationEntity } from './registration.entity';
+import { TranslationOverrideEntity } from './translation-override.entity';
 
 export { AdminSessionEntity } from './admin-session.entity';
 export { AdminUserEntity } from './admin-user.entity';
@@ -32,6 +33,7 @@ export { ProgramItemEntity } from './program-item.entity';
 export { PushSubscriptionEntity } from './push-subscription.entity';
 export { RegistrationFieldEntity } from './registration-field.entity';
 export { RegistrationEntity } from './registration.entity';
+export { TranslationOverrideEntity } from './translation-override.entity';
 
 /**
  * Core entities. Plug-in entities are added separately by the plug-in data
@@ -53,4 +55,5 @@ export const CORE_ENTITIES = [
   RegistrationEntity,
   RegistrationFieldEntity,
   AttachmentEntity,
+  TranslationOverrideEntity,
 ];

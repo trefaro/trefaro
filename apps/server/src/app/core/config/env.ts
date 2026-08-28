@@ -70,6 +70,15 @@ export interface TrefaroEnv {
    * production (through the NGINX reverse proxy) without any extra routing.
    */
   readonly pluginBundleDir: string;
+  /**
+   * Directory holding the shipped translation catalogues (E22).
+   *
+   * The default points at the library the files live in, so `nx serve` and every
+   * test suite read the source of truth and a corrected word needs no build. The
+   * image sets it to where its build copied them; the reason it is a value at all
+   * rather than a constant is that those two paths cannot both be a default.
+   */
+  readonly i18nCatalogueDir: string;
   /** Public origins of both clients: CORS allow-list and link base for e-mails. */
   readonly publicUserClientUrl: string;
   readonly publicAdminClientUrl: string;
@@ -201,6 +210,10 @@ export function loadEnv(
     port: read.integer('SERVER_PORT', 3000),
     uploadDir: read.optional('UPLOAD_DIR', './tmp/uploads'),
     pluginBundleDir: read.optional('PLUGIN_BUNDLE_DIR', './dist/apps/plugins'),
+    i18nCatalogueDir: read.optional(
+      'I18N_CATALOGUE_DIR',
+      './libs/shared-i18n/catalogues',
+    ),
     publicUserClientUrl: read.optional(
       'PUBLIC_USER_CLIENT_URL',
       'http://localhost:4200',

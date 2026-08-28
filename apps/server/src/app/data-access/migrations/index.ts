@@ -13,6 +13,7 @@ import { MediaLinksAndFollowUp1787789800000 } from './1787789800000-MediaLinksAn
 import { Invitations1787789900000 } from './1787789900000-Invitations';
 import { InstanceIdentity1787790000000 } from './1787790000000-InstanceIdentity';
 import { BrandingImages1787790100000 } from './1787790100000-BrandingImages';
+import { Translations1787790200000 } from './1787790200000-Translations';
 
 /**
  * Core migrations, in the order they must run.
@@ -36,4 +37,5 @@ export const CORE_MIGRATIONS = [
   Invitations1787789900000,
   InstanceIdentity1787790000000,
   BrandingImages1787790100000,
+  Translations1787790200000,
 ];

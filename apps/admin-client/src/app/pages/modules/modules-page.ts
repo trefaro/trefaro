@@ -7,8 +7,8 @@ import {
 } from '@angular/core';
 import { AppConfigService } from '@trefaro/shared-config';
 import type { ApiError } from '@trefaro/shared-http';
+import { TranslationService } from '@trefaro/shared-i18n';
 import type { ModuleSummary } from '@trefaro/shared-models';
-import { moduleDisplayName } from '@trefaro/shared-models';
 import {
   PluginLoaderService,
   type PluginLoadResult,
@@ -38,11 +38,12 @@ import { ModulesAdminService } from '../../features/modules/modules-admin.servic
  *    does not see it needs to learn that its bundle failed, rather than conclude
  *    the product is broken. That is also the one thing this page knows and the
  *    server does not — the load happened here.
- * 4. **Names are humanised keys for now.** Every module carries a `titleKey`,
- *    and resolving it needs the catalogue AP 6 brings. Until then
- *    `moduleDisplayName` derives something readable from the key, and the key
- *    itself stays in the row — it is what the API and the database call the
- *    thing.
+ * 4. **Names come from the catalogue, keys stay in the row.** Every module
+ *    carries a `titleKey`, resolved here against the catalogue the server
+ *    serves (E22) — so this list is in the organizer's language, including the
+ *    plug-ins'. The key itself stays visible beside the name: it is what the
+ *    API, the database and `module_config` call the thing, and an organizer
+ *    reading a log needs to recognise it.
  */
 @Component({
   selector: 'trefaro-modules-page',
@@ -74,10 +75,10 @@ import { ModulesAdminService } from '../../features/modules/modules-admin.servic
         </tr>
       </thead>
       <tbody>
-        @for (module of modules(); track module.key) {
+        @for (module of rows(); track module.key) {
           <tr>
             <td>
-              <strong>{{ name(module) }}</strong>
+              <strong>{{ module.name }}</strong>
               <br /><code>{{ module.key }}</code>
             </td>
             <td>
@@ -189,6 +190,7 @@ export class ModulesPage {
   private readonly admin = inject(ModulesAdminService);
   private readonly config = inject(AppConfigService);
   private readonly plugins = inject(PluginLoaderService);
+  private readonly i18n = inject(TranslationService);
 
   protected readonly modules = signal<readonly ModuleSummary[]>([]);
   protected readonly loading = signal(true);
@@ -196,6 +198,25 @@ export class ModulesPage {
   protected readonly notice = signal<string | null>(null);
   /** The key currently being written, so one click disables every button. */
   protected readonly busy = signal<string | null>(null);
+
+  /**
+   * The table's rows, with each name already resolved.
+   *
+   * The name has to be *here* rather than in a method the template calls: the
+   * page is `OnPush` and this client is zoneless, so a language change repaints
+   * only what depends on something that changed. Transloco's pipe registers that
+   * dependency itself; a method call does not, and the table went on showing
+   * English after the switch while `<html lang>` said German. Reading
+   * `i18n.locale()` in this computed is what closes that — the same move the
+   * participant's event tiles make for a plug-in label.
+   */
+  protected readonly rows = computed(() => {
+    this.i18n.locale();
+    return this.modules().map((module) => ({
+      ...module,
+      name: this.name(module),
+    }));
+  });
 
   /** Load results by key, so a plug-in's row can carry its bundle's fate. */
   private readonly statusByKey = computed(
@@ -209,8 +230,15 @@ export class ModulesPage {
     void this.load();
   }
 
+  /**
+   * The module's name in the organizer's language.
+   *
+   * Resolved in TypeScript rather than with the pipe, because the confirmation
+   * notices need the same string — a name spelled one way in the table and
+   * another way in the message below it would read as two modules.
+   */
   protected name(module: ModuleSummary): string {
-    return moduleDisplayName(module.key);
+    return this.i18n.translate(module.titleKey);
   }
 
   protected loadStatus(key: string): PluginLoadResult | null {

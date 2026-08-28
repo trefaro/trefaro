@@ -28,6 +28,9 @@
     </nav>
 
     <div class="sidebar__account">
+      <!-- Above the account, not in the navigation: choosing a language is not
+           a place in the application. -->
+      <trefaro-language-switcher />
       <span class="sidebar__account-name">{{ auth.admin()?.name }}</span>
       <button type="button" class="sidebar__signout" (click)="signOut()">
         Sign out

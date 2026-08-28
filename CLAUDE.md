@@ -90,7 +90,9 @@ Entscheidungen aus Phase 0, die nicht erneut aufgerollt werden sollten:
   Konvention. Bei Verstoß nicht die Regel lockern, sondern einen Port einziehen.
 - **Deaktivieren löscht nie Daten.** Nur `down`-Migrationen entfernen Tabellen.
 - **`libs/shared-plugins`** ist eine fünfte geteilte Lib über die vier im
-  Ursprungsplan hinaus (Client-Plug-in-Manager + Einhängepunkt-Komponente).
+  Ursprungsplan hinaus (Client-Plug-in-Manager + Einhängepunkt-Komponente);
+  `libs/shared-i18n` ist seit AP 6 der Phase 2 die sechste (mitgelieferte
+  Kataloge + Transloco-Verkabelung + Sprachumschalter).
 - **`tools/spike-verification/`** prüft eine _laufende_ Instanz; `*-e2e` prüft im
   CI. Beides bewusst getrennt.
 
@@ -404,7 +406,7 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
   Installations-Story, nicht zur Härtung; `Secure` fallen zu lassen ist keine
   Alternative.
 
-## Stand Phase 2 (in Arbeit; AP 1–5 erledigt, Meilensteine M3 und M4 erreicht)
+## Stand Phase 2 (in Arbeit; AP 1–6 erledigt, Meilensteine M3 und M4 erreicht)
 
 Plan **und Protokoll**: `docs/PHASE2.md` — dreizehn Arbeitspakete, Entscheidungen
 **E17–E29** (die Zählung läuft über die Phasen weiter), Meilensteine M3
@@ -433,7 +435,12 @@ Installations-Story: `business/setup/` mit `GET /api/setup/state` und
 ist), der Einrichtungsassistent unter `/setup` im Veranstalter-Client, das
 TLS-Overlay `infra/docker-compose.tls.yml` und `docs/INSTALL.md` — damit ist
 **M4** erreicht (alle P1 der Phase: brandbar, konfigurierbar, selbst
-installierbar).
+installierbar) · **AP 6** Transloco in beiden Clients, `libs/shared-i18n` als
+sechste geteilte Bibliothek (mitgelieferte Kataloge **und** die Angular-Seite),
+`business/i18n/` mit `GET /api/i18n/:locale` (mitgelieferter Katalog überlagert
+von `translation_override`, ETag, 304), Sprachumschalter in beiden Shells,
+`<html lang>` folgt, und `titleKey`/`labelKey` lösen jetzt auf —
+`moduleDisplayName` ist entfallen.
 
 Reihenfolge: AP 1–3 Whitelabel (FR 1.4) · AP 4 Modulverwaltung (FR 1.5) · AP 5
 Installations-Story mit geführter Ersteinrichtung und TLS-Overlay (FR 1.1,
@@ -520,9 +527,6 @@ Regeln aus AP 4, die nicht erneut aufgerollt werden sollten:
   das Event und landete auf der Startseite. Sprungmarken gehen über den Router
   (`[routerLink]="[]"` + `fragment`); der Nutzer-Client hat dafür
   `withInMemoryScrolling({ anchorScrolling: 'enabled' })`.
-- **Modulnamen sind bis AP 6 vermenschlichte Schlüssel** (`moduleDisplayName`),
-  keine Übersetzungen. Wer `titleKey`/`labelKey` auflösen kann, ersetzt beide
-  Aufrufstellen und entfernt den Helfer.
 - **`module_config` gehört der Instanz.** Eine Browsersuite, die einen Schalter
   umlegt, läuft nur in Chromium und schaltet **nicht** `media-links` — zwei
   andere Suiten benutzen es parallel. Für Modulschalter mit Fernwirkung ist
@@ -571,8 +575,6 @@ Regeln aus AP 5, die nicht erneut aufgerollt werden sollten:
 - **Zwei Felder dürfen nicht „Name" heißen.** Person und Organisation im selben
   Formular sind für einen Screenreader nicht unterscheidbar (NFR 4) — „Your name"
   und „Organization name". Gefunden hat es der Browserdurchlauf, kein Unit-Test.
-- **Sprachnamen kommen bis AP 6 von `Intl.DisplayNames`** („Deutsch" statt „de"):
-  Plattform, kein Katalog, kein Download.
 - **`defaultLocale` schreibt nur die Ersteinrichtung** (`setLocales` als eigene
   Port-Methode, nicht `save`): `AppConfigChange` ist der Rumpf der Design-Seite,
   und die Sprache jeder ausgehenden Mail darf dort nicht mitreisen. Gewählt werden
@@ -589,6 +591,70 @@ Regeln aus AP 5, die nicht erneut aufgerollt werden sollten:
   Gegen ein selbst ausgestelltes Zertifikat braucht auch der socket.io-Client die
   Ausnahme, sonst liest sich der Fehlschlag wie „der Proxy leitet keine Upgrades
   weiter".
+
+Regeln aus AP 6, die nicht erneut aufgerollt werden sollten:
+
+- **Transloco und zoneless verträgt sich — die Falle ist eine andere** (F72).
+  Pipe, Strukturdirektive und `translateSignal` zeichnen nach einem
+  Sprachwechsel neu, ohne `detectChanges()`; festgehalten in
+  `zoneless-language-change.spec.ts`. Aber: eine Beschriftung, die **in
+  TypeScript** entsteht, hat keine Pipe, die sie neu zeichnet, und
+  `TranslocoService.translate()` liest eine gewöhnliche Map ohne
+  Signal-Abhängigkeit. Wer eine Beschriftung berechnet, liest deshalb
+  `TranslationService.locale()` in derselben `computed()` — so machen es
+  `modules-page.ts` und `event-detail-tiles.ts`. Und **ein Fake in einem
+  solchen Test muss die Nicht-Reaktivität nachbilden**: das erste Fake war
+  reaktiver als Transloco, der Test blieb grün, und gefunden hat es der
+  Browserdurchlauf.
+- **Ein Sprachwechsel lädt erst und aktiviert dann.** `setActiveLang()` wartet
+  nicht auf den Katalog und zeigt weiter die alte Sprache, bis das JSON über das
+  Netz da ist. `TranslationService.use()` ist deshalb die einzige Stelle, die
+  umschaltet — `load()`, dann `setActiveLang()`, dann `localStorage`, dann
+  `<html lang>`; `switching()` ist dazwischen wahr, und bei einem Fehlschlag wird
+  **nichts** gemerkt.
+- **Ein Sprachwechsel lädt immer, auch für die schon aktive Sprache.** Transloco
+  puffert, also kostet es nichts — und eine Abkürzung „ist schon aktiv“ ließ eine
+  Instanz, deren Sprache genau die Rückfallsprache ist, **ohne Katalog** starten:
+  `active` beginnt auf `en`. Sichtbar war das nur, wenn keine Pipe zufällig
+  vorher lud. Und **`start()` merkt sich nichts**: die Anfangssprache ist
+  abgeleitet, gespeichert wird nur, was durch `use()` kommt.
+- **Der Katalog ist flach, mit gepunkteten `lowerCamelCase`-Schlüsseln** (F70),
+  geprüft von `isTranslationKey` in `shared-models`. Drei Dinge adressieren eine
+  Übersetzung — die Zeile in `translation_override`, die Vollständigkeitszahl aus
+  AP 7 und der Schlüssel im Template. Folge: ein Modulschlüssel kann sich nicht
+  selbst schreiben (`media-links` ist kein legales Segment), also **deklariert**
+  jeder Deskriptor seinen `titleKey`/`labelKey`, statt ihn abzuleiten. Ein neuer
+  Schlüssel kommt zuerst in `en.json` — Englisch **ist** die Schlüsselliste (E23),
+  und `catalogues.spec.ts` verlangt, dass Deutsch vollständig bleibt.
+- **Die mitgelieferten Kataloge werden nie importiert.** Sie liegen in
+  `libs/shared-i18n/catalogues/*.json`, und der Server liest sie zur Laufzeit
+  hinter dem Port `ShippedCatalogueReader` — Dateien sind Datenzugriff (dieselbe
+  Linie wie `FileStore`), und ein `import` würde Oberflächentext zur
+  Vertragsschicht machen. `apps/server` hängt weiterhin nur an
+  `@trefaro/shared-models`.
+- **`I18N_CATALOGUE_DIR` lebt an drei Stellen**: `env.ts`, `.env.example` — und
+  die webpack-`assets`-Regel **plus** der `COPY` in
+  `infra/docker/server.Dockerfile`. Fehlt eines, antwortet die Instanz `200 {}`,
+  beide Clients zeichnen ihre Schlüssel, und **jede** Suite bleibt grün: sie
+  fahren `nx serve` aus dem Arbeitsbereich, wo die Vorgabe auf die Bibliothek
+  zeigt. Geprüft wird das von `verify-i18n.mjs` gegen ein laufendes Deployment.
+- **Der Katalog wird revalidiert, nicht zwischengespeichert** — `no-cache` plus
+  ein ETag **über die ausgelieferten Bytes**, nicht über ein `updated_at`. Drei
+  Dinge entscheiden die Antwort (Datei im Image, Zeilen der Organisation,
+  Auflösungsregel) und nur eines hat einen Zeitstempel; so macht auch ein neues
+  Image jede Client-Kopie ungültig.
+- **Eine frische Instanz bietet an, was das Image mitbringt** (F71). Die
+  Migration zieht `active_locales` auf `['en','de']` nach — aber nur dort, wo der
+  Wert noch exakt die Vorgabe ist: eine Migration überschreibt keine
+  Entscheidung. Wer eine Sprache wieder abbestellen will, tut das in der
+  Sprachverwaltung (AP 7), und das Entfernen löscht keine Übersetzung.
+- **Sprachnamen kommen von `Intl.DisplayNames`, endgültig.** Ein Katalogeintrag
+  bräuchte einen Schlüssel je Sprache je Sprache — und die Sprache, die eine
+  Organisation in AP 7 erfindet, wäre in jeder anderen namenlos.
+- **Für einen Spec mit Übersetzungen im Template:**
+  `provideTranslationsForTest({...})` aus `@trefaro/shared-i18n`. Ohne Argument
+  ein leerer Katalog, dann rendert ein Schlüssel als Schlüssel — was ein Test
+  über einen Knopf sehen will. Wer eine Beschriftung prüft, nennt die Wörter.
 
 ## Betriebskontext
 

@@ -5,6 +5,8 @@ import { FILE_STORE } from '../business/attachments/ports/file-store';
 import { APP_CONFIG_REPOSITORY } from '../business/config/ports/app-config.repository';
 import { EVENT_SERIES_REPOSITORY } from '../business/event-series/ports/event-series.repository';
 import { EVENT_REPOSITORY } from '../business/events/ports/event.repository';
+import { SHIPPED_CATALOGUE_READER } from '../business/i18n/ports/shipped-catalogue.reader';
+import { TRANSLATION_OVERRIDE_REPOSITORY } from '../business/i18n/ports/translation-override.repository';
 import { ADMIN_SESSION_REPOSITORY } from '../business/login/ports/admin-session.repository';
 import { INVITATION_REPOSITORY } from '../business/invitations/ports/invitation.repository';
 import { ADMIN_USER_REPOSITORY } from '../business/login/ports/admin-user.repository';
@@ -27,6 +29,7 @@ import type { TrefaroEnv } from '../core/config/env';
 import { buildDataSourceOptions } from './data-source';
 import { CORE_ENTITIES } from './entities';
 import { collectPluginPersistence } from './plugin-data-access/plugin-persistence.registry';
+import { BundledCatalogueReader } from './storage/bundled-catalogue.reader';
 import { LocalDiskFileStore } from './storage/local-disk.file-store';
 import { TypeormAdminSessionRepository } from './repositories/typeorm-admin-session.repository';
 import { TypeormAdminUserRepository } from './repositories/typeorm-admin-user.repository';
@@ -42,6 +45,7 @@ import { TypeormProgramItemRepository } from './repositories/typeorm-program-ite
 import { TypeormPushSubscriptionRepository } from './repositories/typeorm-push-subscription.repository';
 import { TypeormRegistrationFieldRepository } from './repositories/typeorm-registration-field.repository';
 import { TypeormRegistrationRepository } from './repositories/typeorm-registration.repository';
+import { TypeormTranslationOverrideRepository } from './repositories/typeorm-translation-override.repository';
 
 /**
  * The data access layer — the only layer that talks to PostgreSQL.
@@ -88,6 +92,8 @@ export class DataAccessModule {
         TypeormPushSubscriptionRepository,
         TypeormRegistrationRepository,
         TypeormRegistrationFieldRepository,
+        TypeormTranslationOverrideRepository,
+        BundledCatalogueReader,
         {
           provide: ADMIN_USER_REPOSITORY,
           useExisting: TypeormAdminUserRepository,
@@ -168,6 +174,17 @@ export class DataAccessModule {
           provide: REGISTRATION_TALLY,
           useExisting: TypeormRegistrationRepository,
         },
+        {
+          provide: TRANSLATION_OVERRIDE_REPOSITORY,
+          useExisting: TypeormTranslationOverrideRepository,
+        },
+        // The shipped catalogues behind a port, for the same reason the upload
+        // volume is: reading a file is data access, and the business layer knows
+        // that the shipped text exists, not that a disk is involved (E22).
+        {
+          provide: SHIPPED_CATALOGUE_READER,
+          useExisting: BundledCatalogueReader,
+        },
       ],
       exports: [
         ADMIN_USER_REPOSITORY,
@@ -188,6 +205,8 @@ export class DataAccessModule {
         REGISTRATION_REPOSITORY,
         REGISTRATION_FIELD_REPOSITORY,
         REGISTRATION_TALLY,
+        SHIPPED_CATALOGUE_READER,
+        TRANSLATION_OVERRIDE_REPOSITORY,
         TypeOrmModule,
       ],
     };

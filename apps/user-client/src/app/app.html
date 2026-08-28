@@ -7,6 +7,9 @@
   <a class="app-header__title" routerLink="/"
     >{{ config.organizationName() }}</a
   >
+  <!-- In the header rather than in the bottom navigation: that bar is where a
+       participant goes somewhere, and a language is not a somewhere. -->
+  <trefaro-language-switcher />
 </header>
 
 <main class="app-main">

@@ -35,7 +35,22 @@ export type ModuleFamily = 'core' | 'plugin';
 export interface ModuleSummary {
   readonly key: string;
   readonly family: ModuleFamily;
-  /** Translation key for the module's name; resolved by the clients (E22). */
+  /**
+   * Translation key for the module's name: under `modules.` for a core module,
+   * under `plugins.` for a plug-in.
+   *
+   * **Declared** by each descriptor, not derived from {@link key}. A key segment
+   * is `lowerCamelCase`, so `media-links` could not spell itself
+   * (`modules.media-links.title` is not a legal key) — and beyond that, an
+   * identifier and a name are different things: the identifier is what
+   * `module_config` and the API call the module, the name is what a reader sees.
+   *
+   * A key rather than a name, because the administration is one of the screens
+   * an organization reads in its own language (NFR 4) and the module list is
+   * assembled on the server, which has no opinion about which language that is.
+   * Resolved by the clients against the catalogue from `GET /api/i18n/:locale`
+   * (E22).
+   */
   readonly titleKey: string;
   readonly enabled: boolean;
   /** What a fresh instance starts with — shown as "default" in the list. */
@@ -51,23 +66,4 @@ export interface ModuleSummary {
 /** The one thing a module administration writes. */
 export interface ModuleToggle {
   readonly enabled: boolean;
-}
-
-/**
- * A readable name for a module key, until the catalogue can be asked.
- *
- * Every module carries a `titleKey`, and resolving it needs the translation
- * catalogue that arrives with AP 6. Until then a screen that shows nothing but
- * `plugins.roomPlanning.title` is unusable, and hard-coding English names in two
- * clients would be a second catalogue nobody maintains. So the key itself is
- * humanised — `room-planning` becomes "Room planning" — which is right often
- * enough to be read and never claims to be a translation.
- */
-export function moduleDisplayName(key: string): string {
-  const words = key.split(/[-_]/).filter((word) => word.length > 0);
-  if (words.length === 0) return key;
-  return [
-    words[0].charAt(0).toUpperCase() + words[0].slice(1),
-    ...words.slice(1),
-  ].join(' ');
 }

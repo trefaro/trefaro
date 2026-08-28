@@ -6,6 +6,7 @@ import {
   RouterOutlet,
 } from '@angular/router';
 import { AppConfigService } from '@trefaro/shared-config';
+import { LanguageSwitcher } from '@trefaro/shared-i18n';
 import { PluginSlot } from '@trefaro/shared-plugins';
 import { ThemeService } from '@trefaro/shared-theming';
 import { AuthService } from './features/auth/auth.service';
@@ -23,7 +24,13 @@ import { AuthService } from './features/auth/auth.service';
 @Component({
   selector: 'trefaro-root',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, PluginSlot],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    PluginSlot,
+    LanguageSwitcher,
+  ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

@@ -19,6 +19,7 @@ client's cache, so the organizer client was unreachable.
 | `verify-plugin-toggle.mjs` | server + PostgreSQL + `docker exec` into the database container             |
 | `verify-socket.mjs`        | server                                                                      |
 | `verify-push.mjs`          | server + PostgreSQL + a VAPID key pair in `.env`                            |
+| `verify-i18n.mjs`          | server + PostgreSQL + `docker exec` into the database container             |
 | `verify-proxy.mjs`         | the full five-container stack; over HTTPS when `PROXY_BASE` is an https URL |
 | `verify-setup.mjs`         | a **fresh** stack with no administrator, and the token from its startup log |
 
@@ -34,6 +35,7 @@ node dist/apps/server/main.js           # in its own shell
 node tools/spike-verification/verify-api.mjs
 node tools/spike-verification/verify-socket.mjs
 node tools/spike-verification/verify-plugin-toggle.mjs
+node tools/spike-verification/verify-i18n.mjs
 
 # For push, add a key pair to .env first and restart the server:
 npx web-push generate-vapid-keys
@@ -45,6 +47,11 @@ node tools/spike-verification/verify-push.mjs
 ```bash
 docker compose --env-file .env -f infra/docker-compose.yml up -d --build
 node tools/spike-verification/verify-proxy.mjs
+
+# The catalogues have to be *inside* the image, which is where the source tree
+# stops being evidence:
+BASE=http://localhost:8080 POSTGRES_CONTAINER=trefaro-postgres \
+  node tools/spike-verification/verify-i18n.mjs
 ```
 
 ## Against the TLS overlay
@@ -116,6 +123,17 @@ default port — because they are the WebSocket origin allow-list.
   puts the flag back: a fresh instance has it off (E21), and its endpoints then
   answer 404. `verify-api.mjs` meets the same endpoint from the other side and
   asserts exactly that.
+- `verify-i18n.mjs` exists for one class of defect: a catalogue that never
+  reaches the container. The shipped JSON lives in three places at once — the
+  library, the webpack `assets` entry that copies it into
+  `dist/apps/server/assets/i18n`, and the `COPY` plus `I18N_CATALOGUE_DIR` in
+  the server Dockerfile — and a missing one of the three produces an instance
+  that answers `200 {}`, after which both clients render their keys. Every suite
+  stays green, because they all run `nx serve` from the workspace, where the
+  default path is the library itself. The script also writes and removes one
+  `translation_override` row through `psql`, which is the only way to show the
+  second half of E22 before AP 7 has built the screen for it: a changed word is
+  live on the next request, with no rebuild and no restart.
 - `verify-proxy.mjs` also checks what the service worker claims: it replays
   ngsw's own selection rule — one positive pattern matches, no negative one does —
   against the built `ngsw.json`, for `/admin/`, `/api/config` and `/socket.io/`.

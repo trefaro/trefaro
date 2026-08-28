@@ -28,7 +28,6 @@ export {
 } from './fonts';
 export {
   PUSH_MODULE_KEY,
-  moduleDisplayName,
   type ModuleFamily,
   type ModuleSummary,
   type ModuleToggle,

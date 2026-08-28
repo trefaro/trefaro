@@ -170,6 +170,13 @@ export {
   type MyRegistration,
 } from './lib/self-service';
 export {
+  FALLBACK_LOCALE,
+  MAX_TRANSLATION_KEY_LENGTH,
+  MAX_TRANSLATION_VALUE_LENGTH,
+  isTranslationKey,
+  type TranslationCatalogue,
+} from './lib/i18n';
+export {
   BRANDING_IMAGE_KINDS,
   BRANDING_IMAGE_PART,
   BRANDING_MIME_TYPES,
@@ -190,7 +197,6 @@ export {
   isBrandingImageKind,
   isFontFamilyKey,
   isHexColor,
-  moduleDisplayName,
   pluginElementId,
   type AppConfig,
   type AppConfigChange,

@@ -7,7 +7,8 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AppConfigService } from '@trefaro/shared-config';
-import { moduleDisplayName, pluginElementId } from '@trefaro/shared-models';
+import { TranslationService } from '@trefaro/shared-i18n';
+import { pluginElementId } from '@trefaro/shared-models';
 import { PluginLoaderService } from '@trefaro/shared-plugins';
 
 /** One tile: what it is called, where it leads, and how much is behind it. */
@@ -45,11 +46,14 @@ interface DetailTile {
  *    dashboard (F47). A plug-in whose bundle failed to load gets no tile either:
  *    the participant cannot act on that, and the organizer's module page is where
  *    it is reported.
- * 3. **Plug-in names are humanised keys for now.** Every plug-in carries a
- *    `labelKey`, and resolving it needs the catalogue AP 6 brings.
- *    `moduleDisplayName` derives something readable until then; the two core
- *    tiles use the headings of the sections they point at, which are the same
- *    words a reader sees on arrival.
+ * 3. **A plug-in's tile is labelled from the catalogue.** Every plug-in carries
+ *    a `labelKey`, resolved against the catalogue the server serves (E22), so a
+ *    German page does not grow an English tile. The computed reads the active
+ *    language, which is what makes it recompute when a visitor switches — a
+ *    label assembled in TypeScript has no pipe to do that for it. The two core
+ *    tiles still carry English literals; they move into the catalogue with the
+ *    rest of this client's text in AP 8, together with the headings of the
+ *    sections they point at, which have to keep saying the same words.
  */
 @Component({
   selector: 'trefaro-event-detail-tiles',
@@ -108,6 +112,7 @@ export class EventDetailTiles {
 
   private readonly config = inject(AppConfigService);
   private readonly loader = inject(PluginLoaderService);
+  private readonly i18n = inject(TranslationService);
 
   protected readonly tiles = computed<readonly DetailTile[]>(() => {
     const tiles: DetailTile[] = [];
@@ -129,13 +134,15 @@ export class EventDetailTiles {
     }
 
     // Read the load results so this recomputes as bundles finish — a tile that
-    // appeared before its element was defined would scroll to nothing.
+    // appeared before its element was defined would scroll to nothing. And the
+    // active language, so the labels below follow a switch.
     this.loader.loadResults();
+    this.i18n.locale();
     for (const plugin of this.config.pluginsAt('event-detail')) {
       if (!this.loader.isReady(plugin.key)) continue;
       tiles.push({
         target: pluginElementId(plugin.key),
-        label: moduleDisplayName(plugin.key),
+        label: this.i18n.translate(plugin.labelKey),
         hint: 'on this page',
       });
     }

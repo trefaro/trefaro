@@ -1,9 +1,9 @@
 # Phase 2 — Whitelabel, Konfiguration, Mehrsprachigkeit, PWA
 
-**Status: in Arbeit** (28.08.2026). **AP 1 bis AP 5 sind erledigt** (siehe
+**Status: in Arbeit** (28.08.2026). **AP 1 bis AP 6 sind erledigt** (siehe
 _Fortschritt_) — damit sind **Meilenstein M3** und **Meilenstein M4** erreicht;
 die Abschnitte oberhalb davon sind Plan, nicht Protokoll. Wie in Phase 1 gibt
-Marius jedes Paket einzeln frei — AP 6 wartet auf seine Freigabe.
+Marius jedes Paket einzeln frei — AP 7 wartet auf seine Freigabe.
 
 **Die Entscheidungen E17–E29 sind am 28.08.2026 von Marius bestätigt** — sie
 werden nicht erneut aufgerollt, sondern nur gegen die Umsetzung geprüft (wie
@@ -614,6 +614,9 @@ Wird beim jeweiligen Paket eingetragen, nicht am Ende gesammelt:
 | F67 | Welcher Kontrast geprüft wird — und warum nicht der gegen die berechnete Textfarbe (NFR 4, E17)   | 3   |
 | F68 | Wie die Kacheln der Event-Detailansicht entstehen (Mockups 5.2, Bezug F47)                        | 4   |
 | F69 | Warum der Setup-Controller `@AllowAnonymous()` trägt — der Admin-Guard überschätzt (Bezug E16)    | 5   |
+| F70 | Gestalt und Herkunft eines Übersetzungsschlüssels; flach, gepunktet, `lowerCamelCase` (E22)       | 6   |
+| F71 | Welche Sprachen eine frische Instanz anbietet — die, die das Image mitbringt (NFR 4)              | 6   |
+| F72 | Transloco und zoneless: was die Vorprüfung wirklich fand (Bezug E20)                              | 6   |
 
 Anhangspunkt 18 (TLS gehört zur Installations-Story) ist in AP 5 von „geplant"
 auf „umgesetzt" gezogen.
@@ -1118,3 +1121,157 @@ sechster Container, ein Erneuerungszeitplan und ein Anspruch auf Port 80); keine
 Sprachverwaltung (AP 7 — der Assistent wählt aus den mitgelieferten Locales);
 keine übersetzten Seitentitel (AP 6); und keine Sitzung als Antwort des
 Assistenten.
+
+### AP 6 — Transloco und der Katalog vom Server (erledigt)
+
+Beginnt, wie der Plan es verlangt, mit der kleinsten Prüfung: **zeichnet ein
+zoneless Angular-Client nach einem Sprachwechsel neu?** `zone.js` ist keine
+Abhängigkeit dieses Arbeitsbereichs, Transloco ist mehrere Hauptversionen älter
+als dieser Modus, und er zeichnet neu, indem er `markForCheck()` aus einem
+Abonnement ruft. Ergebnis: **ja**, alle drei Lesarten (Pipe, Strukturdirektive,
+`translateSignal`) landen im DOM einer `OnPush`-Komponente, ohne dass jemand
+`detectChanges()` ruft — Angulars `markForCheck()` benachrichtigt seit Version 18
+den zoneless-Planer. Festgehalten in
+`libs/shared-i18n/src/lib/zoneless-language-change.spec.ts`, drei Tests, gelaufen
+**vor** der ersten verschobenen Zeile Text. Die signalbasierte Lesart als Ausweg
+war nicht nötig; was die Prüfung stattdessen fand, steht unter _Abweichungen_ und
+in F72.
+
+Umgesetzt:
+
+- **`libs/shared-i18n`** — eine sechste geteilte Bibliothek, mit beidem darin:
+  `catalogues/en.json` und `catalogues/de.json` (die **mitgelieferten** Kataloge,
+  flach, gepunktete Schlüssel) und der Angular-Seite — `TrefaroCatalogueLoader`
+  (Transloco-Loader gegen `GET /api/i18n/:locale`), `TranslationService`,
+  `LanguageSwitcher`, `provideTrefaroTranslations()` und
+  `provideTranslationsForTest()`.
+- **`shared-models`** — `lib/i18n/`: `TranslationCatalogue` (der flache
+  Wire-Typ), `FALLBACK_LOCALE`, `MAX_TRANSLATION_KEY_LENGTH`,
+  `MAX_TRANSLATION_VALUE_LENGTH` und `isTranslationKey` — die
+  Schlüsselkonvention als Prüffunktion, nicht als Empfehlung (F70).
+  `moduleDisplayName` **entfernt**, wie der Plan es vorsah.
+- **Server, `business/i18n/`** — zwei Ports (`ShippedCatalogueReader`,
+  `TranslationOverrideReader`), `CatalogueService` mit der Auflösungskette aus
+  E23 und einem ETag über die ausgelieferten Bytes, `I18nController`
+  (`GET /api/i18n/:locale`, öffentlich, `no-cache` + `If-None-Match` → 304).
+  Exportiert `CatalogueService` für AP 10.
+- **Server, Datenzugriff** — `BundledCatalogueReader` (liest die Kataloge von der
+  Platte, prozessweit gepuffert, ein defektes File wird geloggt und gilt als
+  abwesend), `TypeormTranslationOverrideRepository`, Entity
+  `TranslationOverrideEntity`, Migration `Translations1787790200000`.
+- **Verkabelung** — `I18N_CATALOGUE_DIR` in `env.ts` und `.env.example`, die
+  webpack-`assets`-Regel nach `assets/i18n`, der `COPY` und das `ENV` in
+  `infra/docker/server.Dockerfile`; beide Clients registrieren
+  `provideTrefaroTranslations()` und tragen `<trefaro-language-switcher />` in
+  ihrer Shell.
+- **Die zwei Aufrufstellen, die der Plan nennt** — `modules-page.ts` löst
+  `titleKey` auf, `event-detail-tiles.ts` löst `labelKey` auf, beide über
+  `TranslationService`. Die `titleKey` der Kernmodule heißen jetzt
+  `modules.<name>.title` statt `modules.<name>`, damit beide Familien eine
+  Konvention haben.
+- **`tools/spike-verification/verify-i18n.mjs`** — 16 Prüfungen gegen ein
+  laufendes Deployment, darunter die einzige, die zählt: dass der Katalog
+  wirklich **im Image** liegt.
+
+Nachweise: `nx run-many -t lint test build` grün für 14 Projekte (13 + die neue
+Bibliothek). Neu: 38 Unit-Tests in `shared-i18n` (Spike 3, Kataloge 15,
+`TranslationService` 14, Umschalter 6), 3 in `apps/server` zu den Modulschlüsseln,
+19 zum `CatalogueService`, 13 API-Vertragstests, 1 Reaktivitätstest je Client, 6
+Browser-Tests im Nutzer-Client und 6 im Veranstalter-Client (2 × 3 Engines).
+Suiten: `server-e2e` 18 Suiten / 322 Tests, `user-client-e2e` 165, `admin-client-e2e` 231. Manuell gegen den Fünf-Container-Stack aus leerem Volume: `verify-i18n.mjs`
+16/16 durch den Proxy, `verify-proxy.mjs` vollständig grün, ein Chromium-Rundgang
+durch beide Clients, `ls /app/assets/i18n` im Server-Container, `down -v`. F70–F72
+und `translation_override` stehen im Referenzdokument, Anhangspunkt 20 dazu.
+
+Abweichungen und ihre Gründe:
+
+- **Die Prüfung fand nicht das erwartete Problem, sondern zwei andere.** Dass ein
+  Sprachwechsel zeichnet, war in Ordnung. Aber `setActiveLang()` **wartet nicht
+  auf den Katalog** — es zeigt weiter die alte Sprache, bis das JSON über das Netz
+  da ist. Über ein Netz statt über einen Stub ist das sichtbar lang, und ein Klick
+  auf „Deutsch“, der die Oberfläche englisch stehen lässt, sieht aus wie ein
+  kaputter Knopf. Deshalb lädt `TranslationService.use()` erst und aktiviert dann,
+  mit `switching()` dazwischen. Und die teurere Hälfte: eine Beschriftung, die
+  **in TypeScript** entsteht, hat keine Pipe, die sie neu zeichnet — die
+  Modulverwaltung zeigte nach dem Umschalten weiter Englisch, während
+  `<html lang>` schon „de“ sagte. Gefunden hat es der Browserdurchlauf, und der
+  Unit-Test dazu war **grün**: das Fake war reaktiver als Transloco. Beide
+  Fakes bilden jetzt nach, dass `translate()` nicht reaktiv ist, und beide Tests
+  wurden gegen die zurückgenommene Korrektur als fehlschlagend belegt (F72).
+- **Der Umschalter hätte auf einer englischen Instanz beim ersten Zeichnen
+  Schlüssel gezeigt.** `use()` hatte eine Abkürzung „ist schon die aktive
+  Sprache, nichts zu tun“ — und `active` beginnt auf der Rückfallsprache. Eine
+  Instanz, deren Sprache **genau** die Rückfallsprache ist, nahm also die
+  Abkürzung und hatte keinen Katalog, bis irgendeine Pipe zufällig einen Ladevorgang
+  auslöste. Der Browserdurchlauf sah es nicht, weil der Umschalter selbst eine
+  Pipe hat und schneller war. Gefunden beim Nachlesen des Diffs; `activate()`
+  lädt jetzt immer (Transloco puffert), und der Test dazu wurde gegen die
+  zurückgenommene Abkürzung als fehlschlagend belegt.
+- **`start()` merkt sich nichts.** Die Anfangssprache ist _abgeleitet_, nicht
+  gewählt; sie zu speichern hieße, aus „dein Browser fragt nach Deutsch“ ein „du
+  hast Deutsch gewählt“ zu machen — und wer später seinen Browser umstellt, bekäme
+  weiter die alte Sprache, ohne dass etwas das erklärt. Gemerkt wird nur, was
+  durch `use()` kommt, also durch den Umschalter.
+- **Eine frische Instanz bot Deutsch nicht an.** `active_locales` war mit
+  Englisch allein gesät, also hatte der Umschalter auf einer neuen Instanz nichts
+  zu schalten — obwohl das Image einen vollständigen deutschen Katalog mitbringt.
+  Das Abnahmekriterium dieses Pakets wäre nicht vorführbar gewesen. Nachgezogen
+  von derselben Migration, aber nur dort, wo der Wert noch exakt die ausgelieferte
+  Vorgabe ist (F71). Deshalb heißt die Migration `Translations…` und nicht
+  `TranslationOverrides…`: sie ändert zwei Dinge.
+- **Die mitgelieferten Kataloge liegen nur im Server-Image**, nicht „in beiden
+  Images“, wie die Paketbeschreibung sagt. E22 ist hier die Entscheidung und ist
+  ausdrücklich: JSON im Client-Image ändert man nur durch einen Neubau, also wäre
+  eine Kopie dort ein zweiter Katalog, den niemand pflegt. Ist der Server nicht
+  erreichbar, zeigen die Clients ihre Schlüssel — ehrlich, und ohnehin nur in
+  einem Zustand erreichbar, in dem es auch keine Inhalte gibt.
+- **Der Katalog ist flach, mit gepunkteten Schlüsseln.** Der Plan legte die
+  Konvention nicht fest, verlangte aber, sie hier zu entscheiden. Flach, weil
+  `translation_override` einen Schlüssel speichert, die Vollständigkeitszahl aus
+  AP 7 Schlüssel zählt und ein Template einen Schlüssel schreibt; verschachtelt
+  wäre „welcher fehlt“ ein Baumdurchlauf. Segmente in `lowerCamelCase`, erzwungen
+  von `isTranslationKey` — mit der Folge, dass ein Modulschlüssel sich nicht selbst
+  schreiben kann (`media-links` ist kein legales Segment) und jeder Deskriptor
+  seinen `titleKey` **deklariert** statt ihn abzuleiten (F70).
+- **Sprachnamen bleiben bei `Intl.DisplayNames`.** In `CLAUDE.md` stand „bis
+  AP 6“; jetzt ist es endgültig. Ein Katalogeintrag bräuchte einen Schlüssel je
+  Sprache **je Sprache** — und genau die Sprache, die eine Organisation in AP 7
+  erfindet, wäre in jeder anderen namenlos.
+- **Der Katalog wird revalidiert, nicht zwischengespeichert.** Ein langes
+  `max-age` würde die Funktion aushöhlen, die es bedient. Der ETag ist ein Hash
+  **über die ausgelieferten Bytes**, nicht über ein `updated_at`: drei Dinge
+  entscheiden diese Antwort — die Datei im Image, die Zeilen der Organisation und
+  die Auflösungsregel — und nur eines davon hat einen Zeitstempel. So macht ein
+  neues Image auch jede Client-Kopie ungültig, ohne dass jemand daran denkt.
+- **Die Kataloge sind Datenzugriff.** `ShippedCatalogueReader` ist ein Port wie
+  `FileStore` (E9 im Geiste): die Geschäftslogik weiß, _dass_ der mitgelieferte
+  Text existiert, nicht wo. Der zweite Grund ist die Schichtgrenze — ein
+  `import` von `libs/shared-i18n/catalogues/en.json` in einen Dienst würde
+  Oberflächentext zur Vertragsschicht machen, und `apps/server` hängt weiterhin
+  nur an `@trefaro/shared-models`.
+- **`I18N_CATALOGUE_DIR` lebt an drei Stellen**, und das ist die Lehre aus AP 13
+  der Phase 1 in neuer Gestalt: `env.ts`, `.env.example` — und die webpack-Regel
+  plus der `COPY` im Dockerfile. Fehlt eines davon, antwortet die Instanz `200 {}`
+  und beide Clients zeichnen ihre Schlüssel, während **jede** Suite grün bleibt
+  (sie fahren `nx serve` aus dem Arbeitsbereich, wo die Vorgabe auf die Bibliothek
+  selbst zeigt) und die CI die Images baut, ohne sie zu starten. Dafür gibt es
+  jetzt `verify-i18n.mjs`.
+- **Der Umschalter fehlt auf dem Anmeldeformular.** Die Shell des
+  Veranstalter-Clients zeichnet ihre Seitenleiste erst nach der Anmeldung. Die
+  Anfangssprache folgt ohnehin dem Browser und der Vorgabe der Instanz, und wer
+  einmal gewählt hat, findet seine Wahl wieder — bleibt also die erste Anmeldung
+  mit einem falsch eingestellten Browser. Nachgezogen in **AP 9**, wo der Text
+  dieser Seite ohnehin in den Katalog zieht; ein Bedienelement auf eine Seite zu
+  setzen, deren Aufbau bis dahin unangetastet bleibt, wäre vorgegriffen.
+- **`provideTranslationsForTest()` steht im Haupt-Einstiegspunkt.** Für eine
+  Funktion keinen zweiten Entry Point von ng-packagr; sie ist eine
+  Provider-Fabrik, also zieht sie nichts in ein Bundle, das sie nicht ruft. Ab
+  AP 8 braucht sie fast jeder Spec beider Clients.
+
+Was AP 6 **nicht** enthält: keine Sprachverwaltung und keine
+Vollständigkeitszahl (AP 7 — `GET /api/admin/i18n` und die Schreibrouten fehlen
+noch, der Port ist deshalb lesend); **keine** Textextraktion aus den Templates
+(AP 8 und AP 9 — der Katalog hat fünf Schlüssel, genau die, die dieses Paket
+auflöst); keine übersetzten Mails (AP 10, E24 — die Vorlagen liegen weiter in
+TypeScript); keine übersetzten Seitentitel und keine `TitleStrategy`; und keine
+Inhaltsübersetzungen (AP 11).

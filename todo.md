@@ -214,11 +214,13 @@ answer, not an opinion.
 - [ ] **The page titles still say "Trefaro".** Both `app.routes.ts` files carry
       their titles as literal strings, and every one of them ends in the product
       name rather than the organization's. AP 3 changed the headers of both
-      clients and the sign-in page; these it left alone. Two reasons to do it in
-      one go later: AP 6 turns exactly these strings into translation keys, so
-      changing them now is changing them twice; and doing it properly means a
-      `TitleStrategy` that appends `AppConfigService.organizationName()` instead
-      of every route repeating it — a small piece of work with a single owner.
+      clients and the sign-in page; these it left alone. AP 6 has since brought
+      the catalogue, so the first of the two reasons to wait is gone: what is
+      left is that doing it properly means a `TitleStrategy` which resolves a
+      key and appends `AppConfigService.organizationName()`, instead of every
+      route repeating both — a small piece of work with a single owner, and it
+      belongs with the rest of each client's text (AP 8 for the participant
+      client, AP 9 for the organizer's).
       Verify: a browser tab of a branded instance names the organization, in both
       clients, in every language.
 
@@ -287,18 +289,20 @@ answer, not an opinion.
       `MEDIA_LINK_KIND_LABELS` in `shared-models` holds "Live stream",
       "Recording" and "Material" in one place so the switch to Transloco is one
       change; the same holds for the section heading "Watch and read" and the
-      organizer's "After the event". Belongs with the translation catalogue
-      below, not before it.
-- [ ] **Translation keys need a catalogue.** The plug-in contract already carries
-      `titleKey` and `labelKey`, and `CORE_MODULES` carries `titleKey`; Transloco
-      is not installed yet, so nothing resolves them. Since AP 4 two screens show
-      that: the organizer's module list and the participant's event detail tiles
-      both name modules through `moduleDisplayName`, which humanises the key
-      (`room-planning` → "Room planning") rather than translating anything. When
-      AP 6 lands, both call sites resolve the key instead — and the helper should
-      go rather than linger as a fallback nobody notices is wrong in German.
-      Verify: switching language at runtime renames modules and plug-ins in both
-      clients.
+      organizer's "After the event". The catalogue exists since AP 6; these
+      strings move into it with the rest of each client's text, in AP 8.
+- [x] **Translation keys need a catalogue.** Done in AP 6 of phase 2 (F70):
+      `GET /api/i18n/:locale` answers the catalogue this image ships, overlaid
+      with the instance's own rows from `translation_override` (E22), and both
+      call sites resolve their key instead of humanising it — the organizer's
+      module list through `titleKey`, the participant's event detail tiles through
+      `labelKey`. `moduleDisplayName` is gone rather than left as a fallback.
+      Two things the browser walk found on the way: a label assembled in
+      TypeScript needs to read `TranslationService.locale()` in its `computed()`,
+      or a language change repaints nothing (F72); and a fresh instance offered
+      only English, so the switcher had nothing to switch (F71).
+      Verified: switching language at runtime renames modules and plug-ins in both
+      clients, in all three browsers.
 - [x] **Self-host the fonts.** Done in phase 2, AP 1: four OFL families plus
       `system-ui` ship in `libs/shared-theming/assets/fonts/`, are declared in
       `fonts.css` and are emitted as hashed build assets by both client builds.

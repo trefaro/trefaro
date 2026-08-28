@@ -34,7 +34,16 @@ import {
  */
 export interface CoreModuleDescriptor {
   readonly key: string;
-  /** Translation key for the module's name in the administration. */
+  /**
+   * Translation key for the module's name in the administration.
+   *
+   * Under `modules.`, the same shape a plug-in uses under `plugins.` (AP 6 of
+   * phase 2). One convention rather than two: the administration lists both
+   * families in one table, and a name that resolves for one row and not for the
+   * next is worse than no name at all. Written out rather than derived from
+   * {@link key} — a key segment is `lowerCamelCase`, and `media-links` is not.
+   * `module-keys.spec.ts` holds every descriptor to that.
+   */
   readonly titleKey: string;
   readonly enabledByDefault: boolean;
 }
@@ -43,11 +52,15 @@ export const CORE_MODULES: readonly CoreModuleDescriptor[] = [
   // Embedding external stream and media library links costs nothing when unused.
   {
     key: MEDIA_LINKS_MODULE_KEY,
-    titleKey: 'modules.mediaLinks',
+    titleKey: 'modules.mediaLinks.title',
     enabledByDefault: true,
   },
   // Off by default: push needs a VAPID key pair in the environment, and an
   // instance without one would offer participants a subscription that cannot be
   // stored.
-  { key: PUSH_MODULE_KEY, titleKey: 'modules.push', enabledByDefault: false },
+  {
+    key: PUSH_MODULE_KEY,
+    titleKey: 'modules.push.title',
+    enabledByDefault: false,
+  },
 ];

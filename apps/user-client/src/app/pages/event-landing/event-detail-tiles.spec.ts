@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AppConfigService } from '@trefaro/shared-config';
+import { TranslationService } from '@trefaro/shared-i18n';
 import type {
   PluginDescriptor,
   PluginMountPoint,
@@ -17,6 +18,39 @@ import { EventDetailTiles } from './event-detail-tiles';
  * ship enabled and most events have none — and not per enabled plug-in either,
  * because a bundle that failed to load leaves nothing to scroll to.
  */
+const LABELS: Record<string, Record<string, string>> = {
+  en: { 'plugins.roomPlanning.label': 'Room planning' },
+  de: { 'plugins.roomPlanning.label': 'Raumplanung' },
+};
+
+/**
+ * The translation service, in the shape that makes the reactivity testable.
+ *
+ * `locale` is a signal and `translate` is not reactive — which is how the real
+ * one behaves, because Transloco's `translate()` reads a plain map. A tile label
+ * is assembled in TypeScript and therefore has no pipe to re-render it, so the
+ * computed has to read the language itself. A fake whose `translate()` read the
+ * signal would hide exactly that.
+ */
+class FakeTranslations {
+  readonly locale = signal('en');
+  private language = 'en';
+
+  translate(key: string): string {
+    return LABELS[this.language]?.[key] ?? key;
+  }
+
+  use(locale: string): void {
+    this.language = locale;
+    this.locale.set(locale);
+  }
+}
+
+/** As a real descriptor spells it: a key segment is `lowerCamelCase`. */
+function camel(key: string): string {
+  return key.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
+}
+
 function descriptor(
   key: string,
   mountPoints: readonly PluginMountPoint[],
@@ -24,7 +58,7 @@ function descriptor(
   return {
     key,
     version: '0.1.0',
-    labelKey: `plugins.${key}.label`,
+    labelKey: `plugins.${camel(key)}.label`,
     elementName: `trefaro-plugin-${key}`,
     bundleUrl: `/api/plugins/${key}/main.js`,
     mountPoints,
@@ -66,12 +100,15 @@ class HostComponent {
 describe('EventDetailTiles', () => {
   let config: StubAppConfig;
   let loader: StubLoader;
+  let translations: FakeTranslations;
 
   function render() {
     config = new StubAppConfig();
     loader = new StubLoader();
+    translations = new FakeTranslations();
     TestBed.configureTestingModule({
       providers: [
+        { provide: TranslationService, useValue: translations },
         // The tiles navigate to the current route with a fragment rather than
         // carrying a bare `#…` href, which a `<base href>` would resolve against
         // itself — so they need a router even in a unit test.
@@ -145,8 +182,23 @@ describe('EventDetailTiles', () => {
     const [tile] = tiles(fixture);
     // The id the plug-in slot puts on the mounted element.
     expect(tile.getAttribute('href')).toMatch(/#plugin-room-planning$/);
-    // Humanised from the key until the catalogue arrives (AP 6).
+    // Labelled from the catalogue, so a German page grows no English tile.
     expect(tile.textContent).toContain('Room planning');
+  });
+
+  it('relabels a plug-in tile when the language changes', () => {
+    const fixture = render();
+    config.plugins.set([descriptor('room-planning', ['event-detail'])]);
+    loader.ready.set(['room-planning']);
+    fixture.detectChanges();
+
+    translations.use('de');
+    fixture.detectChanges();
+
+    // A label built in a computed has no pipe to re-render it, so the computed
+    // reads the active language. Without that, the tile keeps its English word
+    // on a German page — and nothing else in the build notices.
+    expect(tiles(fixture)[0].textContent).toContain('Raumplanung');
   });
 
   it('gives no tile to a plug-in whose bundle never made it', () => {

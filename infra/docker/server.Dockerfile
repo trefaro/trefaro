@@ -23,6 +23,7 @@ WORKDIR /app
 ENV NODE_ENV=production \
     SERVER_PORT=3000 \
     PLUGIN_BUNDLE_DIR=/app/plugins \
+    I18N_CATALOGUE_DIR=/app/assets/i18n \
     UPLOAD_DIR=/app/uploads
 
 # `nx build` writes a package.json listing only the dependencies the bundle
@@ -32,6 +33,11 @@ COPY --from=build /workspace/dist/apps/server/package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --from=build /workspace/dist/apps/server/main.js ./
+# The shipped translation catalogues (E22). The build copies them out of
+# `libs/shared-i18n/catalogues` into the bundle's assets; without this line the
+# image would answer every `/api/i18n/:locale` with an empty catalogue and both
+# clients would render their keys - which no suite in this repository can see.
+COPY --from=build /workspace/dist/apps/server/assets ./assets
 COPY --from=build /workspace/dist/apps/plugins ./plugins
 
 # Uploaded files (logos, avatars, registration attachments) live on a volume;

@@ -6,6 +6,7 @@ import { ConfigurationModule } from './business/config';
 import { DashboardModule } from './business/dashboard';
 import { EventSeriesModule } from './business/event-series';
 import { EventsModule } from './business/events';
+import { I18nModule } from './business/i18n';
 import { InvitationsModule } from './business/invitations';
 import { LoginModule } from './business/login';
 import { MailModule } from './business/mail';
@@ -51,6 +52,10 @@ import { DataAccessModule } from './data-access/data-access.module';
 
     // Configuration first: it is what both clients fetch before rendering.
     ConfigurationModule,
+    // The text of that rendering, second, and public for the same reason
+    // (chapter 4, E22). Not optional: NFR 4 makes multilingualism a
+    // requirement, and a client without its catalogue renders its keys.
+    I18nModule,
 
     // Event management — the survey put it ahead of community features.
     LoginModule,

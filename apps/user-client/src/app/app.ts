@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { AppConfigService } from '@trefaro/shared-config';
+import { LanguageSwitcher } from '@trefaro/shared-i18n';
 import { PluginSlot } from '@trefaro/shared-plugins';
 import { ThemeService } from '@trefaro/shared-theming';
 import { PushSubscriptionService } from './features/push/push-subscription.service';
@@ -17,7 +18,7 @@ import { PushSubscriptionService } from './features/push/push-subscription.servi
 @Component({
   selector: 'trefaro-root',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, PluginSlot],
+  imports: [RouterOutlet, RouterLink, PluginSlot, LanguageSwitcher],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

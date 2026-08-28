@@ -15,10 +15,11 @@ server, a shell, and no prior knowledge of the code.
 - [6. TLS — not optional](#6-tls--not-optional)
 - [7. Mail](#7-mail)
 - [8. Push notifications (optional)](#8-push-notifications-optional)
-- [9. Backups](#9-backups)
-- [10. Updating](#10-updating)
-- [11. When something does not work](#11-when-something-does-not-work)
-- [12. What runs where](#12-what-runs-where)
+- [9. Languages](#9-languages)
+- [10. Backups](#10-backups)
+- [11. Updating](#11-updating)
+- [12. When something does not work](#12-when-something-does-not-work)
+- [13. What runs where](#13-what-runs-where)
 
 ---
 
@@ -286,7 +287,22 @@ Then switch the **push** module on under **Modules** in the organizer client —
 the key pair and the module are two separate decisions, one made by the
 deployment and one by the organization.
 
-## 9. Backups
+## 9. Languages
+
+The instance speaks English and German out of the box, and both clients carry a
+switch in their header — a visitor's choice is remembered in their browser, and
+someone who has never chosen gets whatever their browser asks for.
+
+The text itself is **served by your instance**, not compiled into the clients:
+`GET /api/i18n/en` answers the catalogue that shipped with the image, overlaid
+with whatever your organization has changed. So a wording you disagree with is a
+row in the database, not a rebuild — the screen that edits those rows arrives in
+the next work package, and the mechanism is already in place under it.
+
+Nothing here needs configuring. `I18N_CATALOGUE_DIR` belongs to the image and
+points at the catalogues inside it.
+
+## 10. Backups
 
 Two named volumes and one file carry everything that cannot be rebuilt:
 
@@ -317,7 +333,7 @@ different secret invalidates every one of them.
 Both backups contain personal data of participants. Encrypt them, and keep them
 under the same retention rules as the instance itself.
 
-## 10. Updating
+## 11. Updating
 
 ```bash
 git pull
@@ -331,7 +347,7 @@ is the one change that cannot be undone by starting the old image again.
 Adding the TLS overlay to the command is required every time; a `docker compose`
 invocation without it would go back to plain HTTP.
 
-## 11. When something does not work
+## 12. When something does not work
 
 | Symptom                                                          | Cause                                                                                                                                    |
 | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
@@ -350,7 +366,7 @@ check a running instance from the outside: the proxy routing, the API, the modul
 switches, TLS, the administrative boundary. They are the fastest way to find out
 which half of a problem is which.
 
-## 12. What runs where
+## 13. What runs where
 
 ```
                        ┌───────────────────────────────┐
