@@ -69,20 +69,18 @@ check(
   Array.isArray(config.body?.plugins) && config.body.plugins.length === 0,
 );
 /**
- * Whether this instance has a VAPID key pair in its environment.
+ * No VAPID key while the push module is off — whatever the environment holds.
  *
- * Both readings are correct — a developer's `.env` may or may not carry one —
- * so the checks below adapt instead of failing for a configuration decision.
- * What must hold either way is that only the *public* key is ever published.
+ * Two conditions decide this since AP 4 of phase 2 (E21): the organization's
+ * flag and the deployment's key pair. A fresh instance has push switched off, so
+ * this is deterministic here — it used to adapt to whether a developer's `.env`
+ * carried a pair. That the key *is* published once the module is on, and that
+ * subscriptions are then stored, is `verify-push.mjs`, which switches the flag.
  */
-const pushConfigured = typeof config.body?.webPushPublicKey === 'string';
 check(
-  pushConfigured
-    ? 'the public VAPID key is published while push is configured'
-    : 'no VAPID key is published while push is unconfigured',
-  pushConfigured
-    ? (config.body?.webPushPublicKey ?? '').length > 0
-    : config.body?.webPushPublicKey === null,
+  'no VAPID key is published while the push module is off',
+  config.body?.webPushPublicKey === null,
+  JSON.stringify(config.body?.webPushPublicKey),
 );
 check(
   'the private VAPID key never appears in the payload',
@@ -120,7 +118,7 @@ check(
   bundle.headers.get('cache-control') ?? 'none',
 );
 
-// --- push refuses cleanly while unconfigured -----------------------------
+// --- a switched-off core module looks absent ------------------------------
 const pushOff = await call('/api/user/push/subscriptions', {
   method: 'POST',
   headers: { 'content-type': 'application/json' },
@@ -130,28 +128,13 @@ const pushOff = await call('/api/user/push/subscriptions', {
   }),
 });
 check(
-  pushConfigured
-    ? 'subscribing is accepted while push is configured'
-    : 'subscribing without a VAPID key pair is 503, not a crash',
-  pushOff.status === (pushConfigured ? 204 : 503),
+  // 404, not 503 and not 403: a module that is off looks absent, exactly like a
+  // disabled plug-in (F53). Since AP 4 of phase 2 the flag gates these endpoints
+  // — before that it gated nothing, and the answer here depended on whether the
+  // deployment had a VAPID pair.
+  'subscribing is 404 while the push module is off',
+  pushOff.status === 404,
   `got ${pushOff.status}`,
-);
-
-// --- request validation --------------------------------------------------
-const extraField = await call('/api/user/push/subscriptions', {
-  method: 'POST',
-  headers: { 'content-type': 'application/json' },
-  body: json({
-    endpoint: 'https://push.example.org/abc',
-    keys: { p256dh: 'p', auth: 'a' },
-    // What PushSubscription.toJSON() adds and the client has to strip.
-    expirationTime: null,
-  }),
-});
-check(
-  'an unknown field is rejected rather than silently dropped',
-  extraField.status === 400,
-  `got ${extraField.status}`,
 );
 
 // --- OpenAPI -------------------------------------------------------------

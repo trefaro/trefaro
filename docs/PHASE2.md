@@ -1,9 +1,9 @@
 # Phase 2 — Whitelabel, Konfiguration, Mehrsprachigkeit, PWA
 
-**Status: in Arbeit** (28.08.2026). **AP 1, AP 2 und AP 3 sind erledigt** (siehe
+**Status: in Arbeit** (28.08.2026). **AP 1 bis AP 4 sind erledigt** (siehe
 _Fortschritt_) — damit ist **Meilenstein M3** erreicht; die Abschnitte oberhalb
 davon sind Plan, nicht Protokoll. Wie in Phase 1 gibt Marius jedes Paket einzeln
-frei — AP 4 wartet auf seine Freigabe.
+frei — AP 5 wartet auf seine Freigabe.
 
 **Die Entscheidungen E17–E29 sind am 28.08.2026 von Marius bestätigt** — sie
 werden nicht erneut aufgerollt, sondern nur gegen die Umsetzung geprüft (wie
@@ -546,7 +546,7 @@ prüft `verify-proxy.mjs`.
 ### AP 13 — Abschluss der Phase → **Meilenstein M5**
 
 `todo.md` unter _Checkable after phase 2_ durchgehen (abhaken oder mit Begründung
-verschieben), F60–F67 im Referenzdokument nachtragen, den Fünf-Container-Stack
+verschieben), F60–F68 im Referenzdokument nachtragen, den Fünf-Container-Stack
 aus dem Stand hochfahren, `tools/spike-verification/` und `tools/demo-seed/` auf
 den neuen Stand ziehen (der Seed sollte künftig auch Übersetzungen und ein Logo
 anlegen), `docs/PHASE2.md` von Plan auf Protokoll korrigieren und _Was anders
@@ -612,6 +612,7 @@ Wird beim jeweiligen Paket eingetragen, nicht am Ende gesammelt:
 | F65 | Die Schriftart ist ein mitgelieferter Katalog, kein Upload (E18, Bezug NFR 9)                     | 1   |
 | F66 | Wie ein Logo öffentlich wird, ohne die Anhänge mitzunehmen (E19, Bezug E9, F38)                   | 2   |
 | F67 | Welcher Kontrast geprüft wird — und warum nicht der gegen die berechnete Textfarbe (NFR 4, E17)   | 3   |
+| F68 | Wie die Kacheln der Event-Detailansicht entstehen (Mockups 5.2, Bezug F47)                        | 4   |
 
 Anhangspunkt 18 (TLS gehört zur Installations-Story) wird in AP 5 von „geplant"
 auf „umgesetzt" gezogen.
@@ -631,7 +632,7 @@ auf „umgesetzt" gezogen.
    `tools/spike-verification/` belegt.
 4. `docs/INSTALL.md` existiert und ist von jemandem nachvollziehbar, der dieses
    Repository nicht kennt (NFR 8).
-5. `todo.md` unter _Checkable after phase 2_ ist durchgearbeitet, F60–F67 stehen
+5. `todo.md` unter _Checkable after phase 2_ ist durchgearbeitet, F60–F68 stehen
    im Referenzdokument.
 6. Dieses Dokument ist von Plan auf Protokoll korrigiert und hat einen Abschnitt
    _Was anders lief_.
@@ -896,3 +897,84 @@ Abweichungen und ihre Gründe:
 
 Was AP 3 **nicht** enthält: die Modulverwaltung. Die Seite „Modules" bleibt
 lesend — sie wird in AP 4 schreibend.
+
+### AP 4 — Modul- und Plug-in-Verwaltung (erledigt)
+
+Umgesetzt:
+
+- **`shared-models`** — `ModuleSummary` (Schlüssel, Familie, `titleKey`, Zustand,
+  Vorgabe, bei Plug-ins Version, Bundle und Einhängepunkte), `ModuleToggle`,
+  `PUSH_MODULE_KEY`, `moduleDisplayName` (der vermenschlichte Schlüssel, bis AP 6
+  den Katalog bringt) und `pluginElementId`.
+- **Server** — `CORE_MODULES` auf zwei Einträge zusammengezogen (`media-links`
+  an, `push` aus; F63); `ModuleAdminService` + `AdminModulesController` mit
+  `GET /api/admin/modules` und `PATCH /api/admin/modules/:key`; der `PushModule`
+  importiert `ConfigurationModule` und `PushController` trägt
+  `@CoreModuleController('push')` samt Guard; `webPushPublicKey` in `/api/config`
+  ist `null`, solange das Modul aus ist.
+- **Veranstalter-Client** — `ModulesAdminService` und die Seite `/modules`
+  schreibend: eine Tabelle für beide Familien mit Zustand, Vorgabe, Bundle und
+  dessen Ladeergebnis, einem Knopf je Zeile, und zwei Sätzen — dass Abschalten
+  nichts löscht und dass ein eingeschaltetes Plug-in erst nach einem Neuladen
+  erscheint (E20).
+- **Nutzer-Client** — `EventDetailTiles` in der Event-Detailansicht: eine Kachel
+  je Abschnitt, der wirklich etwas enthält, und eine je geladenem Plug-in am
+  Einhängepunkt `event-detail` (F68). Die Abschnitte tragen jetzt `id="program"`
+  und `id="media"`, der Plug-in-Slot setzt `id="plugin-<key>"` auf jedes
+  gemountete Element.
+- **Werkzeuge** — `verify-plugin-toggle.mjs` hat einen Abschnitt für den
+  Verwaltungsendpunkt (ohne jedes Warten, das ist der Punkt);
+  `verify-push.mjs` schaltet das Modul für seinen Lauf ein und stellt den Schalter
+  zurück; `verify-api.mjs` prüft die Gegenseite (404 und kein VAPID-Schlüssel,
+  solange `push` aus ist).
+
+Belege: `nx run-many -t lint test build` grün für 12 Projekte (u. a. sieben neue
+Unit-Tests für `ModuleAdminService`, sieben für die Modulseite, acht für die
+Kacheln); `nx e2e server-e2e` **16 Suiten / 304 Tests** — neu
+`apps/server-e2e/src/api/modules.spec.ts`, das die Sofortwirkung festschreibt;
+Browsersuiten **219 + 6 übersprungen** (Veranstalter, neu `modules.spec.ts`) und
+**150** (Nutzer, drei neue Kacheltests).
+
+Abweichungen und Entscheidungen, die beim Bauen fielen:
+
+- **Der Zustand in der Liste kommt aus den Registries, nicht aus der Tabelle.**
+  Dieselbe Quelle, aus der `/api/config` und die Guards antworten (F53) — ein
+  dritter Leser könnte beiden widersprechen, und eine Liste, die `media-links`
+  als „an" zeigt, während seine Endpunkte 404 antworten, ist schlimmer als keine.
+- **Ein `PATCH` frischt beide Zwischenspeicher auf**, nicht nur den der
+  betroffenen Familie: sie lesen dieselbe Tabelle, und der zweite Aufruf ist eine
+  Abfrage. So entfällt die Frage, ob der richtige gewählt wurde.
+- **Ein unbekannter Schlüssel ist ein 404, keine neue Zeile.** `module_config`
+  nähme sie, und nichts würde sie je lesen.
+- **Die Kacheln entstehen nicht „je aktiviertem Modul"** (F68), sondern je
+  Abschnitt mit Inhalt — sonst führte die `media-links`-Kachel bei den meisten
+  Events ins Leere.
+- **Ein reiner Fragment-Link funktioniert in diesen Clients nicht.** `<base
+href>` lässt `href="#program"` gegen die Basis auflösen: der Klick verließ das
+  Event und landete auf der Startseite mit Fragment. Die Kacheln verlinken
+  deshalb über den Router (`[routerLink]="[]"` + `fragment`), und der
+  Nutzer-Client bekam `withInMemoryScrolling({ anchorScrolling: 'enabled' })` —
+  ohne das ändert sich nur die Adresse und nichts bewegt sich.
+- **Das `icon` im Plug-in-Vertrag bleibt ungenutzt.** Es nennt ein
+  Material-Symbols-Glyph, und keiner der beiden Clients lädt eine Icon-Schrift;
+  von Google nachladen verbietet NFR 9. Die Kacheln sind Text. Steht in
+  `todo.md`.
+- **Die schreibende Browsersuite schaltet `push`, nicht `media-links`.** Zwei
+  andere Browsersuiten benutzen die Medien-Links; sie ihnen unter den Füßen
+  abzuschalten hätte sie zum Scheitern gebracht, und der Fehlschlag hätte wie
+  eine kaputte Seite gelesen. Dass genau `media-links` — Endpunkt, Abschnitt und
+  Dashboard-Kachel — beim Schreiben des Schalters sofort verschwindet, prüft
+  `apps/server-e2e/src/api/modules.spec.ts`, wo die Suite allein läuft.
+- **Vier bestehende Tests mussten nachgezogen werden**, und jeder war ein
+  Symptom: der Startup-Test des Veranstalter-Clients erwartete „No plug-in is
+  enabled" (jetzt hat auch ein abgeschaltetes Plug-in eine Zeile); die vier
+  Validierungstests in `public-endpoints.spec.ts` liefen gegen den
+  Push-Endpunkt, der jetzt 404 antwortet, und schalten das Modul nun selbst ein;
+  `verify-api.mjs` und `verify-push.mjs` standen auf derselben Annahme.
+- **Zeilen entfallener Schlüssel bleiben stehen** (F63). Der Zwischenspeicher
+  ignoriert, was kein Deskriptor beansprucht; Phase 3 findet `chat` wieder so
+  vor, wie eine Organisation es gelassen hat.
+
+Was AP 4 **nicht** enthält: die Übersetzung der Modulnamen (`titleKey`,
+`labelKey`) — das ist AP 6; und keinen Einhängepunkt `event-dashboard` im
+Plug-in-Vertrag, solange kein Plug-in eine Kachel dafür mitbringt (F47).

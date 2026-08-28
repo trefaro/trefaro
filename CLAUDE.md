@@ -404,7 +404,7 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
   Installations-Story, nicht zur Härtung; `Secure` fallen zu lassen ist keine
   Alternative.
 
-## Stand Phase 2 (in Arbeit; AP 1–3 erledigt, Meilenstein M3 erreicht)
+## Stand Phase 2 (in Arbeit; AP 1–4 erledigt, Meilenstein M3 erreicht)
 
 Plan **und Protokoll**: `docs/PHASE2.md` — dreizehn Arbeitspakete, Entscheidungen
 **E17–E29** (die Zählung läuft über die Phasen weiter), Meilensteine M3
@@ -423,7 +423,11 @@ Pfadspalten, Typ aus den ersten Bytes und kein SVG) · **AP 3** Design-Seite im
 Veranstalter-Client (`/design`) mit Live-Vorschau im eigenen Dokument,
 Zurücknehmen bei Abbrechen **und** beim Verlassen, Legibilitätspanel (F67), den
 zwei Uploads mit Vorschau — und beide Kopfzeilen tragen jetzt den
-Organisationsnamen statt „Trefaro". Damit ist **M3** erreicht.
+Organisationsnamen statt „Trefaro" (damit ist **M3** erreicht) · **AP 4**
+Modul- und Plug-in-Verwaltung: `CORE_MODULES` auf zwei echte Einträge
+zusammengezogen (F63), `GET/PATCH /api/admin/modules`, die Seite `/modules`
+schreibend, `push` mit Guard und Bedingung am VAPID-Schlüssel, und die Kacheln
+in der Event-Detailansicht des Nutzer-Clients (F68).
 
 Reihenfolge: AP 1–3 Whitelabel (FR 1.4) · AP 4 Modulverwaltung (FR 1.5) · AP 5
 Installations-Story mit geführter Ersteinrichtung und TLS-Overlay (FR 1.1,
@@ -482,6 +486,42 @@ Regeln aus AP 3, die nicht erneut aufgerollt werden sollten:
   von `start-up.spec.ts` in beiden Clients geprüft. Wer eine Instanzeinstellung
   im Browser schreibt, beschränkt den Test auf einen Browser und stellt her, was
   er gefunden hat.
+
+Regeln aus AP 4, die nicht erneut aufgerollt werden sollten:
+
+- **`CORE_MODULES` nennt nur Module, die es gibt** (E21, F63): `media-links` und
+  `push`. `newsletter` entfällt endgültig, `chat`/`profiles`/`profile-search`
+  kommen mit Phase 3 zurück. Zeilen entfallener Schlüssel werden **nicht
+  gelöscht** — `ModuleFlagCache` ignoriert, was kein Deskriptor beansprucht. Ein
+  neues optionales Kernmodul braucht Deskriptor **und** Guard, sonst ist der
+  Schalter eine Attrappe.
+- **Die Modulverwaltung liest den Zustand aus den Registries, nie aus der
+  Tabelle.** Dieselbe Quelle wie `/api/config` und die Guards (F53); ein dritter
+  Leser könnte beiden widersprechen. Geschrieben wird über den Port, danach
+  werden **beide** `refresh()` abgewartet — sonst wartet ein Veranstalter eine
+  Viertelminute auf seinen eigenen Klick (F6). Ein unbekannter Schlüssel ist ein
+  404, keine neue Zeile.
+- **`push` ist ein echter Schalter.** Endpunkte mit Guard, `webPushPublicKey`
+  `null`, solange das Modul aus ist. Wer Push testet, schaltet das Modul vorher
+  ein und stellt den Schalter zurück (`verify-push.mjs`, die Validierungstests in
+  `public-endpoints.spec.ts`).
+- **Eine Kachel gibt es nur, wo etwas dahinter ist** (F68) — nicht je aktiviertem
+  Modul: `media-links` ist ab Werk an, und die meisten Events haben keine Links.
+  Dieselbe Regel wie beim Dashboard (F47). Ein Plug-in, dessen Bundle nicht
+  geladen hat, bekommt keine.
+- **Ein reiner Fragment-Link funktioniert in diesen Clients nicht.** Beide tragen
+  ein `<base href>`, und `href="#program"` löst dagegen auf — der Klick verließ
+  das Event und landete auf der Startseite. Sprungmarken gehen über den Router
+  (`[routerLink]="[]"` + `fragment`); der Nutzer-Client hat dafür
+  `withInMemoryScrolling({ anchorScrolling: 'enabled' })`.
+- **Modulnamen sind bis AP 6 vermenschlichte Schlüssel** (`moduleDisplayName`),
+  keine Übersetzungen. Wer `titleKey`/`labelKey` auflösen kann, ersetzt beide
+  Aufrufstellen und entfernt den Helfer.
+- **`module_config` gehört der Instanz.** Eine Browsersuite, die einen Schalter
+  umlegt, läuft nur in Chromium und schaltet **nicht** `media-links` — zwei
+  andere Suiten benutzen es parallel. Für Modulschalter mit Fernwirkung ist
+  `apps/server-e2e` der richtige Ort: dort läuft eine Suite allein
+  (`maxWorkers: 1`).
 
 ## Betriebskontext
 

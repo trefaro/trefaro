@@ -37,19 +37,26 @@ test.describe('organizer client startup', () => {
       .toBe('#1f6f5c');
   });
 
-  test('lists the enabled core modules and no plug-in while none is on', async ({
+  test('reaches the module administration and finds this image’s modules in it', async ({
     page,
   }) => {
     await page.goto('/');
     await page.getByRole('link', { name: 'Modules' }).click();
 
-    // `level: 1` and `exact` are both needed: the page also has a "Core
-    // modules" heading, and accessible-name matching is a substring match.
+    // `level: 1` and `exact` are both needed: accessible-name matching is a
+    // substring match, and the sidebar entry carries the same word.
     await expect(
       page.getByRole('heading', { level: 1, name: 'Modules', exact: true }),
     ).toBeVisible();
+    // Since AP 4 of phase 2 a *disabled* module has a row too — that is what
+    // makes the page a switch rather than a report. What each row says, and what
+    // a click does, is `modules.spec.ts`.
     await expect(page.getByText('media-links')).toBeVisible();
-    await expect(page.getByText('No plug-in is enabled')).toBeVisible();
+    // `exact`, because the plug-in's key is also part of its bundle URL in the
+    // same row — Playwright's text matching is a substring match otherwise.
+    await expect(
+      page.getByText('room-planning', { exact: true }),
+    ).toBeVisible();
   });
 
   test('mounts nothing in the navigation while no plug-in is enabled', async ({

@@ -72,8 +72,9 @@ import { PushSubscriptionService } from '../../features/push/push-subscription.s
         </p>
       } @empty {
         <p>
-          No plug-in is enabled. Enable one in <code>module_config</code> and
-          reload — the plug-in's tables already exist either way.
+          No plug-in is enabled. Switch one on under
+          <code>Modules</code> in the organizer client and reload — the
+          plug-in's tables already exist either way.
         </p>
       }
       <p>
@@ -98,7 +99,10 @@ import { PushSubscriptionService } from '../../features/push/push-subscription.s
         }
         @case ('not-configured') {
           <p>
-            This instance has no VAPID key pair. Generate one with
+            This instance publishes no VAPID key, which has two possible reasons
+            since phase 2: the <code>push</code> module is switched off (switch
+            it on under <code>Modules</code> in the organizer client), or there
+            is no key pair — generate one with
             <code>npx web-push generate-vapid-keys</code> and set
             <code>VAPID_PUBLIC_KEY</code> and <code>VAPID_PRIVATE_KEY</code>.
           </p>

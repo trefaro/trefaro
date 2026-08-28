@@ -6,6 +6,7 @@ import type {
 } from '@trefaro/shared-models';
 import {
   MAX_ORGANIZATION_NAME_LENGTH,
+  PUSH_MODULE_KEY,
   fontFamilyStack,
   isFontFamilyKey,
   isHexColor,
@@ -75,7 +76,15 @@ export class ConfigurationService {
       plugins: this.plugins.enabledClientDescriptors(),
       // Handing the public key to the client saves it a second round trip before
       // it can subscribe to push; the private key never leaves the server.
-      webPushPublicKey: this.env.webPush?.publicKey ?? null,
+      //
+      // Withheld while the module is off (E21): a client that has the key offers
+      // a subscription, and the endpoint that would store it answers 404. Two
+      // conditions rather than one, because they say different things — the
+      // module is what the organization decided, the key pair is what the
+      // deployment provided.
+      webPushPublicKey: this.coreModules.isEnabled(PUSH_MODULE_KEY)
+        ? (this.env.webPush?.publicKey ?? null)
+        : null,
       // From the environment, not the database: only the deployment knows the
       // address the outside world uses, and the organizer client — a different
       // origin — cannot derive it.

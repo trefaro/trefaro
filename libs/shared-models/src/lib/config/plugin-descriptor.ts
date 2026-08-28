@@ -21,3 +21,16 @@ export interface PluginDescriptor {
   readonly mountPoints: readonly PluginMountPoint[];
   readonly icon: string | null;
 }
+
+/**
+ * The id the plug-in slot puts on a mounted web component.
+ *
+ * Built here rather than in the slot, because two places need the same string:
+ * the slot that mounts the element and the tile in the participant's event
+ * detail view that links to it (FR 1.5). A plug-in renders inside the page it is
+ * mounted on, so its tile is a jump link — and a jump link needs a target
+ * neither side may spell differently.
+ */
+export function pluginElementId(pluginKey: string): string {
+  return `plugin-${pluginKey}`;
+}

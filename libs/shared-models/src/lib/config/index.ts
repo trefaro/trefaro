@@ -25,5 +25,16 @@ export {
   isFontFamilyKey,
   type FontFamilyOption,
 } from './fonts';
-export type { PluginDescriptor, PluginMountPoint } from './plugin-descriptor';
+export {
+  PUSH_MODULE_KEY,
+  moduleDisplayName,
+  type ModuleFamily,
+  type ModuleSummary,
+  type ModuleToggle,
+} from './modules';
+export {
+  pluginElementId,
+  type PluginDescriptor,
+  type PluginMountPoint,
+} from './plugin-descriptor';
 export { HEX_COLOR_PATTERN, isHexColor, type Theme } from './theme';

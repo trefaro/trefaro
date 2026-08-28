@@ -62,20 +62,34 @@ describe('CoreModuleRegistryService', () => {
     await service.onApplicationBootstrap();
 
     // Media links are the one optional module that ships switched on: embedding
-    // external links costs nothing when unused. The community features start
-    // off, because the survey put them behind event management.
+    // external links costs nothing when unused. Push starts off, because it
+    // needs a VAPID key pair the deployment may not have provided.
     expect(repository.rows.get('media-links')?.enabled).toBe(true);
-    expect(repository.rows.get('chat')?.enabled).toBe(false);
+    expect(repository.rows.get('push')?.enabled).toBe(false);
     expect(service.isEnabled('media-links')).toBe(true);
-    expect(service.isEnabled('chat')).toBe(false);
+    expect(service.isEnabled('push')).toBe(false);
   });
 
   it('does not overwrite a module the organization already configured', async () => {
-    await repository.setEnabled('chat', true);
+    await repository.setEnabled('push', true);
 
     await service.onApplicationBootstrap();
 
-    expect(service.isEnabled('chat')).toBe(true);
+    expect(service.isEnabled('push')).toBe(true);
+  });
+
+  it('ignores a flag whose descriptor this version no longer ships', async () => {
+    // `chat` was a core module key until AP 4 of phase 2 and comes back with its
+    // module in phase 3 (E21). The row is left alone — switching a module off
+    // deletes nothing, and neither does withdrawing its descriptor — so an
+    // instance that had it on finds it on again. Until then nothing answers for
+    // it.
+    await repository.setEnabled('chat', true);
+    await service.onApplicationBootstrap();
+
+    expect(service.isEnabled('chat')).toBe(false);
+    expect(service.enabledKeys()).not.toContain('chat');
+    expect(repository.rows.get('chat')?.enabled).toBe(true);
   });
 
   it('answers no for a module key that is not a core module', async () => {
@@ -89,18 +103,22 @@ describe('CoreModuleRegistryService', () => {
   });
 
   it('reports the enabled keys sorted, which is what /api/config carries', async () => {
-    await repository.setEnabled('chat', true);
     await repository.setEnabled('push', true);
     await service.onApplicationBootstrap();
 
-    expect(service.enabledKeys()).toEqual(['chat', 'media-links', 'push']);
+    expect(service.enabledKeys()).toEqual(['media-links', 'push']);
   });
 
-  it('lists every optional module, enabled or not', async () => {
+  it('lists every optional module, enabled or not — and only modules that exist', async () => {
     await service.onApplicationBootstrap();
 
-    // The administration offers what can be switched on, not only what is.
-    expect(service.all().map((module) => module.key)).toContain('chat');
+    // The administration offers what can be switched on, not only what is. And
+    // nothing else: a key nothing reads would be a switch wired to nothing
+    // (E21).
+    expect(service.all().map((module) => module.key)).toEqual([
+      'media-links',
+      'push',
+    ]);
   });
 
   it('picks up a change made outside the application on refresh', async () => {
@@ -133,8 +151,9 @@ describe('CoreModuleRegistryService enabled-state refresh', () => {
     await service.onApplicationBootstrap();
 
     // Stands in for an operator flipping the flag in module_config while the
-    // server keeps running — the only way to do it until phase 2 builds the
-    // module administration.
+    // server keeps running. Still supported after AP 4 gave organizers a page
+    // for it: the administration writes the same table and only adds an
+    // immediate re-read on top (F6).
     await repository.setEnabled('media-links', false);
     await jest.advanceTimersByTimeAsync(15_000);
 
@@ -145,10 +164,10 @@ describe('CoreModuleRegistryService enabled-state refresh', () => {
     await service.onApplicationBootstrap();
     service.onApplicationShutdown();
 
-    await repository.setEnabled('chat', true);
+    await repository.setEnabled('push', true);
     await jest.advanceTimersByTimeAsync(60_000);
 
-    expect(service.isEnabled('chat')).toBe(false);
+    expect(service.isEnabled('push')).toBe(false);
   });
 
   it('keeps the last known state when a refresh fails', async () => {

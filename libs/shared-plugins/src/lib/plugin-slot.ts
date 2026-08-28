@@ -14,6 +14,7 @@ import type {
   PluginDescriptor,
   PluginMountPoint,
 } from '@trefaro/shared-models';
+import { pluginElementId } from '@trefaro/shared-models';
 import { PluginLoaderService } from './plugin-loader.service';
 
 /**
@@ -32,6 +33,12 @@ import { PluginLoaderService } from './plugin-loader.service';
  * No styling is passed in: the plug-in inherits the whitelabel design through
  * CSS custom properties on the document root, which cross the shadow DOM
  * boundary on their own.
+ *
+ * Every mounted element carries `id="plugin-<key>"` ({@link pluginElementId}),
+ * so something outside can link to it. A plug-in at the event detail hook point
+ * renders inside the page it is mounted on, and the tile the participant client
+ * shows for it is therefore a jump link rather than a route (FR 1.5, AP 4 of
+ * phase 2).
  */
 @Component({
   selector: 'trefaro-plugin-slot',
@@ -85,6 +92,9 @@ export class PluginSlot {
     for (const plugin of plugins) {
       const element = this.document.createElement(plugin.elementName);
       element.setAttribute('data-plugin', plugin.key);
+      // The link target of this plug-in's tile. Assigned here rather than by the
+      // plug-in, because a bundle that forgot it would break a link in the host.
+      element.id = pluginElementId(plugin.key);
       Object.assign(element, context);
       host.appendChild(element);
     }

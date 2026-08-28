@@ -17,6 +17,7 @@ export {
 } from './branding.service';
 export { ConfigurationModule } from './configuration.module';
 export { ConfigurationService } from './configuration.service';
+export { ModuleAdminService } from './module-admin.service';
 export {
   APP_CONFIG_REPOSITORY,
   type AppConfigReader,

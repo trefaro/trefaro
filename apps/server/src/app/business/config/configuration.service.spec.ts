@@ -69,6 +69,7 @@ class FakeAppConfigRepository implements AppConfigRepository {
 const coreModulesWith = (enabled: readonly string[]) =>
   ({
     enabledKeys: () => enabled,
+    isEnabled: (key: string) => enabled.includes(key),
   }) as unknown as CoreModuleRegistryService;
 
 const noPlugins = {
@@ -168,18 +169,44 @@ describe('ConfigurationService', () => {
   });
 
   it('publishes the VAPID public key only, and only when push is configured', async () => {
-    expect((await serviceWith({}).getAppConfig()).webPushPublicKey).toBeNull();
+    const env = loadEnv({
+      VAPID_PUBLIC_KEY: 'public-key',
+      VAPID_PRIVATE_KEY: 'private-key',
+    });
 
-    const withPush = serviceWith({
+    // No key pair in the environment: nothing to publish, however the module is
+    // configured.
+    expect(
+      (
+        await serviceWith({
+          coreModules: coreModulesWith(['push']),
+        }).getAppConfig()
+      ).webPushPublicKey,
+    ).toBeNull();
+
+    const config = await serviceWith({
+      env,
+      coreModules: coreModulesWith(['push']),
+    }).getAppConfig();
+
+    expect(config.webPushPublicKey).toBe('public-key');
+    expect(JSON.stringify(config)).not.toContain('private-key');
+  });
+
+  it('withholds the VAPID key while the push module is switched off (E21)', async () => {
+    // A key in the environment and the module off: the deployment provided the
+    // pair, the organization did not ask for push. A client that got the key
+    // would offer a subscription, and the endpoint that stores it answers 404 —
+    // so the two have to be decided by the same flag.
+    const config = await serviceWith({
       env: loadEnv({
         VAPID_PUBLIC_KEY: 'public-key',
         VAPID_PRIVATE_KEY: 'private-key',
       }),
-    });
-    const config = await withPush.getAppConfig();
+    }).getAppConfig();
 
-    expect(config.webPushPublicKey).toBe('public-key');
-    expect(JSON.stringify(config)).not.toContain('private-key');
+    expect(config.webPushPublicKey).toBeNull();
+    expect(config.enabledModules).not.toContain('push');
   });
 
   it('expands the stored font key into the stack the clients publish', async () => {

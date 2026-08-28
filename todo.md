@@ -213,13 +213,12 @@ answer, not an opinion.
       Verify: a browser tab of a branded instance names the organization, in both
       clients, in every language.
 
-- [ ] **A programme tile in the participant's event detail view.** The mockups
-      (chapter 5.2) put "Programmplan" on a tile beside the room plan, the forum
-      and the proposals, and the tiles appear only for modules that are enabled.
-      AP 8 renders the timeline on the landing page instead, which is where the
-      criterion asked for it. The tiles belong to the module and plug-in hook
-      point, so this is phase 2 — and once they exist, the timeline is what the
-      tile links to rather than a second rendering of it.
+- [x] **A programme tile in the participant's event detail view** — done in
+      AP 4 of phase 2, as jump links rather than routes (F68): everything a tile
+      can lead to renders on the landing page itself, so the programme tile
+      points at the timeline instead of a second rendering of it. Not one tile
+      per enabled module either — one per section that actually has something in
+      it, plus one per loaded plug-in at the `event-detail` hook point.
 - [ ] **"My registration" is not linked from anywhere.** The page exists (E11)
       and is only reachable through the personal link in the receipt, which is
       correct as long as there is no participant login: a link in the navigation
@@ -230,12 +229,23 @@ answer, not an opinion.
       have had to invent the translation mechanism for one table. Whatever
       phase 2 decides for `event_translation` applies here unchanged — the shape
       of the two tables is the same.
-- [ ] **Module toggling from the admin UI must be instant.** The plug-in registry
-      re-reads its flags every 15 s; the admin endpoint that flips a flag has to
-      call `PluginRegistryService.refresh()` so its own change takes effect
-      immediately. Verify: enable a plug-in in the UI, reload the client, the
-      plug-in is there without waiting.
+- [x] **Module toggling from the admin UI must be instant** — done in AP 4 of
+      phase 2: `PATCH /api/admin/modules/:key` writes the flag and refreshes
+      **both** registries before answering, so the next request already sees it.
+      Asserted without a sleep in `apps/server-e2e/src/api/modules.spec.ts` and
+      against a running stack in `verify-plugin-toggle.mjs`.
       → [`02-server-plugin.md`](docs/spikes/02-server-plugin.md)
+
+- [ ] **The plug-in contract names an icon nobody draws.**
+      `PluginClientContribution.icon` carries a Material Symbols glyph name
+      (`meeting_room` for the room plan), and neither client loads an icon font —
+      fetching one from Google is out (NFR 9), so it would have to be
+      self-hosted like the fonts of AP 1. The tiles of AP 4 are text-only
+      because of it. Either an instance ships an icon set and the tiles and the
+      navigation use it, or the field goes: a value nothing reads looks like a
+      feature (E21's rule, applied to the contract). Verify: a tile shows the
+      glyph its plug-in names, from this instance's own files — or no descriptor
+      promises one.
 - [ ] **The PWA manifest is still static.** `apps/user-client/public/manifest.webmanifest`
       hard-codes name, icons and `theme_color`. A whitelabel instance has to
       serve them per organization. Verify: change the primary colour and the
@@ -257,14 +267,13 @@ answer, not an opinion.
       **installed** client, which needs a device and an installed PWA.
       → [`03-web-push.md`](docs/spikes/03-web-push.md#open-items)
       → see also the entry about a CI job that starts the stack, phase 5
-- [ ] **The module administration has to refresh both registries.** Switching a
-      module on or off in phase 2's UI writes `module_config`; the flags are
-      cached and re-read every 15 s (`ModuleFlagCache`), so without a call to
+- [x] **The module administration has to refresh both registries** — done in
+      AP 4: `ModuleAdminService.setEnabled` writes the flag and awaits
       `CoreModuleRegistryService.refresh()` **and**
-      `PluginRegistryService.refresh()` the organizer would flip a switch and
-      watch nothing happen for a quarter of a minute. Both methods exist for
-      exactly this. Verify: switching `media-links` off in the UI makes the
-      dashboard tile disappear on the next reload, not fifteen seconds later.
+      `PluginRegistryService.refresh()` before answering, so the request that
+      follows already sees the change. Both, not only the family the key belongs
+      to: they read the same table, and picking one is a question that can be got
+      wrong.
 - [ ] **The names of the media link kinds are English strings in the clients.**
       `MEDIA_LINK_KIND_LABELS` in `shared-models` holds "Live stream",
       "Recording" and "Material" in one place so the switch to Transloco is one
@@ -273,8 +282,14 @@ answer, not an opinion.
       below, not before it.
 - [ ] **Translation keys need a catalogue.** The plug-in contract already carries
       `titleKey` and `labelKey`, and `CORE_MODULES` carries `titleKey`; Transloco
-      is not installed yet, so nothing resolves them. Verify: switching language
-      at runtime renames modules and plug-ins in both clients.
+      is not installed yet, so nothing resolves them. Since AP 4 two screens show
+      that: the organizer's module list and the participant's event detail tiles
+      both name modules through `moduleDisplayName`, which humanises the key
+      (`room-planning` → "Room planning") rather than translating anything. When
+      AP 6 lands, both call sites resolve the key instead — and the helper should
+      go rather than linger as a fallback nobody notices is wrong in German.
+      Verify: switching language at runtime renames modules and plug-ins in both
+      clients.
 - [x] **Self-host the fonts.** Done in phase 2, AP 1: four OFL families plus
       `system-ui` ship in `libs/shared-theming/assets/fonts/`, are declared in
       `fonts.css` and are emitted as hashed build assets by both client builds.

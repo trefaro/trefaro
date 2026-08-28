@@ -1,3 +1,4 @@
+import { adminCookie } from '../support/admin-session';
 import { api, postJson } from '../support/api-client';
 
 /**
@@ -93,9 +94,49 @@ describe('public API', () => {
   });
 });
 
+/**
+ * The global validation pipe, asserted on the push subscription endpoint.
+ *
+ * That endpoint because it is the one with a nested object and a URL in it —
+ * both of the phase 0 defects above were in exactly this shape. Since AP 4 of
+ * phase 2 `push` is a core module a fresh instance has switched **off** (E21),
+ * and a switched-off module answers 404 before any DTO is looked at (F53), so
+ * this block switches it on for its own duration and puts the flag back.
+ *
+ * Through the administration endpoint rather than the table, because that one
+ * takes effect immediately (F6) — writing the flag directly would cost this
+ * suite fifteen seconds twice.
+ */
 describe('request validation', () => {
   const endpoint = 'https://push.example.org/contract-test';
   const keys = { p256dh: 'client-public-key', auth: 'client-auth-secret' };
+
+  const setPush = (enabled: boolean) =>
+    api('/api/admin/modules/push', {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        cookie: adminCookie(),
+      },
+      body: JSON.stringify({ enabled }),
+    });
+
+  let wasEnabled = false;
+
+  beforeAll(async () => {
+    const modules = await api<{ key: string; enabled: boolean }[]>(
+      '/api/admin/modules',
+      { headers: { cookie: adminCookie() } },
+    );
+    wasEnabled =
+      modules.body.find((module) => module.key === 'push')?.enabled ?? false;
+    if (!wasEnabled) expect((await setPush(true)).status).toBe(200);
+  });
+
+  afterAll(async () => {
+    // The flag belongs to the instance, not to this suite.
+    if (!wasEnabled) await setPush(false);
+  });
 
   it('rejects an unknown field rather than silently dropping it', async () => {
     // `PushSubscription.toJSON()` includes expirationTime; the client has to

@@ -6,13 +6,17 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiNoContentResponse,
+  ApiNotFoundResponse,
   ApiOperation,
   ApiServiceUnavailableResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { PUSH_MODULE_KEY } from '@trefaro/shared-models';
+import { CoreModuleController, CoreModuleEnabledGuard } from '../config';
 import {
   CreatePushSubscriptionDto,
   DeletePushSubscriptionDto,
@@ -29,8 +33,16 @@ import { PushService } from './push.service';
  * only then can a subscription be tied to a person. Until then this endpoint
  * needs rate limiting before an instance goes public, which is noted with the
  * phase 3 work.
+ *
+ * Behind {@link CoreModuleEnabledGuard} since AP 4 of phase 2, because `push` is
+ * a core module an organization may switch off (FR 1.5, E21): switched off, this
+ * answers 404 and `/api/config` carries no VAPID key, so nothing offers a
+ * subscription that would not be stored. That is what makes the switch gate
+ * something real — before it, it gated nothing at all.
  */
 @ApiTags('push')
+@UseGuards(CoreModuleEnabledGuard)
+@CoreModuleController(PUSH_MODULE_KEY)
 @Controller('user/push/subscriptions')
 export class PushController {
   constructor(private readonly push: PushService) {}
@@ -39,6 +51,9 @@ export class PushController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Register this browser for push notifications' })
   @ApiNoContentResponse({ description: 'Subscription stored.' })
+  @ApiNotFoundResponse({
+    description: 'This organization has the push module switched off.',
+  })
   @ApiServiceUnavailableResponse({
     description: 'This instance has no VAPID key pair configured.',
   })

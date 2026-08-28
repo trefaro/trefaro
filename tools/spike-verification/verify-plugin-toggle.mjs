@@ -41,7 +41,15 @@ function check(name, condition, detail = '') {
   );
 }
 
-/** Stands in for the module administration UI, which arrives in phase 2. */
+/**
+ * The operator's path: the flag straight in the table.
+ *
+ * Still the path this script uses for the runtime-activation checks, because it
+ * is the one with the timer in it — the server has to notice a change nobody told
+ * it about. What the module administration of AP 4 does instead is asserted in
+ * its own section further down, and its point is precisely that it needs no
+ * wait.
+ */
 function setEnabled(moduleKey, enabled) {
   psql(
     `update module_config set enabled = ${enabled} where module_key = '${moduleKey}'`,
@@ -377,6 +385,67 @@ check(
   psql(
     `select count(*) from plugin_room_planning_room where id = '${ROOM}'`,
   ) === '1',
+);
+
+// --- the module administration (FR 1.5, AP 4 of phase 2) -----------------
+//
+// The same switch through the API an organizer uses. The difference this section
+// exists for is the timing: the endpoint re-reads the flags as part of the
+// request, so the next call already sees the change — no `waitFor…` anywhere
+// below.
+console.log('--- switching modules through the administration endpoint ---');
+const modules = await call('/api/admin/modules');
+check(
+  'the administration lists every switchable module',
+  modules.status === 200 && Array.isArray(modules.body),
+  `got ${modules.status}`,
+);
+const listed = (modules.body ?? []).map((module) => module.key);
+check(
+  'including the plug-ins that are switched off',
+  listed.includes('room-planning'),
+  JSON.stringify(listed),
+);
+check(
+  'and only modules that exist (E21)',
+  !listed.includes('newsletter') && !listed.includes('chat'),
+  JSON.stringify(listed),
+);
+
+const enabledNow = await send('PATCH', '/api/admin/modules/room-planning', {
+  enabled: true,
+});
+check(
+  'switching a plug-in on answers with its new state',
+  enabledNow.status === 200 && enabledNow.body?.enabled === true,
+  `got ${enabledNow.status} ${JSON.stringify(enabledNow.body)}`,
+);
+const immediately = await call('/api/config');
+check(
+  'the clients are told about it on the very next request, without waiting',
+  (immediately.body?.plugins ?? []).some((p) => p.key === 'room-planning'),
+  JSON.stringify((immediately.body?.plugins ?? []).map((p) => p.key)),
+);
+check(
+  'and its API answers at once as well',
+  (await call(`/api/admin/plugins/room-planning/events/${EVENT}/rooms`))
+    .status === 200,
+);
+
+const disabledNow = await send('PATCH', '/api/admin/modules/room-planning', {
+  enabled: false,
+});
+check(
+  'switching it off is just as immediate',
+  disabledNow.status === 200 &&
+    !((await call('/api/config')).body?.plugins ?? []).some(
+      (p) => p.key === 'room-planning',
+    ),
+);
+check(
+  'a key this image does not ship is refused rather than stored',
+  (await send('PATCH', '/api/admin/modules/not-a-module', { enabled: true }))
+    .status === 404,
 );
 
 console.log('--- cleaning up ---');

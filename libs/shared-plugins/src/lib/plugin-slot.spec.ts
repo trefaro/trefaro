@@ -115,6 +115,9 @@ describe('PluginSlot', () => {
     expect(elements).toHaveLength(1);
     expect(elements[0].tagName.toLowerCase()).toBe(elementName);
     expect(elements[0].dataset['plugin']).toBe('forum');
+    // The link target of this plug-in's tile in the participant client (AP 4 of
+    // phase 2). Assigned by the slot, so a bundle cannot forget it.
+    expect(elements[0].id).toBe('plugin-forum');
   });
 
   it('skips a plug-in whose bundle has not made its element available', () => {

@@ -53,13 +53,20 @@ default port — because they are the WebSocket origin allow-list.
 ## Notes
 
 - `verify-plugin-toggle.mjs` changes `module_config` through
-  `docker exec trefaro-postgres psql`, standing in for the module administration
-  UI that arrives in phase 2. It takes up to 15 seconds for the change to be
-  picked up, which is the server's configuration refresh interval. Since AP 9 it
-  also needs `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD` in the
+  `docker exec trefaro-postgres psql` — the operator's path, and the one with the
+  timer in it: it takes up to 15 seconds for the change to be picked up, which is
+  the server's configuration refresh interval. Since AP 4 of phase 2 the script
+  also exercises the module administration endpoint
+  (`PATCH /api/admin/modules/:key`), whose whole point is that the _next_ request
+  already sees the change — so that section contains no waiting at all. Since
+  AP 9 it needs `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD` in the
   environment: every `/api/admin/**` route needs a session (E16), and a room
   needs an event that exists (F46), so the script signs in and creates a series
   and an event of its own — and removes them again at the end.
+- `verify-push.mjs` switches the `push` core module on for its own duration and
+  puts the flag back: a fresh instance has it off (E21), and its endpoints then
+  answer 404. `verify-api.mjs` meets the same endpoint from the other side and
+  asserts exactly that.
 - `verify-proxy.mjs` also checks what the service worker claims: it replays
   ngsw's own selection rule — one positive pattern matches, no negative one does —
   against the built `ngsw.json`, for `/admin/`, `/api/config` and `/socket.io/`.

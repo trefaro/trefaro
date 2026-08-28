@@ -30,6 +30,7 @@ import {
   seatsLeft,
 } from '@trefaro/shared-models';
 import { PluginSlot } from '@trefaro/shared-plugins';
+import { EventDetailTiles } from './event-detail-tiles';
 import { PublicEventsService } from '../../features/events/public-events.service';
 import { PublicMediaLinksService } from '../../features/media-links/public-media-links.service';
 import { PublicProgramService } from '../../features/program/public-program.service';
@@ -72,11 +73,17 @@ import { PublicProgramService } from '../../features/program/public-program.serv
  *
  * Carries the second plug-in hook point: the programme, the room plan and the
  * forum mount here as web components once their modules are enabled.
+ *
+ * Since AP 4 of phase 2 it also carries the tiles the mockups draw
+ * ({@link EventDetailTiles}) — one per part of this page that actually has
+ * something in it, including one per mounted plug-in. They are jump links: this
+ * page *is* the event detail view, so a tile leads to a section of it rather than
+ * to a second rendering somewhere else.
  */
 @Component({
   selector: 'trefaro-event-landing-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, PluginSlot],
+  imports: [RouterLink, PluginSlot, EventDetailTiles],
   template: `
     @if (error()) {
       <p class="notice" role="alert">{{ error() }}</p>
@@ -126,6 +133,14 @@ import { PublicProgramService } from '../../features/program/public-program.serv
 
         <p class="description">{{ item.description }}</p>
 
+        <!-- What this event offers, as jump links to the sections below
+             (mockups 5.2). Nothing here navigates: a plug-in at the event detail
+             hook point renders further down this page. -->
+        <trefaro-event-detail-tiles
+          [sessions]="items().length"
+          [mediaLinks]="mediaLinkCount()"
+        />
+
         @if (item.followUpBody) {
           <section class="follow-up" aria-labelledby="follow-up-heading">
             <h2 id="follow-up-heading">After the event</h2>
@@ -134,7 +149,7 @@ import { PublicProgramService } from '../../features/program/public-program.serv
         }
 
         @if (media().length > 0) {
-          <section class="media" aria-labelledby="media-heading">
+          <section id="media" class="media" aria-labelledby="media-heading">
             <h2 id="media-heading">Watch and read</h2>
             @for (group of media(); track group.kind) {
               <h3 class="media__kind">{{ group.label }}</h3>
@@ -156,7 +171,11 @@ import { PublicProgramService } from '../../features/program/public-program.serv
         }
 
         @if (days().length > 0) {
-          <section class="program" aria-labelledby="program-heading">
+          <section
+            id="program"
+            class="program"
+            aria-labelledby="program-heading"
+          >
             <h2 id="program-heading">Programme</h2>
             @if (hasSignups()) {
               <p class="program__note">
@@ -462,6 +481,17 @@ export class EventLandingPage {
   protected readonly media = computed<
     readonly MediaLinkGroup<PublicMediaLink>[]
   >(() => groupMediaLinksByKind(eventMediaLinks(this.links())));
+
+  /**
+   * How many links the media section renders — the number its tile carries.
+   *
+   * The event's own links, not every link: one that belongs to a session is
+   * shown with that session, and a tile pointing at the media section must not
+   * promise links that are not in it.
+   */
+  protected readonly mediaLinkCount = computed(() =>
+    this.media().reduce((total, group) => total + group.links.length, 0),
+  );
 
   protected readonly pluginContext = computed(() => ({
     eventId: this.event()?.id ?? '',

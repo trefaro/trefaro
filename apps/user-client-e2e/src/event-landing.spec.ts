@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import {
   DRAFT_EVENT,
   DRAFT_SERIES,
@@ -26,6 +26,10 @@ import {
  * The last two blocks are AP 11's criterion, from the participant's side: the
  * follow-up section appears only after the event has ended, and media links are
  * links that leave the page rather than embedded players (F50, F51).
+ *
+ * The tiles at the end are AP 4 of phase 2 (mockups 5.2): what this event offers,
+ * as jump links into the page itself. A browser is the only place that can show
+ * they lead anywhere — a payload has no viewport.
  */
 const landingPage = (seriesSlug: string, eventSlug: string) =>
   `/series/${seriesSlug}/events/${eventSlug}`;
@@ -281,5 +285,65 @@ test.describe('what an event leaves behind', () => {
       .getByRole('heading', { level: 3 })
       .allInnerTexts();
     expect(kinds).toEqual(['Recordings', 'Materials']);
+  });
+});
+
+test.describe('the tiles on the landing page', () => {
+  const tiles = (page: Page) =>
+    page.getByRole('navigation', { name: 'What this event offers' });
+
+  test('offers a tile per part of this page that has something in it', async ({
+    page,
+  }) => {
+    await page.goto(landingPage(PUBLISHED_SERIES.slug, UPCOMING_EVENT.slug));
+
+    // The count comes from the fixture rather than from a literal: what the tile
+    // has to say is how much is behind it. The keynote's slides are *not*
+    // counted in the media tile — they hang on a session, and the media section
+    // does not render them either.
+    const programme = tiles(page).getByRole('link', { name: /Programme/ });
+    await expect(programme).toContainText(`${PROGRAM_ITEMS.length} sessions`);
+    // The address is this event's own, with the fragment appended: a bare `#…`
+    // would resolve against the client's `<base href>` and leave the event.
+    await expect(programme).toHaveAttribute(
+      'href',
+      `${landingPage(PUBLISHED_SERIES.slug, UPCOMING_EVENT.slug)}#program`,
+    );
+
+    const media = tiles(page).getByRole('link', { name: /Watch and read/ });
+    await expect(media).toContainText('1 link');
+    await expect(media).toHaveAttribute(
+      'href',
+      `${landingPage(PUBLISHED_SERIES.slug, UPCOMING_EVENT.slug)}#media`,
+    );
+  });
+
+  test('leads to the section instead of navigating away', async ({ page }) => {
+    const address = landingPage(PUBLISHED_SERIES.slug, UPCOMING_EVENT.slug);
+    await page.goto(address);
+
+    await tiles(page)
+      .getByRole('link', { name: /Programme/ })
+      .click();
+
+    // The same page, scrolled: everything a tile can lead to renders here, so a
+    // tile that navigated would need a second rendering of the same timeline.
+    await expect(page).toHaveURL(new RegExp(`${address}#program$`));
+    await expect(
+      page.getByRole('region', { name: 'Programme' }),
+    ).toBeInViewport();
+  });
+
+  test('has no tile for a section that is not there', async ({ page }) => {
+    await page.goto(landingPage(PUBLISHED_SERIES.slug, PAST_EVENT.slug));
+
+    // The past event has a recording and no sessions. A tile leading to an empty
+    // section would be a dead end drawn as a feature (F47's rule, again).
+    await expect(
+      tiles(page).getByRole('link', { name: /Watch and read/ }),
+    ).toBeVisible();
+    await expect(
+      tiles(page).getByRole('link', { name: /Programme/ }),
+    ).toHaveCount(0);
   });
 });
