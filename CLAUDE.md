@@ -404,7 +404,7 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
   Installations-Story, nicht zur Härtung; `Secure` fallen zu lassen ist keine
   Alternative.
 
-## Stand Phase 2 (in Arbeit; AP 1 und AP 2 erledigt)
+## Stand Phase 2 (in Arbeit; AP 1–3 erledigt, Meilenstein M3 erreicht)
 
 Plan **und Protokoll**: `docs/PHASE2.md` — dreizehn Arbeitspakete, Entscheidungen
 **E17–E29** (die Zählung läuft über die Phasen weiter), Meilensteine M3
@@ -419,7 +419,11 @@ aus einem mitgelieferten, selbst gehosteten Katalog) · **AP 2** Logo und
 App-Icon (`PUT/DELETE /api/admin/config/{logo,app-icon}`,
 `GET /api/media/branding/{logo,app-icon}` öffentlich und **ohne Pfad vom
 Aufrufer**, eigener `branding/`-Teilbaum im Upload-Volume, `CHECK` auf beide
-Pfadspalten, Typ aus den ersten Bytes und kein SVG).
+Pfadspalten, Typ aus den ersten Bytes und kein SVG) · **AP 3** Design-Seite im
+Veranstalter-Client (`/design`) mit Live-Vorschau im eigenen Dokument,
+Zurücknehmen bei Abbrechen **und** beim Verlassen, Legibilitätspanel (F67), den
+zwei Uploads mit Vorschau — und beide Kopfzeilen tragen jetzt den
+Organisationsnamen statt „Trefaro". Damit ist **M3** erreicht.
 
 Reihenfolge: AP 1–3 Whitelabel (FR 1.4) · AP 4 Modulverwaltung (FR 1.5) · AP 5
 Installations-Story mit geführter Ersteinrichtung und TLS-Overlay (FR 1.1,
@@ -447,6 +451,37 @@ in einer frischen Sitzung improvisiert:
   seinen Guard.
 - **Die Ersteinrichtung ist tokengeschützt** (E28); `ADMIN_BOOTSTRAP_*` bleibt
   der unbeaufsichtigte Weg.
+
+Regeln aus AP 3, die nicht erneut aufgerollt werden sollten:
+
+- **Text auf einer Markenfarbe kann nicht zu blass werden** (F67).
+  `readableTextColor` wählt an der Kreuzungsluminanz, also liegt das Verhältnis
+  immer bei ≥ ≈ 4,58:1 (`MIN_DERIVED_TEXT_CONTRAST`). Der geplante Hinweis
+  „unter 4,5:1 gegen die berechnete Textfarbe" kann deshalb **nie** auslösen und
+  ist keine Prüfung, sondern eine angezeigte Tatsache. Gewarnt wird bei der
+  **Primärfarbe gegen die weiße Seite unter 3:1** — sie ist die Fläche und die
+  Quelle der Linkfarbe. Die **Akzentfarbe** bekommt keine Warnung (sie ist immer
+  _in_ etwas, und die Vorgabe `#e8a33d` liegt bei 2,2:1 — eine Warnung erschiene
+  ab Werk). Der Fokusring beider Clients nimmt darum
+  `--trefaro-color-accent-strong`, nicht den rohen Akzent.
+- **Ein laufender Client wird nur von seiner eigenen Seite umgefärbt.** Die
+  Design-Seite ruft `ThemeService.apply()` mit dem Entwurf; `DestroyRef` stellt
+  beim Verlassen wieder her, `Discard` beim Klick. Nach jedem Schreiben wird
+  `/api/config` über `AppConfigService.reload()` **neu gelesen**, nie gemergt —
+  der Server besitzt den beschnittenen Namen, den CSS-Stack hinter dem
+  Schriftschlüssel und die neue `?v=`.
+- **`<input type="color">` kann nur `#rrggbb`.** Ein gespeichertes `#fff` (E17
+  erlaubt es) wird beim Laden erweitert; sonst zeigt der Wähler wortlos Schwarz
+  und schreibt es beim ersten Öffnen zurück. Deshalb auch kein zweites
+  Freitextfeld je Farbe.
+- **Ein Bild wird beim Hochladen geschrieben, nicht beim Speichern** — zwei
+  Schritte je Bild, und „Discard changes" erfasst es ausdrücklich nicht.
+- **Die Browsersuiten schreiben `app_config` nur in Chromium.** Eine einzige
+  Zeile, drei parallele Playwright-Browser: jeder prüfte den Wert, den ein
+  anderer gerade ersetzt hat. Und sie schreiben **keine Farbe** — `#1f6f5c` wird
+  von `start-up.spec.ts` in beiden Clients geprüft. Wer eine Instanzeinstellung
+  im Browser schreibt, beschränkt den Test auf einen Browser und stellt her, was
+  er gefunden hat.
 
 ## Betriebskontext
 

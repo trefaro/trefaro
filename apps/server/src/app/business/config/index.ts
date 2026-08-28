@@ -9,7 +9,6 @@ export {
   BRANDING_URL_PREFIX,
   MEDIA_URL_PREFIX,
   brandingImageUrls,
-  type BrandingImageUrls,
 } from './branding-url';
 export {
   BrandingService,

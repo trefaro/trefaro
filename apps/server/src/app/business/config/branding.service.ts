@@ -5,7 +5,7 @@ import {
   Logger,
   PayloadTooLargeException,
 } from '@nestjs/common';
-import type { BrandingImageKind } from '@trefaro/shared-models';
+import type { BrandingImageKind, BrandingImages } from '@trefaro/shared-models';
 import {
   BRANDING_MIME_TYPES,
   MAX_BRANDING_BYTES,
@@ -18,7 +18,7 @@ import {
   matchesSignature,
   signatureType,
 } from '../attachments';
-import { brandingImageUrls, type BrandingImageUrls } from './branding-url';
+import { brandingImageUrls } from './branding-url';
 import {
   APP_CONFIG_REPOSITORY,
   type AppConfigRecord,
@@ -82,7 +82,7 @@ export class BrandingService {
   ) {}
 
   /** Both URLs as they stand — what the upload endpoints answer with. */
-  async urls(): Promise<BrandingImageUrls> {
+  async urls(): Promise<BrandingImages> {
     return brandingImageUrls(await this.appConfig.load());
   }
 
@@ -99,7 +99,7 @@ export class BrandingService {
   async replace(
     kind: BrandingImageKind,
     image: BrandingImageUpload,
-  ): Promise<BrandingImageUrls> {
+  ): Promise<BrandingImages> {
     this.assertAcceptable(image);
 
     const previous = pathOf(await this.appConfig.load(), kind);
@@ -124,7 +124,7 @@ export class BrandingService {
    * was asked for, whereas a column pointing at a file that is already gone
    * would render a broken image on every page.
    */
-  async remove(kind: BrandingImageKind): Promise<BrandingImageUrls> {
+  async remove(kind: BrandingImageKind): Promise<BrandingImages> {
     const previous = pathOf(await this.appConfig.load(), kind);
     const record = await this.appConfig.setBrandingImage(kind, null);
 

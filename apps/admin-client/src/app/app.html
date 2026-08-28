@@ -3,13 +3,11 @@
   <aside class="sidebar">
     <div class="sidebar__brand">
       @if (theme.hasLogo()) {
-      <span
-        class="sidebar__logo"
-        role="img"
-        aria-label="Organization logo"
-      ></span>
+      <!-- Decorative: the name stands right beside it, so a screen reader that
+           announced the logo too would read the organization twice. -->
+      <span class="sidebar__logo" aria-hidden="true"></span>
       }
-      <span class="sidebar__title">Trefaro</span>
+      <span class="sidebar__title">{{ config.organizationName() }}</span>
     </div>
 
     <nav class="sidebar__nav" aria-label="Main navigation">
@@ -23,6 +21,7 @@
       <a routerLink="/administrators" routerLinkActive="is-active">
         Administrators
       </a>
+      <a routerLink="/design" routerLinkActive="is-active">Design</a>
       <a routerLink="/modules" routerLinkActive="is-active">Modules</a>
       <!-- Plug-in hook point one: the navigation bar. -->
       <trefaro-plugin-slot mountPoint="navigation" />

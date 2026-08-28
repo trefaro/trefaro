@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom, timeout } from 'rxjs';
 import { ApiClient } from '@trefaro/shared-http';
 import { STARTUP_TIMEOUT_MS } from './startup-timeout';
+import { DEFAULT_ORGANIZATION_NAME } from '@trefaro/shared-models';
 import type {
   AppConfig,
   PluginDescriptor,
@@ -28,6 +29,17 @@ export class AppConfigService {
 
   /** `null` until the configuration has arrived. */
   readonly config = this.state.asReadonly();
+
+  /**
+   * What the instance calls itself — the header of both clients (FR 1.4).
+   *
+   * Falls back to the product name while the configuration is still on its way
+   * and if it never arrives: a header with a hole in it looks broken, and this
+   * is the one string a client shows before anything has loaded.
+   */
+  readonly organizationName = computed(
+    () => this.state()?.organizationName ?? DEFAULT_ORGANIZATION_NAME,
+  );
 
   readonly enabledModules = computed<readonly string[]>(
     () => this.state()?.enabledModules ?? [],
@@ -78,5 +90,21 @@ export class AppConfigService {
       },
     );
     return this.pending;
+  }
+
+  /**
+   * Fetches the configuration again, after this client itself changed it.
+   *
+   * Not a push channel and not a poll: the design page writes the branding and
+   * then needs to know what the server now says — the font as a CSS stack, the
+   * logo URL with its new `?v=`, the name as it was trimmed. Reading it back
+   * rather than merging the write into the cache means the client cannot end up
+   * holding a configuration the server does not agree with.
+   *
+   * Every other client learns of the change on its next start (E20).
+   */
+  reload(): Promise<AppConfig> {
+    this.pending = null;
+    return this.ensureLoaded();
   }
 }

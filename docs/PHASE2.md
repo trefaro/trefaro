@@ -1,8 +1,9 @@
 # Phase 2 — Whitelabel, Konfiguration, Mehrsprachigkeit, PWA
 
-**Status: in Arbeit** (28.08.2026). **AP 1 und AP 2 sind erledigt** (siehe
-_Fortschritt_); die Abschnitte oberhalb davon sind Plan, nicht Protokoll. Wie in
-Phase 1 gibt Marius jedes Paket einzeln frei — AP 3 wartet auf seine Freigabe.
+**Status: in Arbeit** (28.08.2026). **AP 1, AP 2 und AP 3 sind erledigt** (siehe
+_Fortschritt_) — damit ist **Meilenstein M3** erreicht; die Abschnitte oberhalb
+davon sind Plan, nicht Protokoll. Wie in Phase 1 gibt Marius jedes Paket einzeln
+frei — AP 4 wartet auf seine Freigabe.
 
 **Die Entscheidungen E17–E29 sind am 28.08.2026 von Marius bestätigt** — sie
 werden nicht erneut aufgerollt, sondern nur gegen die Umsetzung geprüft (wie
@@ -545,7 +546,7 @@ prüft `verify-proxy.mjs`.
 ### AP 13 — Abschluss der Phase → **Meilenstein M5**
 
 `todo.md` unter _Checkable after phase 2_ durchgehen (abhaken oder mit Begründung
-verschieben), F60–F65 im Referenzdokument nachtragen, den Fünf-Container-Stack
+verschieben), F60–F67 im Referenzdokument nachtragen, den Fünf-Container-Stack
 aus dem Stand hochfahren, `tools/spike-verification/` und `tools/demo-seed/` auf
 den neuen Stand ziehen (der Seed sollte künftig auch Übersetzungen und ein Logo
 anlegen), `docs/PHASE2.md` von Plan auf Protokoll korrigieren und _Was anders
@@ -610,6 +611,7 @@ Wird beim jeweiligen Paket eingetragen, nicht am Ende gesammelt:
 | F64 | Die Ersteinrichtung ist tokengeschützt; `ADMIN_BOOTSTRAP_*` bleibt der unbeaufsichtigte Weg (E28) | 5   |
 | F65 | Die Schriftart ist ein mitgelieferter Katalog, kein Upload (E18, Bezug NFR 9)                     | 1   |
 | F66 | Wie ein Logo öffentlich wird, ohne die Anhänge mitzunehmen (E19, Bezug E9, F38)                   | 2   |
+| F67 | Welcher Kontrast geprüft wird — und warum nicht der gegen die berechnete Textfarbe (NFR 4, E17)   | 3   |
 
 Anhangspunkt 18 (TLS gehört zur Installations-Story) wird in AP 5 von „geplant"
 auf „umgesetzt" gezogen.
@@ -629,7 +631,7 @@ auf „umgesetzt" gezogen.
    `tools/spike-verification/` belegt.
 4. `docs/INSTALL.md` existiert und ist von jemandem nachvollziehbar, der dieses
    Repository nicht kennt (NFR 8).
-5. `todo.md` unter _Checkable after phase 2_ ist durchgearbeitet, F60–F66 stehen
+5. `todo.md` unter _Checkable after phase 2_ ist durchgearbeitet, F60–F67 stehen
    im Referenzdokument.
 6. Dieses Dokument ist von Plan auf Protokoll korrigiert und hat einen Abschnitt
    _Was anders lief_.
@@ -792,3 +794,105 @@ Abweichungen und ihre Gründe:
 Was AP 2 **nicht** enthält: die Oberfläche. Hochladen geht über
 `PUT /api/admin/config/logo`; die Design-Seite mit Vorschau, Farbwählern und
 Kontrasthinweis ist AP 3 und schließt damit M3 ab.
+
+### AP 3 — Design-Einstellungsseite (erledigt) → **Meilenstein M3**
+
+Umgesetzt:
+
+- **Veranstalter-Client** — Seite „Design" unter `/design`
+  (`pages/design/design-page.ts`) mit Organisationsname, zwei Farbwählern,
+  Schriftauswahl aus dem Katalog, Legibilitätspanel, Vorschaukarte und den zwei
+  Uploads; `pages/design/branding-image-field.ts` als eigene Komponente je Bild;
+  `features/config/config-admin.service.ts` als einziger Zugang zu
+  `/api/admin/config` und den beiden Bildrouten.
+- **Live-Vorschau im eigenen Dokument** (E20): jede Formularänderung ruft
+  `ThemeService.apply()` mit dem Entwurf, also färbt sich der laufende
+  Veranstalter-Client mit — Menü, Knöpfe und jede Plug-in-Webkomponente, weil
+  die Custom Properties an der Wurzel hängen. „Discard changes" **und** das
+  Verlassen der Seite (`DestroyRef.onDestroy`) stellen das Gespeicherte wieder
+  her.
+- **`shared-theming`** — `contrastRatio()`, `MIN_TEXT_CONTRAST` (4,5),
+  `MIN_SURFACE_CONTRAST` (3), `MIN_DERIVED_TEXT_CONTRAST` (≈ 4,58) und
+  `PAGE_BACKGROUND_COLOR`; `readableTextColor` liest die Luminanz jetzt über
+  denselben Helfer.
+- **`shared-config`** — `organizationName` als Signal (Rückfall auf
+  `DEFAULT_ORGANIZATION_NAME`) und `reload()`, das die Konfiguration nach einem
+  eigenen Schreibvorgang neu liest, statt den Cache zu patchen.
+- **Beide Kopfzeilen** tragen den Organisationsnamen statt „Trefaro", das Logo
+  daneben ist `aria-hidden` (der Name sagt dasselbe), und der Login des
+  Veranstalter-Clients nennt die Organisation — `/api/config` ist öffentlich,
+  also ist der Name vor der Anmeldung bekannt.
+- **`shared-models`** — `BrandingImages` (die zwei öffentlichen URLs) wanderte
+  aus `apps/server/.../branding-url.ts` hierher: der Client liest genau diese
+  Antwort.
+
+Nachweise: 18 neue Unit-Tests (`DesignPage` 10, `BrandingImageField` 8), 3 in
+`shared-theming` (Kontrastspanne, Symmetrie, bekannte Paare, der gefegte
+Luminanzbereich für die Garantie), 1 in `shared-config` (`reload`), 8 neue
+Browsertests im Veranstalter-Client (`apps/admin-client-e2e/src/design.spec.ts`)
+und 2 im Nutzer-Client (`theming.spec.ts`). Vier Punkte des Abnahmekriteriums
+stehen dort namentlich: die Vorschau wirkt vor dem Speichern, Abbrechen nimmt sie
+zurück, Speichern zieht die Kopfzeile sofort nach und übersteht ein Neuladen, und
+die Startseite des Nutzer-Clients trägt den konfigurierten Namen.
+
+Abweichungen und ihre Gründe:
+
+- **Der geplante Kontrasthinweis kann nicht auslösen — also prüft er etwas
+  anderes** (F67). Geplant war: warnen, wenn eine Markenfarbe gegen ihre
+  _berechnete Textfarbe_ unter 4,5:1 liegt. Das ist rechnerisch unmöglich:
+  `readableTextColor` wählt Schwarz oder Weiß genau an der Luminanz, an der beide
+  gleich kontrastieren (L = √0,0525 − 0,05), und dort beträgt das Verhältnis
+  ≈ 4,58:1 — der schlechteste Fall über alle Farben. Eine Prüfung, die nie
+  greift, liest sich wie eine Zusicherung, über die jemand wacht. Gezeigt wird
+  die Zahl deshalb als **Tatsache**; gewarnt wird, wo nichts entschieden werden
+  kann: **die Primärfarbe gegen die weiße Seite, Schwelle 3:1** (WCAG 2.2
+  SC 1.4.11, die Schwelle für ein Bedienelement statt für Text). Die Primärfarbe
+  ist die Fläche — Menü, Knopf, Kachel — und die Quelle der Linkfarbe
+  (`-strong`); eine fast weiße Primärfarbe lässt beides verschwinden, während der
+  Text darauf tadellos lesbar bleibt. Ein Unit-Test fegt den Luminanzbereich ab
+  und hält die Garantie fest.
+- **Die Akzentfarbe bekommt keine Warnung, und das ist kein Versehen.** Sie ist
+  nie die Fläche, die gefunden werden muss, sondern Abzeichen oder Rand _in_
+  etwas, das schon gefunden ist — immer mit ihrer abgeleiteten Textfarbe darauf.
+  Eine Warnung dort würde auf der **ausgelieferten Vorgabe** (`#e8a33d`, 2,2:1
+  gegen Weiß) sofort erscheinen und Veranstalter darauf trainieren, das Panel zu
+  überlesen.
+- **Der Fokusring nimmt jetzt `--trefaro-color-accent-strong`.** Beim Prüfen des
+  Punktes davor fiel auf, dass die einzige Stelle, an der die Akzentfarbe doch
+  eine dünne Linie auf weißem Grund war, der Fokusring beider Clients ist — und
+  dort gilt 3:1 zwingend. `-strong` ist aus dem Akzent abgeleitet und damit immer
+  dunkler; die Vorgabe kommt so auf ≈ 4,2:1, ohne dass eine Markenfarbe geändert
+  werden musste.
+- **Nur ein Farbwähler je Farbe, kein zweites Textfeld.** E17 sagt: „Ein
+  Farbwähler liefert genau Hex." Ein Freitextfeld daneben müsste `#fff`
+  entgegennehmen (die API akzeptiert es), und `<input type="color">` kann das
+  nicht darstellen — es zeigt wortlos Schwarz und schreibt dieses Schwarz beim
+  ersten Öffnen zurück. Der gespeicherte Wert wird deshalb beim Laden auf sechs
+  Stellen erweitert; der Hexwert steht als Text unter dem Wähler.
+- **Ein Bild wird beim Hochladen geschrieben, nicht beim Speichern.** Zwei
+  Schritte je Bild (auswählen → hochladen), weil niemand prüfen kann, ob ein
+  App-Icon quadratisch ist (E26 schließt eine Bildbibliothek aus) — die einzige
+  Prüfung ist ein Blick auf die Vorschau. Und weil ein Upload eben **nicht** von
+  „Discard changes" erfasst wird, was ein Zwei-Klick-Ablauf sichtbar macht.
+- **Nach jedem Schreiben wird `/api/config` neu gelesen**, statt den Cache zu
+  patchen. Der Server besitzt die Antwort: den beschnittenen Namen, den
+  CSS-Stack hinter dem Schriftschlüssel und die neue `?v=` der Bilder. Ein
+  gemergter Cache wäre eine zweite Wahrheit.
+- **Die Browsersuite schreibt nur in Chromium.** `app_config` ist eine einzige
+  Zeile, und Playwright fährt drei Browser gleichzeitig: drei Arbeiter, die
+  speichern und zurücksetzen, prüfen jeweils den Wert, den ein anderer gerade
+  ersetzt hat. Die zwei schreibenden Tests sind deshalb auf Chromium beschränkt
+  (mit `test.skip` und Begründung im Code) und stellen her, was sie gefunden
+  haben. Alles, was nur im Client passiert, läuft in allen drei.
+- **Und sie schreibt keine Farbe.** Die Farbe der Instanz wird von
+  `start-up.spec.ts` in **beiden** Clients geprüft (`#1f6f5c`); ein Test, der sie
+  ändert, ließe einen unbeteiligten Test scheitern. Geschrieben werden Name und
+  Schriftart, die niemand sonst prüft — dass eine Farbe durchgeschrieben wird,
+  belegt `apps/server-e2e/src/api/app-config.spec.ts` aus AP 1.
+- **Die Seitentitel bleiben „… — Trefaro".** Sie stehen als Zeichenketten in
+  beiden `app.routes.ts` und werden in AP 6 zu Übersetzungsschlüsseln; sie jetzt
+  auf den Organisationsnamen umzuhängen (eine `TitleStrategy`) hieße, dieselben
+  Zeilen zweimal anzufassen. Steht in `todo.md`.
+
+Was AP 3 **nicht** enthält: die Modulverwaltung. Die Seite „Modules" bleibt
+lesend — sie wird in AP 4 schreibend.

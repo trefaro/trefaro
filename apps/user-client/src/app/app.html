@@ -1,12 +1,12 @@
 <header class="app-header">
   @if (theme.hasLogo()) {
-  <span
-    class="app-header__logo"
-    role="img"
-    aria-label="Organization logo"
-  ></span>
+  <!-- Decorative: the organization's name is the link right next to it, and
+       announcing both would read the same thing twice. -->
+  <span class="app-header__logo" aria-hidden="true"></span>
   }
-  <a class="app-header__title" routerLink="/">Trefaro</a>
+  <a class="app-header__title" routerLink="/"
+    >{{ config.organizationName() }}</a
+  >
 </header>
 
 <main class="app-main">

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * The whitelabel theme, in a real browser (FR 1.4) — phase 2, AP 1.
+ * The whitelabel theme, in a real browser (FR 1.4) — phase 2, AP 1 and AP 3.
  *
  * The acceptance criterion of AP 1 is a chain: an administrator writes a colour
  * and a font, and a reload of either client shows them — inside plug-in web
@@ -24,12 +24,39 @@ import { expect, test } from '@playwright/test';
  * 2. `readableTextColor` picks black on a light accent *as rendered*, not only
  *    in a unit test;
  * 3. the custom properties cross a shadow root, which is the whole reason
- *    plug-ins are allowed to ship no CSS of their own.
+ *    plug-ins are allowed to ship no CSS of their own;
+ * 4. the header names the *organization* rather than the product, and paints its
+ *    logo — the half of AP 3 that lives in this client (the design page itself is
+ *    covered in the organizer client's `design.spec.ts`).
  */
 
 /** Reads a custom property off the document root, the way a plug-in would. */
 const themeVariable = (name: string) =>
   `getComputedStyle(document.documentElement).getPropertyValue('${name}').trim()`;
+
+/** Serves the instance's own configuration with the branding swapped out. */
+async function withBranding(
+  page: import('@playwright/test').Page,
+  branding: { organizationName?: string; logoUrl?: string },
+): Promise<void> {
+  await page.route('**/api/config', async (route) => {
+    const response = await route.fetch();
+    const config = await response.json();
+    await route.fulfill({
+      response,
+      json: {
+        ...config,
+        ...(branding.organizationName
+          ? { organizationName: branding.organizationName }
+          : {}),
+        theme: {
+          ...config.theme,
+          ...(branding.logoUrl ? { logoUrl: branding.logoUrl } : {}),
+        },
+      },
+    });
+  });
+}
 
 /** Serves the instance's own configuration with the theme swapped out. */
 async function withTheme(
@@ -100,6 +127,50 @@ test.describe('the whitelabel theme in the browser', () => {
     });
     expect(faces.count).toBeGreaterThan(0);
     expect(faces.available).toBe(true);
+  });
+
+  test('carries the organization in the header, not the product name', async ({
+    page,
+  }) => {
+    // What AP 3 finished: the header used to read "Trefaro" for every
+    // organization that installed this. Intercepted rather than written, for the
+    // reason this file gives — but the *value* comes from the configuration
+    // either way, which is the whole claim.
+    await withBranding(page, {
+      organizationName: 'Mehr Demokratie e.V.',
+      logoUrl: '/api/media/branding/logo?v=1',
+    });
+    await page.goto('/');
+
+    await expect(
+      page.getByRole('link', { name: 'Mehr Demokratie e.V.' }),
+    ).toBeVisible();
+    // The logo is painted through the custom property, and it is decorative —
+    // the name beside it says the same thing, so a screen reader hears it once.
+    await expect
+      .poll(() => page.evaluate(themeVariable('--trefaro-logo-url')))
+      .toContain('/api/media/branding/logo');
+    const logo = page.locator('.app-header__logo');
+    await expect(logo).toBeAttached();
+    await expect(logo).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  test('shows the name this instance is configured with after a reload', async ({
+    page,
+  }) => {
+    // No interception: the seeded instance's own name, read from the same
+    // endpoint the header renders from. This is the half of the acceptance
+    // criterion that says a saved brand survives a reload.
+    await page.goto('/');
+    const configured = (await (
+      await page.request.get('/api/config')
+    ).json()) as { organizationName: string };
+
+    await page.reload();
+
+    await expect(page.locator('.app-header__title')).toHaveText(
+      configured.organizationName,
+    );
   });
 
   test('reaches into a shadow root, which is why plug-ins ship no CSS', async ({

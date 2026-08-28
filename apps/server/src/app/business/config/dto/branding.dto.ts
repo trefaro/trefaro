@@ -1,9 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
+import type { BrandingImages } from '@trefaro/shared-models';
 import {
   MAX_BRANDING_BYTES,
   brandingTypeSummary,
 } from '@trefaro/shared-models';
-import type { BrandingImageUrls } from '../branding-url';
 
 /**
  * What the upload and removal endpoints answer with (FR 1.4, E19).
@@ -13,7 +13,7 @@ import type { BrandingImageUrls } from '../branding-url';
  * the logo therefore changes the app icon's URL too. Answering with one of them
  * would leave the page holding a URL that is no longer the current one.
  */
-export class BrandingImagesDto implements BrandingImageUrls {
+export class BrandingImagesDto implements BrandingImages {
   @ApiProperty({
     nullable: true,
     type: String,

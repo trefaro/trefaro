@@ -1,5 +1,13 @@
 import type { Theme } from '@trefaro/shared-models';
-import { deriveThemeVariables, readableTextColor } from './theme-variables';
+import {
+  MIN_DERIVED_TEXT_CONTRAST,
+  MIN_SURFACE_CONTRAST,
+  MIN_TEXT_CONTRAST,
+  PAGE_BACKGROUND_COLOR,
+  contrastRatio,
+  deriveThemeVariables,
+  readableTextColor,
+} from './theme-variables';
 
 const theme: Theme = {
   primaryColor: '#1f6f5c',
@@ -79,5 +87,86 @@ describe('readableTextColor', () => {
 
   it('is case insensitive', () => {
     expect(readableTextColor('#FFFFFF')).toBe('#000000');
+  });
+});
+
+describe('contrastRatio', () => {
+  it('spans the WCAG range', () => {
+    expect(contrastRatio('#000000', '#ffffff')).toBeCloseTo(21, 5);
+    expect(contrastRatio('#ffffff', '#ffffff')).toBeCloseTo(1, 5);
+  });
+
+  it('does not care which colour is named first', () => {
+    expect(contrastRatio('#1f6f5c', '#ffffff')).toBeCloseTo(
+      contrastRatio('#ffffff', '#1f6f5c'),
+      10,
+    );
+  });
+
+  it('agrees with the published ratio of a known pair', () => {
+    // #767676 on white is the canonical "just passes 4.5:1" grey.
+    expect(contrastRatio('#767676', '#ffffff')).toBeGreaterThanOrEqual(
+      MIN_TEXT_CONTRAST,
+    );
+    expect(contrastRatio('#777777', '#ffffff')).toBeLessThan(MIN_TEXT_CONTRAST);
+  });
+
+  it('reads a colour it cannot parse as the worst case, so a hint appears', () => {
+    // 1 is "identical colours", which is what every threshold compares as a
+    // failure. An accessibility hint that errs has to err towards being shown.
+    expect(contrastRatio('rebeccapurple', '#ffffff')).toBe(1);
+    expect(contrastRatio('#ffffff', 'oklch(70% 0.1 200)')).toBe(1);
+  });
+});
+
+describe('the contrast the theme guarantees', () => {
+  /**
+   * The point of {@link MIN_DERIVED_TEXT_CONTRAST}: no brand colour can produce
+   * unreadable text *on* itself, because the text colour is picked at the
+   * crossover point. This is what makes a "text on your colour is too pale"
+   * hint on the design page unreachable — and therefore a hint that must not be
+   * written as if it could fire.
+   */
+  it('never puts text below 4.5:1 on a brand colour, whatever the colour', () => {
+    expect(MIN_DERIVED_TEXT_CONTRAST).toBeGreaterThan(MIN_TEXT_CONTRAST);
+
+    // A sweep rather than a handful of samples: the minimum sits at one exact
+    // luminance, and a few favourite colours would step right over it.
+    for (let step = 0; step <= 255; step += 1) {
+      const grey = `#${step.toString(16).padStart(2, '0').repeat(3)}`;
+      expect(
+        contrastRatio(grey, readableTextColor(grey)),
+      ).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+    }
+
+    for (const colour of [
+      '#1f6f5c',
+      '#e8a33d',
+      '#ffe066',
+      '#7d7d7d',
+      '#767676',
+      '#787878',
+      '#0000ff',
+      '#00ff00',
+    ]) {
+      expect(
+        contrastRatio(colour, readableTextColor(colour)),
+      ).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+    }
+  });
+
+  /**
+   * And the point of {@link MIN_SURFACE_CONTRAST}: what the theme cannot decide
+   * for an organization is whether the coloured surface is distinguishable from
+   * the page it sits on. A near-white primary makes the sidebar and every
+   * button vanish, and no derived text colour can repair that.
+   */
+  it('leaves a pale brand colour indistinguishable from the page', () => {
+    expect(contrastRatio('#f2f2f2', PAGE_BACKGROUND_COLOR)).toBeLessThan(
+      MIN_SURFACE_CONTRAST,
+    );
+    expect(
+      contrastRatio('#1f6f5c', PAGE_BACKGROUND_COLOR),
+    ).toBeGreaterThanOrEqual(MIN_SURFACE_CONTRAST);
   });
 });

@@ -6,6 +6,7 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { AppConfigService } from '@trefaro/shared-config';
 import type { ApiError } from '@trefaro/shared-http';
 import { AuthService } from '../../features/auth/auth.service';
 
@@ -24,7 +25,10 @@ import { AuthService } from '../../features/auth/auth.service';
     <div class="login">
       <form class="card" [formGroup]="form" (ngSubmit)="submit()">
         <h1>Sign in</h1>
-        <p class="hint">Administration of this Trefaro instance.</p>
+        <!-- The organization, not the product: the configuration endpoint is
+             public, so the name is known before anybody signs in. (No backticks
+             in a template comment — they end the template literal.) -->
+        <p class="hint">Administration — {{ config.organizationName() }}</p>
 
         <label for="email">E-mail address</label>
         <input
@@ -120,6 +124,7 @@ import { AuthService } from '../../features/auth/auth.service';
   `,
 })
 export class LoginPage {
+  protected readonly config = inject(AppConfigService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 

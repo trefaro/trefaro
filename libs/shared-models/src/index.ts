@@ -191,6 +191,7 @@ export {
   type AppConfigChange,
   type AppConfigSettings,
   type BrandingImageKind,
+  type BrandingImages,
   type FontFamilyOption,
   type PluginDescriptor,
   type PluginMountPoint,

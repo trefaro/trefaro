@@ -1,4 +1,4 @@
-import type { BrandingImageKind } from '@trefaro/shared-models';
+import type { BrandingImageKind, BrandingImages } from '@trefaro/shared-models';
 import type { AppConfigRecord } from './ports/app-config.repository';
 
 /**
@@ -34,13 +34,14 @@ export const MEDIA_URL_PREFIX = '/api/media';
  */
 export const BRANDING_URL_PREFIX = `${MEDIA_URL_PREFIX}/branding`;
 
-/** The two URLs as the configuration payload and the upload answers carry them. */
-export interface BrandingImageUrls {
-  readonly logoUrl: string | null;
-  readonly appIconUrl: string | null;
-}
-
-export function brandingImageUrls(record: AppConfigRecord): BrandingImageUrls {
+/**
+ * The two URLs as the configuration payload and the upload answers carry them.
+ *
+ * The shape lives in `shared-models` rather than here: the design page of the
+ * organizer client reads exactly this answer, and a second declaration of the
+ * same two fields is a second place to change.
+ */
+export function brandingImageUrls(record: AppConfigRecord): BrandingImages {
   return {
     logoUrl: brandingImageUrl('logo', record.logoPath, record.updatedAt),
     appIconUrl: brandingImageUrl(

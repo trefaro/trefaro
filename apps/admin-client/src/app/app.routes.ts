@@ -137,6 +137,12 @@ export const appRoutes: Route[] = [
         title: 'Administrators',
       },
       {
+        path: 'design',
+        loadComponent: () =>
+          import('./pages/design/design-page').then((m) => m.DesignPage),
+        title: 'Design',
+      },
+      {
         path: 'modules',
         loadComponent: () =>
           import('./pages/modules/modules-page').then((m) => m.ModulesPage),

@@ -64,6 +64,8 @@ describe('AppConfigService', () => {
     expect(service.plugins()).toEqual([]);
     expect(service.webPushPublicKey()).toBeNull();
     expect(service.isModuleEnabled('chat')).toBe(false);
+    // The header of both clients shows this before anything has loaded.
+    expect(service.organizationName()).toBe('Trefaro');
   });
 
   it('fetches the configuration from the public endpoint', async () => {
@@ -76,6 +78,7 @@ describe('AppConfigService', () => {
     expect(service.isModuleEnabled('chat')).toBe(true);
     expect(service.isModuleEnabled('profiles')).toBe(false);
     expect(service.webPushPublicKey()).toBe('vapid-public-key');
+    expect(service.organizationName()).toBe('Democracy International e.V.');
   });
 
   it('requests the configuration only once, however many callers await it', async () => {
@@ -139,5 +142,22 @@ describe('AppConfigService', () => {
 
     await retried;
     expect(service.config()).toEqual(config);
+  });
+
+  it('reads the configuration again after this client changed it', async () => {
+    const loaded = service.ensureLoaded();
+    http.expectOne('/api/config').flush(config);
+    await loaded;
+
+    // What the design page does after a save: the server owns the answer — the
+    // trimmed name, the font as a stack, the logo URL with its new version — so
+    // the client re-reads instead of merging its own write into the cache.
+    const reloaded = service.reload();
+    http
+      .expectOne('/api/config')
+      .flush({ ...config, organizationName: 'Mehr Demokratie e.V.' });
+    await reloaded;
+
+    expect(service.organizationName()).toBe('Mehr Demokratie e.V.');
   });
 });

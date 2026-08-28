@@ -5,6 +5,7 @@ import {
   RouterLinkActive,
   RouterOutlet,
 } from '@angular/router';
+import { AppConfigService } from '@trefaro/shared-config';
 import { PluginSlot } from '@trefaro/shared-plugins';
 import { ThemeService } from '@trefaro/shared-theming';
 import { AuthService } from './features/auth/auth.service';
@@ -28,6 +29,7 @@ import { AuthService } from './features/auth/auth.service';
 })
 export class App {
   protected readonly theme = inject(ThemeService);
+  protected readonly config = inject(AppConfigService);
   protected readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 

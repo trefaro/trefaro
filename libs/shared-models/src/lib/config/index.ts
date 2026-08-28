@@ -14,6 +14,7 @@ export {
   brandingTypeSummary,
   isBrandingImageKind,
   type BrandingImageKind,
+  type BrandingImages,
 } from './branding';
 export {
   DEFAULT_FONT_FAMILY_KEY,

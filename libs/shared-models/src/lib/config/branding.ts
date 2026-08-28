@@ -33,6 +33,24 @@ export function isBrandingImageKind(
 }
 
 /**
+ * The two public image URLs, as the upload and removal endpoints answer them.
+ *
+ * Both of them every time, not only the one that just changed: the version in
+ * `?v=` is `app_config.updated_at` and therefore belongs to the row, so
+ * replacing the logo gives the app icon a new URL as well. A response carrying
+ * one of them would leave the design page holding an address that is no longer
+ * the current one.
+ *
+ * The same two values appear in `AppConfig` — `theme.logoUrl` and `appIconUrl` —
+ * because that is where an anonymous visitor reads them. This type is what the
+ * writing side answers with.
+ */
+export interface BrandingImages {
+  readonly logoUrl: string | null;
+  readonly appIconUrl: string | null;
+}
+
+/**
  * What may be uploaded as a logo or an app icon.
  *
  * Its own list, not the registration form's catalogue (`UPLOAD_TYPES`): the two

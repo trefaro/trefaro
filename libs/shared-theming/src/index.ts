@@ -5,5 +5,13 @@
  * properties, which is what allows the architecture to forbid plug-ins from
  * shipping CSS.
  */
-export { deriveThemeVariables, readableTextColor } from './lib/theme-variables';
+export {
+  MIN_DERIVED_TEXT_CONTRAST,
+  MIN_SURFACE_CONTRAST,
+  MIN_TEXT_CONTRAST,
+  PAGE_BACKGROUND_COLOR,
+  contrastRatio,
+  deriveThemeVariables,
+  readableTextColor,
+} from './lib/theme-variables';
 export { FALLBACK_THEME, ThemeService } from './lib/theme.service';

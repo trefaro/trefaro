@@ -30,6 +30,8 @@ table {
 }
 
 :focus-visible {
-  outline: 2px solid var(--trefaro-color-accent, #e8a33d);
+  /* The darkened shade, for the reason the participant client's stylesheet
+     gives: a thin focus ring is the strictest contrast case. */
+  outline: 2px solid var(--trefaro-color-accent-strong, #a86f13);
   outline-offset: 2px;
 }
