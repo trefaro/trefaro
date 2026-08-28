@@ -1,8 +1,15 @@
 # Phase 1 — Kern-MVP „Eventmanagement" (alle P1)
 
-**Status: Plan. Beginnt erst auf ausdrückliches Go von Marius** — Stand
-26.08.2026 liegt es nicht vor. Bis dahin wird an diesem Dokument gearbeitet,
-nicht am Code.
+**Status: abgeschlossen am 28.08.2026 (AP 13), Meilenstein M2 erreicht mit einer
+offenen Zusage** — alle dreizehn Arbeitspakete liegen, `todo.md` ist
+durchgearbeitet, F22–F24 sind gegen die Umsetzung geprüft. Offen bleibt allein
+Punkt 5 der Definition of Done: die Feedbackrunde mit Democracy International hat
+nicht stattgefunden. Was sie beantworten soll, steht gesammelt in `todo.md` unter
+_Questions for the pilot partner_.
+
+Dieses Dokument war bis AP 12 ein Plan und ist ab AP 13 ein Protokoll: die
+Abschnitte oberhalb von _Fortschritt_ sind auf den tatsächlichen Verlauf
+korrigiert, die Abweichungen stehen gebündelt unter _Was anders lief_.
 
 Grundlage: Kapitel 6, Phase 1 in
 [`Anforderungsanalyse_und_Umsetzungsplan.md`](Anforderungsanalyse_und_Umsetzungsplan.md).
@@ -190,6 +197,12 @@ Neue Kerntabellen, in der Reihenfolge ihrer Migrationen. Konventionen wie in
 `1787702400000-InitialCoreSchema.ts`: explizites SQL statt generiertem,
 `snake_case`, sprechende Constraint-Namen, `timestamptz`.
 
+**Stand nach AP 13 gegen die Migrationen abgeglichen** — dieser Block beschreibt
+nicht mehr den Plan, sondern die dreizehn Migrationen, die tatsächlich liegen
+(`1787788800000-AdminIdentity` bis `1787789900000-Invitations`). Wo der
+ursprüngliche Entwurf etwas anderes sagte, steht die Abweichung mit ihrer
+Begründung dabei.
+
 ```
 admin_user             (id uuid pk, email citext-ähnlich unique(lower), password_hash,
                         name, created_at, updated_at, last_login_at?)
@@ -201,23 +214,54 @@ event_series           (id uuid pk, slug unique, name, description, logo_path?,
                         created_at, updated_at)
 event                  (id uuid pk, series_id fk→event_series, slug, name, description,
                         logo_path?, starts_at, ends_at, timezone, event_type
-                        [presence|online|hybrid], status [draft|published|archived],
+                        [onsite|online|hybrid], status [draft|published|archived],
                         venue_name?, venue_address?, online_url?, languages varchar[],
-                        registration_opens_at?, registration_closes_at?, capacity?,
                         follow_up_body?, created_at, updated_at)
                         unique (series_id, slug)
+                        ← `onsite`, nicht `presence` (F25): der Typwert ist Code, und
+                          Code ist englisch. Dieser Plan schrieb `presence`, AP 3 legte
+                          `onsite` an — die Abweichung ist die richtige Seite
+                        ← **ohne registration_opens_at, registration_closes_at und
+                          capacity.** Der Schemaentwurf 5.3 nannte sie, AP 3 hat sie nicht
+                          angelegt und AP 4 brauchte sie nicht: FR 3.5 verlangt kein
+                          Anmeldefenster und keine Eventkapazität. Wenn sie kommen, dann
+                          mit einem Paket, das sie auch bedient — ein Feld ohne Bedeutung
+                          sieht aus wie eine Funktion, die es gibt
+                        ← follow_up_body kam in AP 11 per ALTER TABLE dazu (F50)
 
-registration_field_def (id uuid pk, event_id fk→event ON DELETE CASCADE, field_key,
-                        label, type [text|select|checkbox|file], options_json,
-                        required, sort, max_file_size?, accepted_mime_types?)
-                        unique (event_id, field_key)
+registration_field_def (id uuid pk, event_id fk→event ON DELETE CASCADE, key,
+                        label, type [text|select|checkbox|file], help_text?,
+                        options_json jsonb, accept_json jsonb, max_size_bytes?,
+                        required, sort, created_at, updated_at)
+                        unique (event_id, key)
+                        ← die Spalte heißt `key`, nicht `field_key` (AP 6); `field_key`
+                          heißt sie nur dort, wo sie als Fremdverweis auftritt — in
+                          `attachment`
+                        ← `file` und mit ihm `accept_json`/`max_size_bytes` kamen in AP 7
+                          per ALTER TABLE, zusammen mit der erweiterten Typ-Constraint
+                        ← `sort` ist bewusst **nicht** eindeutig: die Reihenfolge wird als
+                          Ganzes in einer Transaktion neu vergeben (0…n-1)
 registration           (id uuid pk, event_id fk→event, email, first_name, last_name,
                         phone?, origin?, custom_fields_json jsonb, status
                         [pending|confirmed|cancelled], newsletter_opt_in,
                         contact_opt_out, confirmed_at?, created_at, updated_at)
                         unique (event_id, lower(email))
-attachment             (id uuid pk, owner_type [registration|…], owner_id, file_path,
-                        original_name, mime_type, size, created_at)
+attachment             (id uuid pk, registration_id fk→registration ON DELETE CASCADE,
+                        field_key, file_path, file_name, mime_type, size_bytes,
+                        created_at)
+                        unique (registration_id, field_key), unique (file_path)
+                        ← **echter Fremdschlüssel statt owner_type/owner_id** (F37): dieser
+                          Plan nannte das polymorphe Paar, AP 7 hat es verworfen. Das
+                          Erste, was diese Tabelle garantieren muss, ist, dass keine Datei
+                          ihren Eigentümer überlebt — und ein polymorphes Paar lässt sich
+                          überhaupt nicht einschränken. Phase 3 (Anhänge an Chatnachrichten)
+                          ergänzt einen zweiten, nullable Schlüssel und einen Check, dass
+                          genau einer gesetzt ist
+                        ← `field_key` ohne Fremdschlüssel auf `registration_field_def`:
+                          eine gelöschte Frage löscht keine Antworten (F34), und eine
+                          Datei ist eine Antwort
+                        ← `file_path` ist relativ zum Volume und wird nie statisch
+                          ausgeliefert (E9)
 
 program_item           (id uuid pk, event_id fk→event ON DELETE CASCADE, title,
                         description?, speaker?, starts_at, ends_at,
@@ -281,12 +325,6 @@ registration           ← ergänzt um IDX_registration_email auf lower(email): 
                         Adressliste gruppiert nach Adresse, der Widerspruch schreibt
                         alle Zeilen einer Adresse (F57). Bis AP 12 wurde eine Adresse
                         nur je Event gesucht
-
--- Plug-in-eigene Tabelle, Migration des Raumplanungs-Plug-ins:
-plugin_room_planning_program_item_room
-                       (program_item_id fk→program_item ON DELETE CASCADE,
-                        room_id fk→plugin_room_planning_room ON DELETE CASCADE,
-                        pk (program_item_id, room_id))
 ```
 
 Zwei Regeln, die sich aus Phase 0 ergeben und hier greifen:
@@ -313,7 +351,8 @@ unauthentifiziert; `/api/admin/**` verlangt eine Sitzung (E16).
 | `POST /api/admin/auth/login` · `logout` · `GET auth/me`              | UC 01                                                        | 1   |
 | `GET/POST/DELETE /api/admin/admins`                                  | FR 1.2                                                       | 1   |
 | `GET/POST/PATCH/DELETE /api/admin/series[/:id]`                      | FR 2.1, 2.2                                                  | 2   |
-| `GET/POST/PATCH/DELETE /api/admin/events[/:id]`                      | FR 3.1, 3.2                                                  | 3   |
+| `GET/POST /api/admin/series/:id/events`                              | FR 3.1, Liste und Anlegen unter der Reihe (E7)               | 3   |
+| `GET/PATCH/DELETE /api/admin/events/:id`                             | FR 3.2, ein Event für sich                                   | 3   |
 | `GET /api/admin/events/:id/dashboard`                                | FR 3.8                                                       | 10  |
 | `GET/POST /api/admin/events/:id/registration-fields`                 | F12, Formular je Event                                       | 6   |
 | `PUT /api/admin/events/:id/registration-fields/order`                | Reihenfolge als Ganzes (F35)                                 | 6   |
@@ -545,6 +584,10 @@ Feedbackrunde mit Democracy International auswerten.
 | M1          | AP 5  | Kernschleife lauffähig → erste Feedbackrunde mit dem Pilotpartner (F19) |
 | M2          | AP 13 | Phase 1 abgeschlossen, alle P1 dieser Phase umgesetzt und geprüft       |
 
+**Erreicht:** M0 am 26.08.2026, M1 am 27.08.2026, M2 am 28.08.2026 — M1 allerdings
+nur technisch: die Feedbackrunde, die den Meilenstein ausmacht, hat nicht
+stattgefunden (Punkt 5 der Definition of Done).
+
 ## Querschnittsregeln für jedes Arbeitspaket
 
 - **Erst der Test, dann der Code.** Unit-Tests je Service und Guard, API-Vertrag
@@ -574,7 +617,7 @@ Feedbackrunde mit Democracy International auswerten.
 Vier der Entscheidungen dieses Plans verändern den Schemaentwurf und stehen
 deshalb im Entscheidungsprotokoll von
 [`Anforderungsanalyse_und_Umsetzungsplan.md`](Anforderungsanalyse_und_Umsetzungsplan.md)
-(Version 1.4), nicht nur hier:
+— dort eingetragen mit Version 1.4, inzwischen 1.15 —, nicht nur hier:
 
 - **F22** — Admin-Sitzungen als Tabelle `admin_session` statt JWT (E1); ergänzt
   Schema 5.3.
@@ -587,6 +630,14 @@ Bestätigt von Marius am 26.08.2026, zusammen mit E11 (Selbstbedienung über
 signierten Link, keine Schemafolge). Die übrigen Entscheidungen E2–E4, E6–E10,
 E12–E14 und E16 sind Umsetzungsdetails innerhalb des bereits Entschiedenen und
 bleiben in diesem Dokument.
+
+**In AP 13 gegen die Umsetzung geprüft: keine der drei ist abgewichen.** F23 hat
+einen dritten Tokenzweck bekommen (Widerspruch gegen Einladungen, AP 12) — eine
+Ergänzung, die die Zeile im Referenzdokument jetzt nennt. F24 ist in AP 12
+dreifach präzisiert worden (F55, F57, F59), jede Präzisierung mit eigener Zeile.
+Und das Referenzdokument hat einen Anhangspunkt dazubekommen, der nicht aus
+diesem Plan stammt, sondern aus dem Phasenabschluss: TLS gehört zur
+Installations-Story, weil das Sitzungscookie in Produktion `Secure` trägt.
 
 ## Fortschritt
 
@@ -1737,17 +1788,194 @@ Weiteres, das beim Bauen entschieden oder gelernt wurde:
   den 404-Rumpf riss den Teardown eines völlig anderen Tests mit. Aufräumcode
   muss mit einem 404 rechnen.
 
+### AP 13 — Abschluss der Phase (erledigt) → **Meilenstein M2**
+
+Stand 28.08.2026. Kein fachliches Paket, sondern vier Prüfungen — und zwei davon
+haben etwas gefunden, was zwölf grüne Arbeitspakete nicht gefunden hatten.
+
+**1. `todo.md`, Abschnitt Phase 1, ist durchgearbeitet.** Sechs Einträge sind
+abgehakt, elf sind mit Begründung in die Phase gewandert, die sie entscheiden
+kann, und keiner ist offen geblieben. Der Eintrag zum Lese-Port der
+Überbuchungsprüfung war schon seit AP 9 erledigt und stand nur noch da. Neu
+dazugekommen: ein Abschnitt **_Questions for the pilot partner_**. Er sammelt die
+fünf Fragen, die dieses Repository nicht beantworten kann — kein mehrzeiliges
+Textfeld, Antworten nur im Detailbereich statt als Tabellenspalten, fünf erlaubte
+Dateitypen, keine Suche in den Antworten, was Teilnehmende an ihrer Anmeldung
+selbst ändern dürfen, Plätze in parallelen Sessions, und was ein Raumplan
+eigentlich verweigern soll. Sie standen vorher über drei Phasenabschnitte
+verstreut; wer in die Feedbackrunde geht, braucht sie an einer Stelle.
+
+**2. F22–F24 gegen die Umsetzung geprüft — keine Abweichung.**
+
+- **F22** (Sitzung als Zeile, nicht als JWT): `admin_session` speichert
+  `character(64)` — den SHA-256-Hex eines 256-Bit-Zufallstokens —, eindeutig, mit
+  `ON DELETE CASCADE` auf den Zugang. Das Cookie ist `HttpOnly`, `SameSite=Lax`,
+  `Path=/api`, `Secure` in Produktion. Genau, was entschieden wurde.
+- **F23** (Token signiert, nicht gespeichert): `confirmation_token` kommt im
+  ganzen Quellbaum nicht vor. Der Signierer trägt inzwischen **drei** Zwecke —
+  Bestätigung, Selbstbedienung, Widerspruch gegen Einladungen —, jeder in der
+  Signatur. Das ist eine Ergänzung, keine Abweichung; die Zeile F23 im
+  Referenzdokument nennt sie jetzt.
+- **F24** (Einladungen nur mit Widerspruchsweg): umgesetzt und in AP 12 dreifach
+  präzisiert — F55 (Empfänger sind Anmeldungen, keine Adressen), F57 (der
+  Widerspruch gilt für alle Zeilen einer Adresse), F59 (er stoppt Einladungen,
+  nicht transaktionale Mail). Alle drei stehen als eigene Entscheidungen im
+  Referenzdokument.
+
+**3. Der Fünf-Container-Stack aus dem Stand — und hier lag ein echter Fehler.**
+`docker compose -f infra/docker-compose.yml up -d --build` gegen ein leeres
+Volume, und der Server kam hoch, migrierte alle fünfzehn Migrationen (dreizehn
+Kern-, zwei Plug-in-Migrationen) und antwortete durch NGINX: `/api/health`,
+`/api/config`, beide Clients mit richtigem `<base href>`, das Plug-in-Bundle unter
+`/api/plugins/room-planning/main.js`, `/socket.io` durchgeproxied, `/api/admin/**`
+mit 401. Dazu liefen die Verifikationsskripte aus `tools/spike-verification/`
+gegen diesen Stack statt gegen einen Dev-Server — `verify-proxy.mjs` (PWA-Manifest,
+Service Worker, `/admin`-Redirect, zwei verschiedene Builds, WebSocket-Upgrade),
+`verify-api.mjs` und `verify-admin-access.mjs` einschließlich der Login-Sperre, die
+kein automatischer Test auslösen darf. Alle grün. Aber:
+
+- **`ADMIN_BOOTSTRAP_EMAIL` und `ADMIN_BOOTSTRAP_PASSWORD` erreichten den
+  Container nicht.** Sie stehen in `.env.example`, der Server liest sie, E3 baut
+  darauf — und `infra/docker-compose.yml` reichte sie nie durch. Eine frische
+  Produktionsinstanz hatte damit **keinen Administrator und keinen Weg, einen
+  anzulegen**: jeder Endpunkt, der einen anlegen könnte, verlangt eine Sitzung
+  (E16). Der Compose-Stack ist der einzige unterstützte Betrieb, also war das
+  FR 1.2/1.3 im Zielbetrieb, nicht in der Entwicklung. Behoben, zusammen mit
+  `ADMIN_SESSION_TTL_HOURS` (dokumentiert, aber unerreichbar) und einem Kommentar,
+  warum `DATABASE_SYNCHRONIZE` bewusst **nicht** durchgereicht wird und
+  `UPLOAD_DIR`/`PLUGIN_BUNDLE_DIR` dem Image gehören. Danach steht im Log
+  „Created the first administrator … from the environment", und der Login durch
+  NGINX liefert eine Sitzung. **Warum kein Test das fand:** die E2E-Suiten fahren
+  den Server per `nx serve` mit der `.env` der Entwicklung, nicht als Container;
+  die CI **baut** die Images und **startet** sie nie zusammen. Der einzige Test
+  dafür ist genau der, den AP 13 verlangt.
+- **Ohne TLS ist der Stack nur auf `localhost` bedienbar.** Das Sitzungscookie
+  trägt `Secure`, sobald `NODE_ENV=production` (E2), und ein Browser speichert ein
+  `Secure`-Cookie nur über HTTPS — `localhost` ist die übliche Ausnahme. TLS
+  gehört damit zur Installations-Story und nicht zur Härtung; das steht jetzt so
+  in `todo.md` und als Punkt 18 im Anhang des Referenzdokuments. `Secure` fallen
+  zu lassen ist keine Alternative.
+
+**4. Dieses Dokument gegen den tatsächlichen Verlauf.** Der Schemablock der Phase
+beschrieb an vier Stellen den Plan und nicht die Migrationen: `attachment` als
+polymorphes Paar (tatsächlich echter Fremdschlüssel, F37), `event_type` als
+`presence` (tatsächlich `onsite`, F25), `registration_field_def.field_key`
+(tatsächlich `key`, dazu `help_text`, `accept_json`, `max_size_bytes`) und ein
+Registrierungsfenster am Event, das nie angelegt wurde. Korrigiert, mit der
+Abweichung als Notiz daneben statt als stiller Überschreibung. Dazu stand die
+Join-Tabelle des Raumplanungs-Plug-ins zweimal im Block, und die API-Tabelle
+schnitt die Event-Endpunkte falsch: angelegt und gelistet wird unter der Reihe
+(`/api/admin/series/:id/events`), ein einzelnes Event ist flach adressiert. Alle
+übrigen Zeilen stimmen mit den Controllern überein — abgeglichen gegen die
+Dekoratoren im Quellbaum, nicht gelesen. Der Server bedient insgesamt 44 Pfade;
+die vier, die in der Tabelle fehlen, sind aus Phase 0 (`/api/config`,
+`/api/health`, die Push-Abonnements und die Raum-CRUD des Plug-ins).
+
+**Geprüft am Ende, nicht behauptet.** `nx run-many -t lint test build` über zwölf
+Projekte grün, **746 Unit-Tests** (server 518, admin-client 91, shared-models 67,
+user-client 18, shared-theming 14, shared-plugins 14, shared-http 13,
+plugin-room-planning 8, shared-config 3); `nx run-many -t e2e --parallel=1` grün
+mit **278 API-Vertragstests** und **315 Browsertests** (189 Veranstalter-, 126
+Nutzer-Client, je über Chromium, Firefox und WebKit); der Container-Stack wie
+oben. Ausgeführt gegen dieselbe Instanz und mit demselben Parallelitätsgrad wie
+die CI — die Lektion aus AP 12.
+
+Was AP 13 **nicht** konnte: die Feedbackrunde mit Democracy International. Sie ist
+Punkt 5 der Definition of Done und der einzige offene Punkt der Phase.
+
+## Was anders lief
+
+Der Plan dieses Dokuments ist an zwölf Stellen von der Umsetzung korrigiert
+worden. Gesammelt, weil ein Leser des Plans sonst dreizehn Paketprotokolle lesen
+muss, um zu wissen, was heute gilt:
+
+1. **Zwei Entscheidungen des Plans sind gekippt, beide beim Schreiben der
+   Migration.** `attachment` sollte ein polymorphes `owner_type`/`owner_id`-Paar
+   tragen und trägt einen echten Fremdschlüssel auf `registration` (F37, AP 7);
+   `event_type` sollte `presence` heißen und heißt `onsite` (F25, AP 3). Der
+   Grund ist in beiden Fällen derselbe: eine Constraint, die die Datenbank nicht
+   durchsetzen kann, ist keine.
+2. **Drei Spalten des Schemaentwurfs wurden nie angelegt** — `registration_opens_at`,
+   `registration_closes_at` und `capacity` am Event. FR 3.5 verlangt kein
+   Anmeldefenster und keine Eventkapazität, und AP 4 brauchte sie nicht. Dieselbe
+   Linie ließ `program_item.sort` (F40), `media_link.sort` (F52) und
+   `program_item.room_id` (F21) weg.
+3. **Zwei Spalten entstanden später als geplant, und zwar absichtlich.**
+   `program_item.registration_enabled`/`capacity` erst in AP 9, zusammen mit
+   `program_item_signup`, das ihnen Bedeutung gibt (F42); `event.follow_up_body`
+   erst in AP 11. Ein Flag, das nichts liest, sieht aus wie eine Funktion, die es
+   gibt.
+4. **Der `TokenSigner` wanderte von AP 1 nach AP 4.** Die Sitzungen brauchen ihn
+   nicht — sie sind opake Zufallstokens (E1) — und ein Baustein ohne Verwendung
+   ist unbelegt.
+5. **Drei Drosselungsgrenzen sind höher als geplant**: Login 20 statt 5 Versuche
+   pro fünf Minuten (AP 1), öffentliche Registrierungen 60 statt 30 (AP 7),
+   Bestätigungen 60 statt 30 (AP 9). Grund jedes Mal derselbe: ein Büro hinter
+   einer öffentlichen Adresse, und eine Testsuite, die von einer Adresse aus
+   arbeitet. Ein Limit, das für Tests gelockert wird, wird nicht mehr geprüft.
+   Die beiden Erhöhungen aus AP 7 und AP 9 warten auf Marius' Bestätigung
+   (`todo.md`, Phase 5).
+6. **Die Event-Endpunkte sind anders geschnitten** als die API-Tabelle sagte:
+   unter der Reihe anlegen und listen, einzeln flach adressieren. Folge von E7 —
+   ein Slug ist je Reihe eindeutig, also braucht das Anlegen den Elternteil.
+7. **Das Event-Formular ist nicht mehr die Adresse des Events** (F48, AP 10).
+   `…/events/:id` ist das Dashboard, `…/edit` das Formular — dieselbe Ordnung wie
+   bei der Reihe, aber im Plan stand sie nicht.
+8. **Der „kleine `CoreModuleEnabledGuard`" aus AP 11 wurde ein Mechanismus.** Ein
+   abgeschaltetes Kernmodul antwortet 404 wie ein Plug-in, und `/api/config` und
+   der Guard lesen denselben Zwischenspeicher, damit kein Client von einem Modul
+   erfährt, dessen API 404 gibt (F53). `media-links` ist das erste Kernmodul, das
+   davon Gebrauch macht.
+9. **Eine Seite kam dazu, eine fiel weg.** Der Nutzer-Client bekam in AP 2 eine
+   Reihen-Detailseite, die der Plan nicht verlangte — eine Liste von Links braucht
+   ein Ziel. Die Phase-0-Platzhalterseite des Veranstalter-Clients ist entfallen:
+   die Reihenliste _ist_ die Startseite.
+10. **Zwei Testinfrastruktur-Regeln entstanden aus Fehlschlägen, nicht aus dem
+    Plan.** Fixture-Namen tragen keine Uhrzeit, sondern `<scope>-<pid>-<n>` (AP 12,
+    nach Kollisionen am eindeutigen Slug-Index), und jede Browsersuite meldet sich
+    einmal pro **Lauf** an statt pro Fixture (AP 12, nach einem 429 im Seed). Dazu
+    die Einsicht, die die CI erzwang: die drei E2E-Projekte teilen sich die
+    Drosselung **eines** Servers, also ist jedes Limit ein Budget für den ganzen
+    Lauf.
+11. **Vier Zusagen des Plans sind nicht eingelöst, drei davon bewusst.** Der Test
+    gegen den echten SMTP-Server des Pilotpartners fehlt (Zugangsdaten; von Marius
+    am 27.08.2026 ohne Termin verschoben, spätestens Phase 5). Die
+    Überbuchungsprüfung selbst ist Phase 4, ihre Daten liegen seit AP 9. Der
+    Einhängepunkt `event-dashboard` im Plug-in-Vertrag wird erst gezogen, wenn ein
+    Plug-in eine Kachel mitbringt (F47). Nicht bewusst, sondern übersehen: die
+    Bootstrap-Zugangsdaten im Compose-Stack, gefunden in AP 13.
+12. **Die Reihenfolge der Pakete hielt.** Dreizehn Pakete, dreizehn Freigaben,
+    kein Paket musste zurückgenommen oder umgestellt werden — und jede Migration
+    lief einmal vorwärts und einmal rückwärts, bevor sie committet wurde.
+
 ## Definition of Done für Phase 1
 
-1. Alle P1-Anforderungen aus der Scope-Tabelle sind umgesetzt und durch Tests
-   belegt.
-2. `todo.md`, Abschnitt Phase 1, ist abgearbeitet oder mit Begründung
-   verschoben; die beiden _Known gaps_ sind geschlossen.
-3. Der Fünf-Container-Stack läuft mit den neuen Migrationen aus dem Stand
-   (`docker compose up`, NFR 15), einschließlich Bootstrap-Admin.
-4. CI grün: Lint, Unit, E2E gegen echte Datenbank und echte Browser,
-   Image-Builds.
-5. Democracy International hat die Fassung aus M1 gesehen und das Feedback ist
-   ausgewertet — verschoben oder umgesetzt, aber nicht unerwähnt.
-6. `docs/PHASE1.md` beschreibt, was tatsächlich passiert ist, mit einem
-   Abschnitt „Was anders lief".
+Stand 28.08.2026, nach AP 13. Fünf von sechs Punkten sind erfüllt; der sechste
+liegt nicht in der Hand dieses Repositories.
+
+1. ✅ **Alle P1-Anforderungen aus der Scope-Tabelle sind umgesetzt und durch
+   Tests belegt.** Die zwölf Zeilen der Scope-Tabelle deckungsgleich mit Kapitel 6
+   des Referenzdokuments; nichts davon ist ausgefallen. Die P1-Anforderungen 1.4
+   (Whitelabel-Oberfläche), 1.5 (Modulverwaltung) und 3.4 (Nachrichtenübersicht)
+   sind **nicht** Teil dieser Phase — sie stehen in Kapitel 6 unter Phase 2 bzw.
+   Phase 3, und der Abschnitt _Bewusst draußen_ sagt das seit dem ersten Entwurf.
+2. ✅ **`todo.md`, Abschnitt Phase 1, ist abgearbeitet**, und die beiden
+   _Known gaps_ sind seit AP 1 geschlossen. Sechs Einträge abgehakt, elf mit
+   Begründung verschoben, fünf Fragen an den Pilotpartner ausgelagert.
+3. ✅ **Der Fünf-Container-Stack läuft aus dem Stand** — nach dem Fehler, den
+   diese Prüfung gefunden hat: die Bootstrap-Zugangsdaten erreichten den
+   Server-Container nicht. Behoben und danach verifiziert, einschließlich
+   Bootstrap-Admin, fünfzehn Migrationen, beider Clients, des Plug-in-Bundles und
+   des WebSocket-Pfads durch NGINX. Einschränkung, die dabei sichtbar wurde: ohne
+   TLS ist der Stack nur auf `localhost` bedienbar (siehe AP 13).
+4. ✅ **CI grün**: Lint, Unit, E2E gegen echte Datenbank und echte Browser,
+   Image-Builds. 746 Unit-Tests, 278 API-Vertragstests, 315 Browsertests über
+   Chromium, Firefox und WebKit.
+5. ⛔ **Nicht erfüllt: Democracy International hat die Fassung aus M1 nicht
+   gesehen.** M1 war nach AP 5 erreicht, die Runde ist seither offen, und dieses
+   Repository kann sie nicht selbst abhalten. Was sie beantworten soll, steht
+   vollständig und an einer Stelle in `todo.md` unter _Questions for the pilot
+   partner_ — fünf Fragen, alle billig zu ändern, keine davon blockiert Phase 2.
+   Der Punkt bleibt offen und wird nicht stillschweigend abgehakt.
+6. ✅ **`docs/PHASE1.md` beschreibt, was tatsächlich passiert ist**, mit dem
+   Abschnitt _Was anders lief_ (zwölf Punkte) und dreizehn Paketprotokollen.

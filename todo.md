@@ -9,6 +9,10 @@ Every entry below says **which phase makes it checkable** and **how to check it*
 Work the matching section at the end of each phase; an entry that turns out to
 still be premature moves down rather than being ticked.
 
+One section is not keyed to a phase: _Questions for the pilot partner_ collects
+what no phase can decide because it needs an answer from Democracy International.
+Those entries wait for the feedback round, not for a milestone.
+
 Entries link to the spike protocol they came from, so the reasoning stays
 attached to the task.
 
@@ -30,6 +34,19 @@ an instance were exposed today.
       default), so every endpoint including this one is covered. It stays
       anonymous by design until phase 3 ties a subscription to a profile.
       → see [`03-web-push.md`](docs/spikes/03-web-push.md#open-items)
+- [x] **A fresh production instance had no administrator.** Found and closed in
+      AP 13, while bringing the five-container stack up from an empty volume:
+      `infra/docker-compose.yml` never passed `ADMIN_BOOTSTRAP_EMAIL` and
+      `ADMIN_BOOTSTRAP_PASSWORD` to the server container. They are in
+      `.env.example`, the server reads them, E3 depends on them — and the only
+      supported deployment dropped them, so the instance came up with no account
+      and no way to make one (every route that could requires a session, E16).
+      Fixed together with `ADMIN_SESSION_TTL_HOURS`, and the two install
+      documents now name the values a fresh instance cannot start or log in
+      without. **The class of problem stays:** a key in `env.ts` plus
+      `.env.example` is not configuration until compose passes it on, and nothing
+      in the test suite can see that — the e2e suites run `nx serve`, and CI
+      builds the images without ever starting them together.
 
 ---
 
@@ -43,11 +60,14 @@ is assigned to one of its work packages.
       once a session proves the caller may know that much. Deleting an
       administrator ends their sessions through the foreign key, which is why
       sessions are rows rather than signed tokens (F22).
-- [ ] **Overbooking check gets its data.** FR 3.10 programme item sign-ups exist
-      from this phase on; the room planning plug-in needs to read their counts.
-      The plug-in must not query core tables directly — this needs a read
-      capability in `business/plugin-api`, which is a versioned contract change.
-      → implement the check itself in phase 4
+- [x] **Overbooking check gets its data.** Done in AP 9. Programme item sign-ups
+      exist (FR 3.10), and the room planning plug-in reads their counts through
+      `PluginProgramReads` (E12, F45): five fields per programme item and counts
+      for a list of ids, provided by the global `PluginHostModule` — so a plug-in
+      still imports nothing but `plugin-api` and still queries no core table.
+      `PLUGIN_API_VERSION` went to **1.1.0**, with a case in the compatibility
+      test. What is deliberately not built is the **judgement** — see the phase 4
+      entry and the question under _Questions for the pilot partner_.
 - [x] **Look a registration up without decoding its token.** ~~AP 4 creates rows
       that the API can delete but not list, so both e2e suites read the id out of
       the confirmation token's payload.~~ Closed in AP 5: both suites use
@@ -55,19 +75,6 @@ is assigned to one of its work packages.
       `registrationIdFromPath` and `idFromToken` are gone. The organizer client's
       teardown now removes an event's registrations before its series, which is
       what E14 requires of anything that seeds a confirmed one.
-- [ ] **Mail against the pilot partner's real SMTP server.** AP 4 proves the
-      double opt-in against Mailpit, in unit tests, in the API contract suite and
-      in three browsers — but Mailpit accepts everything. What it cannot show:
-      authentication, TLS, SPF/DKIM alignment and whether the mail lands in an
-      inbox rather than in spam. The phase plan assigned this to AP 4; it needs
-      credentials for a server this project does not have. Verify when it
-      happens: `SMTP_SECURE=true` with real credentials, and a confirmation mail
-      that arrives without being filed as junk.
-      **Deliberately deferred, no date yet** (Marius, 27.08.2026). It is not tied
-      to the M1 feedback round any more and does not block a work package —
-      but it must happen before a release: an instance whose mail lands in spam
-      cannot register anyone, and no test in this repository can find that out.
-      Latest point is the hardening of phase 5, together with TLS.
 - [x] **Tell a participant when an organizer cancels their registration.** Done
       in AP 12 (F59). `ParticipantsService.setStatus` takes an `actor`, and the
       notice goes out only when the **organizer** cancels a **confirmed**
@@ -86,14 +93,6 @@ is assigned to one of its work packages.
       for a file is in `validateSubmission` rather than beside it. Verified in
       `apps/server-e2e/src/api/attachments.spec.ts`, including the file count in
       the volume before and after a deletion.
-- [ ] **Throttle registration attempts per e-mail address, not only per client.**
-      `REGISTRATIONS_PER_WINDOW` counts per client address, which is what the
-      guard can see — so one address can be mailed as often as a single client is
-      allowed to submit at all (60 per five minutes since AP 7, raised because an
-      office shares one public address). The endpoint sends a mail to whatever
-      address it is given, so the number that matters is per recipient. Needs a
-      second counter with its own key; belongs with the hardening of phase 5,
-      together with the SMTP work.
 - [x] **The browser suites still log in five times per run.** Done in AP 12,
       and not a moment too early: the new participant-client suite pushed the
       count past the twenty attempts the login allows in five minutes, and the
@@ -104,17 +103,27 @@ is assigned to one of its work packages.
       last, after the teardown that needs it. Same shape as `admin-client-e2e`
       has had since AP 1. What is left of the original entry: nothing — the API
       contract suite already shared one session, and both browser suites now do.
-- [ ] **A sweep over the upload volume.** `AttachmentsService` compensates where
-      the database and the volume can disagree, and it compensates towards
-      keeping bytes rather than losing them — so a crash between two steps can
-      leave a file that no row references. It is logged when it happens by
-      compensation, but nothing finds one left by a crash. A sweep that lists the
-      volume, joins it against `attachment.file_path` and reports (not deletes)
-      what nothing points at would close it. Phase 5: right now it would be
-      stock-keeping against a problem no instance has yet.
-- [ ] **Three questions about the field kit for the M1 feedback round.** All were
-      decided deliberately, and all are cheap to change if Democracy
-      International says otherwise. First: there is **no multi-line text type** —
+
+**Worked through in AP 13 on 28.08.2026 — nothing open is left here.** Six
+entries are closed above; everything else that stood in this section moved, with
+its reasoning, to the phase that can actually decide it: the real SMTP server,
+the per-recipient throttle, the volume sweep, the shared e2e limits, the
+invitation sender's pause and retry and the `List-Unsubscribe` header to
+phase 5; the `newsletter` module key to phase 2; the overbooking rule and the
+double booking to phase 4; and the questions nobody in this repository can
+answer to _Questions for the pilot partner_ below.
+
+---
+
+## Questions for the pilot partner — open until the feedback round
+
+Neither gaps nor deferred work: decisions that were made deliberately, that are
+cheap to change, and that this repository cannot settle on its own. They belong
+in the feedback round with Democracy International after M1 (F19). Each entry
+says what was decided, what changing it would cost, and where the change would
+go — ask before building any of them.
+
+- [ ] **Three questions about the field kit.** First: there is **no multi-line text type** —
       a text field holds 500 characters, which is a paragraph, but it renders as
       a single line. Second: the answers appear in the **detail panel only, not
       as table columns**, because the overview has to stay readable and fast at
@@ -123,30 +132,12 @@ is assigned to one of its work packages.
       for at most five files. If the pilot partner collects something else —
       scanned forms as TIFF, a spreadsheet — the catalogue in
       `libs/shared-models/src/lib/registrations/upload.ts` is where it goes, and
-      it needs a signature in `file-signature.ts` to go with it. Ask before
-      building any of the three.
+      it needs a signature in `file-signature.ts` to go with it.
 - [ ] **The participant search does not look into the answers.** It covers first
       name, last name and e-mail (F32). Searching `custom_fields_json` means a
       JSONB predicate that no index of ours covers, so it is not a small
       addition — and nobody has asked for it yet. Revisit if the pilot partner
       does.
-- [ ] **Build the overbooking check** (FR 3.11, phase 4). Everything it needs
-      exists since AP 9: the room's capacity, the sessions assigned to it, and
-      their sign-up counts — the last of those through the plug-in's read port
-      (F45), which is why the plug-in still touches no core table. What is
-      deliberately _not_ built is the judgement: whether more sign-ups than
-      chairs is a warning, a refusal or a hint, and where an organizer should see
-      it. `GET …/rooms/:id/schedule` reports the numbers side by side and decides
-      nothing. Ask the pilot partner before inventing a rule.
-- [ ] **Two sessions in one room at the same time** is not refused either, for
-      the same reason: the schedule carries `startsAt`/`endsAt` per booking, and
-      what a double booking should _do_ is a phase 4 product decision.
-- [ ] **Confirm the confirmation rate limit.** Sixty attempts per five minutes
-      per address (`CONFIRMATIONS_PER_WINDOW`), raised from thirty in AP 9 to
-      match the registration endpoint. The endpoint is idempotent and changes
-      nothing after the first call, and against guessing an HMAC thirty and sixty
-      are equally hopeless — what the tighter number did hit was an office behind
-      one address and the test suites. Say the word and it goes back.
 - [ ] **Decide what a participant may change about their own registration.**
       "My registration" (E11) currently shows the answers to the event's own
       questions read-only and offers cancelling; changing a name or an answer is
@@ -158,54 +149,15 @@ is assigned to one of its work packages.
       whether they mean to split their morning. If the pilot partner wants it
       refused, the check belongs in `ProgramSignupsService` and needs the
       programme of the event, not just the one session.
+- [ ] **What should a room plan refuse?** Two questions in one, both phase 4 work
+      whose _rule_ is a product decision: more sign-ups than chairs (FR 3.11), and
+      two sessions in the same room at the same time. The numbers are all there
+      since AP 9 — capacity, the sessions assigned to a room, their sign-up counts
+      through the plug-in's read port — and `GET …/rooms/:id/schedule` reports them
+      side by side and decides nothing. Whether an organizer wants a warning, a
+      refusal or a hint, and where they should see it, is what the answer decides.
 
-- [ ] **The three e2e projects share one server's rate limits.** CI runs them
-      with `--parallel=1` against a single instance, so every limit that counts
-      per client address is a budget for the whole run: sixty public
-      registrations per five minutes (`REGISTRATIONS_PER_WINDOW`) and twenty
-      logins (`LOGIN_ATTEMPTS_PER_WINDOW`). The API contract suite spends most of
-      the registrations, deliberately — the double opt-in through the real form
-      _is_ its subject. The first CI run of AP 12 failed because the new
-      participant-client suite added six more and pushed the total over sixty;
-      the fix was to seed that fixture instead (`support/registration-seed.ts`).
-      What is left is the margin, and it is thin. Before a suite adds
-      registrations through the form again, either count what the run already
-      makes or seed. Worth a proper answer in phase 5, when the throttle gets a
-      second counter per recipient anyway: a test profile that raises the limits
-      would work, but only if it cannot be the one an instance ships with.
-
-- [ ] **The invitation sender has no pause and no retry.** AP 12 sends one mail
-      after another as fast as the mail server accepts them, and a refused
-      address is recorded as failed and never tried again. Against Mailpit and
-      against a well-behaved server that is right; against a shared mail service
-      with a per-minute limit, two hundred invitations in twenty seconds is how
-      an instance gets itself throttled or blacklisted — and a mailbox that was
-      briefly full stays "failed" for good. Both wants the same seam: a
-      configurable pause between mails, and a second attempt for a delivery that
-      failed with a temporary code. The rows already carry what a retry needs
-      (`status`, `failure`), so this is the sender's own loop and no schema
-      change. Belongs with the SMTP work of phase 5, where a real server is
-      available to measure against.
-- [ ] **No `List-Unsubscribe` header on invitations.** The objection link is in
-      the body (F58), which is where a person looks. Mail clients look for the
-      header, and Gmail and Outlook weigh its absence when they decide whether a
-      bulk message is spam — so the feature that works may still not arrive. It
-      needs `List-Unsubscribe` plus `List-Unsubscribe-Post: List-Unsubscribe=One-Click`,
-      which in turn needs an endpoint that accepts a bare POST without the page
-      in front of it, and the `Mailer` port to carry headers. Deliberately not in
-      AP 12: one-click unsubscribe from a header is exactly the request E5b says
-      a link previewer must not be able to make, so the endpoint needs its own
-      reasoning rather than a copy of this one. Phase 5, with the SMTP work.
-- [ ] **`CORE_MODULES` still lists `newsletter`, and nothing reads it.** The
-      descriptor is from phase 0 and appears in `/api/config` as a module that is
-      switched off. Nothing checks the flag, because there is no newsletter
-      module in v1 and there will not be one (F8) — and inviting former
-      participants is deliberately _not_ it (F55), so AP 12 did not give the flag
-      a meaning either. Same smell as the fields AP 6 and AP 9 refused to add: a
-      flag nothing reads looks like a feature that exists. Decide in phase 2,
-      when the module administration makes the list visible to an organizer:
-      either the key goes, or it is renamed to what the opt-in management it
-      would actually gate is called.
+---
 
 ## Checkable after phase 2 — whitelabel, module administration, i18n, PWA
 
@@ -275,6 +227,29 @@ is assigned to one of its work packages.
       Verify: the dashboard offers a "view the public page" link that works in
       development and in the container stack, and the address stays visible for
       copying.
+- [ ] **`CORE_MODULES` still lists `newsletter`, and nothing reads it.** The
+      descriptor is from phase 0 and appears in `/api/config` as a module that is
+      switched off. Nothing checks the flag, because there is no newsletter
+      module in v1 and there will not be one (F8) — and inviting former
+      participants is deliberately _not_ it (F55), so AP 12 did not give the flag
+      a meaning either. Same smell as the fields AP 6 and AP 9 refused to add: a
+      flag nothing reads looks like a feature that exists. Decide in phase 2,
+      when the module administration makes the list visible to an organizer:
+      either the key goes, or it is renamed to what the opt-in management it
+      would actually gate is called.
+- [ ] **A new mail language is a code change.** The templates are TypeScript, one
+      file per locale behind an interface every locale must satisfy in full
+      (`business/mail/templates/{en,de}.ts`). That is what makes a missing
+      translation a compile error instead of a mail that quietly goes out in the
+      wrong language — and exactly what stands in the way of the promise that an
+      organization maintains its own languages (chapter 4, "Mehrsprachigkeit").
+      Four mails are affected: confirmation request, receipt, cancellation notice
+      and invitation. Phase 2 brings Transloco for the UI, and the same catalogue
+      has to reach the mails: texts in files the instance loads at runtime, with
+      the completeness check kept in some form — a language that is 80 % done must
+      be visible as such, not as English mixed into German. Verify: an
+      organization adds a locale without rebuilding the image, and the double
+      opt-in mail arrives in it.
 
 ## Checkable after phase 3 — profiles, messaging, chat, push
 
@@ -340,7 +315,18 @@ is assigned to one of its work packages.
       README; they are deliberately not registered as no-op plug-ins. Order from
       the plan: programme proposals, forum, room planning, QR check-in.
 - [ ] **Implement the overbooking check** in the room planning plug-in: sign-ups
-      per programme item against room capacity.
+      per programme item against room capacity. Everything it needs exists since
+      AP 9 — the room's capacity, the sessions assigned to it, and their sign-up
+      counts through the plug-in's read port (F45), which is why the plug-in still
+      touches no core table. What is deliberately _not_ built is the judgement:
+      whether more sign-ups than chairs is a warning, a refusal or a hint, and
+      where an organizer should see it. `GET …/rooms/:id/schedule` reports the
+      numbers side by side and decides nothing. Ask the pilot partner first — the
+      question is under _Questions for the pilot partner_.
+- [ ] **Two sessions in one room at the same time** is not refused either, for
+      the same reason: the schedule carries `startsAt`/`endsAt` per booking, and
+      what a double booking should _do_ is a product decision, not a phase-4
+      implementation detail.
 - [ ] **Room planning stays structured for now.** An OpenStreetMap/Leaflet floor
       plan is the later stage (F14) — and never a Google map (NFR 9).
 - [ ] **Each new plug-in proves the contract.** Verify per plug-in: own tables
@@ -377,9 +363,16 @@ is assigned to one of its work packages.
   - a plug-in migration must be timestamped after any core migration it depends
     on
     → [`01-client-plugin.md`](docs/spikes/01-client-plugin.md#open-items)
-- [ ] **TLS.** Deliberately absent from `infra/nginx/trefaro.conf` so a local
-      `docker compose up` works without certificates. Terminating Let's Encrypt
-      belongs in the deployment documentation and an optional compose overlay.
+- [ ] **TLS — and it is not optional in practice.** Deliberately absent from
+      `infra/nginx/trefaro.conf` so a local `docker compose up` works without
+      certificates. What AP 13 made concrete while checking the stack: the session
+      cookie carries `Secure` as soon as `NODE_ENV=production` (E2), and a browser
+      stores a `Secure` cookie only over HTTPS — `localhost` being the usual
+      exception. So the published stack is loginnable on the operator's own
+      machine and **nowhere else** until TLS terminates in front of it. That makes
+      Let's Encrypt part of the installation story rather than of the hardening:
+      documentation plus an optional compose overlay, and the note that the
+      alternative — dropping `Secure` — is not one.
 - [ ] **Decide the fate of `/spikes`.** The participant client's diagnostics page
       is reachable without a login. It exposes nothing `/api/config` does not
       already expose publicly, so it is not a leak — but decide whether it stays
@@ -395,14 +388,20 @@ is assigned to one of its work packages.
       verified by hand, via
       `tools/spike-verification/verify-admin-access.mjs`, because exercising it
       locks the route for fifteen minutes.
-- [ ] **Confirm the registration rate limit.** Thirty attempts per five minutes
-      per address (`REGISTRATIONS_PER_WINDOW` in
-      `public-registrations.controller.ts`), and the same for the confirmation
-      endpoint. Deliberately without a block period, unlike the login: this
-      endpoint sends mail to an address the caller chooses, but a participant who
-      mistypes their own address a few times has to be able to fix it. Not
-      covered by an automatic test for the same reason as the login block — the
-      window is five minutes, and a suite that trips it cannot repeat.
+- [ ] **Confirm the registration and confirmation rate limits.** **Sixty**
+      attempts per five minutes per client address, for the public registration
+      form (`REGISTRATIONS_PER_WINDOW`) and for the confirmation endpoint
+      (`CONFIRMATIONS_PER_WINDOW`) alike. Both started at thirty and were raised
+      during phase 1 — the registration form in AP 7, the confirmation in AP 9 —
+      because an office behind one public address, and the test suites, both hit
+      the tighter number. Deliberately without a block period, unlike the login:
+      this endpoint sends mail to an address the caller chooses, but a participant
+      who mistypes their own address a few times has to be able to fix it. The
+      confirmation endpoint is idempotent and changes nothing after the first
+      call, and against guessing an HMAC thirty and sixty are equally hopeless.
+      Not covered by an automatic test for the same reason as the login block —
+      the window is five minutes, and a suite that trips it cannot repeat. **Say
+      the word and either goes back to thirty.**
 - [ ] **Security review.** Auth, upload validation, plug-in isolation, and
       whether the OpenAPI description should keep being served publicly (it is
       today, on the grounds that the source is AGPL anyway).
@@ -411,6 +410,71 @@ is assigned to one of its work packages.
 - [ ] **Load tests** (NFR 12).
 - [ ] **socket.io shared adapter** — only if more than one server container is
       ever run. Not needed for one instance per organization.
+- [ ] **Mail against the pilot partner's real SMTP server.** AP 4 proves the
+      double opt-in against Mailpit, in unit tests, in the API contract suite and
+      in three browsers — but Mailpit accepts everything. What it cannot show:
+      authentication, TLS, SPF/DKIM alignment and whether the mail lands in an
+      inbox rather than in spam. The phase plan assigned this to AP 4; it needs
+      credentials for a server this project does not have. Verify when it
+      happens: `SMTP_SECURE=true` with real credentials, and a confirmation mail
+      that arrives without being filed as junk.
+      **Deliberately deferred, no date yet** (Marius, 27.08.2026). It is not tied
+      to the M1 feedback round any more and does not block a work package —
+      but it must happen before a release: an instance whose mail lands in spam
+      cannot register anyone, and no test in this repository can find that out.
+      Latest point is the hardening of phase 5, together with TLS.
+- [ ] **Throttle registration attempts per e-mail address, not only per client.**
+      `REGISTRATIONS_PER_WINDOW` counts per client address, which is what the
+      guard can see — so one address can be mailed as often as a single client is
+      allowed to submit at all (60 per five minutes since AP 7, raised because an
+      office shares one public address). The endpoint sends a mail to whatever
+      address it is given, so the number that matters is per recipient. Needs a
+      second counter with its own key; belongs with the hardening of phase 5,
+      together with the SMTP work.
+- [ ] **A sweep over the upload volume.** `AttachmentsService` compensates where
+      the database and the volume can disagree, and it compensates towards
+      keeping bytes rather than losing them — so a crash between two steps can
+      leave a file that no row references. It is logged when it happens by
+      compensation, but nothing finds one left by a crash. A sweep that lists the
+      volume, joins it against `attachment.file_path` and reports (not deletes)
+      what nothing points at would close it. Phase 5: right now it would be
+      stock-keeping against a problem no instance has yet.
+- [ ] **The three e2e projects share one server's rate limits.** CI runs them
+      with `--parallel=1` against a single instance, so every limit that counts
+      per client address is a budget for the whole run: sixty public
+      registrations per five minutes (`REGISTRATIONS_PER_WINDOW`) and twenty
+      logins (`LOGIN_ATTEMPTS_PER_WINDOW`). The API contract suite spends most of
+      the registrations, deliberately — the double opt-in through the real form
+      _is_ its subject. The first CI run of AP 12 failed because the new
+      participant-client suite added six more and pushed the total over sixty;
+      the fix was to seed that fixture instead (`support/registration-seed.ts`).
+      What is left is the margin, and it is thin. Before a suite adds
+      registrations through the form again, either count what the run already
+      makes or seed. Worth a proper answer in phase 5, when the throttle gets a
+      second counter per recipient anyway: a test profile that raises the limits
+      would work, but only if it cannot be the one an instance ships with.
+- [ ] **The invitation sender has no pause and no retry.** AP 12 sends one mail
+      after another as fast as the mail server accepts them, and a refused
+      address is recorded as failed and never tried again. Against Mailpit and
+      against a well-behaved server that is right; against a shared mail service
+      with a per-minute limit, two hundred invitations in twenty seconds is how
+      an instance gets itself throttled or blacklisted — and a mailbox that was
+      briefly full stays "failed" for good. Both wants the same seam: a
+      configurable pause between mails, and a second attempt for a delivery that
+      failed with a temporary code. The rows already carry what a retry needs
+      (`status`, `failure`), so this is the sender's own loop and no schema
+      change. Belongs with the SMTP work of phase 5, where a real server is
+      available to measure against.
+- [ ] **No `List-Unsubscribe` header on invitations.** The objection link is in
+      the body (F58), which is where a person looks. Mail clients look for the
+      header, and Gmail and Outlook weigh its absence when they decide whether a
+      bulk message is spam — so the feature that works may still not arrive. It
+      needs `List-Unsubscribe` plus `List-Unsubscribe-Post: List-Unsubscribe=One-Click`,
+      which in turn needs an endpoint that accepts a bare POST without the page
+      in front of it, and the `Mailer` port to carry headers. Deliberately not in
+      AP 12: one-click unsubscribe from a header is exactly the request E5b says
+      a link previewer must not be able to make, so the endpoint needs its own
+      reasoning rather than a copy of this one. Phase 5, with the SMTP work.
 - [ ] **Usability test with Democracy International**: the thesis' seven tasks
       repeated, plus the use cases it never tested.
 

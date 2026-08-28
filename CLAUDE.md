@@ -102,12 +102,13 @@ Entscheidungen aus Phase 0, die nicht erneut aufgerollt werden sollten:
 **Offene Punkte** stehen in `todo.md`, nach der Phase gruppiert, ab der sie
 prüfbar werden — nach jeder Phase durchgehen.
 
-## Stand in Phase 1 (laufend, Stand 27.08.2026)
+## Stand nach Phase 1 (abgeschlossen 28.08.2026, Meilenstein M2)
 
 Plan und Protokoll: `docs/PHASE1.md` (Arbeitspakete AP 1–13, Entscheidungen
-E1–E16, je Paket ein Abschnitt „erledigt" mit dem, was tatsächlich passierte).
+E1–E16, je Paket ein Abschnitt „erledigt" mit dem, was tatsächlich passierte;
+dazu die Abschnitte _Was anders lief_ und die abgehakte Definition of Done).
 Marius gibt jedes Paket einzeln frei — **nicht** ohne Aufforderung mit dem
-nächsten anfangen.
+nächsten anfangen; das gilt für Phase 2 genauso.
 
 Erledigt: **AP 1** Login, Admin-Zugänge, Guard über `/api/admin` · **AP 2**
 Veranstaltungsreihen · **AP 3** Events und öffentliche Landingpage · **AP 4**
@@ -127,10 +128,21 @@ unter `…/edit`) · **AP 11** Follow-Up-Text am Event und Medien-Links
 `media-links` ist das erste abschaltbare Kernmodul mit eigener API · **AP 12**
 Ehemalige Teilnehmende einladen (`business/invitations`, `invitation` +
 `invitation_recipient`, `ContactsService` im Registrierungsmodul,
-Widerspruchsseite im Nutzer-Client) und der Storno-Hinweis an Teilnehmende.
-Damit sind **alle fachlichen Pakete der Phase 1 durch**; offen ist nur **AP 13**
-(Phasenabschluss: `todo.md` durchgehen, `docs/PHASE1.md` gegen den tatsächlichen
-Verlauf prüfen, Feedbackrunde mit Democracy International auswerten).
+Widerspruchsseite im Nutzer-Client) und der Storno-Hinweis an Teilnehmende ·
+**AP 13** Phasenabschluss: `todo.md` durchgearbeitet (sechs Einträge zu, elf verschoben, ein neuer Abschnitt
+_Questions for the pilot partner_), F22–F24 gegen die Umsetzung geprüft (keine
+Abweichung; F23 trägt inzwischen drei Tokenzwecke), der Fünf-Container-Stack aus
+dem Stand hochgefahren — dabei fiel auf, dass `infra/docker-compose.yml` die
+Bootstrap-Zugangsdaten nicht durchreichte, also **hatte eine frische
+Produktionsinstanz keinen Administrator**; behoben.
+
+**Phase 1 ist damit abgeschlossen**, mit einer offenen Zusage: die Feedbackrunde
+mit Democracy International (Punkt 5 der Definition of Done) hat nicht
+stattgefunden. Die fünf Fragen an den Pilotpartner stehen gesammelt in `todo.md`
+unter _Questions for the pilot partner_ — keine davon blockiert Phase 2.
+Nächster Schritt wäre **Phase 2** (Whitelabel-Theming, Modulverwaltung, i18n,
+PWA, Installations-Story) — erst auf Marius' Go, und mit einem eigenen
+`docs/PHASE2.md` wie in Phase 1.
 
 Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
 
@@ -345,6 +357,23 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
 <projekt> <ms>` in zwei Dateien = ein Rennen am eindeutigen Index, sobald zwei
   Playwright-Arbeiter in derselben Millisekunde säen. Der Fehlschlag liest sich
   wie ein kaputtes Fixture.
+
+- **Eine Umgebungsvariable lebt an drei Stellen, nicht an zwei.** `env.ts` liest
+  sie, `.env.example` dokumentiert sie — und `infra/docker-compose.yml` muss sie
+  an den Server-Container **durchreichen**, sonst existiert sie im Zielbetrieb
+  nicht. Genau das war mit `ADMIN_BOOTSTRAP_*` passiert: eine frische
+  Produktionsinstanz hatte keinen Administrator und keinen Weg, einen anzulegen
+  (AP 13). Kein Test der Suite kann das finden — die E2E-Suiten fahren den Server
+  per `nx serve`, und die CI **baut** die Images, ohne sie je zusammen zu starten.
+- **Wer Installierbarkeit prüfen will, fährt den Stack hoch.**
+  `docker compose -f infra/docker-compose.yml up -d --build` gegen ein leeres
+  Volume, mit eigenem `-p`-Projektnamen, danach `down -v`. Das ist die einzige
+  Prüfung, die NFR 15 belegt, und sie gehört an das Ende jeder Phase.
+- **Ohne TLS ist der Produktionsstack nur auf `localhost` bedienbar.** Das
+  Sitzungscookie trägt `Secure`, sobald `NODE_ENV=production` (E2), und ein
+  Browser speichert ein `Secure`-Cookie nur über HTTPS. TLS gehört damit zur
+  Installations-Story, nicht zur Härtung; `Secure` fallen zu lassen ist keine
+  Alternative.
 
 ## Betriebskontext
 
