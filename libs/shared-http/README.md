@@ -1,7 +1,13 @@
 # shared-http
 
-This library was generated with [Nx](https://nx.dev).
+How both clients talk to the server: the typed `ApiClient`, the API base URL
+token, `ApiError` (which turns a problem response into something a page can
+render), and the socket.io connection.
 
-## Running unit tests
+One place, so a change to error handling or to the base path reaches both
+clients — and so relative URLs keep working identically behind the Angular dev
+server's proxy and behind NGINX.
 
-Run `nx test shared-http` to execute the unit tests.
+```bash
+nx test shared-http
+```

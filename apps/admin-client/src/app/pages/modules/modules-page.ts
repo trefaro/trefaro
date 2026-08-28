@@ -5,8 +5,8 @@ import { PluginLoaderService } from '@trefaro/shared-plugins';
 /**
  * Module and plug-in administration (FR 1.5).
  *
- * Read-only in phase 0: it shows what the configuration reports and how each
- * plug-in bundle fared. Turning modules on and off from here is phase 2 work,
+ * Read-only until phase 2: it shows what the configuration reports and how
+ * each plug-in bundle fared. Turning modules on and off from here is phase 2 work,
  * together with the theme settings — until then the `module_config` table is the
  * switch.
  *

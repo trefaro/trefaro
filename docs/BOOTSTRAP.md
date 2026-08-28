@@ -160,13 +160,20 @@ Join-Tabelle** (F21, entschieden am 26.08.2026) — `program_item` bekommt kein
 `room_id`. Der Widerspruch zwischen Schemaentwurf 5.3 und Architekturregel 2 ist
 damit aufgelöst; der Entwurf im Anforderungsdokument ist korrigiert. Begründung,
 verworfene Alternativen und die bewusst akzeptierten Konsequenzen in
-[`docs/spikes/02-server-plugin.md`](spikes/02-server-plugin.md). Umgesetzt ist
-noch nichts — das steht in [`todo.md`](../todo.md) unter Phase 1.
+[`docs/spikes/02-server-plugin.md`](spikes/02-server-plugin.md). **Umgesetzt in
+AP 9** (27.08.2026), zusammen mit dem Lese-Port im Plug-in-Vertrag (F45) und dem
+nachgezogenen Fremdschlüssel auf `plugin_room_planning_room.event_id` (F46).
 
 ## Nächster Schritt
 
-Phase 1 — Kern-MVP Eventmanagement (alle P1). Der Plan dafür steht in
-[`PHASE1.md`](PHASE1.md): dreizehn Arbeitspakete in Abhängigkeitsreihenfolge, die
-Entscheidungen E1–E16, das Schema der Phase und die Abnahmekriterien. Herleitung
-in Kapitel 6 von `Anforderungsanalyse_und_Umsetzungsplan.md`. **Beginnt erst auf
-ausdrückliches Go von Marius**; Stand 26.08.2026 liegt es noch nicht vor.
+**Phase 1 ist abgeschlossen** (28.08.2026, Meilenstein M2): dreizehn
+Arbeitspakete, die Entscheidungen E1–E16 und was tatsächlich passierte stehen in
+[`PHASE1.md`](PHASE1.md), einschließlich des Abschnitts _Was anders lief_. Offen
+geblieben ist dort ein einziger Punkt, und keiner, den dieses Repository lösen
+kann: die Feedbackrunde mit Democracy International. Die Fragen dafür stehen
+gesammelt in [`todo.md`](../todo.md) unter _Questions for the pilot partner_.
+
+Als nächstes **Phase 2** — Whitelabel-Theming, Modulverwaltung, i18n zur
+Laufzeit, PWA-Ausbau, Installations-Story (Herleitung in Kapitel 6 von
+`Anforderungsanalyse_und_Umsetzungsplan.md`). **Beginnt erst auf ausdrückliches
+Go von Marius**, wie jedes Arbeitspaket der Phase 1 auch.

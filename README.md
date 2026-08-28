@@ -8,13 +8,26 @@ Every organization runs its **own instance** (Docker Compose, 5 containers). No 
 
 ## Status
 
-🚧 **Pre-alpha.** The concept is based on a master's thesis (empirical requirements analysis with NGOs, 2024).
+🚧 **Pre-alpha.** The concept is based on a master's thesis (empirical requirements analysis with NGOs, 2024). The paragraphs above describe the finished product; this section describes what exists.
 
-Phase 0 is complete: the monorepo, the strictly layered server, the plug-in
-mechanism on both sides, the container stack and the CI are in place, and the four
-architecture spikes the thesis left open are built and verified — see
-[`docs/spikes/`](docs/spikes/README.md). No event management features exist yet;
-that is phase 1.
+**Phase 0** built the foundation: the monorepo, the strictly layered server, the
+plug-in mechanism on both sides, the container stack, the CI, and the four
+architecture spikes the thesis left open — see
+[`docs/spikes/`](docs/spikes/README.md).
+
+**Phase 1 is complete** (28.08.2026): event series and events, the public start
+page and event landing page, registration with double opt-in and a configurable
+field kit including file upload, the participant overview, programme planning with
+per-session sign-up, the event dashboard, follow-up text and external media links,
+invitations to former participants — and administrator accounts with a login in
+front of all of it. An organization can run its event work on an instance today.
+The record, decision by decision, is in [`docs/PHASE1.md`](docs/PHASE1.md).
+
+**Not built yet:** whitelabel settings, module administration, runtime language
+switching and the PWA polish (phase 2); participant login, profiles, messaging,
+real-time chat and push (phase 3); the four curated plug-ins — programme
+proposals, forum, room planning, QR check-in (phase 4). What is deferred and why
+is in [`todo.md`](todo.md).
 
 `docs/BOOTSTRAP.md` sets up a development environment.
 `docs/Anforderungsanalyse_und_Umsetzungsplan.md` (German) holds the full

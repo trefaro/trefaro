@@ -117,6 +117,16 @@ of them checkable.
 - **Notification permission is asked for on a button press**, which is correct —
   but the participant client should explain why before asking (NFR 4). That is UI
   work for phase 3.
-- The service worker's `navigationUrls` excludes `/api/**` and `/socket.io/**`,
-  so the cache never answers an API call. Worth re-checking when the PWA is
-  polished in phase 2.
+- The service worker's `navigationUrls` excludes `/api/**`, `/socket.io/**` and —
+  **since 28.08.2026** — `/admin` and `/admin/**`. The last two were missing, and
+  this sentence used to name only the first two, which is how the gap survived a
+  whole phase: the worker is served from the root, so its scope is the entire
+  origin, and it answered navigations to `/admin/` from the participant client's
+  cache. That client has no route for `/admin/`, so its wildcard route redirected
+  to `/` — **the organizer client was unreachable** in the container stack, in any
+  browser that had once loaded the participant client. Only in a production build,
+  because that is the only place Angular registers the worker at all, which is why
+  every suite stayed green. `verify-proxy.mjs` now replays ngsw's own selection
+  rule against the built `ngsw.json`. Still worth re-checking when the PWA is
+  polished in phase 2 — and the lesson is the general one: a path added under this
+  origin that does not belong to the participant client belongs in that list.

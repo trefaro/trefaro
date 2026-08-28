@@ -22,9 +22,9 @@ export interface ChatEchoReply {
 /**
  * Real-time chat gateway (FR 4.5).
  *
- * Phase 0 carries only what the WebSocket spike needs: the connection lifecycle
- * and an echo message that proves a socket.io upgrade survives the NGINX reverse
- * proxy from both clients. Conversations, groups and image exchange arrive in
+ * Still carries only what the WebSocket spike of phase 0 needed: the connection
+ * lifecycle and an echo message that proves a socket.io upgrade survives the
+ * NGINX reverse proxy from both clients. Conversations, groups and image exchange arrive in
  * phase 3 and replace the echo handler.
  *
  * Origins are allow-listed by `ConfiguredIoAdapter`, which can read the

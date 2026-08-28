@@ -7,7 +7,11 @@ really survives the proxy.
 
 Every one of them found at least one defect that the unit tests did not:
 a database driver missing from the server image, `@IsUrl` accepting a bare word,
-a service worker cached forever, redirects pointing at the wrong port.
+a service worker cached forever, redirects pointing at the wrong port — and, in
+phase 1, the two that only a running container stack can show: the bootstrap
+credentials never reaching the server container, so a fresh instance had no
+administrator, and a service worker that answered `/admin/` from the participant
+client's cache, so the organizer client was unreachable.
 
 | Script                     | Needs                                                           |
 | -------------------------- | --------------------------------------------------------------- |
@@ -56,6 +60,11 @@ default port — because they are the WebSocket origin allow-list.
   environment: every `/api/admin/**` route needs a session (E16), and a room
   needs an event that exists (F46), so the script signs in and creates a series
   and an event of its own — and removes them again at the end.
+- `verify-proxy.mjs` also checks what the service worker claims: it replays
+  ngsw's own selection rule — one positive pattern matches, no negative one does —
+  against the built `ngsw.json`, for `/admin/`, `/api/config` and `/socket.io/`.
+  A unit test cannot see this and neither can a `fetch`-based check: only a real
+  browser runs a service worker, and only a production build registers one.
 - Every script exits non-zero on the first failed check, so they can be chained
   in a shell or a pipeline.
 - These are deliberately plain Node scripts rather than an Nx target: they test a

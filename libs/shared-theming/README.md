@@ -1,7 +1,14 @@
 # shared-theming
 
-This library was generated with [Nx](https://nx.dev).
+Whitelabel theming through CSS custom properties: `theme-variables.ts` computes
+the shades of the primary and accent colour, `ThemeService` writes them onto the
+document root.
 
-## Running unit tests
+Custom properties rather than compiled styles because plug-ins are web components
+that bring no CSS of their own (architecture rule 3) — they inherit the
+organization's colours by being inside the page, and that only works if the
+theme lives in inherited properties.
 
-Run `nx test shared-theming` to execute the unit tests.
+```bash
+nx test shared-theming
+```

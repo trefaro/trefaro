@@ -8,8 +8,8 @@ import { Module } from '@nestjs/common';
  * A profile appears in results only after its owner opted in (F13). This is
  * activist data: invisible is the default, findable is a decision.
  *
- * Structure only at this point: phase 0 validates the architecture, it does not
- * implement features. Controllers, services and repository ports arrive with
+ * Structure only: the module exists so the composition root and the layer
+ * boundaries are in place before there is anything to put in them. Controllers, services and repository ports arrive with
  * the phase named above.
  */
 @Module({})

@@ -8,9 +8,10 @@ import { Module } from '@nestjs/common';
  * fields (FR 4.3) — phase 3.
  * Managing and cancelling one's own registrations (FR 4.7) lives here too.
  *
- * Structure only at this point: phase 0 validates the architecture, it does not
- * implement features. Controllers, services and repository ports arrive with
- * the phase named above.
+ * Structure only: the module exists so the composition root and the layer
+ * boundaries are in place before there is anything to put in them.
+ * Controllers, services and repository ports arrive with the phase named
+ * above.
  */
 @Module({})
 export class ProfilesModule {}

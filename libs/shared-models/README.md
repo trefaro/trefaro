@@ -1,11 +1,15 @@
 # shared-models
 
-This library was generated with [Nx](https://nx.dev).
+The contract between the server and both clients: the payload types of every
+endpoint, plus the pure functions that must not be reimplemented per client —
+formatting a time in an event's zone (E8), building a public event address
+(`publicEventPath`), grouping a programme into days, deriving an invitation's
+state from its counts.
 
-## Building
+Framework-free on purpose. It is the only shared library the **server** imports,
+which is what makes a broken contract a build error rather than a failed request;
+an Angular dependency here would end that.
 
-Run `nx build shared-models` to build the library.
-
-## Running unit tests
-
-Run `nx test shared-models` to execute the unit tests via [Jest](https://jestjs.io).
+```bash
+nx test shared-models    # Jest — no browser environment needed
+```

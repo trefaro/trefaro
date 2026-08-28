@@ -366,6 +366,19 @@ go — ask before building any of them.
       in F32 because the extension needs rights a managed PostgreSQL may not
       grant), and the decision has to be made with a real database in front of
       it, not from the plan.
+- [ ] **There are no contribution guidelines, and phase 0 said there would be.**
+      Chapter 6 of the reference document names "Contribution-Guidelines" among
+      the phase 0 deliverables, next to the licence and the README; the licence and
+      the README exist, `CONTRIBUTING.md` does not. Noticed in the documentation
+      pass after phase 1. Most of the content is already decided and only needs
+      collecting — AGPL-3.0-or-later, Conventional Commits, a unit test with every
+      feature and Playwright for the interface, the layer boundaries as lint rules,
+      plug-in contract changes only with a version bump. What is **not** decided,
+      and cannot be decided here, is the policy: whether pull requests are accepted
+      at all before v1.0, DCO or CLA, who reviews, and how a plug-in gets into the
+      curated set. Ask before writing it. Phase 5, with the release and the
+      open-source announcement — a contribution guide for a project nobody can
+      contribute to yet would be the wrong kind of promise.
 - [ ] **Plug-in SDK documentation.** Three things phase 0 learned that a
       third-party plug-in author has to be told:
   - bundles are loaded same-origin and run with full page access, so plug-in
