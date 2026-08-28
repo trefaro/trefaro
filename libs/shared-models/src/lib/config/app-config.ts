@@ -34,6 +34,16 @@ export interface AppConfig {
    * own origin is a different one.
    */
   readonly publicUserClientUrl: string;
+  /**
+   * The organization's square app icon, or `null` while none is uploaded.
+   *
+   * Beside `organizationName` rather than inside {@link Theme}, because nothing
+   * in CSS refers to it: the theme is the set of values that become custom
+   * properties, and this one is read by the PWA manifest (F20) and by the
+   * preview on the design page. `null` means the shipped Trefaro icons apply —
+   * they are drawn as maskable, an uploaded one is not (E26).
+   */
+  readonly appIconUrl: string | null;
 }
 
 /** Longest instance name; matches `app_config.organization_name`. */

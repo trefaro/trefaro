@@ -19,7 +19,6 @@ import {
   REGISTRATION_TALLY,
   type RegistrationTally,
 } from '../registration/ports/registration-tally';
-import { toMediaUrl } from '../media/media-url';
 import {
   EVENT_REPOSITORY,
   EventSlugTakenError,
@@ -419,7 +418,8 @@ function toPublicEvent(record: EventRecord): PublicEvent {
     slug: record.slug,
     name: record.name,
     description: record.description,
-    logoUrl: toMediaUrl(record.logoPath),
+    // Never written either — see the same note in `event-series.service.ts`.
+    logoUrl: null,
     eventType: record.eventType,
     startsAt: record.startsAt.toISOString(),
     endsAt,

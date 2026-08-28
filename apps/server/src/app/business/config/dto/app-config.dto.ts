@@ -22,7 +22,15 @@ export class ThemeDto implements Theme {
   @ApiProperty({ example: '#e8a33d' })
   accentColor!: string;
 
-  @ApiProperty({ nullable: true, type: String, example: '/api/media/logo.svg' })
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    example: '/api/media/branding/logo?v=1787790100000',
+    description:
+      'Public URL of the logo, or `null` while none is uploaded. It names the ' +
+      'image rather than its stored path (E19); `?v=` changes whenever the ' +
+      'configuration does, which is what lets the bytes be cached for a year.',
+  })
   logoUrl!: string | null;
 
   @ApiProperty({
@@ -95,4 +103,16 @@ export class AppConfigDto implements AppConfig {
       'to a public event page. From the environment, not the database.',
   })
   publicUserClientUrl!: string;
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    example: '/api/media/branding/app-icon?v=1787790100000',
+    description:
+      'Public URL of the square app icon, or `null` while none is uploaded — ' +
+      'then the icons shipped with the participant client apply, which are ' +
+      'drawn as maskable (E26). Beside the theme rather than inside it: ' +
+      'nothing in CSS refers to it.',
+  })
+  appIconUrl!: string | null;
 }

@@ -11,6 +11,7 @@ import {
   isHexColor,
 } from '@trefaro/shared-models';
 import { ENV } from '../../core/config/env.module';
+import { brandingImageUrls } from './branding-url';
 import type { TrefaroEnv } from '../../core/config/env';
 import { PluginRegistryService } from '../plugin-manager';
 import { CoreModuleRegistryService } from './core-module-registry.service';
@@ -19,9 +20,6 @@ import {
   type AppConfigRecord,
   type AppConfigRepository,
 } from './ports/app-config.repository';
-
-/** Public URL prefix under which stored files are served. */
-const MEDIA_URL_PREFIX = '/api/media';
 
 /**
  * Assembles the configuration both clients fetch, and writes the part of it an
@@ -56,15 +54,16 @@ export class ConfigurationService {
   async getAppConfig(): Promise<AppConfig> {
     const config = await this.appConfig.load();
     const enabledModules = this.coreModules.enabledKeys();
+    // Built in one place for both images, because a stored path never appears in
+    // a URL (E19) and the version has to be the same in both.
+    const { logoUrl, appIconUrl } = brandingImageUrls(config);
 
     return {
       organizationName: config.organizationName,
       theme: {
         primaryColor: config.primaryColor,
         accentColor: config.accentColor,
-        logoUrl: config.logoPath
-          ? `${MEDIA_URL_PREFIX}/${config.logoPath}`
-          : null,
+        logoUrl,
         // The stored value is a catalogue key; the clients need the CSS stack.
         // Expanded here rather than in each client, so `--trefaro-font-family`
         // cannot mean two different things in two apps (E18).
@@ -81,6 +80,7 @@ export class ConfigurationService {
       // address the outside world uses, and the organizer client — a different
       // origin — cannot derive it.
       publicUserClientUrl: this.env.publicUserClientUrl,
+      appIconUrl,
     };
   }
 

@@ -5,7 +5,7 @@ import type {
   AttachmentRepository,
   NewAttachment,
 } from './ports/attachment.repository';
-import type { FileStore } from './ports/file-store';
+import type { FileArea, FileStore } from './ports/file-store';
 import type { UploadedFile } from './uploaded-file';
 
 const CREATED_AT = new Date('2026-08-24T09:30:00.000Z');
@@ -83,8 +83,11 @@ class FakeFileStore implements FileStore {
   readonly removed: string[] = [];
   private next = 1;
 
-  async save(bytes: Buffer): Promise<string> {
-    const path = `attachments/xx/file-${this.next++}`;
+  async save(area: FileArea, bytes: Buffer): Promise<string> {
+    const path =
+      area === 'attachments'
+        ? `attachments/xx/file-${this.next++}`
+        : `${area}/file-${this.next++}`;
     this.files.set(path, bytes);
     return path;
   }

@@ -1,8 +1,8 @@
 # Phase 2 — Whitelabel, Konfiguration, Mehrsprachigkeit, PWA
 
-**Status: in Arbeit** (28.08.2026). **AP 1 ist erledigt** (siehe _Fortschritt_);
-die Abschnitte oberhalb davon sind Plan, nicht Protokoll. Wie in Phase 1 gibt
-Marius jedes Paket einzeln frei — AP 2 wartet auf seine Freigabe.
+**Status: in Arbeit** (28.08.2026). **AP 1 und AP 2 sind erledigt** (siehe
+_Fortschritt_); die Abschnitte oberhalb davon sind Plan, nicht Protokoll. Wie in
+Phase 1 gibt Marius jedes Paket einzeln frei — AP 3 wartet auf seine Freigabe.
 
 **Die Entscheidungen E17–E29 sind am 28.08.2026 von Marius bestätigt** — sie
 werden nicht erneut aufgerollt, sondern nur gegen die Umsetzung geprüft (wie
@@ -609,6 +609,7 @@ Wird beim jeweiligen Paket eingetragen, nicht am Ende gesammelt:
 | F63 | `CORE_MODULES` listet nur Module, die es gibt; `newsletter` entfällt (E21, Bezug F8)              | 4   |
 | F64 | Die Ersteinrichtung ist tokengeschützt; `ADMIN_BOOTSTRAP_*` bleibt der unbeaufsichtigte Weg (E28) | 5   |
 | F65 | Die Schriftart ist ein mitgelieferter Katalog, kein Upload (E18, Bezug NFR 9)                     | 1   |
+| F66 | Wie ein Logo öffentlich wird, ohne die Anhänge mitzunehmen (E19, Bezug E9, F38)                   | 2   |
 
 Anhangspunkt 18 (TLS gehört zur Installations-Story) wird in AP 5 von „geplant"
 auf „umgesetzt" gezogen.
@@ -628,7 +629,7 @@ auf „umgesetzt" gezogen.
    `tools/spike-verification/` belegt.
 4. `docs/INSTALL.md` existiert und ist von jemandem nachvollziehbar, der dieses
    Repository nicht kennt (NFR 8).
-5. `todo.md` unter _Checkable after phase 2_ ist durchgearbeitet, F60–F65 stehen
+5. `todo.md` unter _Checkable after phase 2_ ist durchgearbeitet, F60–F66 stehen
    im Referenzdokument.
 6. Dieses Dokument ist von Plan auf Protokoll korrigiert und hat einen Abschnitt
    _Was anders lief_.
@@ -715,3 +716,79 @@ Pick<AppConfigRepository, 'load'>`). Es braucht die Standardsprache, nicht die
 Was AP 1 **nicht** enthält: die Oberfläche. Farben, Schrift und Name sind über
 die API einstellbar; die Design-Seite im Veranstalter-Client ist AP 3, und bis
 dahin ist `PATCH /api/admin/config` der Weg.
+
+### AP 2 — Logo und App-Icon (erledigt)
+
+Umgesetzt:
+
+- **`shared-models`** — `BRANDING_IMAGE_KINDS` (`logo`, `app-icon`),
+  `BRANDING_TYPES` mit PNG/JPEG/WebP und **ohne SVG**, `BRANDING_MIME_TYPES`,
+  `MAX_BRANDING_BYTES` (512 KB), `BRANDING_IMAGE_PART`, `brandingTypeSummary`,
+  `isBrandingImageKind`; `AppConfig` trägt jetzt `appIconUrl`.
+- **Migration `BrandingImages`** — `app_icon_path` und
+  `CHK_app_config_branding_paths`: beide Pfadspalten dürfen nur `branding/%`
+  enthalten.
+- **Server** — `BrandingService` (Prüfen, Schreiben, Ersetzen, Wegnehmen, Lesen),
+  `AdminBrandingController` mit `PUT`/`DELETE` je Bild unter
+  `/api/admin/config/{logo,app-icon}`, `BrandingMediaController` mit
+  `GET /api/media/branding/{logo,app-icon}` (öffentlich, ohne Pfadparameter),
+  `AppConfigRepository.setBrandingImage`, `FileStore.save` nimmt jetzt einen
+  **Bereich** (`attachments` | `branding`), `signatureType` in
+  `file-signature.ts` und `branding-url.ts` als einzige Stelle, die die zwei
+  öffentlichen URLs baut.
+- **`/api/config`** — `theme.logoUrl` ist nicht mehr `/api/media/<gespeicherter
+Pfad>`, sondern `/api/media/branding/logo?v=<updated_at>`; dazu `appIconUrl`.
+
+Nachweise: 20 neue Unit-Tests (`BrandingService`, Branding-Katalog in
+`shared-models`), 9 neue API-Vertragstests (`apps/server-e2e/src/api/branding.spec.ts`)
+— darunter die vier Punkte des Abnahmekriteriums. `down` der Migration einmal
+wirklich ausgeführt und wieder hochgezogen, dabei zusätzlich geprüft, dass das
+`CHECK` einen Anhangpfad tatsächlich ablehnt. F66 steht im Referenzdokument,
+Schema 5.3 nennt `app_icon_path` und das `CHECK`.
+
+Abweichungen und ihre Gründe:
+
+- **Drei Schichten für E19, nicht eine.** Geplant war „öffentlich, ohne
+  Pfadparameter". Dazu kamen zwei: der `FileStore` schreibt in einen **Bereich**
+  (`branding/` neben `attachments/`, im Volume mit `ls` prüfbar), und die
+  Datenbank lehnt eine Pfadspalte ab, die nicht dort hineinzeigt. Grund: das ist
+  die einzige öffentliche Route zu gespeicherten Bytes dieser Anwendung, und ihre
+  Nachbarn im Volume sind Visa-Dokumente (E9). Die Route allein wäre eine
+  Zusicherung über eine Datei; drei Schichten sind eine über den Zustand.
+- **Der Typ steht nirgends gespeichert, er wird beim Ausliefern aus den Bytes
+  gelesen.** Geplant war die Prüfung beim Hochladen (F38). Beim Ausliefern
+  braucht die Antwort aber einen `Content-Type`, und dafür gab es zwei Wege: eine
+  Spalte, oder dieselbe Signaturprüfung noch einmal. Die Spalte wäre ein zweiter
+  Ort, an dem der Typ steht, und der könnte falsch sein — also `signatureType`,
+  und ein Bild, dessen Bytes nachträglich etwas anderes sind, ist ein 404 mit
+  Logzeile.
+- **`Cache-Control` wird im Rumpf gesetzt, nicht per `@Header`.** Ein Dekorator
+  gilt auch für den 404 — und ein für ein Jahr zwischengespeicherter 404 auf
+  `…/logo` überlebt genau den Upload, der ihn heilen soll. `nosniff` und die CSP
+  bleiben Dekoratoren (auf **beiden** Handlern; ein Dekorator auf der geteilten
+  privaten Methode täte wortlos nichts).
+- **`toMediaUrl` ist weg, und Reihe und Event liefern `logoUrl: null`.** Der
+  Platzhalter aus Phase 0 baute `/api/media/<gespeicherter Pfad>` — genau die
+  Form, die E19 verbietet. Geschrieben wurde `event_series.logo_path` /
+  `event.logo_path` noch nie; die Spalten und die Payload-Felder bleiben, aber
+  ein Logo je Reihe braucht eine eigene pfadfreie Route. Steht in `todo.md`.
+- **Kein Prüfen der Bildmaße.** E26 schließt ein Bildbearbeitungspaket aus, also
+  weiß der Server nicht, ob ein App-Icon quadratisch ist. Die Bytegrenze bleibt
+  die einzige Aussage über das Bild; „quadratisch" sagt die Design-Seite in AP 3
+  und zeigt eine Vorschau.
+- **Die Version ist `app_config.updated_at`, also gemeinsam für beide Bilder.**
+  Ein Farbwechsel lädt das Logo einmal neu. Der Preis ist ein Bild von wenigen
+  Dutzend Kilobyte; die Alternative wäre eine zweite Spalte je Bild, die mit der
+  ersten in Schritt gehalten werden muss.
+- **Der Vertragstest liest eine Spalte direkt aus der Datenbank.** Das
+  Abnahmekriterium lautet „der gespeicherte Pfad ist nicht erreichbar" — und der
+  einzige Ort, der den Pfad kennt, ist die Zeile. Dafür hat
+  `support/database.ts` jetzt einen Lesezugriff (`brandingPaths`), den einzigen
+  in dieser Datei.
+- **Die Suite legt zurück, was sie gefunden hat.** `app_config` ist eine einzige
+  Zeile: sie holt die vorhandenen Bilder zuerst als Bytes ab und lädt sie am Ende
+  wieder hoch — sonst wäre eine gebrandete Instanz nach einem Testlauf ungebrandet.
+
+Was AP 2 **nicht** enthält: die Oberfläche. Hochladen geht über
+`PUT /api/admin/config/logo`; die Design-Seite mit Vorschau, Farbwählern und
+Kontrasthinweis ist AP 3 und schließt damit M3 ab.

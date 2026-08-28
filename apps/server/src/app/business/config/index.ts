@@ -5,6 +5,17 @@ export {
 } from './core-module-enabled.guard';
 export { CoreModuleRegistryService } from './core-module-registry.service';
 export { MODULE_FLAG_REFRESH_MS, ModuleFlagCache } from './module-flags';
+export {
+  BRANDING_URL_PREFIX,
+  MEDIA_URL_PREFIX,
+  brandingImageUrls,
+  type BrandingImageUrls,
+} from './branding-url';
+export {
+  BrandingService,
+  type BrandingImageBytes,
+  type BrandingImageUpload,
+} from './branding.service';
 export { ConfigurationModule } from './configuration.module';
 export { ConfigurationService } from './configuration.service';
 export {

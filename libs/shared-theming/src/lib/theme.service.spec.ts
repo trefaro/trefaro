@@ -37,11 +37,14 @@ describe('ThemeService', () => {
   });
 
   it('reports a logo once one is configured', () => {
-    service.apply({ ...FALLBACK_THEME, logoUrl: '/api/media/logo.svg' });
+    service.apply({
+      ...FALLBACK_THEME,
+      logoUrl: '/api/media/branding/logo?v=1787790100000',
+    });
 
     expect(service.hasLogo()).toBe(true);
     expect(root.style.getPropertyValue('--trefaro-logo-url')).toBe(
-      'url("/api/media/logo.svg")',
+      'url("/api/media/branding/logo?v=1787790100000")',
     );
   });
 

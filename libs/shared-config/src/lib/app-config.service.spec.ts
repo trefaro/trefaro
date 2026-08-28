@@ -41,6 +41,7 @@ const config: AppConfig = {
   ],
   webPushPublicKey: 'vapid-public-key',
   publicUserClientUrl: 'http://localhost:4200',
+  appIconUrl: null,
 };
 
 describe('AppConfigService', () => {

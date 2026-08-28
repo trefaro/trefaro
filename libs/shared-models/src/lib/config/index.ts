@@ -6,6 +6,16 @@ export {
   type AppConfigSettings,
 } from './app-config';
 export {
+  BRANDING_IMAGE_KINDS,
+  BRANDING_IMAGE_PART,
+  BRANDING_MIME_TYPES,
+  BRANDING_TYPES,
+  MAX_BRANDING_BYTES,
+  brandingTypeSummary,
+  isBrandingImageKind,
+  type BrandingImageKind,
+} from './branding';
+export {
   DEFAULT_FONT_FAMILY_KEY,
   DEFAULT_FONT_FAMILY_STACK,
   FONT_FAMILIES,

@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
+import { AdminBrandingController } from './admin-branding.controller';
 import { AdminConfigController } from './admin-config.controller';
+import { BrandingMediaController } from './branding-media.controller';
+import { BrandingService } from './branding.service';
 import { ConfigurationController } from './configuration.controller';
 import { ConfigurationService } from './configuration.service';
 import { CoreModuleEnabledGuard } from './core-module-enabled.guard';
@@ -14,6 +17,13 @@ import { CoreModuleRegistryService } from './core-module-registry.service';
  * The repository ports it depends on are bound by the composition root, so this
  * module compiles without knowing that PostgreSQL exists.
  *
+ * Since AP 2 of phase 2 it also owns the two branding images: the writing side
+ * under `/api/admin/config/{logo,app-icon}`, because they are two more values of
+ * the same configuration, and the public route that serves them under
+ * `/api/media/branding` (E19). One module for both halves — the rule that a
+ * branding file is never an attachment is only a rule if one place enforces it
+ * in both directions.
+ *
  * It also owns which optional core modules are switched on
  * ({@link CoreModuleRegistryService}) and the guard that turns a switched-off
  * one into a 404 (F53). A module with optional endpoints — `media-links` is the
@@ -21,14 +31,21 @@ import { CoreModuleRegistryService } from './core-module-registry.service';
  * from the plug-in manager.
  */
 @Module({
-  controllers: [ConfigurationController, AdminConfigController],
+  controllers: [
+    ConfigurationController,
+    AdminConfigController,
+    AdminBrandingController,
+    BrandingMediaController,
+  ],
   providers: [
     ConfigurationService,
+    BrandingService,
     CoreModuleRegistryService,
     CoreModuleEnabledGuard,
   ],
   exports: [
     ConfigurationService,
+    BrandingService,
     CoreModuleRegistryService,
     CoreModuleEnabledGuard,
   ],

@@ -74,7 +74,7 @@ export class AttachmentsService {
     const created: AttachmentRecord[] = [];
     try {
       for (const upload of uploads) {
-        written.push(await this.files.save(upload.bytes));
+        written.push(await this.files.save('attachments', upload.bytes));
       }
       for (const [index, upload] of uploads.entries()) {
         created.push(

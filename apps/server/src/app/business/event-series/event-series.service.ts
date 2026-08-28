@@ -11,7 +11,6 @@ import type {
 } from '@trefaro/shared-models';
 import { AttachmentsService } from '../attachments';
 import { isSlug, slugify } from '../common/slug';
-import { toMediaUrl } from '../media/media-url';
 import {
   REGISTRATION_TALLY,
   type RegistrationTally,
@@ -246,7 +245,10 @@ function toPublicEventSeries(record: EventSeriesRecord): PublicEventSeries {
     slug: record.slug,
     name: record.name,
     description: record.description,
-    logoUrl: toMediaUrl(record.logoPath),
+    // A series has no logo upload, so this column is never written. AP 2 of
+    // phase 2 removed the path-based media URL (E19): a per-series logo will
+    // need a path-free route of its own — noted in `todo.md`.
+    logoUrl: null,
     websiteUrl: record.websiteUrl,
     contactEmail: record.contactEmail,
   };

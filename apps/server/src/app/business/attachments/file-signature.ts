@@ -48,9 +48,36 @@ export function matchesSignature(mimeType: string, bytes: Buffer): boolean {
   return SIGNATURES[mimeType]?.(bytes) ?? false;
 }
 
-/** Every type of the catalogue has a signature — asserted by a unit test. */
-export function typesWithoutSignature(): readonly string[] {
-  return UPLOAD_MIME_TYPES.filter((mimeType) => !(mimeType in SIGNATURES));
+/**
+ * The types of a catalogue that have no signature here — always empty.
+ *
+ * Asserted by a unit test for both catalogues that exist: what a registration
+ * form may collect (`UPLOAD_TYPES`) and what may be uploaded as this instance's
+ * brand (`BRANDING_TYPES`). A type without a signature is a type whose name is
+ * a claim, which is the whole of F38.
+ */
+export function typesWithoutSignature(
+  mimeTypes: readonly string[] = UPLOAD_MIME_TYPES,
+): readonly string[] {
+  return mimeTypes.filter((mimeType) => !(mimeType in SIGNATURES));
+}
+
+/**
+ * Which of the given types these bytes actually are, if any.
+ *
+ * The counterpart to {@link matchesSignature} for the case where nothing claimed
+ * a type: a stored branding image carries no file name and no type column, so
+ * what it is gets decided by its own first bytes when it is served. That is the
+ * same rule as on the way in, applied in the one direction where there is
+ * nobody to ask.
+ */
+export function signatureType(
+  bytes: Buffer,
+  candidates: readonly string[],
+): string | null {
+  return (
+    candidates.find((mimeType) => matchesSignature(mimeType, bytes)) ?? null
+  );
 }
 
 function starts(bytes: Buffer, magic: readonly number[]): boolean {

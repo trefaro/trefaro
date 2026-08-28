@@ -186,6 +186,22 @@ answer, not an opinion.
       certificate stays outside the stack, and the alternative — dropping
       `Secure` — is not one.
 
+- [ ] **A series and an event can have a logo in the schema, and no way to
+      upload one.** `event_series.logo_path` and `event.logo_path` exist, the
+      participant client already renders `logoUrl` on the start page, the series
+      page and the event landing page — and nothing has ever written those
+      columns. AP 2 removed the placeholder that turned a stored path into a URL
+      (`/api/media/<path>`), because that shape is exactly what E19 forbids, so
+      both services now answer `logoUrl: null` on purpose. Deciding this is
+      cheap now that the mechanism exists: either a per-series and per-event
+      upload with a path-free route of its own
+      (`GET /api/media/series/:id/logo`, resolved through the row like the
+      instance logo), or the columns and the two payload fields go. What must
+      **not** happen is a third shape — a route that takes a stored path would
+      put registration attachments one guess away (E9). Verify: upload a logo on
+      a series, see it on the start page; or, if it goes, no payload field
+      promises something no screen can set.
+
 - [ ] **A programme tile in the participant's event detail view.** The mockups
       (chapter 5.2) put "Programmplan" on a tile beside the room plan, the forum
       and the proposals, and the tiles appear only for modules that are enabled.

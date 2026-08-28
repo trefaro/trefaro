@@ -3,7 +3,11 @@ export {
   AttachmentsService,
   type AttachmentDownload,
 } from './attachments.service';
-export { matchesSignature, typesWithoutSignature } from './file-signature';
+export {
+  matchesSignature,
+  signatureType,
+  typesWithoutSignature,
+} from './file-signature';
 export { contentDisposition, safeFileName } from './file-name';
 export type { UploadedFile } from './uploaded-file';
 export {
@@ -12,4 +16,4 @@ export {
   type AttachmentRepository,
   type NewAttachment,
 } from './ports/attachment.repository';
-export { FILE_STORE, type FileStore } from './ports/file-store';
+export { FILE_STORE, type FileArea, type FileStore } from './ports/file-store';

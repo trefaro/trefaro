@@ -4,7 +4,7 @@ import { deriveThemeVariables, readableTextColor } from './theme-variables';
 const theme: Theme = {
   primaryColor: '#1f6f5c',
   accentColor: '#e8a33d',
-  logoUrl: '/api/media/logo.svg',
+  logoUrl: '/api/media/branding/logo?v=1787790100000',
   fontFamily: "'Inter', sans-serif",
 };
 
@@ -31,7 +31,7 @@ describe('deriveThemeVariables', () => {
 
   it('wraps a logo in url() and uses none when there is no logo', () => {
     expect(deriveThemeVariables(theme)['--trefaro-logo-url']).toBe(
-      'url("/api/media/logo.svg")',
+      'url("/api/media/branding/logo?v=1787790100000")',
     );
     expect(
       deriveThemeVariables({ ...theme, logoUrl: null })['--trefaro-logo-url'],

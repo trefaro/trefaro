@@ -25,9 +25,24 @@ export class AppConfigEntity {
   @Column({ name: 'accent_color', type: 'varchar', length: 32 })
   accentColor!: string;
 
-  /** Storage-relative path inside the upload volume, never an external URL. */
+  /**
+   * Storage-relative path inside the upload volume, never an external URL.
+   *
+   * Always under `branding/`, enforced by `CHK_app_config_branding_paths`: the
+   * public route serves what this column points at, so it must not be able to
+   * point at an attachment (E19).
+   */
   @Column({ name: 'logo_path', type: 'varchar', length: 512, nullable: true })
   logoPath!: string | null;
+
+  /** The square PWA icon (E26) — a second, optional upload, same subtree. */
+  @Column({
+    name: 'app_icon_path',
+    type: 'varchar',
+    length: 512,
+    nullable: true,
+  })
+  appIconPath!: string | null;
 
   /**
    * A key of `FONT_FAMILIES`, not a CSS stack: the stack is derived in the

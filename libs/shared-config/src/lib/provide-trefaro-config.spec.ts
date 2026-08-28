@@ -12,7 +12,7 @@ import { provideTrefaroConfig } from './provide-trefaro-config';
 const theme = {
   primaryColor: '#123456',
   accentColor: '#abcdef',
-  logoUrl: '/api/media/logo.svg',
+  logoUrl: '/api/media/branding/logo?v=1787790100000',
   fontFamily: 'Inter',
 };
 

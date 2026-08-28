@@ -1,4 +1,7 @@
-import type { AppConfigChange } from '@trefaro/shared-models';
+import type {
+  AppConfigChange,
+  BrandingImageKind,
+} from '@trefaro/shared-models';
 import type { TrefaroEnv } from '../../core/config/env';
 import { loadEnv } from '../../core/config/env';
 import type { PluginRegistryService } from '../plugin-manager';
@@ -9,14 +12,19 @@ import type {
   AppConfigRepository,
 } from './ports/app-config.repository';
 
+/** The version in every branding URL below; `?v=` carries its epoch millis. */
+const CHANGED_AT = new Date('2026-08-28T09:41:00.000Z');
+
 const storedConfig: AppConfigRecord = {
   organizationName: 'Democracy International e.V.',
   primaryColor: '#1f6f5c',
   accentColor: '#e8a33d',
-  logoPath: 'branding/logo.svg',
+  logoPath: 'branding/8f1c2d3e-4a5b-6c7d-8e9f-0a1b2c3d4e5f',
+  appIconPath: null,
   fontFamily: 'inter',
   defaultLocale: 'de',
   availableLocales: ['en', 'de'],
+  updatedAt: CHANGED_AT,
 };
 
 class FakeAppConfigRepository implements AppConfigRepository {
@@ -35,6 +43,17 @@ class FakeAppConfigRepository implements AppConfigRepository {
   async save(change: AppConfigChange): Promise<AppConfigRecord> {
     this.written = change;
     this.record = { ...this.record, ...change };
+    return this.record;
+  }
+
+  async setBrandingImage(
+    kind: BrandingImageKind,
+    storedPath: string | null,
+  ): Promise<AppConfigRecord> {
+    this.record =
+      kind === 'logo'
+        ? { ...this.record, logoPath: storedPath }
+        : { ...this.record, appIconPath: storedPath };
     return this.record;
   }
 }
@@ -71,15 +90,19 @@ function serviceWith(options: {
 }
 
 describe('ConfigurationService', () => {
-  it('turns the stored logo path into a public media URL', async () => {
+  it('publishes a logo URL that names the image, not its stored path', async () => {
     const config = await serviceWith({}).getAppConfig();
 
+    // The generated file name is nowhere in it (E19): the route resolves the
+    // logo through `app_config`, so no caller can name a neighbouring file —
+    // and the neighbours in that volume are registration attachments (E9).
     expect(config.theme).toEqual({
       primaryColor: '#1f6f5c',
       accentColor: '#e8a33d',
-      logoUrl: '/api/media/branding/logo.svg',
+      logoUrl: `/api/media/branding/logo?v=${CHANGED_AT.getTime()}`,
       fontFamily: "'Inter', system-ui, sans-serif",
     });
+    expect(config.theme.logoUrl).not.toContain(storedConfig.logoPath);
   });
 
   it('reports no logo URL while none is uploaded', async () => {
@@ -91,6 +114,24 @@ describe('ConfigurationService', () => {
     });
 
     expect((await service.getAppConfig()).theme.logoUrl).toBeNull();
+  });
+
+  it('publishes the app icon beside the theme, and only once uploaded', async () => {
+    expect((await serviceWith({}).getAppConfig()).appIconUrl).toBeNull();
+
+    const withIcon = serviceWith({
+      appConfig: new FakeAppConfigRepository({
+        ...storedConfig,
+        appIconPath: 'branding/1b2c3d4e-5f60-7182-93a4-b5c6d7e8f900',
+      }),
+    });
+
+    // Same version as the logo: `?v=` is the row's `updated_at`, so both images
+    // are re-fetched together and neither can be shown from a stale cache while
+    // the other is current.
+    expect((await withIcon.getAppConfig()).appIconUrl).toBe(
+      `/api/media/branding/app-icon?v=${CHANGED_AT.getTime()}`,
+    );
   });
 
   it('reports the enabled core modules the registry names', async () => {

@@ -3,7 +3,7 @@ import { Pool } from 'pg';
 /**
  * Direct database access for the API contract tests.
  *
- * Used for exactly one thing: putting registrations into the table in bulk. The
+ * Used almost only for one thing: putting registrations into the table in bulk. The
  * public registration endpoint is the wrong tool for that — it sends a mail per
  * attempt and is rate limited on purpose (AP 4) — and the load check of the
  * participant overview needs two thousand rows, not thirty.
@@ -181,6 +181,29 @@ export async function setModuleEnabled(
     'UPDATE module_config SET enabled = $2 WHERE module_key = $1',
     [moduleKey, enabled],
   );
+}
+
+/**
+ * The two stored branding paths (E19).
+ *
+ * The one read in this file, and the reason it is here rather than derived from
+ * an endpoint: the point of the branding contract is that the stored path is
+ * *not* in any answer the API gives. A test that wants to prove the path is
+ * unreachable has to learn it from the only place that holds it.
+ */
+export async function brandingPaths(): Promise<{
+  logoPath: string | null;
+  appIconPath: string | null;
+}> {
+  const result = await pool.query<{
+    logo_path: string | null;
+    app_icon_path: string | null;
+  }>('SELECT logo_path, app_icon_path FROM app_config WHERE id = 1');
+
+  return {
+    logoPath: result.rows[0]?.logo_path ?? null,
+    appIconPath: result.rows[0]?.app_icon_path ?? null,
+  };
 }
 
 /** Removes every registration of one event — the counterpart of the seeds. */

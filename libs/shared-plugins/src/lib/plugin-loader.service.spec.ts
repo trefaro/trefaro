@@ -37,6 +37,7 @@ function config(plugins: readonly PluginDescriptor[]): AppConfig {
     plugins,
     webPushPublicKey: null,
     publicUserClientUrl: 'http://localhost:4200',
+    appIconUrl: null,
   };
 }
 

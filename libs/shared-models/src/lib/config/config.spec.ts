@@ -7,6 +7,15 @@ import {
   fontFamilyStack,
   isFontFamilyKey,
 } from './fonts';
+import {
+  BRANDING_IMAGE_KINDS,
+  BRANDING_MIME_TYPES,
+  BRANDING_TYPES,
+  MAX_BRANDING_BYTES,
+  brandingTypeSummary,
+  isBrandingImageKind,
+} from './branding';
+import { UPLOAD_MIME_TYPES, MAX_UPLOAD_BYTES } from '../registrations/upload';
 import { isHexColor } from './theme';
 
 describe('isHexColor', () => {
@@ -82,5 +91,65 @@ describe('the font catalogue (E18)', () => {
       const quoted = font.stack.split(',')[0].trim();
       expect(stylesheet).toContain(`font-family: ${quoted};`);
     }
+  });
+});
+
+describe('branding images', () => {
+  it('offers exactly the two kinds the configuration has columns for', () => {
+    expect([...BRANDING_IMAGE_KINDS]).toEqual(['logo', 'app-icon']);
+
+    for (const kind of BRANDING_IMAGE_KINDS) {
+      expect(isBrandingImageKind(kind)).toBe(true);
+    }
+    for (const value of ['favicon', 'logo.png', '', null, 1]) {
+      expect(isBrandingImageKind(value)).toBe(false);
+    }
+  });
+
+  it('accepts only raster images a browser renders as a picture', () => {
+    expect([...BRANDING_MIME_TYPES]).toEqual([
+      'image/png',
+      'image/jpeg',
+      'image/webp',
+    ]);
+  });
+
+  /**
+   * The one entry whose absence is a decision rather than an omission.
+   *
+   * An SVG is a document that may carry script, and a logo is served from the
+   * origin of the client that displays it — an uploaded one would be that
+   * client's own code. It is also absent from `UPLOAD_TYPES`, for the same
+   * reason, and both lists have to stay that way.
+   */
+  it('does not accept SVG anywhere', () => {
+    expect(BRANDING_MIME_TYPES).not.toContain('image/svg+xml');
+    expect(UPLOAD_MIME_TYPES).not.toContain('image/svg+xml');
+  });
+
+  it('is a list of its own, not the registration form catalogue', () => {
+    // The two answer different questions: what a participant may attach to a
+    // form, and what may be rendered as this instance's brand. A PDF belongs in
+    // the first and would be a nonsensical logo.
+    expect(UPLOAD_MIME_TYPES).toContain('application/pdf');
+    expect(BRANDING_MIME_TYPES).not.toContain('application/pdf');
+  });
+
+  it('gives every type a file picker filter and a name to read', () => {
+    for (const type of BRANDING_TYPES) {
+      expect(type.label.length).toBeGreaterThan(0);
+      expect(type.extensions.length).toBeGreaterThan(0);
+      for (const extension of type.extensions) {
+        expect(extension.startsWith('.')).toBe(true);
+      }
+    }
+    expect(brandingTypeSummary()).toBe('PNG, JPEG, WebP');
+  });
+
+  it('is bounded far below what a registration may carry', () => {
+    // Not about disk: this image is fetched before the first paint of a
+    // mobile-first client, and it is the one picture on the page that is not
+    // content.
+    expect(MAX_BRANDING_BYTES).toBeLessThan(MAX_UPLOAD_BYTES / 10);
   });
 });

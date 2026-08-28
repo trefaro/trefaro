@@ -65,9 +65,11 @@ const configWith = (defaultLocale: string) => ({
     primaryColor: '#1c4b8c',
     accentColor: '#e8a33d',
     logoPath: null,
+    appIconPath: null,
     fontFamily: 'system-ui',
     defaultLocale,
     availableLocales: ['en', defaultLocale],
+    updatedAt: new Date('2026-08-28T09:41:00.000Z'),
   }),
 });
 

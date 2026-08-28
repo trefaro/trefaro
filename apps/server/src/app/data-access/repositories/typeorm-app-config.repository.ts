@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import type { AppConfigChange } from '@trefaro/shared-models';
+import type {
+  AppConfigChange,
+  BrandingImageKind,
+} from '@trefaro/shared-models';
 import { Repository } from 'typeorm';
 import type {
   AppConfigRecord,
@@ -47,6 +50,27 @@ export class TypeormAppConfigRepository implements AppConfigRepository {
     return this.toRecord(await this.repository.save(row));
   }
 
+  async setBrandingImage(
+    kind: BrandingImageKind,
+    storedPath: string | null,
+  ): Promise<AppConfigRecord> {
+    const row = await this.findRow();
+
+    // The one place that knows which column carries which image. A `switch`
+    // rather than a lookup table, so adding a third kind does not compile until
+    // this decision has been made for it.
+    switch (kind) {
+      case 'logo':
+        row.logoPath = storedPath;
+        break;
+      case 'app-icon':
+        row.appIconPath = storedPath;
+        break;
+    }
+
+    return this.toRecord(await this.repository.save(row));
+  }
+
   private async findRow(): Promise<AppConfigEntity> {
     const row = await this.repository.findOneBy({
       id: APP_CONFIG_SINGLETON_ID,
@@ -70,9 +94,11 @@ export class TypeormAppConfigRepository implements AppConfigRepository {
       primaryColor: row.primaryColor,
       accentColor: row.accentColor,
       logoPath: row.logoPath,
+      appIconPath: row.appIconPath,
       fontFamily: row.fontFamily,
       defaultLocale: row.defaultLocale,
       availableLocales: row.activeLocales,
+      updatedAt: row.updatedAt,
     };
   }
 }
