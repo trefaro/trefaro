@@ -91,6 +91,14 @@ docker compose --env-file .env -f infra/docker-compose.yml up -d --build
 node tools/spike-verification/verify-proxy.mjs
 ```
 
+Ohne `DATABASE_PASSWORD`, `AUTH_SECRET`, `SMTP_HOST` und `SMTP_FROM` startet der
+Server nicht — er prüft die Umgebung und nennt alle Probleme auf einmal. Ohne
+`ADMIN_BOOTSTRAP_EMAIL`/`ADMIN_BOOTSTRAP_PASSWORD` startet er, hat aber keinen
+Administrator, und es gibt keinen Weg, einen anzulegen: jeder Endpunkt, der das
+könnte, verlangt eine Sitzung. Beide Werte nach dem ersten persönlichen Zugang
+wieder entfernen. Und: das Sitzungscookie trägt in Produktion `Secure` — ohne TLS
+vor dem Proxy ist der Login nur auf `localhost` möglich.
+
 Nur der Reverse Proxy veröffentlicht einen Port (Standard 8080). Nutzer-Client
 unter `/`, Veranstalter-Client unter `/admin/`, API unter `/api/`, WebSockets
 unter `/socket.io/`.

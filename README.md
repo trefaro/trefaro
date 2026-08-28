@@ -38,6 +38,15 @@ The whole stack as it ships, five containers behind a reverse proxy:
 docker compose --env-file .env -f infra/docker-compose.yml up -d --build
 ```
 
+A fresh instance needs four values in `.env` before it will start, and a fifth
+before anyone can log in: `DATABASE_PASSWORD`, `AUTH_SECRET`, `SMTP_HOST` and
+`SMTP_FROM` — plus `ADMIN_BOOTSTRAP_EMAIL`/`ADMIN_BOOTSTRAP_PASSWORD`, which
+create the first administrator while no administrator exists. Every route that
+could create one requires a session, so without them the instance has no way in.
+Remove both once a personal account exists. Note that the session cookie is
+`Secure` in production: put TLS in front of the proxy, or the login works on
+`localhost` only.
+
 ## Tech stack
 
 Angular 22 (standalone, signals, zoneless) · NestJS 11 · TypeScript end-to-end ·
