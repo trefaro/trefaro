@@ -171,7 +171,20 @@ answer, not an opinion.
 
 ---
 
-## Checkable after phase 2 — whitelabel, module administration, i18n, PWA
+## Checkable after phase 2 — whitelabel, modules, i18n, PWA, installation
+
+- [ ] **TLS — and it is not optional in practice.** Deliberately absent from
+      `infra/nginx/trefaro.conf` so a local `docker compose up` works without
+      certificates. What AP 13 of phase 1 made concrete while checking the stack:
+      the session cookie carries `Secure` as soon as `NODE_ENV=production` (E2),
+      and a browser stores a `Secure` cookie only over HTTPS — `localhost` being
+      the usual exception. So the published stack is loginnable on the operator's
+      own machine and **nowhere else** until TLS terminates in front of it. That
+      makes it part of the installation story rather than of the hardening, which
+      is why this entry moved out of phase 5: **claimed by phase 2, AP 5** as an
+      optional compose overlay plus documentation (E29). Acquiring the
+      certificate stays outside the stack, and the alternative — dropping
+      `Secure` — is not one.
 
 - [ ] **A programme tile in the participant's event detail view.** The mockups
       (chapter 5.2) put "Programmplan" on a tile beside the room plan, the forum
@@ -400,16 +413,6 @@ answer, not an opinion.
   - a plug-in migration must be timestamped after any core migration it depends
     on
     → [`01-client-plugin.md`](docs/spikes/01-client-plugin.md#open-items)
-- [ ] **TLS — and it is not optional in practice.** Deliberately absent from
-      `infra/nginx/trefaro.conf` so a local `docker compose up` works without
-      certificates. What AP 13 made concrete while checking the stack: the session
-      cookie carries `Secure` as soon as `NODE_ENV=production` (E2), and a browser
-      stores a `Secure` cookie only over HTTPS — `localhost` being the usual
-      exception. So the published stack is loginnable on the operator's own
-      machine and **nowhere else** until TLS terminates in front of it. That makes
-      Let's Encrypt part of the installation story rather than of the hardening:
-      documentation plus an optional compose overlay, and the note that the
-      alternative — dropping `Secure` — is not one.
 - [ ] **Decide the fate of `/spikes`.** The participant client's diagnostics page
       is reachable without a login. It exposes nothing `/api/config` does not
       already expose publicly, so it is not a leak — but decide whether it stays

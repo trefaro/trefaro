@@ -157,10 +157,6 @@ Speicher. Konfigurierbar (mit den strengen Werten als Vorgabe und einer
 Startwarnung bei Lockerung) werden sie in **Phase 5**, zusammen mit dem zweiten
 Zähler je Empfängeradresse.
 
-Nächster Schritt wäre **Phase 2** (Whitelabel-Theming, Modulverwaltung, i18n,
-PWA, Installations-Story) — erst auf Marius' Go, und mit einem eigenen
-`docs/PHASE2.md` wie in Phase 1.
-
 Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
 
 - **Der Admin-Schutz hängt am URL-Präfix** (E16), nicht an einem Dekorator: ein
@@ -407,6 +403,38 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
   Browser speichert ein `Secure`-Cookie nur über HTTPS. TLS gehört damit zur
   Installations-Story, nicht zur Härtung; `Secure` fallen zu lassen ist keine
   Alternative.
+
+## Stand Phase 2 (geplant am 28.08.2026, noch nichts umgesetzt)
+
+Plan: `docs/PHASE2.md` — dreizehn Arbeitspakete, Entscheidungen **E17–E29**
+(die Zählung läuft über die Phasen weiter), Meilensteine M3 (Whitelabel), M4
+(alle P1: brandbar, konfigurierbar, selbst installierbar) und M5 (Abschluss),
+geplante Nachträge F60–F65. **Jedes Paket einzeln von Marius freigeben** — nicht
+ohne Aufforderung mit dem nächsten anfangen.
+
+Reihenfolge: AP 1–3 Whitelabel (FR 1.4) · AP 4 Modulverwaltung (FR 1.5) · AP 5
+Installations-Story mit geführter Ersteinrichtung und TLS-Overlay (FR 1.1,
+NFR 15) · AP 6–10 Transloco, pflegbare Sprachen, beide Clients, die Mails ·
+AP 11 Inhaltsübersetzungen (FR 3.12) · AP 12 PWA · AP 13 Abschluss.
+
+Die Entscheidungen stehen ausführlich in `docs/PHASE2.md`; diese sechs würden
+sonst in einer frischen Sitzung improvisiert:
+
+- **Farben nur als Hex** (E17) — `readableTextColor` muss den Kontrast
+  entscheiden können; was es nicht parst, bekommt Weiß.
+- **Schriftarten sind ein mitgelieferter Katalog, kein Upload** (E18).
+- **`/api/media/branding/…` nimmt keinen Pfad vom Aufrufer** (E19). Branding ist
+  öffentlich, Anhänge nicht (E9) — die zwei Dateiarten dürfen nicht in einer
+  URL verwechselbar sein.
+- **Der Übersetzungskatalog kommt vom Server** (E22), nicht aus dem
+  Client-Image, sonst ist „von der Organisation pflegbar" nicht einlösbar. Eine
+  Mail fällt als Ganzes in die Standardsprache zurück, die Oberfläche je
+  Schlüssel (E23, E24).
+- **`CORE_MODULES` listet nur Module, die es gibt** (E21): `newsletter` entfällt,
+  `chat`/`profiles`/`profile-search` kommen mit Phase 3 zurück, `push` bekommt
+  seinen Guard.
+- **Die Ersteinrichtung ist tokengeschützt** (E28); `ADMIN_BOOTSTRAP_*` bleibt
+  der unbeaufsichtigte Weg.
 
 ## Betriebskontext
 

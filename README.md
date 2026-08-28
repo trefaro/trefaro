@@ -24,7 +24,8 @@ front of all of it. An organization can run its event work on an instance today.
 The record, decision by decision, is in [`docs/PHASE1.md`](docs/PHASE1.md).
 
 **Not built yet:** whitelabel settings, module administration, runtime language
-switching and the PWA polish (phase 2); participant login, profiles, messaging,
+switching, content translations and the PWA polish (phase 2 — planned in
+[`docs/PHASE2.md`](docs/PHASE2.md)); participant login, profiles, messaging,
 real-time chat and push (phase 3); the four curated plug-ins — programme
 proposals, forum, room planning, QR check-in (phase 4). What is deferred and why
 is in [`todo.md`](todo.md).

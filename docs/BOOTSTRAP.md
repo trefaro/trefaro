@@ -174,6 +174,8 @@ kann: die Feedbackrunde mit Democracy International. Die Fragen dafür stehen
 gesammelt in [`todo.md`](../todo.md) unter _Questions for the pilot partner_.
 
 Als nächstes **Phase 2** — Whitelabel-Theming, Modulverwaltung, i18n zur
-Laufzeit, PWA-Ausbau, Installations-Story (Herleitung in Kapitel 6 von
-`Anforderungsanalyse_und_Umsetzungsplan.md`). **Beginnt erst auf ausdrückliches
-Go von Marius**, wie jedes Arbeitspaket der Phase 1 auch.
+Laufzeit, Inhaltsübersetzungen, PWA-Ausbau, Installations-Story. Der Plan steht
+in [`PHASE2.md`](PHASE2.md): dreizehn Arbeitspakete, die Entscheidungen E17–E29
+und drei Meilensteine (M3 nach dem Whitelabel, M4 nach der Installations-Story,
+M5 zum Abschluss). **Jedes Paket beginnt erst auf ausdrückliches Go von Marius**,
+wie jedes Arbeitspaket der Phase 1 auch.
