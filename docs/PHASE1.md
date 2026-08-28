@@ -1794,8 +1794,9 @@ Stand 28.08.2026. Kein fachliches Paket, sondern vier Prüfungen — und zwei da
 haben etwas gefunden, was zwölf grüne Arbeitspakete nicht gefunden hatten.
 
 **1. `todo.md`, Abschnitt Phase 1, ist durchgearbeitet.** Sechs Einträge sind
-abgehakt, elf sind mit Begründung in die Phase gewandert, die sie entscheiden
-kann, und keiner ist offen geblieben. Der Eintrag zum Lese-Port der
+abgehakt, zehn sind mit Begründung in eine spätere Phase gewandert — zwei davon
+in einen dort schon stehenden Eintrag hinein —, vier in den neuen Abschnitt
+_Questions for the pilot partner_, und keiner ist offen geblieben. Der Eintrag zum Lese-Port der
 Überbuchungsprüfung war schon seit AP 9 erledigt und stand nur noch da. Neu
 dazugekommen: ein Abschnitt **_Questions for the pilot partner_**. Er sammelt die
 fünf Fragen, die dieses Repository nicht beantworten kann — kein mehrzeiliges
@@ -1959,9 +1960,11 @@ liegt nicht in der Hand dieses Repositories.
    (Whitelabel-Oberfläche), 1.5 (Modulverwaltung) und 3.4 (Nachrichtenübersicht)
    sind **nicht** Teil dieser Phase — sie stehen in Kapitel 6 unter Phase 2 bzw.
    Phase 3, und der Abschnitt _Bewusst draußen_ sagt das seit dem ersten Entwurf.
-2. ✅ **`todo.md`, Abschnitt Phase 1, ist abgearbeitet**, und die beiden
-   _Known gaps_ sind seit AP 1 geschlossen. Sechs Einträge abgehakt, elf mit
-   Begründung verschoben, fünf Fragen an den Pilotpartner ausgelagert.
+2. ✅ **`todo.md`, Abschnitt Phase 1, ist abgearbeitet**, und die _Known gaps_
+   sind geschlossen — die beiden aus Phase 0 seit AP 1, der dritte (Bootstrap im
+   Container) in diesem Paket. Sechs Einträge abgehakt, zehn in eine spätere
+   Phase verschoben, vier zu Fragen an den Pilotpartner; dort stehen fünf, weil
+   die Raumplan-Frage zwei Phase-4-Einträge zusammenfasst.
 3. ✅ **Der Fünf-Container-Stack läuft aus dem Stand** — nach dem Fehler, den
    diese Prüfung gefunden hat: die Bootstrap-Zugangsdaten erreichten den
    Server-Container nicht. Behoben und danach verifiziert, einschließlich

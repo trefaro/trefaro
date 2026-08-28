@@ -109,9 +109,11 @@ entries are closed above; everything else that stood in this section moved, with
 its reasoning, to the phase that can actually decide it: the real SMTP server,
 the per-recipient throttle, the volume sweep, the shared e2e limits, the
 invitation sender's pause and retry and the `List-Unsubscribe` header to
-phase 5; the `newsletter` module key to phase 2; the overbooking rule and the
-double booking to phase 4; and the questions nobody in this repository can
-answer to _Questions for the pilot partner_ below.
+phase 5, where the confirmation rate limit joined the registration one in a
+single entry with the numbers that actually hold; the `newsletter` module key to
+phase 2; the overbooking rule and the double booking to phase 4; and the
+questions nobody in this repository can answer to _Questions for the pilot
+partner_ below.
 
 ---
 

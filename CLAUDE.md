@@ -129,8 +129,8 @@ unter `…/edit`) · **AP 11** Follow-Up-Text am Event und Medien-Links
 Ehemalige Teilnehmende einladen (`business/invitations`, `invitation` +
 `invitation_recipient`, `ContactsService` im Registrierungsmodul,
 Widerspruchsseite im Nutzer-Client) und der Storno-Hinweis an Teilnehmende ·
-**AP 13** Phasenabschluss: `todo.md` durchgearbeitet (sechs Einträge zu, elf verschoben, ein neuer Abschnitt
-_Questions for the pilot partner_), F22–F24 gegen die Umsetzung geprüft (keine
+**AP 13** Phasenabschluss: `todo.md` durchgearbeitet (sechs Einträge zu, zehn in spätere Phasen verschoben, vier in
+den neuen Abschnitt _Questions for the pilot partner_), F22–F24 gegen die Umsetzung geprüft (keine
 Abweichung; F23 trägt inzwischen drei Tokenzwecke), der Fünf-Container-Stack aus
 dem Stand hochgefahren — dabei fiel auf, dass `infra/docker-compose.yml` die
 Bootstrap-Zugangsdaten nicht durchreichte, also **hatte eine frische
