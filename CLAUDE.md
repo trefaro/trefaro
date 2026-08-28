@@ -140,6 +140,13 @@ Produktionsinstanz keinen Administrator**; behoben.
 mit Democracy International (Punkt 5 der Definition of Done) hat nicht
 stattgefunden. Die fünf Fragen an den Pilotpartner stehen gesammelt in `todo.md`
 unter _Questions for the pilot partner_ — keine davon blockiert Phase 2.
+**Entschieden am 28.08.2026:** sie werden erst an einem weiter entwickelten Stand
+gestellt; sollte doch etwas blockieren, klärt Marius den einzelnen Punkt vorher.
+Also **keine davon auf Verdacht umsetzen** — der jetzige Zustand _ist_ die
+Entscheidung. Ebenfalls entschieden: **`CONTRIBUTING.md` wird geschrieben, wenn
+alle Phasen durch sind** (nicht vorher, gegen die fertige v1.0; steht als
+Erinnerung in `todo.md` unter Phase 5).
+
 Nächster Schritt wäre **Phase 2** (Whitelabel-Theming, Modulverwaltung, i18n,
 PWA, Installations-Story) — erst auf Marius' Go, und mit einem eigenen
 `docs/PHASE2.md` wie in Phase 1.

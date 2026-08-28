@@ -117,13 +117,23 @@ partner_ below.
 
 ---
 
-## Questions for the pilot partner — open until the feedback round
+## Questions for the pilot partner — asked later, deliberately
 
 Neither gaps nor deferred work: decisions that were made deliberately, that are
-cheap to change, and that this repository cannot settle on its own. They belong
-in the feedback round with Democracy International after M1 (F19). Each entry
-says what was decided, what changing it would cost, and where the change would
-go — ask before building any of them.
+cheap to change, and that this repository cannot settle on its own. Each entry
+says what was decided, what changing it would cost, and where the change would go.
+
+**When they get asked is decided: later, at a further-developed state of the
+application** (Marius, 28.08.2026). None of them blocks a phase — that is why the
+feedback round could stay open at the end of phase 1 without holding anything up,
+and why asking five questions about a version the pilot partner has not used yet
+would produce weaker answers than asking them about one they have. If something
+here turns out to block after all, Marius clarifies that single point beforehand
+rather than waiting for the whole round.
+
+Consequence for anyone working on this list: **do not build any of them on a
+guess.** The decision on the table is the current behaviour; changing it needs an
+answer, not an opinion.
 
 - [ ] **Three questions about the field kit.** First: there is **no multi-line text type** —
       a text field holds 500 characters, which is a paragraph, but it renders as
@@ -376,9 +386,12 @@ go — ask before building any of them.
       plug-in contract changes only with a version bump. What is **not** decided,
       and cannot be decided here, is the policy: whether pull requests are accepted
       at all before v1.0, DCO or CLA, who reviews, and how a plug-in gets into the
-      curated set. Ask before writing it. Phase 5, with the release and the
-      open-source announcement — a contribution guide for a project nobody can
-      contribute to yet would be the wrong kind of promise.
+      curated set. **Scheduled: after all phases are through** (Marius,
+      28.08.2026) — written once, against the finished v1.0, rather than kept in
+      step with a moving target for five phases. A contribution guide for a
+      project nobody can contribute to yet would be the wrong kind of promise
+      anyway. This entry is the reminder; it is the last documentation item of
+      phase 5 and must not leave this list until the file exists.
 - [ ] **Plug-in SDK documentation.** Three things phase 0 learned that a
       third-party plug-in author has to be told:
   - bundles are loaded same-origin and run with full page access, so plug-in
