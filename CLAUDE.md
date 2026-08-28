@@ -394,3 +394,11 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
 ## Betriebskontext
 
 Entwicklung: lokal in WSL2 (dieser Ordner), Docker via Docker Desktop (WSL2-Backend) oder docker-ce. Zielbetrieb: eigener Linux-Server der Organisation, identische Container. Compose-Dateien und Dockerfiles unter `infra/`, CI unter `.github/workflows/ci.yml` (Qualität, E2E gegen echte DB und Browser, Image-Builds).
+
+Zwei Werkzeuge unter `tools/`, beide gegen eine _laufende_ Instanz:
+`spike-verification/` prüft ein Deployment (Proxy, API, Plug-in-Schalter,
+Admin-Zugang), `demo-seed/` füllt es mit Demo-Daten — **ausschließlich über die
+API**, damit kein Zustand entsteht, den die Anwendung selbst ablehnen würde.
+`node tools/demo-seed/seed.mjs --reset` ersetzt einen früheren Lauf. Der Seed
+braucht Mailpit: Bestätigung, Selbstbedienungslink und Widerspruch sind Tokens,
+die nur in versandter Mail existieren.

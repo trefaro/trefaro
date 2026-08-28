@@ -38,6 +38,14 @@ The whole stack as it ships, five containers behind a reverse proxy:
 docker compose --env-file .env -f infra/docker-compose.yml up -d --build
 ```
 
+Fill it with something to look at — two series, five events, a form with all four
+field types, forty registrations, a programme with a full session, an invitation
+that really went out:
+
+```bash
+node tools/demo-seed/seed.mjs            # --reset replaces an earlier run
+```
+
 A fresh instance needs four values in `.env` before it will start, and a fifth
 before anyone can log in: `DATABASE_PASSWORD`, `AUTH_SECRET`, `SMTP_HOST` and
 `SMTP_FROM` — plus `ADMIN_BOOTSTRAP_EMAIL`/`ADMIN_BOOTSTRAP_PASSWORD`, which

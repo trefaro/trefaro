@@ -91,6 +91,12 @@ docker compose --env-file .env -f infra/docker-compose.yml up -d --build
 node tools/spike-verification/verify-proxy.mjs
 ```
 
+Damit etwas zu sehen ist:
+
+```bash
+node tools/demo-seed/seed.mjs      # Demo-Daten über die API, --reset ersetzt sie
+```
+
 Ohne `DATABASE_PASSWORD`, `AUTH_SECRET`, `SMTP_HOST` und `SMTP_FROM` startet der
 Server nicht — er prüft die Umgebung und nennt alle Probleme auf einmal. Ohne
 `ADMIN_BOOTSTRAP_EMAIL`/`ADMIN_BOOTSTRAP_PASSWORD` startet er, hat aber keinen
