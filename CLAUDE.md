@@ -147,6 +147,16 @@ Entscheidung. Ebenfalls entschieden: **`CONTRIBUTING.md` wird geschrieben, wenn
 alle Phasen durch sind** (nicht vorher, gegen die fertige v1.0; steht als
 Erinnerung in `todo.md` unter Phase 5).
 
+Drittens entschieden am 28.08.2026: **die Drosselungsgrenzen bleiben, wie sie
+sind** — 20 Logins, 60 Registrierungen, 60 Bestätigungen je fünf Minuten je
+Client-Adresse; die Erhöhungen aus AP 7 und AP 9 sind bestätigt. Sie werden
+**nicht** für Tests entfernt: eine fehlende Drosselung hat kein Symptom, und eine
+Grenze, die für Tests gelockert wird, wird nicht mehr geprüft (E4). Wer beim
+Entwickeln in eine Sperre läuft, startet den Server neu — die Zähler liegen im
+Speicher. Konfigurierbar (mit den strengen Werten als Vorgabe und einer
+Startwarnung bei Lockerung) werden sie in **Phase 5**, zusammen mit dem zweiten
+Zähler je Empfängeradresse.
+
 Nächster Schritt wäre **Phase 2** (Whitelabel-Theming, Modulverwaltung, i18n,
 PWA, Installations-Story) — erst auf Marius' Go, und mit einem eigenen
 `docs/PHASE2.md` wie in Phase 1.

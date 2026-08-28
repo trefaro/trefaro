@@ -437,8 +437,28 @@ answer, not an opinion.
       confirmation endpoint is idempotent and changes nothing after the first
       call, and against guessing an HMAC thirty and sixty are equally hopeless.
       Not covered by an automatic test for the same reason as the login block —
-      the window is five minutes, and a suite that trips it cannot repeat. **Say
-      the word and either goes back to thirty.**
+      the window is five minutes, and a suite that trips it cannot repeat.
+      **Confirmed at sixty by Marius on 28.08.2026** ("ok fürs erste"), so this is
+      no longer a question waiting for an answer — it is a number to re-examine
+      with the rest of the hardening, next to the second counter per recipient
+      address.
+- [ ] **Make the rate limits configurable, with the strict values as defaults.**
+      Decided for phase 5 on 28.08.2026, after weighing the alternative: taking
+      the limits out for now and putting them back once the application is stable.
+      Rejected, because a missing throttle has **no symptom** — no test fails, no
+      page looks different, nothing appears in a log — and the two defects phase 1
+      shipped (bootstrap credentials, service worker) were both of exactly that
+      kind: silently fine until somebody happened to look. On top of that, a limit
+      that is relaxed for tests stops being tested, which is why the current
+      numbers were picked to be survivable by the full suite in the first place
+      (E4). The shape when it gets built: `LOGIN_ATTEMPTS_PER_WINDOW`,
+      `REGISTRATIONS_PER_WINDOW` and `CONFIRMATIONS_PER_WINDOW` read from the
+      environment, defaults exactly today's values, and the server logs loudly at
+      startup when a limit sits above its default — a relaxation should be visible
+      in an `.env`, never invisible in the code. Belongs with the second counter
+      per recipient address and the SMTP work of this phase. Until then the
+      workaround is one command: `docker compose -p trefaro restart server` clears
+      the counters, which live in memory.
 - [ ] **Security review.** Auth, upload validation, plug-in isolation, and
       whether the OpenAPI description should keep being served publicly (it is
       today, on the grounds that the source is AGPL anyway).
@@ -489,7 +509,8 @@ answer, not an opinion.
       registrations through the form again, either count what the run already
       makes or seed. Worth a proper answer in phase 5, when the throttle gets a
       second counter per recipient anyway: a test profile that raises the limits
-      would work, but only if it cannot be the one an instance ships with.
+      would work, but only if it cannot be the one an instance ships with. That is
+      now decided — see the entry about making the limits configurable.
 - [ ] **The invitation sender has no pause and no retry.** AP 12 sends one mail
       after another as fast as the mail server accepts them, and a refused
       address is recorded as failed and never tried again. Against Mailpit and
