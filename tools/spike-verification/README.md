@@ -13,13 +13,14 @@ credentials never reaching the server container, so a fresh instance had no
 administrator, and a service worker that answered `/admin/` from the participant
 client's cache, so the organizer client was unreachable.
 
-| Script                     | Needs                                                           |
-| -------------------------- | --------------------------------------------------------------- |
-| `verify-api.mjs`           | server + PostgreSQL                                             |
-| `verify-plugin-toggle.mjs` | server + PostgreSQL + `docker exec` into the database container |
-| `verify-socket.mjs`        | server                                                          |
-| `verify-push.mjs`          | server + PostgreSQL + a VAPID key pair in `.env`                |
-| `verify-proxy.mjs`         | the full five-container stack                                   |
+| Script                     | Needs                                                                       |
+| -------------------------- | --------------------------------------------------------------------------- |
+| `verify-api.mjs`           | server + PostgreSQL                                                         |
+| `verify-plugin-toggle.mjs` | server + PostgreSQL + `docker exec` into the database container             |
+| `verify-socket.mjs`        | server                                                                      |
+| `verify-push.mjs`          | server + PostgreSQL + a VAPID key pair in `.env`                            |
+| `verify-proxy.mjs`         | the full five-container stack; over HTTPS when `PROXY_BASE` is an https URL |
+| `verify-setup.mjs`         | a **fresh** stack with no administrator, and the token from its startup log |
 
 ## Against a local server
 
@@ -46,6 +47,47 @@ docker compose --env-file .env -f infra/docker-compose.yml up -d --build
 node tools/spike-verification/verify-proxy.mjs
 ```
 
+## Against the TLS overlay
+
+```bash
+docker compose --env-file .env \
+               -f infra/docker-compose.yml \
+               -f infra/docker-compose.tls.yml up -d
+
+PROXY_BASE=https://localhost PROXY_PLAIN_BASE=http://localhost \
+NODE_TLS_REJECT_UNAUTHORIZED=0 \
+  node tools/spike-verification/verify-proxy.mjs
+```
+
+`PROXY_BASE` pointing at the HTTPS address runs every check above over TLS rather
+than duplicating them; `PROXY_PLAIN_BASE` adds the redirect from port 80. With
+`ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD` in the environment it also
+signs in once — the check that actually decides whether an instance is
+administrable, because the session cookie is `Secure` and a browser drops it over
+plain HTTP.
+
+`NODE_TLS_REJECT_UNAUTHORIZED=0` belongs to a self-signed trial certificate only.
+With a real one, leave it out — otherwise the run says nothing about the chain,
+which is the part that breaks in practice (a leaf without its intermediates
+works in the browser that cached them and nowhere else).
+
+## Against a fresh instance, once
+
+```bash
+# ADMIN_BOOTSTRAP_* empty in the .env, and an empty database volume:
+docker compose --env-file .env -p trefaro-fresh \
+               -f infra/docker-compose.yml up -d --build
+docker compose -p trefaro-fresh logs server | grep -A 2 'no administrator'
+
+TREFARO_BASE_URL=http://localhost:8080 TREFARO_SETUP_TOKEN=<the token> \
+  node tools/spike-verification/verify-setup.mjs
+
+docker compose -p trefaro-fresh down -v
+```
+
+This one really sets the instance up, so it is the only script here that must not
+be pointed at anything worth keeping.
+
 `PUBLIC_USER_CLIENT_URL` and `PUBLIC_ADMIN_CLIENT_URL` have to point at the
 proxy — `http://localhost:8080` and `http://localhost:8080/admin` for the
 default port — because they are the WebSocket origin allow-list.
@@ -63,6 +105,13 @@ default port — because they are the WebSocket origin allow-list.
   environment: every `/api/admin/**` route needs a session (E16), and a room
   needs an event that exists (F46), so the script signs in and creates a series
   and an event of its own — and removes them again at the end.
+- `verify-setup.mjs` is the only proof of the first-run setup's happy path that
+  can exist. The endpoints are there only while `admin_user` is empty, every
+  automated suite runs against an instance created from `ADMIN_BOOTSTRAP_*`, and
+  the last administrator cannot be deleted — so no test in this repository can
+  reach that state, which is exactly the property that makes the state safe. The
+  suites assert the other half: that the route is closed
+  (`apps/server-e2e/src/api/setup.spec.ts`, `verify-admin-access.mjs`).
 - `verify-push.mjs` switches the `push` core module on for its own duration and
   puts the flag back: a fresh instance has it off (E21), and its endpoints then
   answer 404. `verify-api.mjs` meets the same endpoint from the other side and

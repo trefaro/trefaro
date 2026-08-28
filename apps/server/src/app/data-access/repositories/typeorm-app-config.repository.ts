@@ -71,6 +71,19 @@ export class TypeormAppConfigRepository implements AppConfigRepository {
     return this.toRecord(await this.repository.save(row));
   }
 
+  async setLocales(locales: {
+    readonly defaultLocale: string;
+    readonly activeLocales: readonly string[];
+  }): Promise<AppConfigRecord> {
+    const row = await this.findRow();
+    row.defaultLocale = locales.defaultLocale;
+    // Copied rather than assigned: the caller's array is readonly, and the
+    // entity's is not — sharing it would let TypeORM's change tracking hold a
+    // reference into somebody else's data.
+    row.activeLocales = [...locales.activeLocales];
+    return this.toRecord(await this.repository.save(row));
+  }
+
   private async findRow(): Promise<AppConfigEntity> {
     const row = await this.repository.findOneBy({
       id: APP_CONFIG_SINGLETON_ID,

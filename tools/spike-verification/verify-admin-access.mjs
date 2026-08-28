@@ -116,6 +116,25 @@ check(
   (await call('/api/admin/auth/me', { headers: cookie })).status === 200,
 );
 
+// --- the setup route, which must be gone (E28) -----------------------------
+
+check(
+  'the first-run setup no longer exists on this instance',
+  // 404 rather than 401: an instance with an administrator has no setup, and the
+  // difference is what the organizer client reads to pick a screen. A 401 here
+  // would mean a fresh-instance route survived into a running one.
+  (await call('/api/setup/state')).status === 404,
+);
+
+check(
+  'and not even with a token',
+  (
+    await call('/api/setup/state', {
+      headers: { 'x-trefaro-setup-token': 'whatever-this-instance-printed' },
+    })
+  ).status === 404,
+);
+
 // --- the rate limit, the part the automated suite cannot afford ------------
 
 console.log(

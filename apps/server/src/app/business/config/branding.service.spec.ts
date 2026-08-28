@@ -55,6 +55,18 @@ class FakeAppConfigRepository implements AppConfigRepository {
         : { ...this.record, appIconPath: storedPath };
     return this.record;
   }
+
+  async setLocales(locales: {
+    readonly defaultLocale: string;
+    readonly activeLocales: readonly string[];
+  }): Promise<AppConfigRecord> {
+    this.record = {
+      ...this.record,
+      defaultLocale: locales.defaultLocale,
+      availableLocales: locales.activeLocales,
+    };
+    return this.record;
+  }
 }
 
 /** The upload volume as a map, with the layout the real store produces. */

@@ -404,7 +404,7 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
   Installations-Story, nicht zur Härtung; `Secure` fallen zu lassen ist keine
   Alternative.
 
-## Stand Phase 2 (in Arbeit; AP 1–4 erledigt, Meilenstein M3 erreicht)
+## Stand Phase 2 (in Arbeit; AP 1–5 erledigt, Meilensteine M3 und M4 erreicht)
 
 Plan **und Protokoll**: `docs/PHASE2.md` — dreizehn Arbeitspakete, Entscheidungen
 **E17–E29** (die Zählung läuft über die Phasen weiter), Meilensteine M3
@@ -427,7 +427,13 @@ Organisationsnamen statt „Trefaro" (damit ist **M3** erreicht) · **AP 4**
 Modul- und Plug-in-Verwaltung: `CORE_MODULES` auf zwei echte Einträge
 zusammengezogen (F63), `GET/PATCH /api/admin/modules`, die Seite `/modules`
 schreibend, `push` mit Guard und Bedingung am VAPID-Schlüssel, und die Kacheln
-in der Event-Detailansicht des Nutzer-Clients (F68).
+in der Event-Detailansicht des Nutzer-Clients (F68) · **AP 5**
+Installations-Story: `business/setup/` mit `GET /api/setup/state` und
+`POST /api/setup/admin` (tokengeschützt, existiert nur solange `admin_user` leer
+ist), der Einrichtungsassistent unter `/setup` im Veranstalter-Client, das
+TLS-Overlay `infra/docker-compose.tls.yml` und `docs/INSTALL.md` — damit ist
+**M4** erreicht (alle P1 der Phase: brandbar, konfigurierbar, selbst
+installierbar).
 
 Reihenfolge: AP 1–3 Whitelabel (FR 1.4) · AP 4 Modulverwaltung (FR 1.5) · AP 5
 Installations-Story mit geführter Ersteinrichtung und TLS-Overlay (FR 1.1,
@@ -522,6 +528,67 @@ Regeln aus AP 4, die nicht erneut aufgerollt werden sollten:
   andere Suiten benutzen es parallel. Für Modulschalter mit Fernwirkung ist
   `apps/server-e2e` der richtige Ort: dort läuft eine Suite allein
   (`maxWorkers: 1`).
+
+Regeln aus AP 5, die nicht erneut aufgerollt werden sollten:
+
+- **Die Existenzbedingung der Ersteinrichtung ist „kann sich überhaupt jemand
+  anmelden?"** (F64) — bei jedem Aufruf an die Datenbank gestellt, kein Flag,
+  keine Datei, nicht „ein Token liegt vor". Nur die Antwort selbst kann ihr nie
+  widersprechen. Und die **Statuscodes sind der Vertrag**: 401 heißt
+  „unbeansprucht, Token fehlt oder ist falsch", 404 heißt „es gibt einen
+  Administrator". Genau aus diesem Unterschied entscheidet der Client, welchen
+  Bildschirm er zeigt — ohne dass der Rumpf je ohne Token herausgegeben wird.
+- **Das Setup-Token lebt nur im Speicher**, 32 Zufallsbytes, bei jedem Start neu,
+  Vergleich mit `timingSafeEqual`. **Keine Drosselung enger als die globale**: ein
+  256-Bit-Token lässt sich nicht raten, und eine Grenze, die niemand auslösen
+  kann, müsste die Testsuite trotzdem überleben (E4).
+- **Der Account wird zuletzt geschrieben.** Er ist es, der die Route schließt —
+  also erst Name, Sprache, Farben, dann das Konto: wird ein Wert abgelehnt,
+  bekommt der Betreiber das Formular zurück und keine verschlossene Instanz. Und
+  **keine Sitzung** als Antwort: angemeldet wird sich auf dem Login, weil dort ein
+  Deployment ohne TLS sofort auffällt (E2).
+- **Der Admin-Guard überschätzt** (F69): `isAdminPath` liest jeden _deklarierten_
+  Pfad einzeln, also sieht `@Post('admin')` unter `@Controller('setup')` für ihn
+  aus wie `/api/admin/…` — und `/api/setup/admin` antwortete 401. Absicht, weil
+  der Fehler in die andere Richtung ein offener Endpunkt wäre. Wer so eine Route
+  braucht, setzt `@AllowAnonymous()` **und** einen eigenen Guard davor; sichtbar
+  ist das nur auf HTTP-Ebene.
+- **`startupWarnings()` ist eine reine Funktion mit zwei Lesern**: dem Startlog
+  und dem Setup-Zustand. Sie meldet Werte, die _vorhanden_ und für ein echtes
+  Deployment _falsch_ sind (Klartext-URL, Mailserver auf `localhost`, Absender
+  ohne Domain, fehlendes VAPID-Paar, unverschlüsselte Verbindung zu einer
+  entfernten Datenbank) — nicht, was `loadEnv` schon verweigert. Eine neue solche
+  Bedingung kommt dorthin, nicht in ein Dokument.
+- **Das Routing des Proxys steht in `infra/nginx/trefaro-locations.conf`**, einmal,
+  eingebunden von `trefaro.conf` und `trefaro-tls.conf`. Zwei Kopien wären zwei
+  Kopien, von denen die produktive die ungetestete ist. Und **`ports:` im Overlay
+  braucht `!override`** — Compose verkettet Sequenzen, Mounts führt es über ihr
+  Ziel zusammen.
+- **Der Assistent färbt den Client am Ende selbst um.** Das Theme wird genau
+  einmal angewendet (Startlauf); `AppConfigService.reload()` frischt nur die Daten
+  auf. Wer Konfiguration schreibt und _sofort_ eine Wirkung sehen soll, ruft
+  zusätzlich `ThemeService.apply()`. Sonst repaint nichts (E20).
+- **Zwei Felder dürfen nicht „Name" heißen.** Person und Organisation im selben
+  Formular sind für einen Screenreader nicht unterscheidbar (NFR 4) — „Your name"
+  und „Organization name". Gefunden hat es der Browserdurchlauf, kein Unit-Test.
+- **Sprachnamen kommen bis AP 6 von `Intl.DisplayNames`** („Deutsch" statt „de"):
+  Plattform, kein Katalog, kein Download.
+- **`defaultLocale` schreibt nur die Ersteinrichtung** (`setLocales` als eigene
+  Port-Methode, nicht `save`): `AppConfigChange` ist der Rumpf der Design-Seite,
+  und die Sprache jeder ausgehenden Mail darf dort nicht mitreisen. Gewählt werden
+  kann nur eine Locale, für die dieses Image Mailvorlagen hat; Englisch bleibt
+  immer in `active_locales` (NFR 4).
+- **Der Erfolgspfad der Ersteinrichtung hat keinen automatisierten Test und kann
+  keinen haben.** Die Endpunkte existieren nur bei leerer `admin_user`-Tabelle,
+  jede Suite läuft gegen eine Instanz aus `ADMIN_BOOTSTRAP_*`, und der letzte
+  Administrator ist nicht löschbar (F22). Also: Unit-Tests plus
+  `tools/spike-verification/verify-setup.mjs` gegen einen frischen Stack; die
+  Suiten prüfen, dass die Route **zu** ist.
+- **`verify-proxy.mjs` läuft über HTTPS, wenn `PROXY_BASE` https ist** (dazu
+  `PROXY_PLAIN_BASE` für die Umleitung und die Anmeldung mit `Secure`-Cookie).
+  Gegen ein selbst ausgestelltes Zertifikat braucht auch der socket.io-Client die
+  Ausnahme, sonst liest sich der Fehlschlag wie „der Proxy leitet keine Upgrades
+  weiter".
 
 ## Betriebskontext
 

@@ -31,6 +31,9 @@ class FakeAppConfigRepository implements AppConfigRepository {
   private record: AppConfigRecord;
   /** What `save` was handed, so a test can assert what never reached the port. */
   written: AppConfigChange | null = null;
+  /** The same for the locale columns, which `save` deliberately cannot touch. */
+  locales: { defaultLocale: string; activeLocales: readonly string[] } | null =
+    null;
 
   constructor(record: AppConfigRecord = storedConfig) {
     this.record = record;
@@ -54,6 +57,19 @@ class FakeAppConfigRepository implements AppConfigRepository {
       kind === 'logo'
         ? { ...this.record, logoPath: storedPath }
         : { ...this.record, appIconPath: storedPath };
+    return this.record;
+  }
+
+  async setLocales(locales: {
+    readonly defaultLocale: string;
+    readonly activeLocales: readonly string[];
+  }): Promise<AppConfigRecord> {
+    this.locales = { ...locales };
+    this.record = {
+      ...this.record,
+      defaultLocale: locales.defaultLocale,
+      availableLocales: locales.activeLocales,
+    };
     return this.record;
   }
 }
@@ -324,5 +340,73 @@ describe('ConfigurationService.updateSettings', () => {
 
     expect(appConfig.written).toEqual({});
     expect(settings.primaryColor).toBe('#1f6f5c');
+  });
+});
+
+/**
+ * The language of the instance (FR 1.1) — written once, by the first-run setup.
+ *
+ * Kept out of `updateSettings` on purpose: the design page must not be able to
+ * change the language of every outgoing mail by sending one more field, and the
+ * catalogue of legal values belongs to the mail module, which reads this
+ * configuration and therefore cannot be asked from here.
+ */
+describe('ConfigurationService.setDefaultLocale', () => {
+  it('writes the tag and keeps English beside it (NFR 4)', async () => {
+    const appConfig = new FakeAppConfigRepository();
+
+    await serviceWith({ appConfig }).setDefaultLocale('de');
+
+    expect(appConfig.locales).toEqual({
+      defaultLocale: 'de',
+      activeLocales: ['en', 'de'],
+    });
+  });
+
+  it('does not list English twice when English is the choice', async () => {
+    const appConfig = new FakeAppConfigRepository();
+
+    await serviceWith({ appConfig }).setDefaultLocale('en');
+
+    expect(appConfig.locales).toEqual({
+      defaultLocale: 'en',
+      activeLocales: ['en'],
+    });
+  });
+
+  it('stores a tag in one spelling', async () => {
+    const appConfig = new FakeAppConfigRepository();
+
+    await serviceWith({ appConfig }).setDefaultLocale(' DE-AT ');
+
+    expect(appConfig.locales?.defaultLocale).toBe('de-at');
+  });
+
+  it('refuses what the column cannot hold or a formatter cannot read', async () => {
+    const appConfig = new FakeAppConfigRepository();
+    const service = serviceWith({ appConfig });
+
+    for (const value of [
+      '',
+      'deutsch bitte',
+      'd',
+      'de_AT',
+      'de-AT-Latn-x-toolong',
+    ]) {
+      await expect(service.setDefaultLocale(value)).rejects.toMatchObject({
+        status: 400,
+      });
+    }
+    expect(appConfig.locales).toBeNull();
+  });
+
+  it('leaves the theme alone', async () => {
+    const appConfig = new FakeAppConfigRepository();
+
+    await serviceWith({ appConfig }).setDefaultLocale('de');
+
+    // Two ports, two calls: `save` is the design page's write path and this is
+    // not the design page.
+    expect(appConfig.written).toBeNull();
   });
 });

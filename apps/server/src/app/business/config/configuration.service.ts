@@ -5,6 +5,7 @@ import type {
   AppConfigSettings,
 } from '@trefaro/shared-models';
 import {
+  MAX_LOCALE_TAG_LENGTH,
   MAX_ORGANIZATION_NAME_LENGTH,
   PUSH_MODULE_KEY,
   fontFamilyStack,
@@ -160,7 +161,61 @@ export class ConfigurationService {
 
     return toSettings(await this.appConfig.save(sanitized));
   }
+
+  /**
+   * Sets the language a fresh instance runs in (FR 1.1, AP 5).
+   *
+   * The only writer of the locale columns until the language administration
+   * arrives, and not part of {@link updateSettings}: the design page must not be
+   * able to change the language of every outgoing mail by sending one more field
+   * (E20 makes that invisible until the next reload), and the set of legal
+   * values is decided elsewhere — by which mail templates this image ships,
+   * which is knowledge of the mail module. `ConfigurationModule` cannot ask it:
+   * the mail module reads this configuration, so the dependency runs the other
+   * way and asking back would close the circle. The caller — the setup module,
+   * which sits above both — checks the value against that catalogue; what is
+   * checked here is the shape and the column's bound, so nothing unstorable or
+   * unformattable can be written by a seed script or a later import.
+   *
+   * English is kept in `active_locales` whatever is chosen: NFR 4 makes it
+   * mandatory beside the national language, and the column has a `CHECK` that it
+   * is never empty.
+   */
+  async setDefaultLocale(locale: string): Promise<void> {
+    const tag = locale.trim();
+    if (tag.length > MAX_LOCALE_TAG_LENGTH || !LOCALE_TAG_PATTERN.test(tag)) {
+      throw new BadRequestException(
+        'defaultLocale must be a BCP 47 language tag such as de or de-AT',
+      );
+    }
+
+    const canonical = tag.toLowerCase();
+    await this.appConfig.setLocales({
+      defaultLocale: canonical,
+      activeLocales:
+        canonical === FALLBACK_UI_LOCALE
+          ? [FALLBACK_UI_LOCALE]
+          : [FALLBACK_UI_LOCALE, canonical],
+    });
+  }
 }
+
+/**
+ * The language every instance has (NFR 4), and the fallback of the mail
+ * templates.
+ *
+ * Spelled out here rather than imported from the mail module, which would make
+ * this module depend on one that depends on it.
+ */
+const FALLBACK_UI_LOCALE = 'en';
+
+/**
+ * A storable language tag: two or three letters, then up to two subtags.
+ *
+ * Checked together with {@link MAX_LOCALE_TAG_LENGTH}, so a value that passes
+ * cannot fail in the database.
+ */
+const LOCALE_TAG_PATTERN = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/;
 
 type WritableChange = {
   -readonly [K in keyof AppConfigChange]: AppConfigChange[K];

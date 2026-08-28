@@ -53,6 +53,15 @@ export const MAX_ORGANIZATION_NAME_LENGTH = 128;
 export const DEFAULT_ORGANIZATION_NAME = 'Trefaro';
 
 /**
+ * Longest storable language tag; matches `app_config.default_locale` and the
+ * element type of `app_config.active_locales`.
+ *
+ * Wide enough for a tag with a script and a region (`sr-Latn-RS`), which is as
+ * specific as a language a set of translations is maintained in ever gets.
+ */
+export const MAX_LOCALE_TAG_LENGTH = 16;
+
+/**
  * The whitelabel settings an administrator may write (FR 1.4).
  *
  * Deliberately smaller than {@link AppConfig}: that payload also carries what

@@ -30,6 +30,7 @@ real-time chat and push (phase 3); the four curated plug-ins — programme
 proposals, forum, room planning, QR check-in (phase 4). What is deferred and why
 is in [`todo.md`](todo.md).
 
+[`docs/INSTALL.md`](docs/INSTALL.md) installs an instance;
 `docs/BOOTSTRAP.md` sets up a development environment.
 `docs/Anforderungsanalyse_und_Umsetzungsplan.md` (German) holds the full
 requirements analysis and implementation plan.
@@ -60,14 +61,18 @@ that really went out:
 node tools/demo-seed/seed.mjs            # --reset replaces an earlier run
 ```
 
-A fresh instance needs four values in `.env` before it will start, and a fifth
-before anyone can log in: `DATABASE_PASSWORD`, `AUTH_SECRET`, `SMTP_HOST` and
-`SMTP_FROM` — plus `ADMIN_BOOTSTRAP_EMAIL`/`ADMIN_BOOTSTRAP_PASSWORD`, which
-create the first administrator while no administrator exists. Every route that
-could create one requires a session, so without them the instance has no way in.
-Remove both once a personal account exists. Note that the session cookie is
-`Secure` in production: put TLS in front of the proxy, or the login works on
-`localhost` only.
+A fresh instance needs four values in `.env` before it will start:
+`DATABASE_PASSWORD`, `AUTH_SECRET`, `SMTP_HOST` and `SMTP_FROM`. The first
+administrator comes either from `ADMIN_BOOTSTRAP_EMAIL`/`ADMIN_BOOTSTRAP_PASSWORD`
+(unattended) or from the guided first-run setup: leave both empty and the server
+prints a one-off setup token, which the organizer client asks for at
+`/admin/setup`. And put TLS in front of the proxy —
+`-f infra/docker-compose.tls.yml` — because the session cookie is `Secure` in
+production, so without HTTPS the login works on `localhost` only.
+
+**[`docs/INSTALL.md`](docs/INSTALL.md) is the full installation guide**:
+prerequisites, every value that matters, TLS, mail, backups, updating, and a
+symptom table for when something does not work.
 
 ## Tech stack
 

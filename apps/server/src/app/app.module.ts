@@ -21,6 +21,7 @@ import { ProgramModule } from './business/program';
 import { PushModule } from './business/push';
 import { RegistrationModule } from './business/registration';
 import { SelfServiceModule } from './business/self-service';
+import { SetupModule } from './business/setup';
 import { CoreModule } from './core/core.module';
 import { HealthController } from './core/health/health.controller';
 import { DataAccessModule } from './data-access/data-access.module';
@@ -53,6 +54,10 @@ import { DataAccessModule } from './data-access/data-access.module';
 
     // Event management — the survey put it ahead of community features.
     LoginModule,
+    // The way into a fresh instance, and only into a fresh one (FR 1.1, E28).
+    // Above the login and the configuration, which it writes through; it owns
+    // nothing but the window in which that may happen without a session.
+    SetupModule,
     EventSeriesModule,
     EventsModule,
     ProgramModule,

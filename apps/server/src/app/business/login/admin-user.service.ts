@@ -89,6 +89,18 @@ export class AdminUserService implements OnApplicationBootstrap {
     return admin;
   }
 
+  /**
+   * Whether this instance has anybody who can log in.
+   *
+   * The one condition under which the first-run setup exists (E28), asked on
+   * every call to it rather than remembered: the answer changes exactly once,
+   * and a cached "no" would leave the route open after the first account was
+   * created. A `COUNT` on a table with a handful of rows is not worth a cache.
+   */
+  async hasAny(): Promise<boolean> {
+    return (await this.admins.count()) > 0;
+  }
+
   async list(): Promise<readonly AdminSummary[]> {
     const admins = await this.admins.findAll();
     return admins.map(toAdminSummary);

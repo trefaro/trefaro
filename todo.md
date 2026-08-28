@@ -173,7 +173,7 @@ answer, not an opinion.
 
 ## Checkable after phase 2 — whitelabel, modules, i18n, PWA, installation
 
-- [ ] **TLS — and it is not optional in practice.** Deliberately absent from
+- [x] **TLS — and it is not optional in practice.** Deliberately absent from
       `infra/nginx/trefaro.conf` so a local `docker compose up` works without
       certificates. What AP 13 of phase 1 made concrete while checking the stack:
       the session cookie carries `Secure` as soon as `NODE_ENV=production` (E2),
@@ -185,6 +185,15 @@ answer, not an opinion.
       optional compose overlay plus documentation (E29). Acquiring the
       certificate stays outside the stack, and the alternative — dropping
       `Secure` — is not one.
+      **Done in AP 5 of phase 2** (28.08.2026): `infra/docker-compose.tls.yml`
+      plus `infra/nginx/trefaro-tls.conf`, with the routing itself moved into
+      `trefaro-locations.conf` so both variants include one copy of it; HSTS,
+      TLS 1.2 as the floor, a 301 from port 80 and an ACME webroot so renewal
+      needs no downtime. `docs/INSTALL.md` has the three ways to get a
+      certificate. Verified against the stack with a self-signed certificate:
+      `verify-proxy.mjs` over `https://…` passes every check, including the
+      WebSocket upgrade and a login whose cookie is `Secure` — and a browser
+      login over HTTPS whose session survives a reload.
 
 - [ ] **A series and an event can have a logo in the schema, and no way to
       upload one.** `event_series.logo_path` and `event.logo_path` exist, the

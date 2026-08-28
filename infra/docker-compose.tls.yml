@@ -1,0 +1,44 @@
+# Trefaro — TLS for the production stack (E29, NFR 15).
+#
+# An overlay, not a second stack: everything from `docker-compose.yml` stays as
+# it is, and only the reverse proxy changes.
+#
+#   docker compose --env-file .env \
+#                  -f infra/docker-compose.yml \
+#                  -f infra/docker-compose.tls.yml up -d
+#
+# Needs three values in the .env — TLS_CERT_FILE, TLS_KEY_FILE and both public
+# URLs on https. Without TLS an instance is only usable on localhost: the
+# administrative session cookie carries `Secure` in production (E2), and a
+# browser stores such a cookie over HTTPS only. That is why TLS belongs to the
+# installation story and not to a later hardening pass.
+#
+# Getting the certificate stays outside the stack — see `nginx/trefaro-tls.conf`
+# for the three ways that work.
+
+services:
+  nginx:
+    # `!override` rather than a second list: Compose *concatenates* sequences
+    # from several files, so without it the base file's mapping would still be
+    # published alongside these two (Compose 2.24 or newer). Mounts merge by
+    # their target path instead, which is why the two conf files below simply
+    # replace the base file's.
+    ports: !override
+      # Both, and both as themselves: port 80 stays open so it can redirect and
+      # so an ACME renewal can answer there.
+      - '${HTTP_PORT:-80}:80'
+      - '${HTTPS_PORT:-443}:443'
+    volumes:
+      - ./nginx/trefaro-tls.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/trefaro-locations.conf:/etc/nginx/trefaro-locations.conf:ro
+      # The full chain, not just the leaf: without the intermediates some
+      # clients — Android and most command line tools among them — cannot build
+      # a path to the root and reject the connection, while a desktop browser
+      # that happens to have cached the intermediate accepts it. A confusing
+      # failure to debug, and the reason this is spelled `fullchain.pem`.
+      - ${TLS_CERT_FILE:?TLS_CERT_FILE must point at the certificate chain}:/etc/nginx/tls/fullchain.pem:ro
+      - ${TLS_KEY_FILE:?TLS_KEY_FILE must point at the private key}:/etc/nginx/tls/privkey.pem:ro
+      # Where `certbot --webroot` writes its challenge files. Harmless when the
+      # certificate comes from somewhere else: the directory is then empty and
+      # the location answers 404.
+      - ${ACME_WEBROOT:-./nginx/acme}:/var/www/acme:ro

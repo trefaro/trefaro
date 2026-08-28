@@ -73,6 +73,25 @@ export interface AppConfigRepository {
     kind: BrandingImageKind,
     storedPath: string | null,
   ): Promise<AppConfigRecord>;
+
+  /**
+   * Writes the instance's language (FR 1.1, AP 5).
+   *
+   * Separate from {@link save} for the same reason as
+   * {@link setBrandingImage}: `AppConfigChange` is the body of the design
+   * page's `PATCH`, and the locales are not a design setting — they are decided
+   * once during the first-run setup and, from AP 7, in a language
+   * administration of their own. A value the design page must not be able to
+   * send has no business being expressible in its DTO.
+   *
+   * Both columns in one call, because they constrain each other: the default
+   * locale has to be one the organization maintains, and `active_locales` has a
+   * `CHECK` that it is never empty.
+   */
+  setLocales(locales: {
+    readonly defaultLocale: string;
+    readonly activeLocales: readonly string[];
+  }): Promise<AppConfigRecord>;
 }
 
 /**

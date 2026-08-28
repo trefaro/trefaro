@@ -4,8 +4,19 @@ import { ApiClient } from '@trefaro/shared-http';
 import type { AdminAccount, AdminSessionInfo } from '@trefaro/shared-models';
 import { firstValueFrom, timeout } from 'rxjs';
 
-/** Paths whose 401 is an answer rather than an expired session. */
-export const AUTH_PROBE_PATHS = ['admin/auth/me', 'admin/auth/login'] as const;
+/**
+ * Paths whose 401 is an answer rather than an expired session.
+ *
+ * The first two are the login and the session probe. The third is the first-run
+ * setup, where a 401 means "this instance is unclaimed and the token was missing
+ * or wrong" (E28) — sending that to the login form would send the operator to a
+ * form no account can pass yet.
+ */
+export const AUTH_PROBE_PATHS = [
+  'admin/auth/me',
+  'admin/auth/login',
+  'setup/',
+] as const;
 
 /**
  * Who is logged in to the organizer client (UC 01).

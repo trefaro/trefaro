@@ -8,6 +8,15 @@ import { Observable, catchError, throwError } from 'rxjs';
 import { API_BASE_URL } from './api-base-url';
 import { toApiError, type ApiError } from './api-error';
 
+/**
+ * Extra request headers, for the few calls that carry a secret of their own.
+ *
+ * There is exactly one so far: the first-run setup token (`SETUP_TOKEN_HEADER`),
+ * which is not a session and cannot be a cookie. A header rather than a query
+ * parameter keeps it out of the reverse proxy's access log.
+ */
+export type RequestHeaders = Readonly<Record<string, string>>;
+
 /** What a caller may put in a query string. */
 export type QueryParams = Readonly<
   Record<string, string | number | boolean | null | undefined>
@@ -37,9 +46,16 @@ export class ApiClient {
    * is what lets a caller pass its whole state and get the short URL that
    * corresponds to the defaults.
    */
-  get<T>(path: string, params?: QueryParams): Observable<T> {
+  get<T>(
+    path: string,
+    params?: QueryParams,
+    headers?: RequestHeaders,
+  ): Observable<T> {
     return this.request(
-      this.http.get<T>(this.url(path), { params: toHttpParams(params) }),
+      this.http.get<T>(this.url(path), {
+        params: toHttpParams(params),
+        ...(headers ? { headers } : {}),
+      }),
     );
   }
 
@@ -51,8 +67,14 @@ export class ApiClient {
    * not be given one, and why the registration form with a file field goes
    * through this same method.
    */
-  post<T>(path: string, body: unknown): Observable<T> {
-    return this.request(this.http.post<T>(this.url(path), body));
+  post<T>(
+    path: string,
+    body: unknown,
+    headers?: RequestHeaders,
+  ): Observable<T> {
+    return this.request(
+      this.http.post<T>(this.url(path), body, headers ? { headers } : {}),
+    );
   }
 
   /**

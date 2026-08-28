@@ -1,0 +1,4 @@
+Webroot for ACME HTTP-01 challenges, mounted read-only into the reverse proxy by
+infra/docker-compose.tls.yml. `certbot --webroot -w infra/nginx/acme` writes its
+challenge files below `.well-known/acme-challenge/` here; nothing else belongs in
+this directory, and it stays empty when the certificate comes from elsewhere.

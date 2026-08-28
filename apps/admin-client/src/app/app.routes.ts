@@ -1,5 +1,6 @@
 import { Route } from '@angular/router';
 import { adminAuthGuard, notLoggedInGuard } from './features/auth/auth.guard';
+import { setupPendingGuard } from './features/setup/setup.guard';
 
 /**
  * Routes of the organizer client.
@@ -9,6 +10,16 @@ import { adminAuthGuard, notLoggedInGuard } from './features/auth/auth.guard';
  * same boundary on every request regardless (FR 1.3).
  */
 export const appRoutes: Route[] = [
+  {
+    // Only reachable while this instance has no administrator (FR 1.1, E28) —
+    // and it is where the session guard sends anybody who arrives before then,
+    // because a login form without an account behind it is a dead end.
+    path: 'setup',
+    canActivate: [setupPendingGuard],
+    loadComponent: () =>
+      import('./pages/setup/setup-page').then((m) => m.SetupPage),
+    title: 'Set up — Trefaro',
+  },
   {
     path: 'login',
     canActivate: [notLoggedInGuard],

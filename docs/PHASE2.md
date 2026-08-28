@@ -1,9 +1,9 @@
 # Phase 2 — Whitelabel, Konfiguration, Mehrsprachigkeit, PWA
 
-**Status: in Arbeit** (28.08.2026). **AP 1 bis AP 4 sind erledigt** (siehe
-_Fortschritt_) — damit ist **Meilenstein M3** erreicht; die Abschnitte oberhalb
-davon sind Plan, nicht Protokoll. Wie in Phase 1 gibt Marius jedes Paket einzeln
-frei — AP 5 wartet auf seine Freigabe.
+**Status: in Arbeit** (28.08.2026). **AP 1 bis AP 5 sind erledigt** (siehe
+_Fortschritt_) — damit sind **Meilenstein M3** und **Meilenstein M4** erreicht;
+die Abschnitte oberhalb davon sind Plan, nicht Protokoll. Wie in Phase 1 gibt
+Marius jedes Paket einzeln frei — AP 6 wartet auf seine Freigabe.
 
 **Die Entscheidungen E17–E29 sind am 28.08.2026 von Marius bestätigt** — sie
 werden nicht erneut aufgerollt, sondern nur gegen die Umsetzung geprüft (wie
@@ -613,8 +613,9 @@ Wird beim jeweiligen Paket eingetragen, nicht am Ende gesammelt:
 | F66 | Wie ein Logo öffentlich wird, ohne die Anhänge mitzunehmen (E19, Bezug E9, F38)                   | 2   |
 | F67 | Welcher Kontrast geprüft wird — und warum nicht der gegen die berechnete Textfarbe (NFR 4, E17)   | 3   |
 | F68 | Wie die Kacheln der Event-Detailansicht entstehen (Mockups 5.2, Bezug F47)                        | 4   |
+| F69 | Warum der Setup-Controller `@AllowAnonymous()` trägt — der Admin-Guard überschätzt (Bezug E16)    | 5   |
 
-Anhangspunkt 18 (TLS gehört zur Installations-Story) wird in AP 5 von „geplant"
+Anhangspunkt 18 (TLS gehört zur Installations-Story) ist in AP 5 von „geplant"
 auf „umgesetzt" gezogen.
 
 ## Definition of Done für Phase 2
@@ -978,3 +979,142 @@ href>` lässt `href="#program"` gegen die Basis auflösen: der Klick verließ da
 Was AP 4 **nicht** enthält: die Übersetzung der Modulnamen (`titleKey`,
 `labelKey`) — das ist AP 6; und keinen Einhängepunkt `event-dashboard` im
 Plug-in-Vertrag, solange kein Plug-in eine Kachel dafür mitbringt (F47).
+
+### AP 5 — Installations-Story (erledigt) → **Meilenstein M4**
+
+Umgesetzt:
+
+- **`shared-models`** — `SetupState` (die Vorbelegung des Formulars, die
+  wählbaren Sprachen, die Befunde zum Deployment), `SetupSubmission`,
+  `SetupResult`, `SETUP_TOKEN_HEADER` und `MAX_LOCALE_TAG_LENGTH`.
+- **Server, `business/setup/`** — `SetupTokenService` (32 Zufallsbytes, nur im
+  Speicher, `timingSafeEqual`), `startupWarnings()` als reine Funktion,
+  `SetupService` mit `onApplicationBootstrap` (Befunde ins Log, Token nur wenn
+  niemand sich anmelden kann), `SetupGuard` (404 vor 401, in dieser Reihenfolge)
+  und `SetupController` mit `GET /api/setup/state` und `POST /api/setup/admin`.
+  `SetupModule` importiert `LoginModule` und `ConfigurationModule` — damit steht
+  es über beiden (F49) _und_ läuft sein Bootstrap-Hook nach dem der Anmeldung, so
+  dass eine Instanz mit `ADMIN_BOOTSTRAP_*` kein Token bekommt.
+- **Server, bestehende Bausteine** — `AdminUserService.hasAny()`;
+  `ConfigurationService.setDefaultLocale()` als einziger Schreiber der
+  Locale-Spalten, mit `setLocales()` als neuer Port-Methode (getrennt von `save`,
+  weil `AppConfigChange` der Rumpf der Design-Seite ist).
+- **`shared-http`** — `get`/`post` nehmen optionale Kopfzeilen (`RequestHeaders`).
+  Der Setup-Token ist der erste und bisher einzige Fall: er ist keine Sitzung und
+  kann kein Cookie sein, und in der Query stünde er im Zugriffsprotokoll des
+  Proxys.
+- **Veranstalter-Client** — `features/setup/` (Dienst, der die Verfügbarkeit aus
+  dem **Statuscode** liest, und `setupPendingGuard`), die Seite `/setup` in drei
+  Schritten (Token · ein Formular mit Konto, Organisation, Sprache, zwei Farben ·
+  fertig), und die zwei Sitzungs-Guards schicken jetzt zur Einrichtung statt zu
+  einem Login ohne Konto dahinter. Der Startlauf fragt die Setup-Route nur, wenn
+  keine Sitzung besteht.
+- **Infrastruktur** — `infra/nginx/trefaro-locations.conf` (das Routing, einmal),
+  eingebunden von `trefaro.conf` und dem neuen `trefaro-tls.conf`;
+  `infra/docker-compose.tls.yml` als Overlay mit `ports: !override`, Zertifikat
+  und Schlüssel als Read-only-Mounts, HSTS, TLS 1.2 als Untergrenze und einer
+  ACME-Webroot, damit eine Erneuerung ohne Ausfall geht.
+- **Dokumentation** — `docs/INSTALL.md`: Voraussetzungen, die Werte ohne die
+  nichts startet, erster Start, beide Wege zum ersten Administrator, TLS mit den
+  drei Beschaffungswegen, SMTP, Push, Sicherung der zwei Volumes _und_ des
+  `AUTH_SECRET`, Aktualisieren, eine Symptomtabelle und ein Diagramm.
+- **Werkzeuge** — `verify-setup.mjs` (der einzige Beweis des Erfolgspfads, der
+  existieren kann); `verify-admin-access.mjs` prüft, dass die Route auf einer
+  laufenden Instanz **weg** ist; `verify-proxy.mjs` läuft jetzt über HTTPS, wenn
+  `PROXY_BASE` eine https-Adresse ist, und meldet sich dabei einmal an.
+
+Belege: `nx run-many -t lint test build` grün für 12 Projekte (neu: acht Tests für
+`startupWarnings`, sechs für den Token, dreizehn für `SetupService`, vier für den
+Guard, fünf für `setDefaultLocale`, acht für den Client-Dienst, zehn für die
+Seite); `nx e2e server-e2e` **17 Suiten / 310 Tests** (neu `setup.spec.ts`);
+Browsersuiten **225 + 6 übersprungen** (Veranstalter, neu `setup.spec.ts`) und
+**150** (Nutzer).
+
+Und, weil das Abnahmekriterium es verlangt, von Hand gegen einen echten Stack —
+`-p trefaro-fresh`, leeres Volume, `ADMIN_BOOTSTRAP_*` leer:
+
+1. `verify-setup.mjs` mit dem Token aus dem Containerlog: **16 von 16 PASS**,
+   einschließlich „a refused value does not close the setup" und
+   „a second submission cannot create a second first administrator".
+2. Der Assistent im echten Browser (Chromium gegen die gebauten Images): falsches
+   Token abgewiesen, richtiges öffnet das vorbelegte Formular, Sprachen als
+   „English"/„Deutsch", ein Befund angezeigt, Administrator angelegt, Übergabe an
+   den Login („Administration — Democracy International e.V."), Anmeldung,
+   Arbeitsbereich in `#7b2d8e` — und `/admin/setup` bietet danach keinen
+   Assistenten mehr.
+3. Mit dem TLS-Overlay und einem selbst ausgestellten Zertifikat:
+   `verify-proxy.mjs` über `https://…` **alle Prüfungen grün**, inklusive
+   WebSocket-Upgrade, HSTS, 301 von Port 80 und der Anmeldung mit `Secure`-Cookie;
+   dazu eine Browseranmeldung über HTTPS, deren Sitzung ein Neuladen übersteht.
+4. Alle fünf Befunde einmal in einem echten Produktionslog gesehen (zwei
+   Klartext-URLs, SMTP-Host, SMTP-Absender, fehlendes VAPID-Paar).
+
+Was anders lief:
+
+- **`POST /api/setup/admin` antwortete 401** — der Admin-Guard liest jeden
+  _deklarierten_ Pfad einzeln, und `@Post('admin')` unter `@Controller('setup')`
+  sieht für ihn aus wie eine administrative Route (F69). Gefunden vom
+  Vertragstest beim ersten Lauf; kein Unit-Test kann das sehen. Gelöst mit
+  `@AllowAnonymous()` am Controller — die dritte Verwendung eines Dekorators, der
+  zwei hatte — plus einem Test an `isAdminPath` selbst, der die Überschätzung
+  festhält, damit der nächste Treffer nicht wieder auf HTTP-Ebene gesucht wird.
+- **Die Verfügbarkeit steckt im Statuscode, nicht im Rumpf.** E28 verlangt ein
+  Token für _beide_ Endpunkte, und der Client muss trotzdem vor der ersten
+  Eingabe wissen, welchen Bildschirm er zeigt. Beides geht auf, weil 401 und 404
+  verschiedene Dinge sagen: unbeansprucht gegen eingerichtet. Der Rumpf wird nie
+  ohne Token herausgegeben, und mehr als „diese Instanz hat noch keinen
+  Administrator" verrät die Unterscheidung nicht.
+- **Keine Drosselung enger als die globale**, gegen den Plan („Drosselung wie beim
+  Login"). Ein 256-Bit-Zufallstoken lässt sich nicht raten; eine Grenze, die
+  niemand auslösen kann, müsste die Testsuite aber trotzdem überleben, und eine
+  Grenze, die für Tests gelockert wird, wird nicht mehr geprüft (E4). Was den
+  Endpunkt schützt, ist der Guard.
+- **Die Sprache ist im Assistenten, die Schrift nicht.** `defaultLocale` hat heute
+  Bedeutung (Mailsprache und Datumsformate), also wird sie gefragt — beschränkt
+  auf die Locales, für die dieses Image Mailvorlagen mitbringt, weil eine Sprache
+  ohne Vorlagen englische Bestätigungen schickt und dabei behauptet, deutsch zu
+  sein. Die Schrift hat einen Katalog und eine Vorschau auf der Design-Seite; eine
+  fünfte Frage hätte den Assistenten länger gemacht, ohne etwas zu entscheiden,
+  was nicht dort besser entschieden wird.
+- **Die Sprachnamen kommen von `Intl.DisplayNames`**, nicht aus einem Katalog:
+  „Deutsch" statt „de", ohne Download und ohne Vorgriff auf AP 6.
+- **Der Assistent färbt den Client am Ende selbst um.** Das Theme wird genau
+  einmal angewendet, im Startlauf — `AppConfigService.reload()` frischt die Daten
+  auf und lässt das Dokument in Trefaros Grün. Aufgefallen im Browserdurchlauf
+  gegen die Images: die Farbe war korrekt gespeichert und nicht zu sehen. Jetzt
+  ruft die Seite `ThemeService.apply()` mit dem neu gelesenen Theme; sonst
+  repaint nichts (E20), aber dies ist der Moment, in dem eine Organisation ihre
+  Farbe zum ersten Mal sieht, und der Login danach ist ein Routenwechsel, kein
+  neuer Ladevorgang.
+- **Zwei Felder hießen „Name".** Person und Organisation im selben Formular — für
+  einen Screenreader nicht unterscheidbar (NFR 4). Gefunden, weil der
+  Browserdurchlauf das Feld nicht traf. Jetzt „Your name" und „Organization
+  name".
+- **Das Routing des Proxys liegt jetzt in einer eigenen Datei.** Zwei Kopien der
+  Location-Blöcke — eine mit TLS, eine ohne — wären zwei Kopien, von denen die
+  produktive die ungetestete ist. `trefaro-locations.conf` wird von beiden
+  eingebunden und in beiden Compose-Dateien gemountet.
+- **`ports:` braucht `!override`.** Compose _verkettet_ Sequenzen aus mehreren
+  Dateien, also hätte das Overlay die 8080er-Zuordnung der Basisdatei zusätzlich
+  veröffentlicht. Mounts werden dagegen über ihr Ziel zusammengeführt, weshalb die
+  beiden Konfigurationsdateien die der Basisdatei einfach ersetzen.
+- **`verify-proxy.mjs` prüfte auf Trefaros Grün.** Seit dieses Paket den
+  Assistenten hat, hat eine normal eingerichtete Instanz eine andere Primärfarbe —
+  die Prüfung wäre auf jedem echten Deployment fehlgeschlagen. Jetzt wird auf
+  „eine Hex-Farbe" geprüft (E17), nicht auf _die_ Vorgabe. Und der
+  socket.io-Client bekommt dieselbe Ausnahme wie der Rest des Laufs, sonst liest
+  sich ein selbst ausgestelltes Zertifikat wie „der Proxy leitet keine Upgrades
+  weiter".
+- **Der Erfolgspfad hat keinen automatisierten Test und kann keinen haben.** Die
+  Endpunkte existieren nur, solange `admin_user` leer ist; jede Suite dieses
+  Repositorys läuft gegen eine Instanz aus `ADMIN_BOOTSTRAP_*`, und der letzte
+  Administrator ist nicht löschbar (F22) — genau die Eigenschaft, die den Zustand
+  unerreichbar macht. Also: Unit-Tests für Dienst, Guard und Seite,
+  `verify-setup.mjs` gegen einen frischen Stack, und die Suiten prüfen die andere
+  Hälfte — dass die Route zu ist.
+
+Was AP 5 **nicht** enthält: keine Zertifikatsautomatik im Stack (E29 — ein
+sechster Container, ein Erneuerungszeitplan und ein Anspruch auf Port 80); keine
+Sprachverwaltung (AP 7 — der Assistent wählt aus den mitgelieferten Locales);
+keine übersetzten Seitentitel (AP 6); und keine Sitzung als Antwort des
+Assistenten.

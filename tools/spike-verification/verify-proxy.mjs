@@ -63,8 +63,16 @@ check(
 const config = await call('/api/config');
 check('/api/config is served through the proxy', config.status === 200);
 check(
-  'the containerised instance seeded its own theme',
-  config.body?.theme?.primaryColor === '#1f6f5c',
+  'the containerised instance carries a theme of its own',
+  // A hexadecimal colour, not *the* default one: since AP 5 of phase 2 the
+  // first-run setup asks for both brand colours, so an instance that has been
+  // set up normally does not answer with Trefaro's green — and a check that
+  // insisted on it would fail on every real deployment (E17 is what makes
+  // "hexadecimal" the assertion worth making).
+  /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(
+    config.body?.theme?.primaryColor ?? '',
+  ),
+  config.body?.theme?.primaryColor,
 );
 
 const bundle = await call('/api/plugins/room-planning/main.js');
@@ -206,6 +214,11 @@ const socket = io(BASE, {
   transports: ['websocket'],
   reconnection: false,
   timeout: 8000,
+  // The same escape hatch the rest of the run gets from
+  // NODE_TLS_REJECT_UNAUTHORIZED: the websocket client keeps its own TLS
+  // options, so without this a self-signed trial certificate fails the
+  // handshake and reads as "the proxy does not pass upgrades".
+  rejectUnauthorized: process.env.NODE_TLS_REJECT_UNAUTHORIZED !== '0',
 });
 
 const connected = await new Promise((resolve) => {
@@ -247,6 +260,80 @@ if (connected) {
   );
 }
 socket.disconnect();
+
+// --- TLS, when the overlay is running (E29) -----------------------------
+//
+// Everything above has already run over whatever PROXY_BASE is, so pointing that
+// at the HTTPS address exercises the routing over TLS rather than duplicating it.
+// What is left is what only TLS can be asked:
+//
+//   docker compose --env-file .env -f infra/docker-compose.yml \
+//                  -f infra/docker-compose.tls.yml up -d
+//   PROXY_BASE=https://localhost PROXY_PLAIN_BASE=http://localhost \
+//   NODE_TLS_REJECT_UNAUTHORIZED=0 \
+//     node tools/spike-verification/verify-proxy.mjs
+//
+// `NODE_TLS_REJECT_UNAUTHORIZED=0` belongs to a self-signed trial certificate
+// only. With a real one, leave it out — otherwise the run says nothing about the
+// chain, which is the part that breaks in practice: a leaf without its
+// intermediates works in the browser that cached them and nowhere else.
+//
+// The login is the check that matters. Without TLS a production instance is
+// unusable off localhost — the session cookie carries `Secure` (E2), the server
+// answers correctly, and the browser discards the session. That is not a
+// hardening remark, it is whether the instance can be administered at all.
+if (BASE.startsWith('https://')) {
+  console.log('--- TLS ---');
+
+  const health = await call('/api/health');
+  check(
+    'HSTS is set, so a browser will not go back to plain HTTP',
+    (health.headers.get('strict-transport-security') ?? '').includes('max-age'),
+    health.headers.get('strict-transport-security') ?? 'absent',
+  );
+
+  const plain = process.env.PROXY_PLAIN_BASE;
+  if (plain) {
+    const response = await fetch(`${plain}/`, { redirect: 'manual' });
+    check(
+      'plain HTTP redirects instead of serving the application',
+      response.status === 301 &&
+        (response.headers.get('location') ?? '').startsWith('https://'),
+      `${response.status} → ${response.headers.get('location')}`,
+    );
+  } else {
+    console.log('SKIP  the redirect from plain HTTP — set PROXY_PLAIN_BASE');
+  }
+
+  if (
+    process.env.ADMIN_BOOTSTRAP_EMAIL &&
+    process.env.ADMIN_BOOTSTRAP_PASSWORD
+  ) {
+    // One attempt, so the login rate limit (E4) is untouched.
+    const login = await call('/api/admin/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email: process.env.ADMIN_BOOTSTRAP_EMAIL,
+        password: process.env.ADMIN_BOOTSTRAP_PASSWORD,
+      }),
+    });
+    const cookie = login.headers
+      .getSetCookie()
+      .find((header) => header.startsWith('trefaro_admin_session='));
+
+    check('an administrator can sign in over HTTPS', login.status === 200);
+    check(
+      'and the session cookie is Secure, which is why HTTPS was needed',
+      (cookie ?? '').toLowerCase().includes('secure'),
+      cookie ? cookie.split(';').slice(1).join(';').trim() : 'no cookie',
+    );
+  } else {
+    console.log(
+      'SKIP  the login over HTTPS — set ADMIN_BOOTSTRAP_EMAIL and ADMIN_BOOTSTRAP_PASSWORD',
+    );
+  }
+}
 
 console.log(
   `\n${failures === 0 ? 'all checks passed' : `${failures} check(s) failed`}`,

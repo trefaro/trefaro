@@ -1,5 +1,6 @@
 export {
   DEFAULT_ORGANIZATION_NAME,
+  MAX_LOCALE_TAG_LENGTH,
   MAX_ORGANIZATION_NAME_LENGTH,
   type AppConfig,
   type AppConfigChange,
@@ -37,4 +38,10 @@ export {
   type PluginDescriptor,
   type PluginMountPoint,
 } from './plugin-descriptor';
+export {
+  SETUP_TOKEN_HEADER,
+  type SetupResult,
+  type SetupState,
+  type SetupSubmission,
+} from './setup';
 export { HEX_COLOR_PATTERN, isHexColor, type Theme } from './theme';

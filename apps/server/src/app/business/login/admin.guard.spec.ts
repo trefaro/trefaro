@@ -48,6 +48,17 @@ describe('isAdminPath', () => {
   it('protects a public controller with an admin handler below it', () => {
     expect(isAdminPath('', 'admin/reports')).toBe(true);
   });
+
+  it('over-approximates: it looks at each declared path, not at their join', () => {
+    // `@Controller('setup')` with `@Post('admin')` is `/api/setup/admin`, which is
+    // not below `/api/admin` at all — and this still says yes. Deliberate: the
+    // guard errs towards demanding a session, because the failure in the other
+    // direction is an open endpoint. The cost is that a route like that needs an
+    // explicit `@AllowAnonymous()`, which is what the first-run setup does
+    // (F69) — and a route that forgets it answers 401 instead of working, which
+    // only an HTTP-level test can see.
+    expect(isAdminPath('setup', 'admin')).toBe(true);
+  });
 });
 
 describe('AdminGuard', () => {
