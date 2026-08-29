@@ -23,7 +23,7 @@ export interface ResolvedCatalogue {
 }
 
 /**
- * The catalogue both clients fetch, and the mails will (E22, E23).
+ * The catalogue both clients fetch, and the mails are written from (E22, E23).
  *
  * Two sources, one answer. The **shipped** catalogues travel in the image and
  * are the reason a fresh instance speaks English and German at all; the
@@ -40,7 +40,9 @@ export interface ResolvedCatalogue {
  * usable rather than a screen full of blank buttons. The one place this rule does
  * *not* hold is a mail (E24): a mail cannot be reloaded, and an English paragraph
  * inside a German letter reads like a fault rather than like a missing
- * translation. AP 10 implements that separately, on top of this service.
+ * translation. That rule lives in the mail module, on top of this service and
+ * out of the two readers below: {@link ownTexts} shows the gaps, {@link resolve}
+ * fills them.
  *
  * Because step 3 fills every gap, a client never has to handle a missing key.
  * Its own `fallbackLang` is a second net for the one case this service cannot
@@ -66,9 +68,56 @@ export class CatalogueService {
    * otherwise the screen that writes the translation could not preview it.
    */
   async isServable(locale: string): Promise<boolean> {
-    if ((await this.shipped.locales()).includes(locale)) return true;
-    const config = await this.configuration.getAppConfig();
-    return config.availableLocales.includes(locale);
+    return (await this.servableLocales()).includes(locale);
+  }
+
+  /**
+   * The same question asked of every language at once.
+   *
+   * Its one caller outside this class is the mail module, which has to pick the
+   * languages it can write a whole letter in (E24) and cannot do that without
+   * first knowing which languages exist at all. Shipped first, so English and
+   * German lead a list an operator reads.
+   */
+  async servableLocales(): Promise<readonly string[]> {
+    const [shipped, config] = await Promise.all([
+      this.shipped.locales(),
+      this.configuration.getAppConfig(),
+    ]);
+    return [...new Set([...shipped, ...config.availableLocales])];
+  }
+
+  /**
+   * What a language says in its own words, with the gaps left open.
+   *
+   * The opposite of {@link resolve}, and the reason both exist: `resolve` fills
+   * every gap with English so a client never has to handle a missing key, which
+   * makes it useless for the one caller that needs to *see* the gaps. E24 turns
+   * on exactly that difference — a mail may not be half German, so the mail
+   * module asks which keys this language actually has before it decides what
+   * language to write in.
+   *
+   * Filtered against the English key list for the same reason `resolve` filters:
+   * English is the key list (E23), and a row or a shipped line for a key this
+   * image does not have is not a translation of anything.
+   */
+  async ownTexts(locale: string): Promise<TranslationCatalogue> {
+    const canonical = this.canonical(locale);
+    const [english, localised, overrides] = await Promise.all([
+      this.shipped.read(FALLBACK_LOCALE),
+      this.shipped.read(canonical),
+      this.overrides.findByLocale(canonical),
+    ]);
+
+    const known = english ?? {};
+    const own: Record<string, string> = {};
+    for (const [key, value] of Object.entries(localised ?? {})) {
+      if (key in known) own[key] = value;
+    }
+    for (const override of overrides) {
+      if (override.key in known) own[override.key] = override.value;
+    }
+    return own;
   }
 
   /**

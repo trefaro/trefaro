@@ -341,19 +341,19 @@ answer, not an opinion.
       when the module administration makes the list visible to an organizer:
       either the key goes, or it is renamed to what the opt-in management it
       would actually gate is called.
-- [ ] **A new mail language is a code change.** The templates are TypeScript, one
-      file per locale behind an interface every locale must satisfy in full
-      (`business/mail/templates/{en,de}.ts`). That is what makes a missing
-      translation a compile error instead of a mail that quietly goes out in the
-      wrong language — and exactly what stands in the way of the promise that an
-      organization maintains its own languages (chapter 4, "Mehrsprachigkeit").
-      Four mails are affected: confirmation request, receipt, cancellation notice
-      and invitation. Phase 2 brings Transloco for the UI, and the same catalogue
-      has to reach the mails: texts in files the instance loads at runtime, with
-      the completeness check kept in some form — a language that is 80 % done must
-      be visible as such, not as English mixed into German. Verify: an
-      organization adds a locale without rebuilding the image, and the double
-      opt-in mail arrives in it.
+- [x] **A new mail language is a code change.** ~~The templates are TypeScript,
+      one file per locale behind an interface every locale must satisfy in
+      full.~~ Closed in phase 2, AP 10. The four mails read 21 keys under `mail.`
+      from the catalogue the organization maintains, `templates/{en,de}.ts` are
+      gone, and the completeness check that the interface used to give is now two
+      things: a CI test that the shipped English catalogue covers every key the
+      four mails declare, and E24 at runtime — a language missing one piece of a
+      letter sends that whole letter in English rather than a German one with
+      English paragraphs in it (F87: the unit is one mail, so the other three can
+      still go out in German). The verification asked for here is
+      `tools/spike-verification/verify-mail.mjs`: it edits the confirmation
+      subject through the API and reads the changed subject out of Mailpit on the
+      next registration, with no rebuild and no restart.
 
 - [ ] **The server refuses in English, whatever language the page is in.** Since
       AP 8 and AP 9 of phase 2 both clients say their own half from the catalogue
@@ -389,9 +389,11 @@ answer, not an opinion.
 - [ ] **Mail in the participant's own language.** AP 4 sends every mail in the
       locale the instance is configured with (`app_config.default_locale`),
       because phase 1 has nowhere to ask a participant for a preference. Once
-      profiles exist, the choice belongs to the person; the template registry in
-      `business/mail/templates` already resolves per locale, so this is a lookup
-      change and not a rebuild.
+      profiles exist, the choice belongs to the person. Since AP 10 of phase 2
+      that is one line: `MailCatalogue.strings()` reads the instance's default
+      locale and everything below it — the whole-mail fallback of E24 included —
+      already works per language, so a participant's own locale replaces the
+      lookup and nothing else changes.
 
 - [ ] **The participant overview gains its profile-status column.** FR 3.3 asks
       for it, and phase 1 left it out rather than shipping a column that always

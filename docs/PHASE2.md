@@ -1,9 +1,9 @@
 # Phase 2 — Whitelabel, Konfiguration, Mehrsprachigkeit, PWA
 
-**Status: in Arbeit** (29.08.2026). **AP 1 bis AP 9 sind erledigt** (siehe
+**Status: in Arbeit** (29.08.2026). **AP 1 bis AP 10 sind erledigt** (siehe
 _Fortschritt_) — damit sind **Meilenstein M3** und **Meilenstein M4** erreicht;
 die Abschnitte oberhalb davon sind Plan, nicht Protokoll. Wie in Phase 1 gibt
-Marius jedes Paket einzeln frei — AP 10 wartet auf seine Freigabe.
+Marius jedes Paket einzeln frei — AP 11 wartet auf seine Freigabe.
 
 **Die Entscheidungen E17–E29 sind am 28.08.2026 von Marius bestätigt** — sie
 werden nicht erneut aufgerollt, sondern nur gegen die Umsetzung geprüft (wie
@@ -622,34 +622,41 @@ entscheidet Marius.
 
 Wird beim jeweiligen Paket eingetragen, nicht am Ende gesammelt:
 
-| Nr. | Inhalt                                                                                               | AP  |
-| --- | ---------------------------------------------------------------------------------------------------- | --- |
-| F60 | `app_config` bekommt `organization_name` und `app_icon_path`; Ergänzung zu Schema 5.3 (E26)          | 1   |
-| F61 | Übersetzungstabelle auch für `event_series`, und was **nicht** übersetzt wird (E25)                  | 11  |
-| F62 | Der Übersetzungskatalog wird vom Server ausgeliefert — so wird Kapitel 4 eingelöst (E22–E24)         | 6   |
-| F63 | `CORE_MODULES` listet nur Module, die es gibt; `newsletter` entfällt (E21, Bezug F8)                 | 4   |
-| F64 | Die Ersteinrichtung ist tokengeschützt; `ADMIN_BOOTSTRAP_*` bleibt der unbeaufsichtigte Weg (E28)    | 5   |
-| F65 | Die Schriftart ist ein mitgelieferter Katalog, kein Upload (E18, Bezug NFR 9)                        | 1   |
-| F66 | Wie ein Logo öffentlich wird, ohne die Anhänge mitzunehmen (E19, Bezug E9, F38)                      | 2   |
-| F67 | Welcher Kontrast geprüft wird — und warum nicht der gegen die berechnete Textfarbe (NFR 4, E17)      | 3   |
-| F68 | Wie die Kacheln der Event-Detailansicht entstehen (Mockups 5.2, Bezug F47)                           | 4   |
-| F69 | Warum der Setup-Controller `@AllowAnonymous()` trägt — der Admin-Guard überschätzt (Bezug E16)       | 5   |
-| F70 | Gestalt und Herkunft eines Übersetzungsschlüssels; flach, gepunktet, `lowerCamelCase` (E22)          | 6   |
-| F71 | Welche Sprachen eine frische Instanz anbietet — die, die das Image mitbringt (NFR 4)                 | 6   |
-| F72 | Transloco und zoneless: was die Vorprüfung wirklich fand (Bezug E20)                                 | 6   |
-| F73 | Vollständigkeit ist eine Zahl über die englische Schlüsselliste (E23)                                | 7   |
-| F74 | Ein leerer Wert ist keine Übersetzung — und der mitgelieferte Text wird nicht gespeichert (E22)      | 7   |
-| F75 | Import ist ein Merge, und unbekannte Schlüssel werden genannt statt geschluckt                       | 7   |
-| F76 | Sprachen anbieten ist eine Entscheidung über `app_config`, nicht über die Übersetzungen (E30)        | 7   |
-| F77 | Eine Meldung hat zwei Hälften: der Satz des Clients aus dem Katalog, der Grund des Servers daneben   | 8   |
-| F78 | Was ein Format ist und keine Übersetzung — Datum, Zonenname, Dateigröße (Bezug E8)                   | 8   |
-| F79 | Ein Satz, der um ein Element gebaut ist, ist keine Übersetzungseinheit                               | 8   |
-| F80 | Ein Schlüssel ist ein Ort in der Oberfläche; wer eine Seite benennt, nimmt deren Schlüssel           | 9   |
-| F81 | Zwei Zähler in einem Satz brauchen einen Schlüssel je Kombination, solange kein Plural-Modul da ist  | 9   |
-| F82 | `admin.*` ist ein eigener Namensraum: die Clients teilen den Katalog, nicht die Sätze                | 9   |
-| F83 | Gespeicherte Statuswörter bekommen Schlüsselfunktionen in `shared-models` — zwei Typen, zwei Räume   | 9   |
-| F84 | Eine Meldung aus einer wechselnden Zahl von Teilsätzen wird beim Handeln fertig, nicht beim Zeichnen | 9   |
-| F85 | Ein Wert, den niemand übersetzen darf — ein Befehl, ein Tag, ein Dateiname — reist als Parameter     | 9   |
+| Nr. | Inhalt                                                                                                | AP  |
+| --- | ----------------------------------------------------------------------------------------------------- | --- |
+| F60 | `app_config` bekommt `organization_name` und `app_icon_path`; Ergänzung zu Schema 5.3 (E26)           | 1   |
+| F61 | Übersetzungstabelle auch für `event_series`, und was **nicht** übersetzt wird (E25)                   | 11  |
+| F62 | Der Übersetzungskatalog wird vom Server ausgeliefert — so wird Kapitel 4 eingelöst (E22–E24)          | 6   |
+| F63 | `CORE_MODULES` listet nur Module, die es gibt; `newsletter` entfällt (E21, Bezug F8)                  | 4   |
+| F64 | Die Ersteinrichtung ist tokengeschützt; `ADMIN_BOOTSTRAP_*` bleibt der unbeaufsichtigte Weg (E28)     | 5   |
+| F65 | Die Schriftart ist ein mitgelieferter Katalog, kein Upload (E18, Bezug NFR 9)                         | 1   |
+| F66 | Wie ein Logo öffentlich wird, ohne die Anhänge mitzunehmen (E19, Bezug E9, F38)                       | 2   |
+| F67 | Welcher Kontrast geprüft wird — und warum nicht der gegen die berechnete Textfarbe (NFR 4, E17)       | 3   |
+| F68 | Wie die Kacheln der Event-Detailansicht entstehen (Mockups 5.2, Bezug F47)                            | 4   |
+| F69 | Warum der Setup-Controller `@AllowAnonymous()` trägt — der Admin-Guard überschätzt (Bezug E16)        | 5   |
+| F70 | Gestalt und Herkunft eines Übersetzungsschlüssels; flach, gepunktet, `lowerCamelCase` (E22)           | 6   |
+| F71 | Welche Sprachen eine frische Instanz anbietet — die, die das Image mitbringt (NFR 4)                  | 6   |
+| F72 | Transloco und zoneless: was die Vorprüfung wirklich fand (Bezug E20)                                  | 6   |
+| F73 | Vollständigkeit ist eine Zahl über die englische Schlüsselliste (E23)                                 | 7   |
+| F74 | Ein leerer Wert ist keine Übersetzung — und der mitgelieferte Text wird nicht gespeichert (E22)       | 7   |
+| F75 | Import ist ein Merge, und unbekannte Schlüssel werden genannt statt geschluckt                        | 7   |
+| F76 | Sprachen anbieten ist eine Entscheidung über `app_config`, nicht über die Übersetzungen (E30)         | 7   |
+| F77 | Eine Meldung hat zwei Hälften: der Satz des Clients aus dem Katalog, der Grund des Servers daneben    | 8   |
+| F78 | Was ein Format ist und keine Übersetzung — Datum, Zonenname, Dateigröße (Bezug E8)                    | 8   |
+| F79 | Ein Satz, der um ein Element gebaut ist, ist keine Übersetzungseinheit                                | 8   |
+| F80 | Ein Schlüssel ist ein Ort in der Oberfläche; wer eine Seite benennt, nimmt deren Schlüssel            | 9   |
+| F81 | Zwei Zähler in einem Satz brauchen einen Schlüssel je Kombination, solange kein Plural-Modul da ist   | 9   |
+| F82 | `admin.*` ist ein eigener Namensraum: die Clients teilen den Katalog, nicht die Sätze                 | 9   |
+| F83 | Gespeicherte Statuswörter bekommen Schlüsselfunktionen in `shared-models` — zwei Typen, zwei Räume    | 9   |
+| F84 | Eine Meldung aus einer wechselnden Zahl von Teilsätzen wird beim Handeln fertig, nicht beim Zeichnen  | 9   |
+| F85 | Ein Wert, den niemand übersetzen darf — ein Befehl, ein Tag, ein Dateiname — reist als Parameter      | 9   |
+| F86 | Der Katalog bekommt Sätze, nie die Auszeichnung um sie herum — Struktur ist Code                      | 10  |
+| F87 | Die Einheit des Rückfalls aus E24 ist **eine Mail**, nicht der Katalog und nicht ein Schlüssel        | 10  |
+| F88 | Text- und HTML-Teil sind zwei Darstellungen **eines** Satzes, nicht zwei Sätze                        | 10  |
+| F89 | In welchen Sprachen eine Instanz Mail schreiben kann, ist eine Laufzeitfrage, keine Konstante         | 10  |
+| F90 | Ein regionaler Tag ist auch für Mail eine eigene Sprache — kein Rückfall auf die Basissprache         | 10  |
+| F91 | Ein Platzhalter, den niemand füllt, bleibt in einer Mail **stehen** — anders als auf einem Bildschirm | 10  |
+| F92 | Maskieren ist ein Typ, keine Gewohnheit: `Html` und die einzige Tür von `string` dorthin              | 10  |
 
 Anhangspunkt 18 (TLS gehört zur Installations-Story) ist in AP 5 von „geplant"
 auf „umgesetzt" gezogen.
@@ -1675,3 +1682,152 @@ Spaltenreihenfolge zeigt, dass die E-Mail-Spalte an derselben Stelle steht
 
 Was AP 9 **nicht** enthält: die Mails (AP 10), Inhalte wie Event- und
 Programmtexte (AP 11) und deutsche **Server**meldungen (`todo.md`).
+
+### AP 10 — Die Mails aus demselben Katalog (erledigt)
+
+Die vier Mails — Bestätigungsaufforderung, Empfangsbestätigung, Stornohinweis,
+Einladung — lesen ihren Text aus dem Katalog, den die Organisation pflegt. Die
+beiden Dateien `templates/de.ts` und `templates/en.ts` sind **entfallen**; an
+ihre Stelle treten **21 Schlüssel** unter `mail.` (Katalog: 598 → **619**), ein
+Renderer je Mail und die Regel von E24 als eigener Dienst. Ein Veranstalter
+ändert den Betreff der Bestätigungsmail auf der Sprachverwaltung, und die
+nächste Mail trägt ihn — ohne Neubau, ohne Neustart. Nachgewiesen an einer
+laufenden Instanz, in beiden Sprachen (`verify-mail.mjs`, unten).
+
+Umgesetzt:
+
+- **`libs/shared-i18n/catalogues/{en,de}.json`** — 21 neue Schlüssel: drei
+  geteilte (`mail.greeting`, `mail.event.when`, `mail.event.details`), einer für
+  die Handlungszeile im Textteil (`mail.actionLine`) und je Mail ihre eigenen.
+- **`business/mail/templates/`** — `mails.ts` (die vier `MailTemplate`, jeweils
+  Schlüsselliste **und** Renderer), `strings.ts` (`MailStrings`, Interpolation,
+  `MissingMailTextError`), `html.ts` (jetzt mit dem Typ `Html`), `types.ts` ohne
+  das alte `MailTemplates`-Interface.
+- **`business/mail/mail-catalogue.service.ts`** — E24: `strings(keys)` liest die
+  Standardsprache der Instanz, prüft sie gegen die Schlüsselliste **dieser** Mail
+  und fällt sonst als Ganzes auf Englisch zurück, mit einer Logzeile, die die
+  fehlenden Schlüssel **nennt**. Dazu `localesForMail()`.
+- **`business/i18n/catalogue.service.ts`** — zwei Leser mehr: `ownTexts(locale)`
+  (was eine Sprache selbst sagt, mit den Lücken offen) und `servableLocales()`.
+- **`business/setup/`** — der Assistent fragt die Liste jetzt, statt sie zu
+  importieren; `MAIL_TEMPLATE_LOCALES` ist entfallen.
+- **`tools/spike-verification/verify-mail.mjs`** — neu, 35 Prüfungen gegen eine
+  laufende Instanz plus Mailpit.
+
+Sieben Entscheidungen waren mehr als „Text verschieben":
+
+**Der Katalog bekommt Sätze, nie die Auszeichnung um sie herum** (F86). Was in
+den Katalog wandert, ist der Satz; `<div>`, `<p>`, `<strong>` und der Link
+bleiben Code. Eine Organisation ändert die Worte ihrer Bestätigungsmail, nicht
+die Gestalt des Dokuments — und ein `<` in einer Übersetzung wäre sonst
+Auszeichnung im Postfach eines Fremden. Deshalb wird der **Katalogtext selbst**
+maskiert und erst danach interpoliert: die Platzhalter überstehen das Maskieren
+unverändert, ein zuerst eingesetzter Wert wäre doppelt maskiert.
+
+**Die Einheit des Rückfalls ist eine Mail** (F87). E24 sagt „fehlt ein Baustein
+einer Mail"; offen war, was „eine Mail" heißt. Es heißt genau das: eine Sprache,
+die die drei Anmeldemails übersetzt hat und die Einladung nicht, schickt drei
+deutsche Mails und eine englische. Gröber — je Instanz — würde ein
+unübersetzter Satz die gesamte Korrespondenz ins Englische kippen; feiner — je
+Schlüssel — gäbe es E24 nicht. Die Schlüsselliste reist deshalb **mit** dem
+Renderer in einem Wert (`MailTemplate`), sonst driftet sie von ihm weg.
+
+**Text- und HTML-Teil sind zwei Darstellungen eines Satzes** (F88). Die alten
+Vorlagen sagten im Textteil „open the link below" und setzten im HTML-Teil einen
+Knopf — zwei Formulierungen, die eine Übersetzerin unabhängig voneinander falsch
+machen kann. Jetzt gibt es einen Satz und **eine** Handlung: derselbe Schlüssel
+ist die Beschriftung des Links und die Zeile über der nackten Adresse. Der
+Doppelpunkt dazwischen ist ein eigener Schlüssel (`mail.actionLine`) und kein
+Zeichen im Code — im Französischen steht dort `Label :`, und Satzzeichen, die in
+TypeScript angeschweißt sind, erreicht keine Übersetzung.
+
+**Welche Sprachen Mail können, ist eine Laufzeitfrage** (F89).
+`MAIL_TEMPLATE_LOCALES` war `Object.keys()` über eine Registry von Dateien; seit
+der Text Daten ist, lautet die Frage „hat diese **Instanz** deutsche Worte für
+alle vier Mails". Der Einrichtungsassistent fragt sie über
+`MailCatalogue.localesForMail()`, und die Antwort ist streng: eine Sprache zählt
+nur, wenn sie **jede** Mail abdeckt — die Wahl der Standardsprache entscheidet
+über alle künftige Korrespondenz, und E24 würde sonst die Hälfte davon
+stillschweigend auf Englisch stellen. Die Kehrseite ist der Gewinn: eine
+Organisation, die eine dritte Sprache fertig übersetzt, kann die Instanz darauf
+stellen, ohne dass jemand ein Image baut.
+
+**Ein regionaler Tag ist eine eigene Sprache** (F90). `mailTemplates('de-AT')`
+fiel bisher am Tag entlang auf Deutsch zurück; das gibt es nicht mehr. Der Grund
+ist Übereinstimmung: `CatalogueService.resolve('de-at')` kennt diesen Rückfall
+auch nicht, also hätte eine Instanz mit `de-AT` eine englische Oberfläche und
+deutsche Mails gehabt. Wer `de-AT` benutzen will, übersetzt es — was seit AP 7
+zwei Klicks sind — oder benutzt `de`.
+
+**Ein Platzhalter, den niemand füllt, bleibt stehen** (F91). Transloco setzt auf
+einem Bildschirm eine leere Zeichenkette ein; hier bleibt `{{tage}}` sichtbar.
+Der Unterschied ist derselbe wie bei E24 selbst: einen Bildschirm lädt man neu,
+eine Mail ist raus. „Der Link ist {{tage}} Tage gültig" ist etwas, das eine
+Empfängerin melden und eine Organisation finden kann; „Der Link ist Tage
+gültig" ist es nicht.
+
+**Maskieren ist ein Typ** (F92). Solange jede Vorlage ihre Sätze selbst
+schrieb, stand `escapeHtml` einmal je Satz; jetzt steht es einmal je
+**Parameter**, und ein vergessenes wäre ein `<script>` im Postfach. `Html` ist
+deshalb ein eigener Typ, jede Funktion, die Auszeichnung baut, gibt ihn zurück,
+jede, die Auszeichnung annimmt, verlangt ihn — und die einzige Tür von `string`
+dorthin ist `escapeHtml`. Der Compiler fragt jetzt danach.
+
+Dazu eine Anwendung von F85: **die Gültigkeitsdauer des Bestätigungslinks kommt
+aus `CONFIRMATION_TOKEN_TTL_MS`**, nicht aus dem Katalogtext. „14 Tage" stand
+bisher in zwei Sprachen als Prosa da; wären aus E5 einmal zehn Tage, hätten beide
+gelogen, und nichts hätte es gemerkt.
+
+Nachgewiesen:
+
+- **Unit:** `mails.spec.ts` rendert die vier Mails gegen die **wirklich
+  mitgelieferten** Katalogdateien (nicht gegen ein Fixture) — das ist der
+  Nachfolger der Compile-Time-Garantie, die E24 aufgibt; `strings.spec.ts`
+  (Interpolation, doppeltes Maskieren, stehender Platzhalter);
+  `mail-catalogue.service.spec.ts` (E24 in fünf Varianten, `localesForMail`);
+  `catalogue.service.spec.ts` um `ownTexts`/`servableLocales` erweitert.
+  `nx run-many -t lint test build` über 13 Projekte grün, Server **667 Tests**;
+  `server-e2e` 337, `user-client-e2e` 168 und `admin-client-e2e` 245 Tests grün.
+- **Gegen eine laufende Instanz:** `verify-mail.mjs`, **35 PASS**, einmal in
+  Englisch und einmal mit `LOCALE=de` — es registriert, bestätigt, storniert und
+  lädt ein, liest alle vier Mails aus Mailpit, ändert den Betreff über
+  `PUT /api/admin/i18n/:locale` und prüft ihn an der **nächsten** Mail, stellt
+  die Instanz auf eine zu 1/21 übersetzte Sprache und prüft, dass der ganze Brief
+  englisch ankommt. Danach stellt es alles wieder her.
+
+Was anders lief:
+
+- **Der Text- und der HTML-Teil sagten nicht dasselbe.** Aufgefallen erst beim
+  Zusammenlegen: „Your personal page — … or cancel:" gegen „On your personal
+  page you can … or cancel." Ein Satz je Stelle, nicht zwei — sonst hätte die
+  Zusammenlegung eine Formulierung stillschweigend gewonnen.
+- **`{{label}}:` ist ein Schlüssel geworden, nicht ein Doppelpunkt im Code.**
+  Der erste Entwurf schrieb `${label}:` — und wäre im Französischen falsch
+  gesetzt. Ein Zeichen, das keine Übersetzerin erreichen kann, ist dasselbe
+  Problem wie ein Satzfragment (F79), nur kleiner.
+- **Jest und Vitest laufen aus verschiedenen Verzeichnissen.**
+  `catalogues.spec.ts` in der Bibliothek liest `process.cwd()` — dort ist das der
+  Arbeitsbereich. In `apps/server` ist es das Projektverzeichnis, und derselbe
+  Pfad war leer. `mails.spec.ts` sucht das Katalogverzeichnis deshalb nach oben,
+  statt einen Pfad zu raten.
+- **Ein Test, der zu viel wegnahm.** „Fällt je Mail zurück" hielt der Sprache
+  alle Schlüssel der Einladung vor — darunter Gruß und Eventblock, die die
+  Empfangsbestätigung genauso braucht. Beide fielen zurück, und der Test bewies
+  das Gegenteil dessen, was er behauptete. Er nimmt jetzt nur, was **allein** zur
+  Einladung gehört.
+- **`MAIL_TEMPLATE_LOCALES` hatte einen zweiten Leser**, den die Suche zuerst
+  nicht zeigte: `SetupService` prüft damit die gewählte Standardsprache. Aus der
+  Konstante wurde ein Aufruf, aus dem `import` eine Modulabhängigkeit
+  (`SetupModule` → `MailModule`) — und die Fehlermeldung sagt jetzt „languages
+  this instance can send mail in" statt „languages this instance ships", weil das
+  seit diesem Paket zweierlei ist.
+- **Der Server hat einen zweiten `FALLBACK_LOCALE` verloren.** `templates/index.ts`
+  hatte einen eigenen neben dem in `shared-models`. Jetzt gibt es einen.
+- **Beide Browsersuiten gleichzeitig zu starten sprengt die Drosselung.** Ein
+  `nx run-many -t e2e` über `user-client-e2e` **und** `admin-client-e2e` schickt
+  sechs Browser gleichzeitig gegen einen Server, und alle kommen von `::1`: 104 ×
+  `429 /api/i18n/en`, worauf beide Clients ihre Schlüssel roh zeichnen und die
+  Fehlschläge nach kaputtem Katalog aussehen. Die Grenze ist richtig (E4, 300
+  Anfragen je Minute je Adresse) und wird nicht gelockert; die Suiten laufen
+  nacheinander, wie in der CI. Mit AP 10 hat das nichts zu tun — 21 Schlüssel
+  mehr sind mehr Bytes, nicht mehr Anfragen.

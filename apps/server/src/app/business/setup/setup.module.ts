@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigurationModule } from '../config';
 import { LoginModule } from '../login';
+import { MailModule } from '../mail';
 import { SetupController } from './setup.controller';
 import { SetupGuard } from './setup.guard';
 import { SetupTokenService } from './setup-token.service';
@@ -20,12 +21,17 @@ import { SetupService } from './setup.service';
  * `ADMIN_BOOTSTRAP_*` has its administrator before this module asks whether one
  * exists, and no setup token is issued for it.
  *
+ * `MailModule` joins them in AP 10 of phase 2, for the one question the wizard
+ * asks it: which languages this instance can write a whole mail in (E24). That
+ * used to be a compile-time constant, and the wizard could import it without
+ * importing anything.
+ *
  * The guard is a provider rather than a global: unlike the administrative guard
  * (E16), this one protects two named handlers in one file, and nothing outside
  * them may ever be reachable without a session.
  */
 @Module({
-  imports: [LoginModule, ConfigurationModule],
+  imports: [LoginModule, ConfigurationModule, MailModule],
   controllers: [SetupController],
   providers: [SetupService, SetupTokenService, SetupGuard],
 })

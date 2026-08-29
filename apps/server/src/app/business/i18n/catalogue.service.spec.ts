@@ -219,6 +219,53 @@ describe('CatalogueService', () => {
     });
   });
 
+  describe('ownTexts', () => {
+    it('shows the gaps instead of filling them', async () => {
+      // The difference from `resolve`, and the whole reason both exist: E24 has
+      // to know whether a language can write a *whole* mail, and a catalogue
+      // that has already fallen back to English cannot be asked that.
+      const own = await service.ownTexts('de');
+
+      expect(own['language.switcher.label']).toBe('Sprache');
+      expect(own['modules.push.title']).toBeUndefined();
+    });
+
+    it("counts the organization's own rows as the language's own words", async () => {
+      overrides.rows = [
+        override('de', 'modules.push.title', 'Push-Nachrichten'),
+      ];
+
+      const own = await service.ownTexts('de');
+
+      // A language exists because somebody translated it (E30) — a row is a
+      // translation as much as a shipped line is, and AP 7 is how a third
+      // language becomes complete enough to send mail in.
+      expect(own['modules.push.title']).toBe('Push-Nachrichten');
+    });
+
+    it('ignores a row for a key this image no longer has', async () => {
+      overrides.rows = [override('de', 'gone.away', 'Weg')];
+
+      expect(await service.ownTexts('de')).not.toHaveProperty('gone.away');
+    });
+
+    it('answers nothing at all for a language nobody has touched', async () => {
+      expect(await service.ownTexts('fr')).toEqual({});
+    });
+  });
+
+  describe('servableLocales', () => {
+    it('lists what the image ships and what the organization offers, once', async () => {
+      availableLocales = ['en', 'fr'];
+
+      expect([...(await service.servableLocales())].sort()).toEqual([
+        'de',
+        'en',
+        'fr',
+      ]);
+    });
+  });
+
   describe('isServable', () => {
     it('accepts a language this image ships', async () => {
       availableLocales = ['en'];

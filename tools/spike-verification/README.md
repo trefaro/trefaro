@@ -20,6 +20,7 @@ client's cache, so the organizer client was unreachable.
 | `verify-socket.mjs`        | server                                                                      |
 | `verify-push.mjs`          | server + PostgreSQL + a VAPID key pair in `.env`                            |
 | `verify-i18n.mjs`          | server + PostgreSQL + `ADMIN_BOOTSTRAP_*` from `.env` (it signs in)         |
+| `verify-mail.mjs`          | server + PostgreSQL + **Mailpit** + `ADMIN_BOOTSTRAP_*` (it signs in)       |
 | `verify-proxy.mjs`         | the full five-container stack; over HTTPS when `PROXY_BASE` is an https URL |
 | `verify-setup.mjs`         | a **fresh** stack with no administrator, and the token from its startup log |
 
@@ -36,6 +37,12 @@ node tools/spike-verification/verify-api.mjs
 node tools/spike-verification/verify-socket.mjs
 node tools/spike-verification/verify-plugin-toggle.mjs
 node tools/spike-verification/verify-i18n.mjs
+
+# The four mails, read out of the box they were actually sent to. It registers,
+# confirms, cancels and invites, edits the confirmation subject to prove it takes
+# effect with no rebuild, and puts the instance into a half-translated language
+# to prove E24 — then puts everything back.
+node tools/spike-verification/verify-mail.mjs
 
 # For push, add a key pair to .env first and restart the server:
 npx web-push generate-vapid-keys

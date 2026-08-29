@@ -1,11 +1,16 @@
 /**
- * The shape every language has to fill (FR 3.5, NFR 4).
+ * What a mail is made of (FR 3.5, NFR 4).
  *
- * One file per locale implements `MailTemplates`, which makes a missing
- * translation a compile error rather than a mail that silently goes out in
- * English. Phase 2 lets an organization maintain its own languages; adding one
- * before that is a file plus a line in the registry, with no change here.
+ * Until AP 10 of phase 2 this file declared one interface per language and a
+ * file implementing it, which made a missing translation a compile error. The
+ * text now lives in the catalogue the organization maintains (E22), so that
+ * guarantee could not survive — a catalogue is data, and no compiler reads it.
+ * What replaces it is two things: the key list a template declares here, checked
+ * against the shipped English catalogue in CI, and E24 at runtime, which sends
+ * the whole mail in English rather than half of it in German.
  */
+
+import type { MailStrings } from './strings';
 
 export interface RenderedMail {
   readonly subject: string;
@@ -77,21 +82,19 @@ export interface InvitationMailContext {
   readonly optOutUrl: string;
 }
 
-export interface MailTemplates {
-  /** BCP 47 tag this set is written in, so a caller can log what it sent. */
-  readonly locale: string;
-  /** Asks the participant to confirm their address (double opt-in). */
-  registrationConfirmation(context: ConfirmationMailContext): RenderedMail;
-  /** The receipt afterwards: confirmed, what you signed up for, and the link. */
-  registrationConfirmed(context: ReceiptMailContext): RenderedMail;
-  /**
-   * Tells a participant that the organizer cancelled their registration.
-   *
-   * Transactional, not an invitation: it goes out regardless of
-   * `contact_opt_out` (F59). Somebody who objected to being invited again still
-   * has to learn that they are no longer expected at the door.
-   */
-  registrationCancelled(context: RegistrationMailContext): RenderedMail;
-  /** An invitation to former participants of the series (FR 2.4). */
-  invitation(context: InvitationMailContext): RenderedMail;
+/**
+ * One mail: the words it needs, and how it puts them together.
+ *
+ * The two travel as one value because E24 asks a question about a *mail* — "does
+ * this language have every piece of this letter?" — and a key list kept beside
+ * the renderer instead of in it is a list that drifts. `keys` is therefore the
+ * unit of the whole-mail fallback and, at the same time, what CI checks the
+ * shipped catalogue against.
+ */
+export interface MailTemplate<Context> {
+  /** For the log line that says what went out, and for tests to name. */
+  readonly name: string;
+  /** Every catalogue key {@link render} may ask for. */
+  readonly keys: readonly string[];
+  render(strings: MailStrings, context: Context): RenderedMail;
 }

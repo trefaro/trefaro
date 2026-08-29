@@ -3,6 +3,7 @@ import type { AppConfig, AppConfigChange } from '@trefaro/shared-models';
 import type { TrefaroEnv } from '../../core/config/env';
 import type { ConfigurationService } from '../config';
 import type { AdminSummary, AdminUserService } from '../login';
+import type { MailCatalogue } from '../mail';
 import { SetupTokenService } from './setup-token.service';
 import { SetupService } from './setup.service';
 
@@ -104,9 +105,25 @@ const SUBMISSION = {
   accentColor: '#e8a33d',
 } as const;
 
+/**
+ * The languages the wizard may offer, asked rather than compiled in (AP 10).
+ *
+ * Since the mail text is catalogue data, "can this instance write German mail"
+ * is a question about its rows and its image — so the wizard asks the mail
+ * module, and this fake is where a test decides what the answer is.
+ */
+class FakeMailCatalogue {
+  forMail: string[] = ['en', 'de'];
+
+  async localesForMail(): Promise<readonly string[]> {
+    return this.forMail;
+  }
+}
+
 describe('SetupService', () => {
   let admins: FakeAdmins;
   let configuration: FakeConfiguration;
+  let mail: FakeMailCatalogue;
   let tokens: SetupTokenService;
   let service: SetupService;
   let warnings: string[];
@@ -116,6 +133,7 @@ describe('SetupService', () => {
       admins as unknown as AdminUserService,
       configuration as unknown as ConfigurationService,
       tokens,
+      mail as unknown as MailCatalogue,
       {
         nodeEnv: 'development',
         publicUserClientUrl: 'http://localhost:4200',
@@ -131,6 +149,7 @@ describe('SetupService', () => {
   beforeEach(() => {
     admins = new FakeAdmins();
     configuration = new FakeConfiguration();
+    mail = new FakeMailCatalogue();
     tokens = new SetupTokenService();
     warnings = [];
     jest.spyOn(Logger.prototype, 'warn').mockImplementation((message) => {

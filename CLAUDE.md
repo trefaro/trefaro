@@ -406,12 +406,12 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
   Installations-Story, nicht zur Härtung; `Secure` fallen zu lassen ist keine
   Alternative.
 
-## Stand Phase 2 (in Arbeit; AP 1–9 erledigt, Meilensteine M3 und M4 erreicht)
+## Stand Phase 2 (in Arbeit; AP 1–10 erledigt, Meilensteine M3 und M4 erreicht)
 
 Plan **und Protokoll**: `docs/PHASE2.md` — dreizehn Arbeitspakete, Entscheidungen
 **E17–E30** (die Zählung läuft über die Phasen weiter), Meilensteine M3
 (Whitelabel), M4 (alle P1: brandbar, konfigurierbar, selbst installierbar) und M5
-(Abschluss), Nachträge F60–F85. Was schon umgesetzt ist, steht dort unter
+(Abschluss), Nachträge F60–F92. Was schon umgesetzt ist, steht dort unter
 _Fortschritt_, je Paket ein Abschnitt „erledigt" mit den Abweichungen — dort
 zuerst nachsehen. **Jedes Paket einzeln von Marius freigeben** — nicht ohne
 Aufforderung mit dem nächsten anfangen.
@@ -457,7 +457,13 @@ mitgelieferten Katalogen (443 unter `admin.`), sechzehn Seiten plus Shell, der
 in AP 6 zurückgestellte Sprachumschalter auf dem Anmeldeformular, alle siebzehn
 `error()`-Signale halten `Problem`, `eventStatusKey`/`eventSeriesStatusKey` in
 `shared-models`, und die Browsersuite dieses Clients prüft ebenfalls gegen
-Schlüssel (`support/catalogue.ts` mit dem neuen `tPattern()`).
+Schlüssel (`support/catalogue.ts` mit dem neuen `tPattern()`) · **AP 10** Die
+Mails aus demselben Katalog: `templates/de.ts` und `templates/en.ts` entfallen,
+**21 Schlüssel** unter `mail.` (Katalog 598 → **619**), je Mail ein
+`MailTemplate` aus Schlüsselliste **und** Renderer, `MailCatalogue` mit E24,
+`CatalogueService.ownTexts`/`servableLocales`, der Einrichtungsassistent fragt
+die Mailsprachen zur Laufzeit — und `verify-mail.mjs` prüft alle vier Briefe in
+Mailpit, in beiden Sprachen.
 
 Reihenfolge: AP 1–3 Whitelabel (FR 1.4) · AP 4 Modulverwaltung (FR 1.5) · AP 5
 Installations-Story mit geführter Ersteinrichtung und TLS-Overlay (FR 1.1,
@@ -814,6 +820,57 @@ Regeln aus AP 9, die nicht erneut aufgerollt werden sollten:
   Design-Formular (drei Eigennamen, der vierte laut Katalogkommentar bewusst so
   formuliert — E18) und der Ladehinweis in `index.html`, der gezeichnet wird,
   bevor es einen Katalog gibt.
+
+Regeln aus AP 10, die nicht erneut aufgerollt werden sollten:
+
+- **In den Katalog wandern Sätze, nie die Auszeichnung um sie herum** (F86).
+  `<div>`, `<p>`, `<strong>` und der Link bleiben Code; eine Organisation ändert
+  die Worte, nicht die Gestalt des Dokuments. Daraus die Reihenfolge beim
+  Rendern: erst den **Katalogtext** maskieren, dann interpolieren — Platzhalter
+  überstehen das Maskieren, ein zuerst eingesetzter Wert wäre doppelt maskiert.
+- **Die Einheit des Rückfalls aus E24 ist eine Mail** (F87), nicht der Katalog
+  und nicht ein Schlüssel. Wer die drei Anmeldemails übersetzt hat und die
+  Einladung nicht, schickt drei deutsche und eine englische. Deshalb tragen
+  Schlüsselliste und Renderer **einen** Wert (`MailTemplate`) — eine daneben
+  geführte Liste driftet, und dann prüft E24 die falsche Menge.
+- **Text- und HTML-Teil sind zwei Darstellungen eines Satzes** (F88). Derselbe
+  Schlüssel ist die Beschriftung des Links und die Zeile über der nackten
+  Adresse; der Doppelpunkt dazwischen ist `mail.actionLine` und kein Zeichen im
+  Code (Französisch setzt `Label :`).
+- **Welche Sprachen Mail können, wird gefragt, nicht importiert** (F89).
+  `MailCatalogue.localesForMail()` statt einer Konstante, und streng: eine
+  Sprache zählt nur, wenn sie **jede** Mail abdeckt. `SetupModule` importiert
+  dafür `MailModule`.
+- **Ein regionaler Tag ist eine eigene Sprache** (F90), auch für Mail. Den
+  Rückfall `de-AT` → `de` gibt es nicht mehr; der Katalog kennt ihn auch nicht,
+  und zwei Antworten hätten englische Oberfläche mit deutscher Mail ergeben.
+- **Ein Platzhalter, den niemand füllt, bleibt in einer Mail stehen** (F91) —
+  anders als in Transloco auf einem Bildschirm. Einen Bildschirm lädt man neu,
+  eine Mail ist raus; `{{tage}}` ist meldbar, eine Lücke nicht.
+- **`Html` ist ein Typ, kein Kommentar** (F92). Alles, was Auszeichnung baut,
+  gibt ihn zurück; alles, was Auszeichnung annimmt, verlangt ihn; die einzige
+  Tür von `string` dorthin ist `escapeHtml`. Seit der Text aus dem Katalog kommt,
+  steht das Maskieren einmal je **Parameter** statt einmal je Satz.
+- **Die Gültigkeitsdauer des Bestätigungslinks kommt aus
+  `CONFIRMATION_TOKEN_TTL_MS`**, nicht aus dem Katalogtext (F85 angewandt):
+  „14 Tage" in zwei Sprachen als Prosa hätte beim nächsten Wechsel zweimal
+  gelogen.
+- **Jest und Vitest starten aus verschiedenen Verzeichnissen.** `process.cwd()`
+  ist unter Vitest (`libs/*`) der Arbeitsbereich und unter Jest (`apps/server`)
+  das Projektverzeichnis. Wer in einem Servertest eine Datei des Arbeitsbereichs
+  liest, sucht sie nach oben, statt einen Pfad zu raten.
+- **Die beiden Browsersuiten laufen nacheinander, nicht gleichzeitig.** Sechs
+  Browser gegen einen Server, alle von `::1`, reißen die globale Drosselung
+  (300 Anfragen je Minute je Adresse, E4): `/api/i18n/:locale` antwortet 429,
+  beide Clients zeichnen ihre Schlüssel roh, und die Fehlschläge sehen nach
+  kaputtem Katalog aus. Kein `nx run-many -t e2e` über beide — erst
+  `user-client-e2e`, dann `admin-client-e2e`, wie in der CI.
+- **`tools/spike-verification/verify-mail.mjs`** ist der Nachweis, den keine
+  Suite führen kann: es registriert, bestätigt, storniert und lädt ein, liest die
+  vier Mails aus Mailpit, ändert einen Betreff über die API und prüft ihn an der
+  **nächsten** Mail, und stellt die Instanz auf eine halb übersetzte Sprache, um
+  E24 zu zeigen. `LOCALE=de` schaltet die Instanz für einen Lauf um und wieder
+  zurück.
 
 ## Betriebskontext
 

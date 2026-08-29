@@ -1,16 +1,13 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import {
-  APP_CONFIG_REPOSITORY,
-  type AppConfigReader,
-} from '../config/ports/app-config.repository';
+import { MailCatalogue } from './mail-catalogue.service';
 import { MAILER, type Mailer } from './ports/mailer';
-import { mailTemplates } from './templates';
+import { MAIL_TEMPLATES } from './templates';
 import type {
   ConfirmationMailContext,
   InvitationMailContext,
+  MailTemplate,
   ReceiptMailContext,
   RegistrationMailContext,
-  RenderedMail,
 } from './templates';
 
 /** Raised when a message could not be handed to the mail server. */
@@ -24,10 +21,12 @@ export class MailDeliveryError extends Error {
 /**
  * Composes and sends the instance's mail (FR 3.5, F8).
  *
- * The language is the one the organization configured, not one guessed from the
- * request: an instance run in German writes German, and phase 1 has no place to
- * ask a participant for a preference. Once profiles exist (phase 3) the choice
- * moves to the person; nothing here has to change for that but the lookup.
+ * Since AP 10 of phase 2 this class does not know a word of any language: the
+ * text comes from {@link MailCatalogue}, which resolves it out of the catalogue
+ * the organization maintains and decides — per mail, as E24 requires — which
+ * language the letter can actually be written in. What is left here is the part
+ * that has nothing to do with words: pick the template, hand it its strings, and
+ * give the result to the mail server.
  */
 @Injectable()
 export class MailService {
@@ -35,8 +34,7 @@ export class MailService {
 
   constructor(
     @Inject(MAILER) private readonly mailer: Mailer,
-    @Inject(APP_CONFIG_REPOSITORY)
-    private readonly appConfig: AppConfigReader,
+    private readonly catalogue: MailCatalogue,
   ) {}
 
   /** The double opt-in request. @throws MailDeliveryError */
@@ -44,12 +42,7 @@ export class MailService {
     to: string,
     context: ConfirmationMailContext,
   ): Promise<void> {
-    const templates = await this.templates();
-    await this.deliver(
-      to,
-      templates.registrationConfirmation(context),
-      `registration confirmation (${templates.locale})`,
-    );
+    await this.send(MAIL_TEMPLATES.registrationConfirmation, to, context);
   }
 
   /**
@@ -64,12 +57,7 @@ export class MailService {
     to: string,
     context: ReceiptMailContext,
   ): Promise<void> {
-    const templates = await this.templates();
-    await this.deliver(
-      to,
-      templates.registrationConfirmed(context),
-      `registration receipt (${templates.locale})`,
-    );
+    await this.send(MAIL_TEMPLATES.registrationConfirmed, to, context);
   }
 
   /**
@@ -86,12 +74,7 @@ export class MailService {
     to: string,
     context: RegistrationMailContext,
   ): Promise<void> {
-    const templates = await this.templates();
-    await this.deliver(
-      to,
-      templates.registrationCancelled(context),
-      `cancellation notice (${templates.locale})`,
-    );
+    await this.send(MAIL_TEMPLATES.registrationCancelled, to, context);
   }
 
   /**
@@ -105,31 +88,24 @@ export class MailService {
     to: string,
     context: InvitationMailContext,
   ): Promise<void> {
-    const templates = await this.templates();
-    await this.deliver(
-      to,
-      templates.invitation(context),
-      `invitation (${templates.locale})`,
-    );
+    await this.send(MAIL_TEMPLATES.invitation, to, context);
   }
 
-  private async templates() {
-    const config = await this.appConfig.load();
-    return mailTemplates(config.defaultLocale);
-  }
-
-  private async deliver(
+  private async send<Context>(
+    template: MailTemplate<Context>,
     to: string,
-    mail: RenderedMail,
-    description: string,
+    context: Context,
   ): Promise<void> {
+    const strings = await this.catalogue.strings(template.keys);
+    const mail = template.render(strings, context);
     try {
       await this.mailer.send({ to, ...mail });
     } catch (error: unknown) {
       // Described, not addressed: what failed belongs in the log, who it was for
       // does not.
       this.logger.error(
-        `Could not send ${description}: ${error instanceof Error ? error.message : String(error)}`,
+        `Could not send ${template.name} (${strings.locale}): ` +
+          `${error instanceof Error ? error.message : String(error)}`,
       );
       throw new MailDeliveryError(error);
     }

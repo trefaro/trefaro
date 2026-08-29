@@ -15,7 +15,7 @@ import type { TrefaroEnv } from '../../core/config/env';
 import { ENV } from '../../core/config/env.module';
 import { ConfigurationService } from '../config';
 import { AdminUserService } from '../login';
-import { MAIL_TEMPLATE_LOCALES } from '../mail';
+import { MailCatalogue } from '../mail';
 import { SetupTokenService } from './setup-token.service';
 import { startupWarnings } from './startup-report';
 
@@ -25,8 +25,9 @@ import { startupWarnings } from './startup-report';
  * Above the modules it composes, like the dashboard and the invitations before
  * it: it asks the login module for the first account, the configuration module
  * for the instance's name, colours and language, and the mail module which
- * languages this image can actually send in. It owns none of them — what it owns
- * is the one-time window in which all of that may be written without a session.
+ * languages this instance can actually send a whole mail in. It owns none of
+ * them — what it owns is the one-time window in which all of that may be
+ * written without a session.
  *
  * That window is a single condition, asked of the database every time: no
  * administrator exists. Not a flag, not a file, not the token's presence — the
@@ -42,6 +43,7 @@ export class SetupService implements OnApplicationBootstrap {
     private readonly admins: AdminUserService,
     private readonly configuration: ConfigurationService,
     private readonly tokens: SetupTokenService,
+    private readonly mail: MailCatalogue,
     @Inject(ENV) private readonly env: TrefaroEnv,
   ) {}
 
@@ -95,14 +97,17 @@ export class SetupService implements OnApplicationBootstrap {
     // not derived ones. The font is not offered here: it has a catalogue and a
     // preview on the design page, and a wizard that asks five questions instead
     // of four is a wizard fewer operators finish.
-    const config = await this.configuration.getAppConfig();
+    const [config, locales] = await Promise.all([
+      this.configuration.getAppConfig(),
+      this.mail.localesForMail(),
+    ]);
 
     return {
       organizationName: config.organizationName,
       primaryColor: config.theme.primaryColor,
       accentColor: config.theme.accentColor,
       defaultLocale: config.defaultLocale,
-      locales: MAIL_TEMPLATE_LOCALES,
+      locales,
       warnings: startupWarnings(this.env),
     };
   }
@@ -125,13 +130,16 @@ export class SetupService implements OnApplicationBootstrap {
       throw new NotFoundException();
     }
 
-    if (!MAIL_TEMPLATE_LOCALES.includes(submission.defaultLocale)) {
-      // The set is small and shipped with the image, so this is a closed
-      // question. It opens up in AP 7, where an organization maintains its own
-      // languages — until then a locale without mail templates would send
-      // English confirmations while claiming to be German.
+    const locales = await this.mail.localesForMail();
+    if (!locales.includes(submission.defaultLocale)) {
+      // Asked rather than looked up in a constant since AP 10: the mail text is
+      // catalogue data now, so "can this instance write German mail" is a
+      // question about its rows and its image and not about which files were
+      // compiled in. A locale that fails it would send English confirmations
+      // while claiming to be German (E24), which is exactly the state the
+      // wizard must not be able to produce.
       throw new BadRequestException(
-        `defaultLocale must be one of the languages this instance ships: ${MAIL_TEMPLATE_LOCALES.join(', ')}`,
+        `defaultLocale must be one of the languages this instance can send mail in: ${locales.join(', ')}`,
       );
     }
 

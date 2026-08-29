@@ -1,15 +1,18 @@
 export { MailDeliveryError, MailService } from './mail.service';
+export { MailCatalogue } from './mail-catalogue.service';
 export { MailModule } from './mail.module';
 export { PublicLinks } from './public-links.service';
 export { MAILER, type Mailer, type OutgoingMail } from './ports/mailer';
 export {
-  FALLBACK_LOCALE,
-  MAIL_TEMPLATE_LOCALES,
-  mailTemplates,
+  ALL_MAIL_KEYS,
+  MAIL_TEMPLATES,
+  MissingMailTextError,
+  mailStrings,
   type ConfirmationMailContext,
   type InvitationMailContext,
   type MailEvent,
-  type MailTemplates,
+  type MailStrings,
+  type MailTemplate,
   type ReceiptMailContext,
   type RegistrationMailContext,
   type RenderedMail,
