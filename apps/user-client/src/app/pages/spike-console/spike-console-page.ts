@@ -4,6 +4,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { AppConfigService } from '@trefaro/shared-config';
 import { RealtimeClient, type RealtimeEchoReply } from '@trefaro/shared-http';
 import { PluginLoaderService } from '@trefaro/shared-plugins';
@@ -20,26 +21,36 @@ import { PushSubscriptionService } from '../../features/push/push-subscription.s
  *
  * It doubles as an operator diagnostic: "is the theme applied, which plug-ins
  * loaded, does push work here, does the socket upgrade survive the proxy" are the
- * questions a self-hosting NGO will ask.
+ * questions a self-hosting NGO will ask. Which is why its prose is in the
+ * catalogue like every other page of this client (AP 8 of phase 2) — the
+ * operator of a German instance is a German speaker. What stays untranslated is
+ * everything that is an identifier rather than a sentence: a module key, a
+ * variable name, a command to run, and the raw state words of the push and
+ * socket clients, which are values to report rather than words to read.
  */
 @Component({
   selector: 'trefaro-spike-console-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [],
+  imports: [TranslocoPipe],
   template: `
-    <h1>Architecture spikes</h1>
+    <h1>{{ 'diagnostics.title' | transloco }}</h1>
 
     <section>
-      <h2>1 · Configuration and theming</h2>
+      <h2>1 · {{ 'diagnostics.config.title' | transloco }}</h2>
       @if (config.config(); as loaded) {
         <dl>
-          <dt>Default locale</dt>
+          <dt>{{ 'diagnostics.config.defaultLocale' | transloco }}</dt>
           <dd>{{ loaded.defaultLocale }}</dd>
-          <dt>Available locales</dt>
+          <dt>{{ 'diagnostics.config.availableLocales' | transloco }}</dt>
           <dd>{{ loaded.availableLocales.join(', ') }}</dd>
-          <dt>Enabled modules</dt>
-          <dd>{{ loaded.enabledModules.join(', ') || 'none' }}</dd>
-          <dt>Primary / accent</dt>
+          <dt>{{ 'diagnostics.config.enabledModules' | transloco }}</dt>
+          <dd>
+            {{
+              loaded.enabledModules.join(', ') ||
+                ('diagnostics.config.none' | transloco)
+            }}
+          </dd>
+          <dt>{{ 'diagnostics.config.colors' | transloco }}</dt>
           <dd>
             <span class="swatch swatch--primary"></span>
             {{ theme.theme().primaryColor }}
@@ -48,15 +59,12 @@ import { PushSubscriptionService } from '../../features/push/push-subscription.s
           </dd>
         </dl>
       } @else {
-        <p class="warn">
-          Configuration not loaded — the client is running on its fallback
-          theme.
-        </p>
+        <p class="warn">{{ 'diagnostics.config.notLoaded' | transloco }}</p>
       }
     </section>
 
     <section>
-      <h2>2 · Client plug-ins</h2>
+      <h2>2 · {{ 'diagnostics.plugins.title' | transloco }}</h2>
       @for (result of plugins.loadResults(); track result.plugin.key) {
         <p>
           <code>{{ result.plugin.key }}</code>
@@ -65,50 +73,45 @@ import { PushSubscriptionService } from '../../features/push/push-subscription.s
             <span class="warn">({{ result.error }})</span>
           }
           <br />
-          <small
-            >&lt;{{ result.plugin.elementName }}&gt; from
-            {{ result.plugin.bundleUrl }}</small
-          >
+          <small>{{
+            'diagnostics.plugins.element'
+              | transloco
+                : {
+                    element: result.plugin.elementName,
+                    url: result.plugin.bundleUrl,
+                  }
+          }}</small>
         </p>
       } @empty {
-        <p>
-          No plug-in is enabled. Switch one on under
-          <code>Modules</code> in the organizer client and reload — the
-          plug-in's tables already exist either way.
-        </p>
+        <p>{{ 'diagnostics.plugins.none' | transloco }}</p>
       }
       <p>
-        A mounted plug-in appears on an event detail view, for example
+        {{ 'diagnostics.plugins.whereMounted' | transloco }}
         <a href="/events/11111111-1111-4111-8111-111111111111"
           >/events/11111111-…</a
-        >.
+        >
       </p>
     </section>
 
     <section>
-      <h2>3 · Web Push</h2>
+      <h2>3 · {{ 'diagnostics.push.title' | transloco }}</h2>
       <p>
-        State: <strong>{{ push.state() }}</strong>
+        {{ 'diagnostics.push.state' | transloco }}
+        <strong>{{ push.state() }}</strong>
       </p>
       @switch (push.state()) {
         @case ('unsupported') {
-          <p>
-            No service worker is active. Angular registers it only in a
-            production build, so push has to be tested against one.
-          </p>
+          <p>{{ 'diagnostics.push.unsupported' | transloco }}</p>
         }
         @case ('not-configured') {
           <p>
-            This instance publishes no VAPID key, which has two possible reasons
-            since phase 2: the <code>push</code> module is switched off (switch
-            it on under <code>Modules</code> in the organizer client), or there
-            is no key pair — generate one with
-            <code>npx web-push generate-vapid-keys</code> and set
-            <code>VAPID_PUBLIC_KEY</code> and <code>VAPID_PRIVATE_KEY</code>.
+            {{ 'diagnostics.push.notConfigured' | transloco }}
+            <code>npx web-push generate-vapid-keys</code>,
+            <code>VAPID_PUBLIC_KEY</code>, <code>VAPID_PRIVATE_KEY</code>
           </p>
         }
         @case ('denied') {
-          <p>Notification permission was declined in this browser.</p>
+          <p>{{ 'diagnostics.push.denied' | transloco }}</p>
         }
         @default {
           <button
@@ -116,10 +119,12 @@ import { PushSubscriptionService } from '../../features/push/push-subscription.s
             [disabled]="!push.canSubscribe()"
             (click)="subscribe()"
           >
-            Subscribe this browser
+            {{ 'diagnostics.push.subscribe' | transloco }}
           </button>
           @if (push.state() === 'subscribed') {
-            <button type="button" (click)="unsubscribe()">Unsubscribe</button>
+            <button type="button" (click)="unsubscribe()">
+              {{ 'diagnostics.push.unsubscribe' | transloco }}
+            </button>
           }
         }
       }
@@ -129,26 +134,40 @@ import { PushSubscriptionService } from '../../features/push/push-subscription.s
     </section>
 
     <section>
-      <h2>4 · WebSocket through the proxy</h2>
+      <h2>4 · {{ 'diagnostics.socket.title' | transloco }}</h2>
       <p>
-        Status: <strong>{{ realtime.status() }}</strong>
+        {{ 'diagnostics.socket.status' | transloco }}
+        <strong>{{ realtime.status() }}</strong>
         @if (realtime.transport(); as transport) {
-          on transport <strong>{{ transport }}</strong>
+          {{ 'diagnostics.socket.onTransport' | transloco }}
+          <strong>{{ transport }}</strong>
         }
       </p>
-      <button type="button" (click)="realtime.connect()">Connect</button>
+      <button type="button" (click)="realtime.connect()">
+        {{ 'diagnostics.socket.connect' | transloco }}
+      </button>
       <button
         type="button"
         [disabled]="!realtime.isConnected()"
         (click)="sendEcho()"
       >
-        Send echo
+        {{ 'diagnostics.socket.echo' | transloco }}
       </button>
-      <button type="button" (click)="realtime.disconnect()">Disconnect</button>
+      <button type="button" (click)="realtime.disconnect()">
+        {{ 'diagnostics.socket.disconnect' | transloco }}
+      </button>
       @if (echoReply(); as reply) {
         <p>
-          Reply &ldquo;{{ reply.text }}&rdquo; at {{ reply.serverTime }} over
-          <strong>{{ reply.transport }}</strong> (socket {{ reply.socketId }})
+          {{
+            'diagnostics.socket.reply'
+              | transloco
+                : {
+                    text: reply.text,
+                    time: reply.serverTime,
+                    transport: reply.transport,
+                    socket: reply.socketId,
+                  }
+          }}
         </p>
       }
       @if (echoError(); as error) {

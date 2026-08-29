@@ -119,6 +119,7 @@ export class ApiClient {
                 status: 0,
                 message: 'The request could not be sent.',
                 retryable: true,
+                explained: false,
               },
         ),
       ),

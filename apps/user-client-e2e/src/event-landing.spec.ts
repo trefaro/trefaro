@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { expectNoRawKeys, t } from './support/catalogue';
 import {
   DRAFT_EVENT,
   DRAFT_SERIES,
@@ -75,7 +76,7 @@ test.describe('the event landing page', () => {
     await expect(
       page.getByRole('heading', { name: UPCOMING_EVENT.name }),
     ).toBeVisible();
-    await expect(page.getByText('On site and online')).toBeVisible();
+    await expect(page.getByText(t('event.onSiteAndOnline'))).toBeVisible();
     await expect(page.getByText(UPCOMING_EVENT.venueName)).toBeVisible();
     await expect(page.getByText(UPCOMING_EVENT.venueAddress)).toBeVisible();
     await expect(
@@ -83,6 +84,7 @@ test.describe('the event landing page', () => {
     ).toBeVisible();
     // FR 3.1 lists the languages an event is held in.
     await expect(page.getByText('de, en')).toBeVisible();
+    await expectNoRawKeys(page);
   });
 
   test('states the time in the zone of the event, named as such', async ({
@@ -107,8 +109,10 @@ test.describe('the event landing page', () => {
   }) => {
     await page.goto(landingPage(PUBLISHED_SERIES.slug, PAST_EVENT.slug));
 
-    await expect(page.getByText('This event has ended')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Register now' })).toBeHidden();
+    await expect(page.getByText(t('event.hasEnded'))).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: t('event.register') }),
+    ).toBeHidden();
   });
 
   test('leads to the registration form on an upcoming event', async ({
@@ -116,12 +120,14 @@ test.describe('the event landing page', () => {
   }) => {
     await page.goto(landingPage(PUBLISHED_SERIES.slug, UPCOMING_EVENT.slug));
 
-    await page.getByRole('link', { name: 'Register now' }).click();
+    await page.getByRole('link', { name: t('event.register') }).click();
 
     // The form itself is covered by `registration.spec.ts`; what matters here is
     // that the landing page's call to action reaches it.
     await expect(page).toHaveURL(/\/register$/);
-    await expect(page.getByRole('heading', { name: 'Register' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: t('register.title') }),
+    ).toBeVisible();
   });
 
   test('says a draft event does not exist rather than showing it', async ({
@@ -129,7 +135,7 @@ test.describe('the event landing page', () => {
   }) => {
     await page.goto(landingPage(PUBLISHED_SERIES.slug, DRAFT_EVENT.slug));
 
-    await expect(page.getByRole('alert')).toContainText('does not exist');
+    await expect(page.getByRole('alert')).toHaveText(t('event.errorMissing'));
   });
 
   test('hides every event of a series that is not public', async ({ page }) => {
@@ -137,7 +143,7 @@ test.describe('the event landing page', () => {
     // series' visibility is not something an event can override.
     await page.goto(landingPage(DRAFT_SERIES.slug, UPCOMING_EVENT.slug));
 
-    await expect(page.getByRole('alert')).toContainText('does not exist');
+    await expect(page.getByRole('alert')).toHaveText(t('event.errorMissing'));
   });
 });
 
@@ -147,7 +153,7 @@ test.describe('the programme on the landing page', () => {
   }) => {
     await page.goto(landingPage(PUBLISHED_SERIES.slug, UPCOMING_EVENT.slug));
 
-    const program = page.getByRole('region', { name: 'Programme' });
+    const program = page.getByRole('region', { name: t('event.program') });
     await expect(program).toBeVisible();
     await expect(
       program.getByRole('heading', { name: PROGRAM_ITEMS[0].title }),
@@ -165,7 +171,7 @@ test.describe('the programme on the landing page', () => {
   test('names the day and its zone once per day', async ({ page }) => {
     await page.goto(landingPage(PUBLISHED_SERIES.slug, UPCOMING_EVENT.slug));
 
-    const program = page.getByRole('region', { name: 'Programme' });
+    const program = page.getByRole('region', { name: t('event.program') });
     // Two of the three fixture sessions are on the event's first day and one on
     // its last, so the timeline has exactly two day headings — and each names
     // the zone, so nobody has to guess whose 09:00 this is.
@@ -179,7 +185,7 @@ test.describe('the programme on the landing page', () => {
   }) => {
     await page.goto(landingPage(PUBLISHED_SERIES.slug, UPCOMING_EVENT.slug));
 
-    const program = page.getByRole('region', { name: 'Programme' });
+    const program = page.getByRole('region', { name: t('event.program') });
     await expect(program.getByText('Dr. Amara Nwosu')).toBeVisible();
     await expect(
       program.getByText(PROGRAM_ITEMS[0].description as string),
@@ -197,7 +203,9 @@ test.describe('the programme on the landing page', () => {
 
     // No empty heading over nothing: a past event with no sessions planned says
     // nothing about a programme at all.
-    await expect(page.getByRole('heading', { name: 'Programme' })).toBeHidden();
+    await expect(
+      page.getByRole('heading', { name: t('event.program') }),
+    ).toBeHidden();
   });
 });
 
@@ -211,7 +219,7 @@ test.describe('what an event leaves behind', () => {
   }) => {
     await page.goto(landingPage(PUBLISHED_SERIES.slug, PAST_EVENT.slug));
 
-    const followUp = page.getByRole('region', { name: 'After the event' });
+    const followUp = page.getByRole('region', { name: t('event.followUp') });
     await expect(followUp).toBeVisible();
     await expect(followUp).toContainText('E2E thank you for coming');
   });
@@ -225,7 +233,7 @@ test.describe('what an event leaves behind', () => {
     // the server withholds it until the event has ended (F50), which means the
     // sentence is not in the page source either.
     await expect(
-      page.getByRole('heading', { name: 'After the event' }),
+      page.getByRole('heading', { name: t('event.followUp') }),
     ).toBeHidden();
     expect(await page.content()).not.toContain(
       'must not be readable before the event',
@@ -235,11 +243,11 @@ test.describe('what an event leaves behind', () => {
   test('links to a stream rather than embedding it', async ({ page }) => {
     await page.goto(landingPage(PUBLISHED_SERIES.slug, UPCOMING_EVENT.slug));
 
-    const media = page.getByRole('region', { name: 'Watch and read' });
+    const media = page.getByRole('region', { name: t('event.media') });
     await expect(media).toBeVisible();
     // The section names the kind, so a participant knows what they are opening.
     await expect(media.getByRole('heading', { level: 3 })).toContainText(
-      'Live streams',
+      t('mediaLinks.kind.stream.many'),
     );
 
     const link = media.getByRole('link', { name: stream.title });
@@ -268,7 +276,7 @@ test.describe('what an event leaves behind', () => {
     ).toBeVisible();
     await expect(
       page
-        .getByRole('region', { name: 'Watch and read' })
+        .getByRole('region', { name: t('event.media') })
         .getByRole('link', { name: sessionMaterial.title }),
     ).toBeHidden();
   });
@@ -276,7 +284,7 @@ test.describe('what an event leaves behind', () => {
   test('offers the recording of an event that is over', async ({ page }) => {
     await page.goto(landingPage(PUBLISHED_SERIES.slug, PAST_EVENT.slug));
 
-    const media = page.getByRole('region', { name: 'Watch and read' });
+    const media = page.getByRole('region', { name: t('event.media') });
     await expect(
       media.getByRole('link', { name: recording.title }),
     ).toHaveAttribute('href', recording.url);
@@ -284,13 +292,16 @@ test.describe('what an event leaves behind', () => {
     const kinds = await media
       .getByRole('heading', { level: 3 })
       .allInnerTexts();
-    expect(kinds).toEqual(['Recordings', 'Materials']);
+    expect(kinds).toEqual([
+      t('mediaLinks.kind.recording.many'),
+      t('mediaLinks.kind.material.many'),
+    ]);
   });
 });
 
 test.describe('the tiles on the landing page', () => {
   const tiles = (page: Page) =>
-    page.getByRole('navigation', { name: 'What this event offers' });
+    page.getByRole('navigation', { name: t('event.tiles.label') });
 
   test('offers a tile per part of this page that has something in it', async ({
     page,
@@ -301,8 +312,12 @@ test.describe('the tiles on the landing page', () => {
     // has to say is how much is behind it. The keynote's slides are *not*
     // counted in the media tile — they hang on a session, and the media section
     // does not render them either.
-    const programme = tiles(page).getByRole('link', { name: /Programme/ });
-    await expect(programme).toContainText(`${PROGRAM_ITEMS.length} sessions`);
+    const programme = tiles(page).getByRole('link', {
+      name: t('event.program'),
+    });
+    await expect(programme).toContainText(
+      t('event.tiles.sessions.many', { count: PROGRAM_ITEMS.length }),
+    );
     // The address is this event's own, with the fragment appended: a bare `#…`
     // would resolve against the client's `<base href>` and leave the event.
     await expect(programme).toHaveAttribute(
@@ -310,8 +325,8 @@ test.describe('the tiles on the landing page', () => {
       `${landingPage(PUBLISHED_SERIES.slug, UPCOMING_EVENT.slug)}#program`,
     );
 
-    const media = tiles(page).getByRole('link', { name: /Watch and read/ });
-    await expect(media).toContainText('1 link');
+    const media = tiles(page).getByRole('link', { name: t('event.media') });
+    await expect(media).toContainText(t('event.tiles.links.one', { count: 1 }));
     await expect(media).toHaveAttribute(
       'href',
       `${landingPage(PUBLISHED_SERIES.slug, UPCOMING_EVENT.slug)}#media`,
@@ -323,14 +338,14 @@ test.describe('the tiles on the landing page', () => {
     await page.goto(address);
 
     await tiles(page)
-      .getByRole('link', { name: /Programme/ })
+      .getByRole('link', { name: t('event.program') })
       .click();
 
     // The same page, scrolled: everything a tile can lead to renders here, so a
     // tile that navigated would need a second rendering of the same timeline.
     await expect(page).toHaveURL(new RegExp(`${address}#program$`));
     await expect(
-      page.getByRole('region', { name: 'Programme' }),
+      page.getByRole('region', { name: t('event.program') }),
     ).toBeInViewport();
   });
 
@@ -340,10 +355,10 @@ test.describe('the tiles on the landing page', () => {
     // The past event has a recording and no sessions. A tile leading to an empty
     // section would be a dead end drawn as a feature (F47's rule, again).
     await expect(
-      tiles(page).getByRole('link', { name: /Watch and read/ }),
+      tiles(page).getByRole('link', { name: t('event.media') }),
     ).toBeVisible();
     await expect(
-      tiles(page).getByRole('link', { name: /Programme/ }),
+      tiles(page).getByRole('link', { name: t('event.program') }),
     ).toHaveCount(0);
   });
 });

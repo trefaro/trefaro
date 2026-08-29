@@ -6,6 +6,7 @@ import {
   input,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { AppConfigService } from '@trefaro/shared-config';
 import { TranslationService } from '@trefaro/shared-i18n';
 import { pluginElementId } from '@trefaro/shared-models';
@@ -46,22 +47,22 @@ interface DetailTile {
  *    dashboard (F47). A plug-in whose bundle failed to load gets no tile either:
  *    the participant cannot act on that, and the organizer's module page is where
  *    it is reported.
- * 3. **A plug-in's tile is labelled from the catalogue.** Every plug-in carries
- *    a `labelKey`, resolved against the catalogue the server serves (E22), so a
- *    German page does not grow an English tile. The computed reads the active
- *    language, which is what makes it recompute when a visitor switches — a
- *    label assembled in TypeScript has no pipe to do that for it. The two core
- *    tiles still carry English literals; they move into the catalogue with the
- *    rest of this client's text in AP 8, together with the headings of the
- *    sections they point at, which have to keep saying the same words.
+ * 3. **Every tile is labelled from the catalogue.** A plug-in carries a
+ *    `labelKey` and the two core tiles have keys of their own, resolved against
+ *    the catalogue the server serves (E22), so a German page does not grow an
+ *    English tile. The computed reads the active language, which is what makes
+ *    it recompute when a visitor switches — a label assembled in TypeScript has
+ *    no pipe to do that for it (F72). Both core tiles deliberately share their
+ *    key with the heading of the section they point at: a tile that said
+ *    something else would look like a second place to go.
  */
 @Component({
   selector: 'trefaro-event-detail-tiles',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, TranslocoPipe],
   template: `
     @if (tiles().length > 0) {
-      <nav class="tiles" aria-label="What this event offers">
+      <nav class="tiles" [attr.aria-label]="'event.tiles.label' | transloco">
         @for (tile of tiles(); track tile.target) {
           <a class="tile" [routerLink]="[]" [fragment]="tile.target">
             <span class="tile__label">{{ tile.label }}</span>
@@ -117,33 +118,45 @@ export class EventDetailTiles {
   protected readonly tiles = computed<readonly DetailTile[]>(() => {
     const tiles: DetailTile[] = [];
 
+    // The active language, read before the first label: this is a computed(),
+    // so nothing else would make it run again after a switch (F72).
+    this.i18n.locale();
+
     if (this.sessions() > 0) {
       tiles.push({
         target: 'program',
-        label: 'Programme',
-        hint: `${this.sessions()} ${this.sessions() === 1 ? 'session' : 'sessions'}`,
+        label: this.i18n.translate('event.program'),
+        hint: this.i18n.translate(
+          this.sessions() === 1
+            ? 'event.tiles.sessions.one'
+            : 'event.tiles.sessions.many',
+          { count: this.sessions() },
+        ),
       });
     }
 
     if (this.mediaLinks() > 0) {
       tiles.push({
         target: 'media',
-        label: 'Watch and read',
-        hint: `${this.mediaLinks()} ${this.mediaLinks() === 1 ? 'link' : 'links'}`,
+        label: this.i18n.translate('event.media'),
+        hint: this.i18n.translate(
+          this.mediaLinks() === 1
+            ? 'event.tiles.links.one'
+            : 'event.tiles.links.many',
+          { count: this.mediaLinks() },
+        ),
       });
     }
 
     // Read the load results so this recomputes as bundles finish — a tile that
-    // appeared before its element was defined would scroll to nothing. And the
-    // active language, so the labels below follow a switch.
+    // appeared before its element was defined would scroll to nothing.
     this.loader.loadResults();
-    this.i18n.locale();
     for (const plugin of this.config.pluginsAt('event-detail')) {
       if (!this.loader.isReady(plugin.key)) continue;
       tiles.push({
         target: pluginElementId(plugin.key),
         label: this.i18n.translate(plugin.labelKey),
-        hint: 'on this page',
+        hint: this.i18n.translate('event.tiles.onThisPage'),
       });
     }
 

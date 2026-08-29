@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { AppConfigService } from '@trefaro/shared-config';
+import { provideTranslationsForTest } from '@trefaro/shared-i18n';
 import type {
   MediaLink,
   MediaLinkChange,
@@ -105,6 +106,13 @@ async function render(
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
+      // The kinds are named from the catalogue since AP 8 of phase 2; the rest
+      // of this client's text follows in AP 9.
+      provideTranslationsForTest({
+        'mediaLinks.kind.stream.one': 'Live stream',
+        'mediaLinks.kind.recording.one': 'Recording',
+        'mediaLinks.kind.material.one': 'Material',
+      }),
       {
         provide: EventsAdminService,
         useValue: { get: () => Promise.resolve(EVENT) },

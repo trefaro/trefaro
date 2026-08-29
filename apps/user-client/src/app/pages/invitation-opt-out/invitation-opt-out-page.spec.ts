@@ -1,4 +1,6 @@
 import { TestBed } from '@angular/core/testing';
+import type { ApiError } from '@trefaro/shared-http';
+import { provideTranslationsForTest } from '@trefaro/shared-i18n';
 import type { ContactOptOutResult } from '@trefaro/shared-models';
 import { InvitationOptOutService } from '../../features/invitations/invitation-opt-out.service';
 import { InvitationOptOutPage } from './invitation-opt-out-page';
@@ -6,7 +8,7 @@ import { InvitationOptOutPage } from './invitation-opt-out-page';
 class FakeInvitationOptOutService {
   readonly tokens: string[] = [];
   result: ContactOptOutResult = { state: 'opted-out' };
-  failure: { message: string } | null = null;
+  failure: ApiError | null = null;
 
   optOut(token: string): Promise<ContactOptOutResult> {
     this.tokens.push(token);
@@ -24,7 +26,7 @@ async function render(
   seeded: {
     token?: string;
     result?: ContactOptOutResult;
-    failure?: { message: string };
+    failure?: ApiError;
   } = {},
 ): Promise<{
   element: HTMLElement;
@@ -37,7 +39,24 @@ async function render(
   if (seeded.failure) service.failure = seeded.failure;
 
   TestBed.configureTestingModule({
-    providers: [{ provide: InvitationOptOutService, useValue: service }],
+    providers: [
+      // Only the words these tests are about; every other key renders as
+      // itself, which is what an assertion about a button wants to see.
+      provideTranslationsForTest({
+        'optOut.done': 'You will not be invited again',
+        'optOut.alreadyDone': 'You had already asked us not to write again',
+        'optOut.explanation':
+          'This address will not receive further invitations from this ' +
+          'organization. Messages about a registration you make yourself — a ' +
+          'confirmation, or a cancellation — are not affected.',
+        'optOut.noToken':
+          'This address is missing its token. Please open the link from the ' +
+          'mail again — the whole link, including everything after the ' +
+          'question mark.',
+        'optOut.error': 'This could not be saved.',
+      }),
+      { provide: InvitationOptOutService, useValue: service },
+    ],
   });
 
   const fixture = TestBed.createComponent(InvitationOptOutPage);
@@ -127,16 +146,42 @@ describe('InvitationOptOutPage', () => {
   it('reports a link that no longer works instead of failing silently', async () => {
     const { page, element, settle } = await render({
       token: 'abc.def',
-      failure: { message: 'This link is not valid any more.' },
+      failure: {
+        status: 400,
+        message: 'This link is not valid any more.',
+        retryable: false,
+        explained: true,
+      },
     });
 
     await page.optOut();
     await settle();
 
-    expect(element.querySelector('[role="alert"]')?.textContent).toContain(
-      'not valid any more',
-    );
+    // Both halves (F77): this client's sentence in the reader's language, and
+    // the server's reason — which is the half that says *why* — beside it.
+    const alert = element.querySelector('[role="alert"]')?.textContent;
+    expect(alert).toContain('This could not be saved.');
+    expect(alert).toContain('not valid any more');
     // And the button stays, so a temporary failure can be retried.
     expect(element.querySelector('button')).not.toBeNull();
+  });
+
+  it('does not repeat a reason the server never gave', async () => {
+    const { page, element, settle } = await render({
+      token: 'abc.def',
+      failure: {
+        status: 0,
+        message: 'The server could not be reached.',
+        retryable: true,
+        explained: false,
+      },
+    });
+
+    await page.optOut();
+    await settle();
+
+    const alert = element.querySelector('[role="alert"]')?.textContent;
+    expect(alert).toContain('This could not be saved.');
+    expect(alert).not.toContain('could not be reached');
   });
 });

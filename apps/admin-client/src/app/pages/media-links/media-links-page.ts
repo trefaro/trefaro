@@ -11,6 +11,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AppConfigService } from '@trefaro/shared-config';
 import type { ApiError } from '@trefaro/shared-http';
+import { TranslationService } from '@trefaro/shared-i18n';
 import type {
   MediaLink,
   MediaLinkKind,
@@ -23,7 +24,7 @@ import {
   MEDIA_LINKS_MODULE_KEY,
   MEDIA_LINK_KINDS,
   isWebUrl,
-  mediaLinkKindLabel,
+  mediaLinkKindKey,
 } from '@trefaro/shared-models';
 import { EventsAdminService } from '../../features/events/events-admin.service';
 import { MediaLinksAdminService } from '../../features/media-links/media-links-admin.service';
@@ -406,6 +407,7 @@ export class MediaLinksPage {
   private readonly mediaLinks = inject(MediaLinksAdminService);
   private readonly program = inject(ProgramAdminService);
   private readonly config = inject(AppConfigService);
+  private readonly i18n = inject(TranslationService);
 
   protected readonly event = signal<OrganizerEvent | null>(null);
   protected readonly links = signal<readonly MediaLink[]>([]);
@@ -454,8 +456,15 @@ export class MediaLinksPage {
     return (event.target as HTMLSelectElement).value as MediaLinkKind;
   }
 
+  /**
+   * The name of a kind, from the catalogue (AP 8 of phase 2).
+   *
+   * A method rather than a `computed()`, so it is re-evaluated whenever this
+   * view is — which a language change does through the pipes elsewhere on the
+   * page. The rest of this client follows in AP 9.
+   */
   protected kindLabel(kind: MediaLinkKind): string {
-    return mediaLinkKindLabel(kind);
+    return this.i18n.translate(mediaLinkKindKey(kind));
   }
 
   protected draft(id: string): LinkDraft {

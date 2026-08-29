@@ -19,6 +19,7 @@ export {
 } from './field';
 export {
   REGISTRATION_STATUSES,
+  registrationStatusKey,
   type ConfirmationState,
   type RegistrationAcknowledgement,
   type RegistrationConfirmation,
@@ -56,6 +57,7 @@ export {
   acceptAttribute,
   formatBytes,
   uploadTypeLabel,
+  uploadTypeLabelKey,
   type AttachmentSummary,
   type UploadType,
 } from './upload';

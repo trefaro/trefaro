@@ -7,7 +7,8 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import type { ApiError } from '@trefaro/shared-http';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { problemOf, type Problem } from '@trefaro/shared-http';
 import type { RegistrationConfirmation } from '@trefaro/shared-models';
 import { RegistrationsService } from '../../features/registrations/registration.service';
 
@@ -23,20 +24,22 @@ import { RegistrationsService } from '../../features/registrations/registration.
 @Component({
   selector: 'trefaro-registration-confirm-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, TranslocoPipe],
   template: `
     <section>
       @if (result(); as done) {
         <h1>
           {{
-            done.state === 'confirmed'
-              ? 'Your registration is confirmed'
-              : 'This registration was already confirmed'
+            (done.state === 'confirmed'
+              ? 'confirm.done'
+              : 'confirm.alreadyDone'
+            ) | transloco
           }}
         </h1>
+        <!-- The event's name is inside the sentence rather than beside it; see
+             the registration page for why. -->
         <p>
-          You are registered for <strong>{{ done.eventName }}</strong
-          >.
+          {{ 'confirm.registeredFor' | transloco: { event: done.eventName } }}
         </p>
         <p>
           <a
@@ -47,25 +50,28 @@ import { RegistrationsService } from '../../features/registrations/registration.
               done.eventSlug,
             ]"
           >
-            Back to the event
+            {{ 'confirm.backToEvent' | transloco }}
           </a>
         </p>
       } @else if (!tokenValue()) {
-        <h1>Confirm your registration</h1>
+        <h1>{{ 'confirm.title' | transloco }}</h1>
         <p class="notice" role="alert">
-          This address is missing its confirmation token. Please open the link
-          from the mail again — the whole link, including everything after the
-          question mark.
+          {{ 'confirm.noToken' | transloco }}
         </p>
       } @else {
-        <h1>Confirm your registration</h1>
-        @if (error()) {
-          <p class="notice" role="alert">{{ error() }}</p>
+        <h1>{{ 'confirm.title' | transloco }}</h1>
+        @if (error(); as problem) {
+          <p class="notice" role="alert">
+            {{ problem.key | transloco }}
+            @if (problem.detail; as detail) {
+              <span class="notice__detail">{{ detail }}</span>
+            }
+          </p>
         } @else {
-          <p>One click to go: confirm that this address is yours.</p>
+          <p>{{ 'confirm.lead' | transloco }}</p>
         }
         <button type="button" [disabled]="busy()" (click)="confirm()">
-          {{ busy() ? 'Confirming…' : 'Confirm my registration' }}
+          {{ (busy() ? 'confirm.working' : 'confirm.submit') | transloco }}
         </button>
       }
     </section>
@@ -117,7 +123,7 @@ export class RegistrationConfirmPage {
   private readonly registrations = inject(RegistrationsService);
 
   protected readonly result = signal<RegistrationConfirmation | null>(null);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
   protected readonly busy = signal(false);
 
   protected async confirm(): Promise<void> {
@@ -128,10 +134,9 @@ export class RegistrationConfirmPage {
     try {
       this.result.set(await this.registrations.confirm(this.tokenValue()));
     } catch (error: unknown) {
-      this.error.set(
-        (error as ApiError)?.message ??
-          'The confirmation could not be completed. Please try again.',
-      );
+      // The server's reason is worth keeping (F77): "this link has expired" is
+      // the difference between trying again and asking for a new mail.
+      this.error.set(problemOf(error, 'confirm.error'));
     } finally {
       this.busy.set(false);
     }

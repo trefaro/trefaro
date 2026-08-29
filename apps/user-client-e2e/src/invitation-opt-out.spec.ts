@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
+import { expectNoRawKeys, t } from './support/catalogue';
 import { optOutPathFrom, waitForMailTo } from './support/mail';
 import {
   closeSeedDatabase,
@@ -217,11 +218,12 @@ test.describe('objecting to further invitations', () => {
       invited.email,
     );
 
-    await page.getByRole('button', { name: 'Do not invite me again' }).click();
+    await page.getByRole('button', { name: t('optOut.submit') }).click();
 
     await expect(
-      page.getByRole('heading', { name: 'You will not be invited again' }),
+      page.getByRole('heading', { name: t('optOut.done') }),
     ).toBeVisible();
+    await expectNoRawKeys(page);
     // The criterion of AP 12, seen from outside: no list an organizer can ask
     // for contains this address any more.
     expect((await invited.contacts()).map((row) => row.email)).not.toContain(
@@ -236,13 +238,11 @@ test.describe('objecting to further invitations', () => {
     invited = await invite(admin, fixtureLabel(browserName));
 
     await page.goto(invited.optOutPath);
-    await page.getByRole('button', { name: 'Do not invite me again' }).click();
+    await page.getByRole('button', { name: t('optOut.submit') }).click();
 
     // Transactional mail keeps working: somebody who does not want invitations
     // still has to learn that their registration was cancelled.
-    await expect(
-      page.getByText(/confirmation, or a cancellation/),
-    ).toBeVisible();
+    await expect(page.getByText(t('optOut.explanation'))).toBeVisible();
   });
 
   test('asks for the whole link when the token is missing', async ({
@@ -250,7 +250,7 @@ test.describe('objecting to further invitations', () => {
   }) => {
     await page.goto('/invitations/unsubscribe');
 
-    await expect(page.getByRole('alert')).toContainText('missing its token');
+    await expect(page.getByRole('alert')).toHaveText(t('optOut.noToken'));
     await expect(page.getByRole('button')).toHaveCount(0);
   });
 });

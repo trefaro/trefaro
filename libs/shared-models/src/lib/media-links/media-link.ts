@@ -19,8 +19,10 @@
  *    they were added — a `sort` column would be a second ordering nobody
  *    maintains, the same reasoning that kept it off `program_item` (F40).
  *
- * The labels are English here and become translatable with the rest of the UI in
- * phase 2 (Transloco); they live in one place so that change is one change.
+ * The labels are not here. A kind carries the *key* of its label
+ * ({@link mediaLinkKindKey}) and a client resolves it against the catalogue the
+ * server serves (E22, AP 8) — this library is imported by the server too, and a
+ * server that owned a screen's wording would own it in one language.
  */
 
 /**
@@ -36,20 +38,6 @@ export const MEDIA_LINK_KINDS: readonly MediaLinkKind[] = [
   'recording',
   'material',
 ];
-
-/** Singular and plural, because a section heading needs the second one. */
-export interface MediaLinkKindLabel {
-  readonly one: string;
-  readonly many: string;
-}
-
-export const MEDIA_LINK_KIND_LABELS: Readonly<
-  Record<MediaLinkKind, MediaLinkKindLabel>
-> = {
-  stream: { one: 'Live stream', many: 'Live streams' },
-  recording: { one: 'Recording', many: 'Recordings' },
-  material: { one: 'Material', many: 'Materials' },
-};
 
 export const MAX_MEDIA_LINK_TITLE_LENGTH = 200;
 export const MAX_MEDIA_LINK_URL_LENGTH = 512;
@@ -133,10 +121,16 @@ export function isWebUrl(value: string): boolean {
   return parsed.protocol === 'http:' || parsed.protocol === 'https:';
 }
 
-/** The label of a kind, in the number the caller is talking about. */
-export function mediaLinkKindLabel(kind: MediaLinkKind, count = 1): string {
-  const label = MEDIA_LINK_KIND_LABELS[kind];
-  return count === 1 ? label.one : label.many;
+/**
+ * The catalogue key of a kind's label, in the number the caller is talking about.
+ *
+ * Two keys per kind rather than one with a placeholder: Transloco interpolates,
+ * it does not pluralise, and a heading over one recording should not read
+ * "Recordings". `one`/`many` is the same pair the kinds have always carried —
+ * what changed in AP 8 is that the words behind them live in the catalogue.
+ */
+export function mediaLinkKindKey(kind: MediaLinkKind, count = 1): string {
+  return `mediaLinks.kind.${kind}.${count === 1 ? 'one' : 'many'}`;
 }
 
 /**
@@ -159,8 +153,8 @@ export function sortMediaLinks<T extends { readonly kind: MediaLinkKind }>(
 /** One rendered section of a media list. */
 export interface MediaLinkGroup<T> {
   readonly kind: MediaLinkKind;
-  /** Plural label of the kind, ready to be a heading. */
-  readonly label: string;
+  /** Catalogue key of the plural label, ready to be a heading. */
+  readonly labelKey: string;
   readonly links: readonly T[];
 }
 
@@ -176,7 +170,7 @@ export function groupMediaLinksByKind<
 >(links: readonly T[]): readonly MediaLinkGroup<T>[] {
   return MEDIA_LINK_KINDS.map((kind) => ({
     kind,
-    label: MEDIA_LINK_KIND_LABELS[kind].many,
+    labelKey: mediaLinkKindKey(kind, 2),
     links: links.filter((link) => link.kind === kind),
   })).filter((group) => group.links.length > 0);
 }

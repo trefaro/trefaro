@@ -43,3 +43,13 @@ button {
   outline: 2px solid var(--trefaro-color-accent-strong, #a86f13);
   outline-offset: 2px;
 }
+
+/* The server's own reason for a refusal, beside this client's sentence (F77).
+   Global rather than per page: eight components render one, and the styles of
+   a component do not reach into another one's markup anyway. */
+.notice__detail {
+  display: block;
+  margin-block-start: 0.15rem;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}

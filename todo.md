@@ -355,6 +355,21 @@ answer, not an opinion.
       organization adds a locale without rebuilding the image, and the double
       opt-in mail arrives in it.
 
+- [ ] **The server refuses in English, whatever language the page is in.** Since
+      AP 8 of phase 2 the participant client says its own half from the catalogue
+      and puts the server's reason beside it (F77) — "Die Anmeldung konnte nicht
+      gesendet werden." followed by `"Passport scan" takes files up to 5 MB`.
+      That is the honest arrangement and not the right one: the reason is the
+      half a person actually reads. Making it translatable is a different piece
+      of work, and a large one — every `BadRequestException` in the business
+      layer would carry a **code** and its placeholder values instead of a
+      sentence, the catalogue would hold the sentences, and each client would
+      resolve them. Worth doing when there is a second language nobody on the
+      team speaks; not worth doing inside a text extraction. Verify: a German
+      browser gets a German reason for a refused registration, and the API
+      contract suite still asserts something stable — which is the second
+      argument for codes.
+
 ## Checkable after phase 3 — profiles, messaging, chat, push
 
 - [ ] **Put the participant login in front of "my registration"** (E11's second

@@ -1,7 +1,10 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AppConfigService } from '@trefaro/shared-config';
-import { TranslationService } from '@trefaro/shared-i18n';
+import {
+  TranslationService,
+  provideTranslationsForTest,
+} from '@trefaro/shared-i18n';
 import type {
   PluginDescriptor,
   PluginMountPoint,
@@ -19,8 +22,24 @@ import { EventDetailTiles } from './event-detail-tiles';
  * because a bundle that failed to load leaves nothing to scroll to.
  */
 const LABELS: Record<string, Record<string, string>> = {
-  en: { 'plugins.roomPlanning.label': 'Room planning' },
-  de: { 'plugins.roomPlanning.label': 'Raumplanung' },
+  en: {
+    'plugins.roomPlanning.label': 'Room planning',
+    'event.program': 'Programme',
+    'event.media': 'Watch and read',
+    'event.tiles.sessions.one': '{{count}} session',
+    'event.tiles.sessions.many': '{{count}} sessions',
+    'event.tiles.links.one': '{{count}} link',
+    'event.tiles.links.many': '{{count}} links',
+  },
+  de: {
+    'plugins.roomPlanning.label': 'Raumplanung',
+    'event.program': 'Programm',
+    'event.media': 'Ansehen und nachlesen',
+    'event.tiles.sessions.one': '{{count}} Programmpunkt',
+    'event.tiles.sessions.many': '{{count}} Programmpunkte',
+    'event.tiles.links.one': '{{count}} Link',
+    'event.tiles.links.many': '{{count}} Links',
+  },
 };
 
 /**
@@ -36,8 +55,12 @@ class FakeTranslations {
   readonly locale = signal('en');
   private language = 'en';
 
-  translate(key: string): string {
-    return LABELS[this.language]?.[key] ?? key;
+  translate(key: string, params?: Record<string, unknown>): string {
+    const text = LABELS[this.language]?.[key] ?? key;
+    return Object.entries(params ?? {}).reduce(
+      (filled, [name, value]) => filled.replace(`{{${name}}}`, String(value)),
+      text,
+    );
   }
 
   use(locale: string): void {
@@ -109,6 +132,9 @@ describe('EventDetailTiles', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: TranslationService, useValue: translations },
+        // The labels come from the fake above; this is for the `transloco` pipe
+        // in the template, which reads Transloco itself.
+        provideTranslationsForTest(),
         // The tiles navigate to the current route with a fragment rather than
         // carrying a bare `#…` href, which a `<base href>` would resolve against
         // itself — so they need a router even in a unit test.

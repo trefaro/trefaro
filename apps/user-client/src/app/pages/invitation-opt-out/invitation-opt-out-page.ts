@@ -6,7 +6,8 @@ import {
   input,
   signal,
 } from '@angular/core';
-import type { ApiError } from '@trefaro/shared-http';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { problemOf, type Problem } from '@trefaro/shared-http';
 import type { ContactOptOutResult } from '@trefaro/shared-models';
 import { InvitationOptOutService } from '../../features/invitations/invitation-opt-out.service';
 
@@ -26,39 +27,34 @@ import { InvitationOptOutService } from '../../features/invitations/invitation-o
 @Component({
   selector: 'trefaro-invitation-opt-out-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [TranslocoPipe],
   template: `
     <section>
       @if (result(); as done) {
         <h1>
           {{
-            done.state === 'opted-out'
-              ? 'You will not be invited again'
-              : 'You had already asked us not to write again'
+            (done.state === 'opted-out' ? 'optOut.done' : 'optOut.alreadyDone')
+              | transloco
           }}
         </h1>
-        <p>
-          This address will not receive further invitations from this
-          organization. Messages about a registration you make yourself — a
-          confirmation, or a cancellation — are not affected.
-        </p>
+        <p>{{ 'optOut.explanation' | transloco }}</p>
       } @else if (!tokenValue()) {
-        <h1>Do not invite me again</h1>
-        <p class="notice" role="alert">
-          This address is missing its token. Please open the link from the mail
-          again — the whole link, including everything after the question mark.
-        </p>
+        <h1>{{ 'optOut.title' | transloco }}</h1>
+        <p class="notice" role="alert">{{ 'optOut.noToken' | transloco }}</p>
       } @else {
-        <h1>Do not invite me again</h1>
-        @if (error()) {
-          <p class="notice" role="alert">{{ error() }}</p>
-        } @else {
-          <p>
-            One click and this address will not be invited to any further event
-            of this organization.
+        <h1>{{ 'optOut.title' | transloco }}</h1>
+        @if (error(); as problem) {
+          <p class="notice" role="alert">
+            {{ problem.key | transloco }}
+            @if (problem.detail; as detail) {
+              <span class="notice__detail">{{ detail }}</span>
+            }
           </p>
+        } @else {
+          <p>{{ 'optOut.lead' | transloco }}</p>
         }
         <button type="button" [disabled]="busy()" (click)="optOut()">
-          {{ busy() ? 'Saving…' : 'Do not invite me again' }}
+          {{ (busy() ? 'optOut.working' : 'optOut.submit') | transloco }}
         </button>
       }
     </section>
@@ -104,7 +100,7 @@ export class InvitationOptOutPage {
   private readonly invitations = inject(InvitationOptOutService);
 
   protected readonly result = signal<ContactOptOutResult | null>(null);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
   protected readonly busy = signal(false);
 
   protected async optOut(): Promise<void> {
@@ -115,10 +111,7 @@ export class InvitationOptOutPage {
     try {
       this.result.set(await this.invitations.optOut(this.tokenValue()));
     } catch (failure: unknown) {
-      this.error.set(
-        (failure as ApiError)?.message ??
-          'This could not be saved. Please try again in a moment.',
-      );
+      this.error.set(problemOf(failure, 'optOut.error'));
     } finally {
       this.busy.set(false);
     }

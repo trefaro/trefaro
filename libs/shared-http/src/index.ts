@@ -11,7 +11,12 @@ export {
   type QueryParams,
   type RequestHeaders,
 } from './lib/api-client.service';
-export { toApiError, type ApiError } from './lib/api-error';
+export {
+  problemOf,
+  toApiError,
+  type ApiError,
+  type Problem,
+} from './lib/api-error';
 export {
   RealtimeClient,
   type RealtimeEchoReply,

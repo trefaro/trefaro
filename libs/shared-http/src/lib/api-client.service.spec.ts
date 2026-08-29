@@ -139,6 +139,7 @@ describe('ApiClient', () => {
       status: 503,
       message: 'Web Push is not configured on this instance',
       retryable: true,
+      explained: true,
     });
   });
 });

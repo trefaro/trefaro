@@ -16,8 +16,9 @@ import {
   type ValidatorFn,
 } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { AppConfigService } from '@trefaro/shared-config';
-import type { ApiError } from '@trefaro/shared-http';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { problemOf, type Problem } from '@trefaro/shared-http';
+import { TranslationService } from '@trefaro/shared-i18n';
 import type {
   PublicEvent,
   RegistrationFieldPublic,
@@ -27,7 +28,7 @@ import {
   acceptAttribute,
   formatBytes,
   formatEventPeriod,
-  uploadTypeLabel,
+  uploadTypeLabelKey,
 } from '@trefaro/shared-models';
 import { PublicEventsService } from '../../features/events/public-events.service';
 import {
@@ -58,28 +59,25 @@ import {
 @Component({
   selector: 'trefaro-event-registration-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, TranslocoPipe],
   template: `
     @if (sentTo(); as address) {
       <section class="done">
-        <h1>Almost done</h1>
-        <p>
-          We have sent a confirmation link to <strong>{{ address }}</strong
-          >. Open it to complete your registration — until then nothing is
-          reserved.
-        </p>
-        <p class="hint">
-          No mail after a few minutes? Check the spam folder, or submit the form
-          again to have the link sent once more.
-        </p>
+        <h1>{{ 'register.done.title' | transloco }}</h1>
+        <!-- One key for the whole sentence, with the address in it: a sentence
+             built around an element is three fragments to whoever translates it,
+             and German would not put them in this order. The cost is the bold
+             address, which is not worth a broken translation unit. -->
+        <p>{{ 'register.done.sentTo' | transloco: { address } }}</p>
+        <p class="hint">{{ 'register.done.noMail' | transloco }}</p>
         <p>
           <a [routerLink]="['/series', seriesSlug(), 'events', eventSlug()]">
-            Back to the event
+            {{ 'register.backToEvent' | transloco }}
           </a>
         </p>
       </section>
     } @else {
-      <h1>Register</h1>
+      <h1>{{ 'register.title' | transloco }}</h1>
       @if (event(); as item) {
         <p class="event">
           <strong>{{ item.name }}</strong>
@@ -87,21 +85,26 @@ import {
         </p>
       }
 
-      @if (error()) {
-        <p class="notice" role="alert">{{ error() }}</p>
+      @if (error(); as problem) {
+        <p class="notice" role="alert">
+          {{ problem.key | transloco: problem.params }}
+          @if (problem.detail; as detail) {
+            <span class="notice__detail">{{ detail }}</span>
+          }
+        </p>
       }
 
       <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
         <label>
-          <span>First name *</span>
+          <span>{{ 'register.firstName' | transloco }} *</span>
           <input formControlName="firstName" autocomplete="given-name" />
         </label>
         <label>
-          <span>Last name *</span>
+          <span>{{ 'register.lastName' | transloco }} *</span>
           <input formControlName="lastName" autocomplete="family-name" />
         </label>
         <label>
-          <span>E-mail *</span>
+          <span>{{ 'register.email' | transloco }} *</span>
           <input
             formControlName="email"
             type="email"
@@ -110,11 +113,11 @@ import {
           />
         </label>
         <label>
-          <span>Phone</span>
+          <span>{{ 'register.phone' | transloco }}</span>
           <input formControlName="phone" type="tel" autocomplete="tel" />
         </label>
         <label>
-          <span>Where are you coming from?</span>
+          <span>{{ 'register.origin' | transloco }}</span>
           <input formControlName="origin" autocomplete="organization" />
         </label>
 
@@ -140,7 +143,9 @@ import {
                     >
                       <!-- An empty first option, so nothing is answered by
                            accident for somebody who scrolled past. -->
-                      <option value="">Please choose…</option>
+                      <option value="">
+                        {{ 'register.choose' | transloco }}
+                      </option>
                       @for (option of field.options; track option) {
                         <option [value]="option">{{ option }}</option>
                       }
@@ -182,19 +187,13 @@ import {
 
         <label class="check">
           <input formControlName="newsletterOptIn" type="checkbox" />
-          <span>
-            Tell me about later events of this series. You can object at any
-            time.
-          </span>
+          <span>{{ 'register.newsletter' | transloco }}</span>
         </label>
 
         <button type="submit" [disabled]="busy()">
-          {{ busy() ? 'Sending…' : 'Register' }}
+          {{ (busy() ? 'register.sending' : 'register.submit') | transloco }}
         </button>
-        <p class="hint">
-          We will send you a confirmation link. Your registration counts once
-          you have opened it.
-        </p>
+        <p class="hint">{{ 'register.hint' | transloco }}</p>
       </form>
     }
   `,
@@ -298,10 +297,10 @@ export class EventRegistrationPage {
 
   private readonly events = inject(PublicEventsService);
   private readonly registrations = inject(RegistrationsService);
-  private readonly config = inject(AppConfigService);
+  private readonly i18n = inject(TranslationService);
 
   protected readonly event = signal<PublicEvent | null>(null);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
   protected readonly busy = signal(false);
   /** Set once the form went through; the address the link was sent to. */
   protected readonly sentTo = signal<string | null>(null);
@@ -343,9 +342,8 @@ export class EventRegistrationPage {
 
   protected readonly when = computed(() => {
     const event = this.event();
-    return event
-      ? formatEventPeriod(event, this.config.config()?.defaultLocale ?? 'en')
-      : '';
+    // The reader's language, not the instance's: the zone stays the event's (E8).
+    return event ? formatEventPeriod(event, this.i18n.locale()) : '';
   });
 
   constructor() {
@@ -366,9 +364,30 @@ export class EventRegistrationPage {
 
   /** What a participant needs to know before opening the file picker. */
   protected fileHint(field: RegistrationFieldPublic): string {
-    const types = field.accept.map(uploadTypeLabel).join(', ');
+    const types = this.typeList(field);
     const limit = field.maxSizeBytes;
-    return limit ? `${types}, up to ${formatBytes(limit)}` : types;
+    return limit
+      ? this.i18n.translate('register.file.typesUpTo', {
+          types,
+          size: formatBytes(limit, this.i18n.locale()),
+        })
+      : types;
+  }
+
+  /**
+   * The types a field accepts, each named in the reader's language.
+   *
+   * A type the catalogue does not name falls back to its MIME type: a field
+   * written before a type left {@link UPLOAD_TYPES} still exists, and neither
+   * the hint nor the picker should break over it.
+   */
+  private typeList(field: RegistrationFieldPublic): string {
+    return field.accept
+      .map((mimeType) => {
+        const key = uploadTypeLabelKey(mimeType);
+        return key ? this.i18n.translate(key) : mimeType;
+      })
+      .join(', ');
   }
 
   protected fileProblem(field: RegistrationFieldPublic): string | null {
@@ -403,15 +422,19 @@ export class EventRegistrationPage {
   }
 
   private reject(field: RegistrationFieldPublic, file: File): string | null {
+    const locale = this.i18n.locale();
     if (field.accept.length > 0 && !field.accept.includes(file.type)) {
-      return `This field takes ${field.accept.map(uploadTypeLabel).join(', ')}.`;
+      return this.i18n.translate('register.file.wrongType', {
+        types: this.typeList(field),
+      });
     }
     if (field.maxSizeBytes !== null && file.size > field.maxSizeBytes) {
-      return `That file is ${formatBytes(file.size)}; at most ${formatBytes(
-        field.maxSizeBytes,
-      )} can be sent.`;
+      return this.i18n.translate('register.file.tooLarge', {
+        size: formatBytes(file.size, locale),
+        limit: formatBytes(field.maxSizeBytes, locale),
+      });
     }
-    if (file.size === 0) return 'That file is empty.';
+    if (file.size === 0) return this.i18n.translate('register.file.empty');
     return null;
   }
 
@@ -447,11 +470,15 @@ export class EventRegistrationPage {
     // any error message.
     const missing = this.missingFiles();
     if (missing.length > 0) {
-      this.error.set(
-        `Please attach a file for ${missing
-          .map((field) => `"${field.label}"`)
-          .join(', ')}.`,
-      );
+      this.error.set({
+        key: 'register.error.missingFiles',
+        // The labels are the organizer's own words in the organizer's own
+        // language; they are named, not translated.
+        params: {
+          fields: missing.map((field) => `"${field.label}"`).join(', '),
+        },
+        detail: null,
+      });
       return;
     }
 
@@ -479,10 +506,9 @@ export class EventRegistrationPage {
       );
       this.sentTo.set(answer.email);
     } catch (error: unknown) {
-      this.error.set(
-        (error as ApiError)?.message ??
-          'The registration could not be sent. Please try again.',
-      );
+      // The server's reason is kept beside this client's sentence (F77): it is
+      // what names the field that was refused, and no key here can do that.
+      this.error.set(problemOf(error, 'register.error.failed'));
     } finally {
       this.busy.set(false);
     }

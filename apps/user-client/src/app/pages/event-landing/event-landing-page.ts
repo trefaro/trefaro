@@ -8,8 +8,10 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { AppConfigService } from '@trefaro/shared-config';
-import type { ApiError } from '@trefaro/shared-http';
+import { problemOf, type ApiError, type Problem } from '@trefaro/shared-http';
+import { TranslationService } from '@trefaro/shared-i18n';
 import type {
   MediaLinkGroup,
   ProgramDay,
@@ -83,11 +85,18 @@ import { PublicProgramService } from '../../features/program/public-program.serv
 @Component({
   selector: 'trefaro-event-landing-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, PluginSlot, EventDetailTiles],
+  imports: [RouterLink, PluginSlot, EventDetailTiles, TranslocoPipe],
   template: `
-    @if (error()) {
-      <p class="notice" role="alert">{{ error() }}</p>
-      <p><a routerLink="/">Back to all event series</a></p>
+    @if (error(); as problem) {
+      <p class="notice" role="alert">
+        {{ problem.key | transloco }}
+        @if (problem.detail; as detail) {
+          <span class="notice__detail">{{ detail }}</span>
+        }
+      </p>
+      <p>
+        <a routerLink="/">{{ 'event.backToSeriesList' | transloco }}</a>
+      </p>
     } @else if (event(); as item) {
       <article>
         <header class="head">
@@ -97,20 +106,20 @@ import { PublicProgramService } from '../../features/program/public-program.serv
           <div>
             <h1>{{ item.name }}</h1>
             @if (isOver()) {
-              <p class="over">This event has ended.</p>
+              <p class="over">{{ 'event.hasEnded' | transloco }}</p>
             }
           </div>
         </header>
 
         <dl class="facts">
-          <dt>When</dt>
+          <dt>{{ 'event.when' | transloco }}</dt>
           <dd>{{ when() }}</dd>
 
-          <dt>Format</dt>
+          <dt>{{ 'event.format' | transloco }}</dt>
           <dd>{{ format() }}</dd>
 
           @if (item.venueName) {
-            <dt>Where</dt>
+            <dt>{{ 'event.where' | transloco }}</dt>
             <dd>
               {{ item.venueName }}
               @if (item.venueAddress) {
@@ -119,7 +128,7 @@ import { PublicProgramService } from '../../features/program/public-program.serv
             </dd>
           }
           @if (item.onlineUrl) {
-            <dt>Online</dt>
+            <dt>{{ 'event.online' | transloco }}</dt>
             <dd>
               <a [href]="item.onlineUrl" rel="noopener noreferrer">
                 {{ item.onlineUrl }}
@@ -127,7 +136,14 @@ import { PublicProgramService } from '../../features/program/public-program.serv
             </dd>
           }
 
-          <dt>{{ item.languages.length === 1 ? 'Language' : 'Languages' }}</dt>
+          <dt>
+            {{
+              (item.languages.length === 1
+                ? 'event.language.one'
+                : 'event.language.many'
+              ) | transloco
+            }}
+          </dt>
           <dd>{{ item.languages.join(', ') }}</dd>
         </dl>
 
@@ -143,16 +159,18 @@ import { PublicProgramService } from '../../features/program/public-program.serv
 
         @if (item.followUpBody) {
           <section class="follow-up" aria-labelledby="follow-up-heading">
-            <h2 id="follow-up-heading">After the event</h2>
+            <h2 id="follow-up-heading">
+              {{ 'event.followUp' | transloco }}
+            </h2>
             <p class="follow-up__text">{{ item.followUpBody }}</p>
           </section>
         }
 
         @if (media().length > 0) {
           <section id="media" class="media" aria-labelledby="media-heading">
-            <h2 id="media-heading">Watch and read</h2>
+            <h2 id="media-heading">{{ 'event.media' | transloco }}</h2>
             @for (group of media(); track group.kind) {
-              <h3 class="media__kind">{{ group.label }}</h3>
+              <h3 class="media__kind">{{ group.labelKey | transloco }}</h3>
               <ul class="media__links">
                 @for (link of group.links; track link.id) {
                   <li>
@@ -176,12 +194,10 @@ import { PublicProgramService } from '../../features/program/public-program.serv
             class="program"
             aria-labelledby="program-heading"
           >
-            <h2 id="program-heading">Programme</h2>
+            <h2 id="program-heading">{{ 'event.program' | transloco }}</h2>
             @if (hasSignups()) {
               <p class="program__note">
-                Some sessions have a limited number of seats. You claim those
-                from your own page, which you reach through the link in the
-                confirmation e-mail after registering.
+                {{ 'event.programSeats' | transloco }}
               </p>
             }
             @for (day of days(); track day.key) {
@@ -238,9 +254,9 @@ import { PublicProgramService } from '../../features/program/public-program.serv
                 'register',
               ]"
             >
-              Register now
+              {{ 'event.register' | transloco }}
             </a>
-            <small>You will be asked to confirm your e-mail address.</small>
+            <small>{{ 'event.registerHint' | transloco }}</small>
           </p>
         }
 
@@ -253,12 +269,12 @@ import { PublicProgramService } from '../../features/program/public-program.serv
 
         <p>
           <a [routerLink]="['/series', seriesSlug()]">
-            All events of this series
+            {{ 'event.allOfSeries' | transloco }}
           </a>
         </p>
       </article>
     } @else {
-      <p class="notice">Loading…</p>
+      <p class="notice">{{ 'common.loading' | transloco }}</p>
     }
   `,
   styles: `
@@ -441,11 +457,12 @@ export class EventLandingPage {
   private readonly program = inject(PublicProgramService);
   private readonly mediaLinks = inject(PublicMediaLinksService);
   private readonly config = inject(AppConfigService);
+  private readonly i18n = inject(TranslationService);
 
   protected readonly event = signal<PublicEvent | null>(null);
   protected readonly items = signal<readonly PublicProgramItem[]>([]);
   protected readonly links = signal<readonly PublicMediaLink[]>([]);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
 
   protected readonly isOver = computed(() => {
     const event = this.event();
@@ -462,7 +479,7 @@ export class EventLandingPage {
   protected readonly days = computed<readonly ProgramDay[]>(() => {
     const event = this.event();
     return event
-      ? groupProgramByDay(this.items(), event.timezone, this.locale())
+      ? groupProgramByDay(this.items(), event.timezone, this.i18n.locale())
       : [];
   });
 
@@ -493,9 +510,15 @@ export class EventLandingPage {
     this.media().reduce((total, group) => total + group.links.length, 0),
   );
 
+  /**
+   * What a mounted plug-in is told about this page.
+   *
+   * The locale is the *reader's*, not the instance's default: a plug-in renders
+   * inside this page and would otherwise be the one English box on a German one.
+   */
   protected readonly pluginContext = computed(() => ({
     eventId: this.event()?.id ?? '',
-    locale: this.config.config()?.defaultLocale ?? 'en',
+    locale: this.i18n.locale(),
   }));
 
   constructor() {
@@ -506,7 +529,7 @@ export class EventLandingPage {
 
   protected when(): string {
     const event = this.event();
-    return event ? formatEventPeriod(event, this.locale()) : '';
+    return event ? formatEventPeriod(event, this.i18n.locale()) : '';
   }
 
   /** The links of one session — its recording, its slides (FR 3.6). */
@@ -517,7 +540,9 @@ export class EventLandingPage {
   /** The session's clock range, in the event's zone — never the reader's (E8). */
   protected clock(item: PublicProgramItem): string {
     const event = this.event();
-    return event ? formatProgramTime(item, event.timezone, this.locale()) : '';
+    return event
+      ? formatProgramTime(item, event.timezone, this.i18n.locale())
+      : '';
   }
 
   /**
@@ -529,26 +554,32 @@ export class EventLandingPage {
    */
   protected seats(item: PublicProgramItem): string {
     const left = seatsLeft(item);
-    if (left === null) return `Sign-up · ${item.signupCount} so far`;
+    if (left === null) {
+      return this.i18n.translate('event.seats.open', {
+        count: item.signupCount,
+      });
+    }
     return isProgramItemFull(item)
-      ? `Full · ${item.signupCount} of ${item.capacity} seats taken`
-      : `${left} of ${item.capacity} seats free`;
+      ? this.i18n.translate('event.seats.full', {
+          count: item.signupCount,
+          capacity: item.capacity,
+        })
+      : this.i18n.translate('event.seats.free', {
+          left,
+          capacity: item.capacity,
+        });
   }
 
   /** Spelled out rather than shown as a raw enum value. */
   protected format(): string {
     switch (this.event()?.eventType) {
       case 'online':
-        return 'Online';
+        return this.i18n.translate('event.online');
       case 'hybrid':
-        return 'On site and online';
+        return this.i18n.translate('event.onSiteAndOnline');
       default:
-        return 'On site';
+        return this.i18n.translate('event.onSite');
     }
-  }
-
-  private locale(): string {
-    return this.config.config()?.defaultLocale ?? 'en';
   }
 
   private async load(seriesSlug: string, eventSlug: string): Promise<void> {
@@ -560,8 +591,8 @@ export class EventLandingPage {
     } catch (error: unknown) {
       this.error.set(
         (error as ApiError)?.status === 404
-          ? 'This event does not exist, or is not public yet.'
-          : ((error as ApiError)?.message ?? 'The event could not be loaded.'),
+          ? { key: 'event.errorMissing', detail: null }
+          : problemOf(error, 'event.error'),
       );
       return;
     }

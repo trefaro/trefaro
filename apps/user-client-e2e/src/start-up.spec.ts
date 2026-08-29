@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { expectNoRawKeys, t } from './support/catalogue';
 import { PUBLISHED_SERIES, UPCOMING_EVENT } from './support/series-fixtures';
 
 /**
@@ -18,11 +19,12 @@ test.describe('participant client startup', () => {
     await page.goto('/');
 
     await expect(
-      page.getByRole('heading', { name: 'Event series' }),
+      page.getByRole('heading', { name: t('start.title') }),
     ).toBeVisible();
     // Nothing on this page may require credentials, and nothing may report a
     // failure — the series it lists are seeded through the API in the setup.
     await expect(page.getByRole('alert')).toBeHidden();
+    await expectNoRawKeys(page);
   });
 
   test('applies the theme it fetched from the server', async ({ page }) => {
@@ -51,12 +53,17 @@ test.describe('participant client startup', () => {
     await page.goto('/spikes');
 
     await expect(
-      page.getByRole('heading', { name: 'Architecture spikes' }),
+      page.getByRole('heading', { name: t('diagnostics.title') }),
     ).toBeVisible();
     // A loaded configuration means the fallback warning is absent.
-    await expect(page.getByText('running on its fallback theme')).toBeHidden();
-    // media-links is the one core module that ships enabled.
+    await expect(
+      page.getByText(t('diagnostics.config.notLoaded')),
+    ).toBeHidden();
+    // media-links is the one core module that ships enabled. A module key is an
+    // identifier, so it is one of the few strings on this page that stays as it
+    // is in every language.
     await expect(page.getByText('media-links')).toBeVisible();
+    await expectNoRawKeys(page);
   });
 
   test('mounts nothing at the event detail hook point while no plug-in is enabled', async ({
@@ -96,7 +103,7 @@ test.describe('participant client startup', () => {
 
     await page.goto('/');
     await expect(
-      page.getByRole('heading', { name: 'Event series' }),
+      page.getByRole('heading', { name: t('start.title') }),
     ).toBeVisible();
 
     expect(errors).toEqual([]);
@@ -106,7 +113,7 @@ test.describe('participant client startup', () => {
     await page.goto('/no-such-page');
 
     await expect(
-      page.getByRole('heading', { name: 'Event series' }),
+      page.getByRole('heading', { name: t('start.title') }),
     ).toBeVisible();
   });
 });

@@ -8,8 +8,9 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { AppConfigService } from '@trefaro/shared-config';
-import type { ApiError } from '@trefaro/shared-http';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { problemOf, type Problem } from '@trefaro/shared-http';
+import { TranslationService } from '@trefaro/shared-i18n';
 import type {
   MyProgramItem,
   MyRegistration,
@@ -22,6 +23,7 @@ import {
   groupProgramByDay,
   hasEnded,
   isProgramItemFull,
+  registrationStatusKey,
   seatsLeft,
 } from '@trefaro/shared-models';
 import { SelfServiceService } from '../../features/self-service/self-service.service';
@@ -48,18 +50,15 @@ import { SelfServiceService } from '../../features/self-service/self-service.ser
 @Component({
   selector: 'trefaro-my-registration-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, TranslocoPipe],
   template: `
     @if (!tokenValue()) {
-      <h1>My registration</h1>
-      <p class="notice" role="alert">
-        This address is missing its token. Please open the whole link from your
-        e-mail, including everything after the question mark.
-      </p>
+      <h1>{{ 'mine.title' | transloco }}</h1>
+      <p class="notice" role="alert">{{ 'mine.noToken' | transloco }}</p>
     } @else if (registration(); as mine) {
       <article>
         <header>
-          <h1>My registration</h1>
+          <h1>{{ 'mine.title' | transloco }}</h1>
           <p class="lead">
             {{ mine.firstName }} {{ mine.lastName }} ·
             <a
@@ -75,51 +74,49 @@ import { SelfServiceService } from '../../features/self-service/self-service.ser
           </p>
         </header>
 
-        @if (error()) {
-          <p class="notice" role="alert">{{ error() }}</p>
+        @if (error(); as problem) {
+          <p class="notice" role="alert">
+            {{ problem.key | transloco }}
+            @if (problem.detail; as detail) {
+              <span class="notice__detail">{{ detail }}</span>
+            }
+          </p>
         }
 
         @if (mine.status === 'cancelled') {
           <p class="notice" role="status">
-            This registration is cancelled. Register again from the event page
-            if you would like to take part after all.
+            {{ 'mine.cancelled' | transloco }}
           </p>
         }
 
         <dl class="facts">
-          <dt>Event</dt>
+          <dt>{{ 'mine.event' | transloco }}</dt>
           <dd>{{ when(mine) }}</dd>
 
-          <dt>E-mail</dt>
+          <dt>{{ 'mine.email' | transloco }}</dt>
           <dd>{{ mine.email }}</dd>
 
-          <dt>Registered</dt>
-          <dd>{{ mine.status }}</dd>
+          <dt>{{ 'mine.registered' | transloco }}</dt>
+          <dd>{{ statusKey(mine) | transloco }}</dd>
         </dl>
 
         @if (answers(mine).length > 0) {
           <section aria-labelledby="answers-heading">
-            <h2 id="answers-heading">What you entered</h2>
+            <h2 id="answers-heading">{{ 'mine.answers' | transloco }}</h2>
             <dl class="facts">
               @for (answer of answers(mine); track answer.key) {
                 <dt>{{ answer.key }}</dt>
                 <dd>{{ answer.value }}</dd>
               }
             </dl>
-            <p class="meta">
-              To change any of this, write to the organizer — this page does not
-              rewrite your answers.
-            </p>
+            <p class="meta">{{ 'mine.answersHint' | transloco }}</p>
           </section>
         }
 
         @if (days(mine).length > 0) {
           <section aria-labelledby="program-heading">
-            <h2 id="program-heading">Programme</h2>
-            <p class="meta">
-              Sessions with a seat limit have to be claimed. The rest you simply
-              come along to.
-            </p>
+            <h2 id="program-heading">{{ 'event.program' | transloco }}</h2>
+            <p class="meta">{{ 'mine.programHint' | transloco }}</p>
 
             @for (day of days(mine); track day.key) {
               <h3 class="day">{{ day.label }}</h3>
@@ -140,7 +137,7 @@ import { SelfServiceService } from '../../features/self-service/self-service.ser
                             [disabled]="busy() || closed(mine)"
                             (click)="signOff(session)"
                           >
-                            Give up my seat
+                            {{ 'mine.giveUpSeat' | transloco }}
                           </button>
                         } @else if (canSignUp(mine, session)) {
                           <button
@@ -149,7 +146,7 @@ import { SelfServiceService } from '../../features/self-service/self-service.ser
                             [disabled]="busy()"
                             (click)="signUp(session)"
                           >
-                            Sign me up
+                            {{ 'mine.signMeUp' | transloco }}
                           </button>
                         }
                       }
@@ -163,34 +160,34 @@ import { SelfServiceService } from '../../features/self-service/self-service.ser
 
         @if (mine.status !== 'cancelled') {
           <section aria-labelledby="cancel-heading">
-            <h2 id="cancel-heading">Cannot come?</h2>
-            <p class="meta">
-              Cancelling frees your place, and the seats you claimed in
-              individual sessions with it. Your registration stays on record so
-              the organizer can see that you had signed up.
-            </p>
+            <h2 id="cancel-heading">{{ 'mine.cannotCome' | transloco }}</h2>
+            <p class="meta">{{ 'mine.cancelHint' | transloco }}</p>
             <button
               type="button"
               class="danger"
               [disabled]="busy()"
               (click)="cancel()"
             >
-              Cancel my registration
+              {{ 'mine.cancel' | transloco }}
             </button>
           </section>
         }
 
-        <p class="meta">
-          Keep the link to this page to yourself: whoever has it can change your
-          registration.
-        </p>
+        <p class="meta">{{ 'mine.keepLink' | transloco }}</p>
       </article>
-    } @else if (error()) {
-      <h1>My registration</h1>
-      <p class="notice" role="alert">{{ error() }}</p>
-      <p><a routerLink="/">Back to all event series</a></p>
+    } @else if (error(); as problem) {
+      <h1>{{ 'mine.title' | transloco }}</h1>
+      <p class="notice" role="alert">
+        {{ problem.key | transloco }}
+        @if (problem.detail; as detail) {
+          <span class="notice__detail">{{ detail }}</span>
+        }
+      </p>
+      <p>
+        <a routerLink="/">{{ 'event.backToSeriesList' | transloco }}</a>
+      </p>
     } @else {
-      <p class="notice">Loading…</p>
+      <p class="notice">{{ 'common.loading' | transloco }}</p>
     }
   `,
   styles: `
@@ -318,10 +315,10 @@ export class MyRegistrationPage {
   protected readonly tokenValue = computed(() => this.token() ?? '');
 
   private readonly selfService = inject(SelfServiceService);
-  private readonly config = inject(AppConfigService);
+  private readonly i18n = inject(TranslationService);
 
   protected readonly registration = signal<MyRegistration | null>(null);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
   protected readonly busy = signal(false);
 
   constructor() {
@@ -331,16 +328,25 @@ export class MyRegistrationPage {
   }
 
   protected when(mine: MyRegistration): string {
-    return formatEventPeriod(mine.event, this.locale());
+    return formatEventPeriod(mine.event, this.i18n.locale());
   }
 
   /** The programme in the days the venue counts them (E8). */
   protected days(mine: MyRegistration): readonly ProgramDay<MyProgramItem>[] {
-    return groupProgramByDay(mine.program, mine.event.timezone, this.locale());
+    return groupProgramByDay(
+      mine.program,
+      mine.event.timezone,
+      this.i18n.locale(),
+    );
   }
 
   protected clock(mine: MyRegistration, session: MyProgramItem): string {
-    return formatProgramTime(session, mine.event.timezone, this.locale());
+    return formatProgramTime(session, mine.event.timezone, this.i18n.locale());
+  }
+
+  /** The state of this registration, as a key rather than a database word. */
+  protected statusKey(mine: MyRegistration): string {
+    return registrationStatusKey(mine.status);
   }
 
   /** Their own answers, in the shape the participant overview shows them. */
@@ -364,13 +370,26 @@ export class MyRegistrationPage {
     const left = seatsLeft(session);
     if (session.signedUp) {
       return left === null
-        ? 'Your seat is booked'
-        : `Your seat is booked · ${session.signupCount} of ${session.capacity} taken`;
+        ? this.i18n.translate('mine.seats.booked')
+        : this.i18n.translate('mine.seats.bookedOf', {
+            count: session.signupCount,
+            capacity: session.capacity,
+          });
     }
-    if (left === null) return `Sign-up · ${session.signupCount} so far`;
+    if (left === null) {
+      return this.i18n.translate('event.seats.open', {
+        count: session.signupCount,
+      });
+    }
     return left === 0
-      ? `Full · ${session.signupCount} of ${session.capacity} taken`
-      : `${left} of ${session.capacity} seats free`;
+      ? this.i18n.translate('mine.seats.full', {
+          count: session.signupCount,
+          capacity: session.capacity,
+        })
+      : this.i18n.translate('event.seats.free', {
+          left,
+          capacity: session.capacity,
+        });
   }
 
   /**
@@ -406,18 +425,10 @@ export class MyRegistrationPage {
   }
 
   protected async cancel(): Promise<void> {
-    if (
-      !confirm(
-        'Cancel your registration? Your seats in individual sessions go with it.',
-      )
-    ) {
+    if (!confirm(this.i18n.translate('mine.confirmCancel'))) {
       return;
     }
     await this.change(() => this.selfService.cancel(this.tokenValue()));
-  }
-
-  private locale(): string {
-    return this.config.config()?.defaultLocale ?? 'en';
   }
 
   private async load(token: string): Promise<void> {
@@ -427,7 +438,7 @@ export class MyRegistrationPage {
       this.registration.set(await this.selfService.view(token));
     } catch (error: unknown) {
       this.registration.set(null);
-      this.report(error, 'Your registration could not be loaded.');
+      this.report(error, 'mine.error.load');
     }
   }
 
@@ -445,7 +456,7 @@ export class MyRegistrationPage {
     try {
       this.registration.set(await action());
     } catch (error: unknown) {
-      this.report(error, 'That could not be saved. Please try again.');
+      this.report(error, 'mine.error.save');
       // The refusal is usually "somebody else took the last seat", so the page
       // is reloaded: showing the old numbers beside the message would invite the
       // same click again.
@@ -455,7 +466,15 @@ export class MyRegistrationPage {
     }
   }
 
-  private report(error: unknown, fallback: string): void {
-    this.error.set((error as ApiError)?.message ?? fallback);
+  /**
+   * What went wrong, in the reader's language, with the server's reason beside
+   * it (F77).
+   *
+   * The reason is the point here: "somebody else took the last seat" is why the
+   * page is showing different numbers than a moment ago, and no key of this
+   * client can say that.
+   */
+  private report(error: unknown, key: string): void {
+    this.error.set(problemOf(error, key));
   }
 }

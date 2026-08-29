@@ -320,8 +320,20 @@ row in the database, not a rebuild.
   imported, not refused.
 
 A change is live on the next load of either client; nothing pushes it to a
-browser that is already open. Outgoing mail still uses the templates the image
-ships and follows the default language.
+browser that is already open.
+
+**What is translated today**, so a half-finished language is not a surprise: the
+**participant client** in full — every page a visitor sees, including the dates,
+the clock and the file sizes, which follow the reader's language while the times
+themselves stay in the event's own zone. The **organizer client** is still
+English apart from a few labels; it follows in the next work package. So does
+outgoing mail, which for now uses the templates the image ships and follows the
+default language.
+
+One thing no translation reaches: when the server refuses something, its reason
+arrives in English — "This session is full" under a German sentence saying that
+the seat could not be claimed. The half your organization can change is the
+sentence; the reason comes from the application itself.
 
 Nothing here needs configuring. `I18N_CATALOGUE_DIR` belongs to the image and
 points at the catalogues inside it.

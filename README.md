@@ -32,9 +32,10 @@ a client — so an organization can correct a word, or add a language, without
 rebuilding anything: the administration lists every language with how far it is
 translated, edits it key by key beside the English original, takes a translation
 file out and back in again, and decides separately which languages visitors may
-choose.
+choose. The **participant client is fully translated**: every page a visitor sees
+speaks the language they picked, dates and sizes included.
 
-**Not built yet:** the rest of the text extraction, translated mails, content
+**Not built yet:** the organizer client's own text, translated mails, content
 translations and the PWA polish (phase 2 — planned and
 recorded in [`docs/PHASE2.md`](docs/PHASE2.md)); participant login, profiles, messaging,
 real-time chat and push (phase 3); the four curated plug-ins — programme

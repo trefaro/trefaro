@@ -72,9 +72,14 @@ export interface BrandingImages {
  * whose name is a claim.
  */
 export const BRANDING_TYPES: readonly UploadType[] = [
-  { mimeType: 'image/png', label: 'PNG', extensions: ['.png'] },
-  { mimeType: 'image/jpeg', label: 'JPEG', extensions: ['.jpg', '.jpeg'] },
-  { mimeType: 'image/webp', label: 'WebP', extensions: ['.webp'] },
+  { mimeType: 'image/png', key: 'png', label: 'PNG', extensions: ['.png'] },
+  {
+    mimeType: 'image/jpeg',
+    key: 'jpeg',
+    label: 'JPEG',
+    extensions: ['.jpg', '.jpeg'],
+  },
+  { mimeType: 'image/webp', key: 'webp', label: 'WebP', extensions: ['.webp'] },
 ];
 
 export const BRANDING_MIME_TYPES: readonly string[] = BRANDING_TYPES.map(

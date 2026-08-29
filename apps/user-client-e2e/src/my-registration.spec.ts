@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { expectNoRawKeys, t } from './support/catalogue';
 import { selfServicePathFrom, waitForMailTo } from './support/mail';
 import { removeRegistrations } from './support/registration-clean-up';
 import {
@@ -153,7 +154,7 @@ const address = (what: string, project: string): string =>
 
 const session = (page: Page, title: string) =>
   page
-    .getByRole('region', { name: 'Programme' })
+    .getByRole('region', { name: t('event.program') })
     .getByRole('listitem')
     .filter({ hasText: title });
 
@@ -166,7 +167,7 @@ test.describe('my registration', () => {
     await openMyRegistration(page, email);
 
     await expect(
-      page.getByRole('heading', { name: 'My registration', level: 1 }),
+      page.getByRole('heading', { name: t('mine.title'), level: 1 }),
     ).toBeVisible();
     await expect(page.getByText('Amina Okonkwo')).toBeVisible();
     await expect(page.getByText(email)).toBeVisible();
@@ -175,11 +176,12 @@ test.describe('my registration', () => {
       page.getByRole('link', { name: UPCOMING_EVENT.name }),
     ).toBeVisible();
     // And the warning that comes with not having a login yet.
-    await expect(
-      page.getByText('whoever has it can change your registration'),
-    ).toBeVisible();
+    await expect(page.getByText(t('mine.keepLink'))).toBeVisible();
+    // Every key on the page resolved: this is the screen with the most of them,
+    // and one that renders as itself is what a missing translation looks like.
+    await expectNoRawKeys(page);
 
-    const programme = page.getByRole('region', { name: 'Programme' });
+    const programme = page.getByRole('region', { name: t('event.program') });
     await expect(
       programme.getByRole('heading', { name: KEYNOTE }),
     ).toBeVisible();
@@ -203,21 +205,21 @@ test.describe('my registration', () => {
 
     const tour = session(page, TOUR);
     await expect(
-      tour.getByRole('button', { name: 'Sign me up' }),
+      tour.getByRole('button', { name: t('mine.signMeUp') }),
     ).toBeVisible();
 
-    await tour.getByRole('button', { name: 'Sign me up' }).click();
+    await tour.getByRole('button', { name: t('mine.signMeUp') }).click();
 
     await expect(
-      session(page, TOUR).getByText('Your seat is booked'),
+      session(page, TOUR).getByText(t('mine.seats.booked')),
     ).toBeVisible();
 
     await session(page, TOUR)
-      .getByRole('button', { name: 'Give up my seat' })
+      .getByRole('button', { name: t('mine.giveUpSeat') })
       .click();
 
     await expect(
-      session(page, TOUR).getByRole('button', { name: 'Sign me up' }),
+      session(page, TOUR).getByRole('button', { name: t('mine.signMeUp') }),
     ).toBeVisible();
   });
 
@@ -228,7 +230,7 @@ test.describe('my registration', () => {
 
     // A mail client that broke the link across two lines is the usual cause, so
     // the page names that rather than reporting an invalid link.
-    await expect(page.getByRole('alert')).toContainText('missing its token');
+    await expect(page.getByRole('alert')).toHaveText(t('mine.noToken'));
   });
 
   test('cancels the registration, and the link then says so', async ({
@@ -238,24 +240,26 @@ test.describe('my registration', () => {
     const url = page.url();
 
     await session(page, TOUR)
-      .getByRole('button', { name: 'Sign me up' })
+      .getByRole('button', { name: t('mine.signMeUp') })
       .click();
     await expect(
-      session(page, TOUR).getByText('Your seat is booked'),
+      session(page, TOUR).getByText(t('mine.seats.booked')),
     ).toBeVisible();
 
     page.once('dialog', (dialog) => void dialog.accept());
-    await page.getByRole('button', { name: 'Cancel my registration' }).click();
+    await page.getByRole('button', { name: t('mine.cancel') }).click();
 
-    await expect(page.getByRole('status')).toContainText(
-      'This registration is cancelled',
-    );
+    await expect(page.getByRole('status')).toHaveText(t('mine.cancelled'));
     // The seat went with it, and there is nothing left to claim.
     await expect(session(page, TOUR).getByRole('button')).toHaveCount(0);
 
     // And the link itself stops working, rather than quietly staying open on a
     // registration that no longer stands.
     await page.goto(url);
-    await expect(page.getByRole('alert')).toContainText('was cancelled');
+    // This client's own sentence, and the server's reason beside it (F77) —
+    // "was cancelled" is the half no key of this client could say.
+    const alert = page.getByRole('alert');
+    await expect(alert).toContainText(t('mine.error.load'));
+    await expect(alert).toContainText('was cancelled');
   });
 });

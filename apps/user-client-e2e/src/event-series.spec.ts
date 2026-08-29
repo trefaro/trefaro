@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { expectNoRawKeys, t } from './support/catalogue';
 import { DRAFT_SERIES, PUBLISHED_SERIES } from './support/series-fixtures';
 
 /**
@@ -37,8 +38,9 @@ test.describe('event series on the public start page', () => {
       page.getByRole('heading', { name: PUBLISHED_SERIES.name }),
     ).toBeVisible();
     await expect(
-      page.getByRole('heading', { name: 'Upcoming events' }),
+      page.getByRole('heading', { name: t('series.upcoming') }),
     ).toBeVisible();
+    await expectNoRawKeys(page);
   });
 
   test('says a draft address does not exist rather than showing it', async ({
@@ -46,6 +48,6 @@ test.describe('event series on the public start page', () => {
   }) => {
     await page.goto(`/series/${DRAFT_SERIES.slug}`);
 
-    await expect(page.getByRole('alert')).toContainText('does not exist');
+    await expect(page.getByRole('alert')).toHaveText(t('series.errorMissing'));
   });
 });

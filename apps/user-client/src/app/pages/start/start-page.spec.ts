@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { provideTranslationsForTest } from '@trefaro/shared-i18n';
 import type { PublicEventSeries } from '@trefaro/shared-models';
 import { PublicEventSeriesService } from '../../features/event-series/public-event-series.service';
 import { StartPage } from './start-page';
@@ -20,6 +21,15 @@ async function render(
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
+      // The words this page is about, and nothing else: a key with no
+      // translation renders as the key, which is what the other assertions
+      // want to see.
+      provideTranslationsForTest({
+        'start.empty':
+          'This organization has not published an event series yet.',
+        'start.errorRetry':
+          'The event series could not be loaded. Please try again in a moment.',
+      }),
       { provide: PublicEventSeriesService, useValue: { list } },
     ],
   });

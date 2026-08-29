@@ -38,7 +38,17 @@ export const REGISTRATION_PAYLOAD_PART = 'payload';
 /** One entry of the catalogue an organizer chooses accepted types from. */
 export interface UploadType {
   readonly mimeType: string;
-  /** What the organizer reads in the form builder. */
+  /**
+   * The segment this type's translation key is built from
+   * ({@link uploadTypeLabelKey}).
+   *
+   * Its own field rather than derived from the MIME type: a key segment is
+   * `lowerCamelCase` with no slashes, plus or dots, and
+   * `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+   * mangled into one would be a key nobody could type twice the same way.
+   */
+  readonly key: string;
+  /** What the server puts into a refusal — English, see {@link uploadTypeLabel}. */
   readonly label: string;
   /**
    * Extensions for the file picker's `accept` attribute.
@@ -62,17 +72,34 @@ export interface UploadType {
  *   same origin as the organizer client would be that client's own script.
  */
 export const UPLOAD_TYPES: readonly UploadType[] = [
-  { mimeType: 'application/pdf', label: 'PDF', extensions: ['.pdf'] },
+  {
+    mimeType: 'application/pdf',
+    key: 'pdf',
+    label: 'PDF',
+    extensions: ['.pdf'],
+  },
   {
     mimeType: 'image/jpeg',
+    key: 'jpeg',
     label: 'JPEG image',
     extensions: ['.jpg', '.jpeg'],
   },
-  { mimeType: 'image/png', label: 'PNG image', extensions: ['.png'] },
-  { mimeType: 'image/webp', label: 'WebP image', extensions: ['.webp'] },
+  {
+    mimeType: 'image/png',
+    key: 'png',
+    label: 'PNG image',
+    extensions: ['.png'],
+  },
+  {
+    mimeType: 'image/webp',
+    key: 'webp',
+    label: 'WebP image',
+    extensions: ['.webp'],
+  },
   {
     mimeType:
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    key: 'docx',
     label: 'Word document (.docx)',
     extensions: ['.docx'],
   },
@@ -121,11 +148,33 @@ export const MAX_FILE_FIELDS = 5;
 /** The longest original file name that is kept; longer ones are shortened. */
 export const MAX_FILE_NAME_LENGTH = 200;
 
-/** The label of a catalogue entry, or the bare MIME type if it is not one. */
+/**
+ * The label of a catalogue entry, or the bare MIME type if it is not one.
+ *
+ * English, and deliberately so: this is what the *server* puts into a refusal
+ * ("this file is not a PDF, whatever it is called"), and the server's messages
+ * are English throughout. A screen says it in the reader's language through
+ * {@link uploadTypeLabelKey}.
+ */
 export function uploadTypeLabel(mimeType: string): string {
   return (
     UPLOAD_TYPES.find((type) => type.mimeType === mimeType)?.label ?? mimeType
   );
+}
+
+/**
+ * The catalogue key of a type's label, or `null` for a type that is not in the
+ * catalogue (AP 8 of phase 2).
+ *
+ * `null` rather than a made-up key, because the caller has something better to
+ * show than a missing translation: the MIME type itself. A field can only ask
+ * for a type this list names — but a field written before a type was removed
+ * from it still exists, and neither the form nor the file picker should break
+ * over that.
+ */
+export function uploadTypeLabelKey(mimeType: string): string | null {
+  const type = UPLOAD_TYPES.find((entry) => entry.mimeType === mimeType);
+  return type ? `upload.type.${type.key}` : null;
 }
 
 /** The `accept` attribute of a file input: MIME types and extensions. */
@@ -144,11 +193,30 @@ export function acceptAttribute(mimeTypes: readonly string[]): string {
  * "4.7 MB" is what somebody comparing this to what their file manager says
  * expects to see, and the exact number is not the point of either.
  */
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${Math.max(0, Math.round(bytes))} B`;
+export function formatBytes(bytes: number, locale = 'en'): string {
+  if (bytes < 1024) return `${format(Math.max(0, bytes), 0, locale)} B`;
   const kilobytes = bytes / 1024;
-  if (kilobytes < 1024) return `${Math.round(kilobytes)} KB`;
-  return `${(kilobytes / 1024).toFixed(1)} MB`;
+  if (kilobytes < 1024) return `${format(kilobytes, 0, locale)} KB`;
+  return `${format(kilobytes / 1024, 1, locale)} MB`;
+}
+
+/**
+ * The number of a size, written the way the reader's language writes numbers.
+ *
+ * German puts a comma where English puts a point, so "4.7 MB" is a different
+ * number to a German reader — the same reason the date helpers take a locale
+ * rather than inventing one (E8, AP 8 of phase 2). The default is English,
+ * which is what the server's own messages are.
+ */
+function format(value: number, decimals: number, locale: string): string {
+  try {
+    return new Intl.NumberFormat(locale, {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    }).format(value);
+  } catch {
+    return value.toFixed(decimals);
+  }
 }
 
 /**

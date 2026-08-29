@@ -1,9 +1,10 @@
+import { isTranslationKey } from '../i18n/catalogue';
 import {
   MEDIA_LINK_KINDS,
   eventMediaLinks,
   groupMediaLinksByKind,
   isWebUrl,
-  mediaLinkKindLabel,
+  mediaLinkKindKey,
   programItemMediaLinks,
   sortMediaLinks,
   type MediaLinkKind,
@@ -42,18 +43,24 @@ describe('isWebUrl', () => {
   });
 });
 
-describe('mediaLinkKindLabel', () => {
+describe('mediaLinkKindKey', () => {
   it('names a kind in the number it is talked about in', () => {
-    expect(mediaLinkKindLabel('stream')).toBe('Live stream');
-    expect(mediaLinkKindLabel('recording', 3)).toBe('Recordings');
+    expect(mediaLinkKindKey('stream')).toBe('mediaLinks.kind.stream.one');
+    expect(mediaLinkKindKey('recording', 3)).toBe(
+      'mediaLinks.kind.recording.many',
+    );
   });
 
-  it('has a label for every kind there is', () => {
-    // A kind without a label would render as an empty heading.
-    for (const kind of MEDIA_LINK_KINDS) {
-      expect(mediaLinkKindLabel(kind)).not.toBe('');
-      expect(mediaLinkKindLabel(kind, 2)).not.toBe('');
-    }
+  it('builds a well-formed, distinct key for every kind there is', () => {
+    // A malformed key cannot be stored as a translation override (F70), and two
+    // kinds sharing one would make a heading say the wrong word.
+    const keys = MEDIA_LINK_KINDS.flatMap((kind) => [
+      mediaLinkKindKey(kind),
+      mediaLinkKindKey(kind, 2),
+    ]);
+
+    expect(keys.every(isTranslationKey)).toBe(true);
+    expect(new Set(keys).size).toBe(keys.length);
   });
 });
 
@@ -102,7 +109,7 @@ describe('groupMediaLinksByKind', () => {
     ]);
 
     expect(groups.map((group) => group.kind)).toEqual(['stream', 'material']);
-    expect(groups[0].label).toBe('Live streams');
+    expect(groups[0].labelKey).toBe('mediaLinks.kind.stream.many');
     expect(groups[1].links.map((entry) => entry.id)).toEqual([
       'slides',
       'report',

@@ -16,8 +16,8 @@
   <router-outlet />
 </main>
 
-<nav class="app-nav" aria-label="Main navigation">
-  <a class="app-nav__link" routerLink="/">Event series</a>
+<nav class="app-nav" [attr.aria-label]="'app.nav.label' | transloco">
+  <a class="app-nav__link" routerLink="/">{{ 'app.nav.series' | transloco }}</a>
   <!-- Plug-in hook point one: the navigation bar. -->
   <trefaro-plugin-slot mountPoint="navigation" />
 </nav>

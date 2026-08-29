@@ -8,8 +8,9 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { AppConfigService } from '@trefaro/shared-config';
-import type { ApiError } from '@trefaro/shared-http';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { problemOf, type ApiError, type Problem } from '@trefaro/shared-http';
+import { TranslationService } from '@trefaro/shared-i18n';
 import type { PublicEvent, PublicEventSeries } from '@trefaro/shared-models';
 import { formatEventPeriod, hasEnded } from '@trefaro/shared-models';
 import { PublicEventSeriesService } from '../../features/event-series/public-event-series.service';
@@ -25,10 +26,15 @@ import { PublicEventsService } from '../../features/events/public-events.service
 @Component({
   selector: 'trefaro-series-detail-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, TranslocoPipe],
   template: `
-    @if (error()) {
-      <p class="notice" role="alert">{{ error() }}</p>
+    @if (error(); as problem) {
+      <p class="notice" role="alert">
+        {{ problem.key | transloco }}
+        @if (problem.detail; as detail) {
+          <span class="notice__detail">{{ detail }}</span>
+        }
+      </p>
     } @else if (series(); as item) {
       <article>
         <header class="head">
@@ -43,26 +49,25 @@ import { PublicEventsService } from '../../features/events/public-events.service
         @if (item.websiteUrl) {
           <p>
             <a [href]="item.websiteUrl" rel="noopener noreferrer">
-              More about this series
+              {{ 'series.website' | transloco }}
             </a>
           </p>
         }
         @if (item.contactEmail) {
           <p>
-            Questions:
+            {{ 'series.questions' | transloco }}
             <a [href]="'mailto:' + item.contactEmail">{{
               item.contactEmail
             }}</a>
           </p>
         }
 
-        <h2>Upcoming events</h2>
+        <h2>{{ 'series.upcoming' | transloco }}</h2>
         @if (upcoming().length === 0) {
           <p class="notice">
             {{
-              loadingEvents()
-                ? 'Loading…'
-                : 'No upcoming events are announced yet.'
+              (loadingEvents() ? 'common.loading' : 'series.noUpcoming')
+                | transloco
             }}
           </p>
         } @else {
@@ -83,7 +88,7 @@ import { PublicEventsService } from '../../features/events/public-events.service
         }
 
         @if (past().length > 0) {
-          <h2>Past events</h2>
+          <h2>{{ 'series.past' | transloco }}</h2>
           <ul class="events">
             @for (event of past(); track event.id) {
               <li>
@@ -100,7 +105,7 @@ import { PublicEventsService } from '../../features/events/public-events.service
         }
       </article>
     } @else {
-      <p class="notice">Loading…</p>
+      <p class="notice">{{ 'common.loading' | transloco }}</p>
     }
   `,
   styles: `
@@ -167,12 +172,12 @@ export class SeriesDetailPage {
 
   private readonly seriesService = inject(PublicEventSeriesService);
   private readonly eventsService = inject(PublicEventsService);
-  private readonly config = inject(AppConfigService);
+  private readonly i18n = inject(TranslationService);
 
   protected readonly series = signal<PublicEventSeries | null>(null);
   protected readonly events = signal<readonly PublicEvent[]>([]);
   protected readonly loadingEvents = signal(true);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
 
   /** Split on the end: a three-day event is not past on its second morning. */
   protected readonly upcoming = computed(() =>
@@ -192,17 +197,34 @@ export class SeriesDetailPage {
     });
   }
 
+  /**
+   * The period, in the language the reader is reading (E8 untouched).
+   *
+   * The *reader's* language rather than the instance's default: the zone stays
+   * the event's, which is what E8 fixes, but "17. September" and "17 September"
+   * are the same instant written for two different people.
+   */
   protected when(event: PublicEvent): string {
-    return formatEventPeriod(
-      event,
-      this.config.config()?.defaultLocale ?? 'en',
-    );
+    return formatEventPeriod(event, this.i18n.locale());
   }
 
+  /**
+   * Where it happens, assembled from the catalogue.
+   *
+   * A method rather than a `computed()`, and that is what makes it redraw: a
+   * template method is re-evaluated whenever its view is, and the `transloco`
+   * pipes on this page mark the view on a language change. A `computed()` would
+   * be memoised and would have to read {@link TranslationService.locale} itself
+   * — the distinction F72 is about.
+   */
   protected where(event: PublicEvent): string {
-    if (event.eventType === 'online') return 'Online';
-    const place = event.venueName ?? 'On site';
-    return event.eventType === 'hybrid' ? `${place} and online` : place;
+    if (event.eventType === 'online') {
+      return this.i18n.translate('event.online');
+    }
+    const place = event.venueName ?? this.i18n.translate('event.onSite');
+    return event.eventType === 'hybrid'
+      ? this.i18n.translate('series.placeAndOnline', { place })
+      : place;
   }
 
   private async load(slug: string): Promise<void> {
@@ -216,11 +238,12 @@ export class SeriesDetailPage {
       this.series.set(series);
       this.events.set(events);
     } catch (error: unknown) {
+      // A 404 needs no reason from the server: this client already knows the
+      // only two it can be, and repeating "Not Found" underneath would be noise.
       this.error.set(
         (error as ApiError)?.status === 404
-          ? 'This event series does not exist, or is not public yet.'
-          : ((error as ApiError)?.message ??
-              'The event series could not be loaded.'),
+          ? { key: 'series.errorMissing', detail: null }
+          : problemOf(error, 'series.error'),
       );
     } finally {
       this.loadingEvents.set(false);

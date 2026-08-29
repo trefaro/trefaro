@@ -5,7 +5,8 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import type { ApiError } from '@trefaro/shared-http';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { problemOf, type ApiError, type Problem } from '@trefaro/shared-http';
 import type { PublicEventSeries } from '@trefaro/shared-models';
 import { PublicEventSeriesService } from '../../features/event-series/public-event-series.service';
 
@@ -18,18 +19,21 @@ import { PublicEventSeriesService } from '../../features/event-series/public-eve
 @Component({
   selector: 'trefaro-start-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, TranslocoPipe],
   template: `
-    <h1>Event series</h1>
+    <h1>{{ 'start.title' | transloco }}</h1>
 
-    @if (error()) {
-      <p class="notice" role="alert">{{ error() }}</p>
-    } @else if (loading()) {
-      <p class="notice">Loading…</p>
-    } @else if (series().length === 0) {
-      <p class="notice">
-        This organization has not published an event series yet.
+    @if (error(); as problem) {
+      <p class="notice" role="alert">
+        {{ problem.key | transloco }}
+        @if (problem.detail; as detail) {
+          <span class="notice__detail">{{ detail }}</span>
+        }
       </p>
+    } @else if (loading()) {
+      <p class="notice">{{ 'common.loading' | transloco }}</p>
+    } @else if (series().length === 0) {
+      <p class="notice">{{ 'start.empty' | transloco }}</p>
     } @else {
       <ul class="series">
         @for (item of series(); track item.id) {
@@ -107,7 +111,15 @@ export class StartPage {
 
   protected readonly series = signal<readonly PublicEventSeries[]>([]);
   protected readonly loading = signal(true);
-  protected readonly error = signal<string | null>(null);
+
+  /**
+   * What went wrong, as a key plus the server's reason if it gave one (F77).
+   *
+   * A sentence assembled here would be English on a German page, so this client
+   * says its half in the reader's language and puts the server's half — always
+   * English — beside it.
+   */
+  protected readonly error = signal<Problem | null>(null);
 
   constructor() {
     void this.load();
@@ -118,10 +130,10 @@ export class StartPage {
       this.series.set(await this.seriesService.list());
     } catch (error: unknown) {
       this.error.set(
-        (error as ApiError)?.retryable
-          ? 'The event series could not be loaded. Please try again in a moment.'
-          : ((error as ApiError)?.message ??
-              'The event series could not be loaded.'),
+        problemOf(
+          error,
+          (error as ApiError)?.retryable ? 'start.errorRetry' : 'start.error',
+        ),
       );
     } finally {
       this.loading.set(false);

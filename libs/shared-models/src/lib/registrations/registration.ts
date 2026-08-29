@@ -26,6 +26,18 @@ export const REGISTRATION_STATUSES: readonly RegistrationStatus[] = [
 ];
 
 /**
+ * The catalogue key a status is shown under (AP 8 of phase 2).
+ *
+ * The stored value is `confirmed`, and a page that printed that would be
+ * printing a database word at a participant. One helper rather than a map per
+ * screen, because both clients name the same three states and they have to name
+ * them the same way.
+ */
+export function registrationStatusKey(status: RegistrationStatus): string {
+  return `registration.status.${status}`;
+}
+
+/**
  * What a participant fills in (FR 3.5, mockups 5.4).
  *
  * Mandatory: first name, last name, e-mail. Phone and origin are asked for

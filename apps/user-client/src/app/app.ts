@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { AppConfigService } from '@trefaro/shared-config';
 import { LanguageSwitcher } from '@trefaro/shared-i18n';
 import { PluginSlot } from '@trefaro/shared-plugins';
@@ -18,7 +19,13 @@ import { PushSubscriptionService } from './features/push/push-subscription.servi
 @Component({
   selector: 'trefaro-root',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, PluginSlot, LanguageSwitcher],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    PluginSlot,
+    LanguageSwitcher,
+    TranslocoPipe,
+  ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

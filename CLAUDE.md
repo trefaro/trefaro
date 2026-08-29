@@ -406,12 +406,12 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
   Installations-Story, nicht zur Härtung; `Secure` fallen zu lassen ist keine
   Alternative.
 
-## Stand Phase 2 (in Arbeit; AP 1–7 erledigt, Meilensteine M3 und M4 erreicht)
+## Stand Phase 2 (in Arbeit; AP 1–8 erledigt, Meilensteine M3 und M4 erreicht)
 
 Plan **und Protokoll**: `docs/PHASE2.md` — dreizehn Arbeitspakete, Entscheidungen
 **E17–E30** (die Zählung läuft über die Phasen weiter), Meilensteine M3
 (Whitelabel), M4 (alle P1: brandbar, konfigurierbar, selbst installierbar) und M5
-(Abschluss), Nachträge F60–F76. Was schon umgesetzt ist, steht dort unter
+(Abschluss), Nachträge F60–F79. Was schon umgesetzt ist, steht dort unter
 _Fortschritt_, je Paket ein Abschnitt „erledigt" mit den Abweichungen — dort
 zuerst nachsehen. **Jedes Paket einzeln von Marius freigeben** — nicht ohne
 Aufforderung mit dem nächsten anfangen.
@@ -446,7 +446,12 @@ Schlüssel, Merge-Write, Zurücksetzen je Schlüssel), `PUT /api/admin/config/lo
 für `active_locales`/`default_locale`, die Seite `/languages` im
 Veranstalter-Client mit Editor, Filter „nur fehlende“, Export und Import als
 JSON — und `verify-i18n.mjs` geht das Abnahmekriterium jetzt über die API durch
-statt über `psql`.
+statt über `psql` · **AP 8** Nutzer-Client übersetzt: 149 Schlüssel in beiden
+mitgelieferten Katalogen, sieben Seiten plus Diagnoseseite und Shell, die
+Datums-/Zeit-/Größenformate bekommen die Sprache des **Lesers** (E8 unberührt),
+`MEDIA_LINK_KIND_LABELS`/`uploadTypeLabel`/der rohe Anmeldestatus sind
+Katalogschlüssel geworden, `Problem = { key, detail }` in `shared-http` (F77) —
+und die Playwright-Suite prüft gegen den Katalog statt gegen englische Wörter.
 
 Reihenfolge: AP 1–3 Whitelabel (FR 1.4) · AP 4 Modulverwaltung (FR 1.5) · AP 5
 Installations-Story mit geführter Ersteinrichtung und TLS-Overlay (FR 1.1,
@@ -664,6 +669,56 @@ Regeln aus AP 6, die nicht erneut aufgerollt werden sollten:
   `provideTranslationsForTest({...})` aus `@trefaro/shared-i18n`. Ohne Argument
   ein leerer Katalog, dann rendert ein Schlüssel als Schlüssel — was ein Test
   über einen Knopf sehen will. Wer eine Beschriftung prüft, nennt die Wörter.
+
+Regeln aus AP 8, die nicht erneut aufgerollt werden sollten:
+
+- **Eine Meldung hat zwei Hälften** (F77): der Satz dieses Clients kommt aus dem
+  Katalog, der Grund des Servers steht englisch daneben (`Problem = { key,
+detail }`, `.notice__detail`). Die Servermeldung wegzuwerfen kostet die
+  Begründung, sie allein zu zeigen setzt Englisch auf eine deutsche Seite.
+  `ApiError.explained` unterscheidet dabei den Text des Servers von dem, den die
+  HTTP-Bibliothek selbst geschrieben hat — „Not Found" ist kein Grund. Wo der
+  Client den Grund kennt (404), setzt er `detail: null`. **Server**meldungen
+  bleiben englisch; der Weg dahin sind Fehlercodes statt Sätze und steht in
+  `todo.md`.
+- **Eine Template-Methode zeichnet neu, ein `computed()` nicht.** `where()` und
+  `seats()` sind Methoden und werden neu ausgewertet, sobald eine
+  `transloco`-Pipe derselben Seite den View markiert; `tiles()` und `days()` sind
+  memoisiert und **müssen** `TranslationService.locale()` selbst lesen (F72).
+  Beide Sorten stehen im Nutzer-Client nebeneinander, und der Unterschied ist nur
+  nach einem Klick auf „Deutsch" sichtbar.
+- **Format ist nicht Übersetzung** (F78). Datum, Uhrzeit, **Zonenname** und
+  Dateigröße folgen der Sprache des Lesers (`this.i18n.locale()`, nicht
+  `config.defaultLocale`); die **Zone** bleibt die des Events (E8). `zoneLabel`
+  geht über `Intl`, also heißt dasselbe Berlin auf Deutsch `MEZ` und auf Englisch
+  `GMT+1` — ein Test, der `GMT+1` erwartet, prüft die Sprache mit.
+- **Ein Satz um ein Element herum ist keine Übersetzungseinheit** (F79). Ein
+  Schlüssel mit `{{platzhalter}}`, und die Auszeichnung entfällt; drei Fragmente
+  kann eine Übersetzerin nicht umstellen, Deutsch verlangt aber genau das.
+  `[innerHTML]` ist keine Alternative (NFR 9).
+- **Eine Beschriftung ohne Template gehört trotzdem in den Katalog.**
+  `mediaLinkKindKey()`, `uploadTypeLabelKey()` und `registrationStatusKey()`
+  liefern **Schlüssel**; `shared-models` wird auch vom Server importiert, und ein
+  Server, der Oberflächenwörter besitzt, besitzt sie in einer Sprache.
+  `uploadTypeLabel()` bleibt englisch — es schreibt die Ablehnungen des Servers.
+- **Die Browsersuite nennt Schlüssel, keine Wörter.** `t(key, params, locale)`
+  aus `support/catalogue.ts` liest die mitgelieferten Kataloge von der Platte
+  (und **wirft** bei einem unbekannten Schlüssel, statt Schlüssel gegen Schlüssel
+  zu vergleichen); `expectNoRawKeys(page)` findet jede Lücke der Extraktion auf
+  einer besuchten Seite. Verglichen werden **ganze** Textknoten — eine Domain im
+  Linktext hat dieselbe Gestalt wie ein Schlüssel.
+- **Ein Aufräumcode, der über alle Katalogschlüssel läuft, wächst mit dem
+  Katalog.** `resetLocale()` in `admin-client-e2e` schickte ein `DELETE` je
+  Schlüssel; bei fünf war das billig, bei 149 lief der Test in seinen Timeout. Er
+  **fragt** jetzt, welche Schlüssel eine Zeile haben — schnell und weiterhin
+  selbstheilend, denn ein abgebrochener Lauf lässt Zeilen zurück, die sonst
+  niemand mehr kennt.
+- **`test.skip(browserName !== 'chromium')` verhindert kein Rennen innerhalb
+  einer Datei.** Playwright verteilt auch die Tests **einer** Datei auf mehrere
+  Arbeiter (`fullyParallel` im Nx-Preset), lokal also parallel; die CI läuft mit
+  einem Arbeiter und sieht es nie. Zwei Tests, die denselben instanzweiten
+  Zustand schreiben, gehören in ein
+  `test.describe.configure({ mode: 'serial' })` — oder in `apps/server-e2e`.
 
 Regeln aus AP 7, die nicht erneut aufgerollt werden sollten:
 
