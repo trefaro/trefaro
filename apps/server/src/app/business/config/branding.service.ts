@@ -15,6 +15,8 @@ import {
 import {
   FILE_STORE,
   type FileStore,
+  type ImageDimensions,
+  imageDimensions,
   matchesSignature,
   signatureType,
 } from '../attachments';
@@ -36,6 +38,19 @@ export interface BrandingImageUpload {
 export interface BrandingImageBytes {
   readonly mimeType: string;
   readonly bytes: Buffer;
+}
+
+/**
+ * What an image is, without its bytes — for the one caller that has to describe
+ * it rather than serve it.
+ *
+ * `dimensions` is `null` when the header does not say, which the PWA manifest
+ * has a rule for. It is read here and nowhere else, so "what the picture is"
+ * stays one question with one answer.
+ */
+export interface BrandingImageDescription {
+  readonly mimeType: string;
+  readonly dimensions: ImageDimensions | null;
 }
 
 /** The subtree of the upload volume branding files live in (E19). */
@@ -66,10 +81,14 @@ const BRANDING_AREA = 'branding';
  * 4. **Nothing is written until everything has been checked.** A refused upload
  *    leaves the volume exactly as it was.
  *
- * What it deliberately does *not* do is look at the picture. E26 rules out an
- * image processing dependency, so nothing here knows whether an app icon is
- * square or whether a logo is 4000 pixels wide — the design page says what is
- * wanted and shows a preview, and the byte ceiling keeps the damage bounded.
+ * What it deliberately does *not* do is *judge* the picture. E26 rules out an
+ * image processing dependency, so no upload is ever refused for being the wrong
+ * shape — the design page says what is wanted and shows a preview, and the byte
+ * ceiling keeps the damage bounded. Since AP 12 it can {@link describe} one,
+ * because the PWA manifest has to declare the size of the icon it points at
+ * (F20) and a declared size is a claim a browser acts on. Reading two numbers
+ * out of a header is not validation: nothing here decides anything because of
+ * them.
  */
 @Injectable()
 export class BrandingService {
@@ -176,6 +195,33 @@ export class BrandingService {
     }
 
     return { mimeType, bytes };
+  }
+
+  /**
+   * What an image is, for a caller that needs to describe it rather than serve
+   * it.
+   *
+   * Built on {@link read}, so it inherits all three of its guards and its
+   * `null` — an app icon outside the branding area or of a type this instance
+   * does not serve is not describable either. The file is read in full for two
+   * numbers, which is affordable because it is at most
+   * {@link MAX_BRANDING_BYTES} and its one caller is a document a browser
+   * fetches when it installs the application.
+   *
+   * The dimensions are not stored in `app_config`, deliberately and for the
+   * reason AP 2 gave for not storing the media type: a column would be a second
+   * place the truth lives, and the bytes are the first.
+   */
+  async describe(
+    kind: BrandingImageKind,
+  ): Promise<BrandingImageDescription | null> {
+    const image = await this.read(kind);
+    if (!image) return null;
+
+    return {
+      mimeType: image.mimeType,
+      dimensions: imageDimensions(image.bytes),
+    };
   }
 
   /**

@@ -9,6 +9,7 @@ export {
   typesWithoutSignature,
 } from './file-signature';
 export { contentDisposition, safeFileName } from './file-name';
+export { imageDimensions, type ImageDimensions } from './image-dimensions';
 export type { UploadedFile } from './uploaded-file';
 export {
   ATTACHMENT_REPOSITORY,

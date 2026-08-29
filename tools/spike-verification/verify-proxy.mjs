@@ -97,17 +97,85 @@ check(
   'its base href is the root',
   typeof root.body === 'string' && root.body.includes('<base href="/"'),
 );
+// --- the PWA manifest, built from this instance's configuration (AP 12) --
+//
+// The document is served by the *server* and linked by the *client*, and only a
+// running stack has both — which is why this is the only place the two halves
+// meet. Everything below would have passed against a hard-coded file in the
+// client image, and that file is exactly what E26 rules out.
+const MANIFEST_PATH = '/api/config/manifest.webmanifest';
+
 check(
-  'the PWA manifest is linked',
-  typeof root.body === 'string' && root.body.includes('manifest.webmanifest'),
+  'the participant client links the manifest the server builds',
+  typeof root.body === 'string' &&
+    root.body.includes(`<link rel="manifest" href="${MANIFEST_PATH}"`),
 );
 
-const manifest = await call('/manifest.webmanifest');
-check('the manifest itself is served', manifest.status === 200);
+const manifest = await call(MANIFEST_PATH);
+check('the manifest is served through the proxy', manifest.status === 200);
 check(
-  'the manifest is installable as Trefaro',
-  manifest.body?.name === 'Trefaro',
-  JSON.stringify(manifest.body?.name),
+  'it is served as a manifest',
+  (manifest.headers.get('content-type') ?? '').includes(
+    'application/manifest+json',
+  ),
+  manifest.headers.get('content-type') ?? 'none',
+);
+check(
+  'it installs as the organization, not as Trefaro',
+  typeof manifest.body?.name === 'string' &&
+    manifest.body.name === config.body?.organizationName,
+  `${JSON.stringify(manifest.body?.name)} vs ${JSON.stringify(
+    config.body?.organizationName,
+  )}`,
+);
+check(
+  'its splash colour is the configured primary colour',
+  manifest.body?.theme_color === config.body?.theme?.primaryColor,
+  `${manifest.body?.theme_color} vs ${config.body?.theme?.primaryColor}`,
+);
+check(
+  'it starts, scopes and identifies at the root',
+  manifest.body?.start_url === '/' &&
+    manifest.body?.scope === '/' &&
+    manifest.body?.id === '/',
+);
+
+const icons = Array.isArray(manifest.body?.icons) ? manifest.body.icons : [];
+check('it declares icons at all', icons.length > 0);
+check(
+  'at least one icon is square, big enough and unmasked — or nothing installs',
+  icons.some((icon) => {
+    const [width, height] = String(icon.sizes ?? '')
+      .split('x')
+      .map(Number);
+    return (
+      String(icon.purpose ?? '')
+        .split(' ')
+        .includes('any') &&
+      width === height &&
+      width >= 144
+    );
+  }),
+  icons.map((icon) => `${icon.sizes} ${icon.purpose}`).join(', '),
+);
+
+for (const icon of icons) {
+  const image = await call(icon.src);
+  check(
+    `the icon at ${icon.src} is reachable through the proxy`,
+    image.status === 200 &&
+      (image.headers.get('content-type') ?? '').startsWith('image/'),
+    `${image.status} ${image.headers.get('content-type') ?? 'no type'}`,
+  );
+}
+
+const revalidated = await call(MANIFEST_PATH, {
+  headers: { 'if-none-match': manifest.headers.get('etag') ?? '' },
+});
+check(
+  'a browser that already holds the manifest gets a 304',
+  revalidated.status === 304,
+  `got ${revalidated.status}`,
 );
 
 const serviceWorker = await call('/ngsw-worker.js');
@@ -151,6 +219,7 @@ for (const path of [
   '/admin/',
   '/admin/series/new',
   '/api/config',
+  MANIFEST_PATH,
   '/socket.io/',
 ]) {
   check(

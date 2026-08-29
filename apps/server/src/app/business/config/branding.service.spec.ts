@@ -114,6 +114,17 @@ const webp = (): Buffer =>
     Buffer.alloc(16),
   ]);
 
+/** A PNG whose IHDR chunk actually declares a size (AP 12). */
+const measurablePng = (width: number, height: number): Buffer => {
+  const bytes = Buffer.alloc(24);
+  png(16).copy(bytes);
+  bytes.writeUInt32BE(13, 8);
+  bytes.write('IHDR', 12, 'latin1');
+  bytes.writeUInt32BE(width, 16);
+  bytes.writeUInt32BE(height, 20);
+  return bytes;
+};
+
 /** A zip archive's local file header — what a `.docx` and a `.zip` start with. */
 const zip = (): Buffer =>
   Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.alloc(16)]);
@@ -301,6 +312,46 @@ describe('BrandingService', () => {
       files.files.set(path, zip());
 
       expect(await service.read('logo')).toBeNull();
+    });
+  });
+
+  describe('describe', () => {
+    it('reads the size out of the header the PWA manifest needs it from', async () => {
+      await service.replace('app-icon', {
+        mimeType: 'image/png',
+        bytes: measurablePng(512, 512),
+      });
+
+      expect(await service.describe('app-icon')).toEqual({
+        mimeType: 'image/png',
+        dimensions: { width: 512, height: 512 },
+      });
+    });
+
+    it('says so when the header does not state a size', async () => {
+      // Not an error and not a refusal: the manifest has a rule for it that
+      // keeps the instance installable (F20).
+      await service.replace('app-icon', {
+        mimeType: 'image/png',
+        bytes: png(),
+      });
+
+      expect(await service.describe('app-icon')).toEqual({
+        mimeType: 'image/png',
+        dimensions: null,
+      });
+    });
+
+    it('inherits every guard of read', async () => {
+      expect(await service.describe('app-icon')).toBeNull();
+
+      await service.replace('app-icon', {
+        mimeType: 'image/png',
+        bytes: measurablePng(192, 192),
+      });
+      files.files.delete(appConfig.record.appIconPath ?? '');
+
+      expect(await service.describe('app-icon')).toBeNull();
     });
   });
 });

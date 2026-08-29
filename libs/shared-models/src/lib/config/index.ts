@@ -37,6 +37,14 @@ export {
   type ModuleToggle,
 } from './modules';
 export {
+  MIN_INSTALLABLE_ICON_PX,
+  SHIPPED_APP_ICONS,
+  WEB_MANIFEST_MIME_TYPE,
+  WEB_MANIFEST_PATH,
+  type WebManifest,
+  type WebManifestIcon,
+} from './pwa';
+export {
   pluginElementId,
   type PluginDescriptor,
   type PluginMountPoint,

@@ -13,6 +13,7 @@ export {
 export {
   BrandingService,
   type BrandingImageBytes,
+  type BrandingImageDescription,
   type BrandingImageUpload,
 } from './branding.service';
 export { ConfigurationModule } from './configuration.module';

@@ -6,9 +6,18 @@
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
-    <link rel="manifest" href="manifest.webmanifest" />
+    <!-- Built by the server from this instance's configuration (E26), not a
+         file in this image: a manifest with a hard-coded name and colour puts
+         Trefaro's brand on somebody else's home screen. Absolute, because the
+         document may be reached at any depth and the manifest is one address. -->
+    <link rel="manifest" href="/api/config/manifest.webmanifest" />
+    <!-- The colour before the configuration has arrived; ThemeService rewrites
+         this tag as soon as it has (AP 12). -->
     <meta name="theme-color" content="#1f6f5c" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <!-- iOS reads this out of the live document when somebody adds the page to
+         their home screen, so AppIconService points it at the uploaded icon.
+         The shipped one is the fallback, exactly as it is in the manifest. -->
     <link rel="apple-touch-icon" href="icons/icon-192x192.png" />
     <style>
       /* Inline, so it needs no stylesheet of its own to be visible. */

@@ -13,6 +13,15 @@ credentials never reaching the server container, so a fresh instance had no
 administrator, and a service worker that answered `/admin/` from the participant
 client's cache, so the organizer client was unreachable.
 
+Since AP 12 of phase 2, `verify-proxy.mjs` also checks the PWA manifest, which
+only a running stack can answer for: the document is built by the _server_ from
+this instance's configuration (E26) and linked by the _client_, so the two halves
+never meet anywhere else. It checks that the link points at the served manifest,
+that the manifest names the organization rather than Trefaro, that its splash
+colour is the configured one, that every icon it declares is reachable through
+the proxy, and that at least one of them is square and big enough for a browser
+to install from.
+
 | Script                     | Needs                                                                       |
 | -------------------------- | --------------------------------------------------------------------------- |
 | `verify-api.mjs`           | server + PostgreSQL                                                         |
@@ -53,6 +62,13 @@ node tools/spike-verification/verify-push.mjs
 
 ```bash
 docker compose --env-file .env -f infra/docker-compose.yml up -d --build
+
+# Routing, the WebSocket upgrade, the service worker's navigation rules — and
+# since AP 12 the PWA manifest: that the participant client links the one the
+# *server* builds, that it carries the organization's name and colour, and that
+# every icon it names is reachable through the proxy. The manifest is the one
+# document whose two halves live in different containers, so a running stack is
+# the only place they meet.
 node tools/spike-verification/verify-proxy.mjs
 
 # The catalogues have to be *inside* the image, which is where the source tree

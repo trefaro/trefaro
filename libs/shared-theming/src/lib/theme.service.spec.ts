@@ -5,14 +5,20 @@ import { FALLBACK_THEME, ThemeService } from './theme.service';
 describe('ThemeService', () => {
   let service: ThemeService;
   let root: HTMLElement;
+  let head: HTMLHeadElement;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
     service = TestBed.inject(ThemeService);
-    root = TestBed.inject(DOCUMENT).documentElement;
+    const document = TestBed.inject(DOCUMENT);
+    root = document.documentElement;
+    head = document.head;
   });
 
-  afterEach(() => root.removeAttribute('style'));
+  afterEach(() => {
+    root.removeAttribute('style');
+    head.querySelector('meta[name="theme-color"]')?.remove();
+  });
 
   it('starts on the fallback theme so the first paint is never unstyled', () => {
     expect(service.theme()).toEqual(FALLBACK_THEME);
@@ -34,6 +40,33 @@ describe('ThemeService', () => {
     expect(
       root.style.getPropertyValue('--trefaro-color-primary-soft'),
     ).toContain('color-mix');
+  });
+
+  it('paints the browser chrome in the primary colour too (AP 12)', () => {
+    service.apply({
+      primaryColor: '#123456',
+      accentColor: '#abcdef',
+      logoUrl: null,
+      fontFamily: 'Inter',
+    });
+
+    // The one part of the brand that is outside the document: without it a
+    // branded instance has the organization's colour on the page and Trefaro's
+    // around it.
+    expect(
+      head
+        .querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+        ?.getAttribute('content'),
+    ).toBe('#123456');
+  });
+
+  it('reuses the meta tag rather than adding one per change', () => {
+    service.apply({ ...FALLBACK_THEME, primaryColor: '#111111' });
+    service.apply({ ...FALLBACK_THEME, primaryColor: '#222222' });
+
+    const tags = head.querySelectorAll('meta[name="theme-color"]');
+    expect(tags).toHaveLength(1);
+    expect(tags[0].getAttribute('content')).toBe('#222222');
   });
 
   it('reports a logo once one is configured', () => {

@@ -257,13 +257,26 @@ answer, not an opinion.
       feature (E21's rule, applied to the contract). Verify: a tile shows the
       glyph its plug-in names, from this instance's own files — or no descriptor
       promises one.
-- [ ] **The PWA manifest is still static.** `apps/user-client/public/manifest.webmanifest`
+- [x] **The PWA manifest is still static.** `apps/user-client/public/manifest.webmanifest`
       hard-codes name, icons and `theme_color`. A whitelabel instance has to
-      serve them per organization. Verify: change the primary colour and the
-      logo, reinstall the PWA, the home screen icon and splash follow.
-- [ ] **`index.html` hard-codes the theme colour and the language.**
+      serve them per organization.
+      **Done in AP 12 of phase 2** (29.08.2026): the file is gone and
+      `GET /api/config/manifest.webmanifest` builds the document from
+      `app_config` (F103). An uploaded app icon replaces the shipped set when a
+      browser can install from it — square and at least 144 pixels, read out of
+      the file's own header — and is never declared `maskable` (F105, F106).
+      Verified against the contract suite and by `verify-proxy.mjs`, which now
+      checks the name, the colour and every icon through the proxy. What still
+      needs a device: that a **reinstall** picks the new icon up, which is the
+      half of the acceptance criterion below.
+- [x] **`index.html` hard-codes the theme colour and the language.**
       `<meta name="theme-color">` and `<html lang="en">` must follow the
       configured theme and default locale.
+      **Done**: the language since AP 6 (`TranslationService` sets
+      `<html lang>` on every activation), the colour in AP 12 — `ThemeService`
+      writes the `<meta>` tag and creates it when it is missing (F108). Both
+      literals stay in the document as the value _before_ the configuration has
+      arrived.
 - [ ] **Re-check the service worker configuration.** `ngsw-config.json` now
       excludes `/admin`, `/admin/**`, `/api/**` and `/socket.io/**` from
       navigation handling — `/admin` was **missing until 28.08.2026**, and the
@@ -274,10 +287,35 @@ answer, not an opinion.
       organizer client at all**, in the container stack, in any browser that had
       once loaded the participant client. `verify-proxy.mjs` now replays ngsw's
       own selection rule against the built `ngsw.json` and would have caught it.
+      Re-checked in AP 12 of phase 2 (29.08.2026): the four exclusions are still
+      there, `/api/config/manifest.webmanifest` was added to the addresses
+      `verify-proxy.mjs` replays the rule against, and the manifest left the
+      prefetch list with the file — checked against the built `ngsw.json`, which
+      now caches the eight icons and no manifest. No `dataGroups` (E27).
       What is still open here: that a new deployment is actually picked up by an
       **installed** client, which needs a device and an installed PWA.
       → [`03-web-push.md`](docs/spikes/03-web-push.md#open-items)
       → see also the entry about a CI job that starts the stack, phase 5
+- [ ] **The design page could now say when an app icon is unusable.** Since
+      AP 12 the server can read an image's dimensions out of its own header
+      (F106) — which is exactly what the manifest uses to decide whether an
+      uploaded icon may replace the shipped set (F105). The design page still
+      says "square" in words and shows a preview, so an organizer who uploads a
+      wide logo or a 64-pixel favicon gets a manifest that quietly keeps the
+      Trefaro icons beside theirs and no sentence saying why. The upload answer
+      would only have to carry the two numbers. Deliberately not done in AP 12:
+      it is a screen decision, and AP 3 is the package that owns that screen.
+      Verify: upload a 500×120 logo as an app icon and be told that it will not
+      be used on a home screen.
+- [ ] **There is no installation hint on iOS, on purpose — and maybe that is
+      wrong for this pilot partner.** The hint hangs on `beforeinstallprompt`
+      (F109), which Safari does not fire: on an iPhone the only way in is Share
+      → "Add to Home Screen", and a page that says so cannot make it happen. A
+      short explanatory hint would be honest as long as it is shown only on iOS
+      and never claims a button. Whether it is worth it depends on what the
+      people around Democracy International actually carry — one of the things
+      to look at with them rather than to guess (see _Questions for the pilot
+      partner_).
 - [x] **The module administration has to refresh both registries** — done in
       AP 4: `ModuleAdminService.setEnabled` writes the flag and awaits
       `CoreModuleRegistryService.refresh()` **and**

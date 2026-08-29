@@ -1,3 +1,7 @@
+<!-- Above everything, including the header: when there is no network, that is
+     the first thing to say about the page (F20). -->
+<trefaro-offline-banner />
+
 <header class="app-header">
   @if (theme.hasLogo()) {
   <!-- Decorative: the organization's name is the link right next to it, and
@@ -15,6 +19,10 @@
 <main class="app-main">
   <router-outlet />
 </main>
+
+<!-- After the content, never in front of it: somebody who followed a link to an
+     event came for the event. -->
+<trefaro-install-hint />
 
 <nav class="app-nav" [attr.aria-label]="'app.nav.label' | transloco">
   <a class="app-nav__link" routerLink="/">{{ 'app.nav.series' | transloco }}</a>

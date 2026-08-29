@@ -1,9 +1,9 @@
 # Phase 2 — Whitelabel, Konfiguration, Mehrsprachigkeit, PWA
 
-**Status: in Arbeit** (29.08.2026). **AP 1 bis AP 11 sind erledigt** (siehe
+**Status: in Arbeit** (29.08.2026). **AP 1 bis AP 12 sind erledigt** (siehe
 _Fortschritt_) — damit sind **Meilenstein M3** und **Meilenstein M4** erreicht;
 die Abschnitte oberhalb davon sind Plan, nicht Protokoll. Wie in Phase 1 gibt
-Marius jedes Paket einzeln frei — AP 12 wartet auf seine Freigabe.
+Marius jedes Paket einzeln frei — AP 13 wartet auf seine Freigabe.
 
 **Die Entscheidungen E17–E29 sind am 28.08.2026 von Marius bestätigt** — sie
 werden nicht erneut aufgerollt, sondern nur gegen die Umsetzung geprüft (wie
@@ -624,51 +624,58 @@ entscheidet Marius.
 
 Wird beim jeweiligen Paket eingetragen, nicht am Ende gesammelt:
 
-| Nr.  | Inhalt                                                                                                   | AP  |
-| ---- | -------------------------------------------------------------------------------------------------------- | --- |
-| F60  | `app_config` bekommt `organization_name` und `app_icon_path`; Ergänzung zu Schema 5.3 (E26)              | 1   |
-| F61  | Übersetzungstabelle auch für `event_series`, und was **nicht** übersetzt wird (E25)                      | 11  |
-| F62  | Der Übersetzungskatalog wird vom Server ausgeliefert — so wird Kapitel 4 eingelöst (E22–E24)             | 6   |
-| F63  | `CORE_MODULES` listet nur Module, die es gibt; `newsletter` entfällt (E21, Bezug F8)                     | 4   |
-| F64  | Die Ersteinrichtung ist tokengeschützt; `ADMIN_BOOTSTRAP_*` bleibt der unbeaufsichtigte Weg (E28)        | 5   |
-| F65  | Die Schriftart ist ein mitgelieferter Katalog, kein Upload (E18, Bezug NFR 9)                            | 1   |
-| F66  | Wie ein Logo öffentlich wird, ohne die Anhänge mitzunehmen (E19, Bezug E9, F38)                          | 2   |
-| F67  | Welcher Kontrast geprüft wird — und warum nicht der gegen die berechnete Textfarbe (NFR 4, E17)          | 3   |
-| F68  | Wie die Kacheln der Event-Detailansicht entstehen (Mockups 5.2, Bezug F47)                               | 4   |
-| F69  | Warum der Setup-Controller `@AllowAnonymous()` trägt — der Admin-Guard überschätzt (Bezug E16)           | 5   |
-| F70  | Gestalt und Herkunft eines Übersetzungsschlüssels; flach, gepunktet, `lowerCamelCase` (E22)              | 6   |
-| F71  | Welche Sprachen eine frische Instanz anbietet — die, die das Image mitbringt (NFR 4)                     | 6   |
-| F72  | Transloco und zoneless: was die Vorprüfung wirklich fand (Bezug E20)                                     | 6   |
-| F73  | Vollständigkeit ist eine Zahl über die englische Schlüsselliste (E23)                                    | 7   |
-| F74  | Ein leerer Wert ist keine Übersetzung — und der mitgelieferte Text wird nicht gespeichert (E22)          | 7   |
-| F75  | Import ist ein Merge, und unbekannte Schlüssel werden genannt statt geschluckt                           | 7   |
-| F76  | Sprachen anbieten ist eine Entscheidung über `app_config`, nicht über die Übersetzungen (E30)            | 7   |
-| F77  | Eine Meldung hat zwei Hälften: der Satz des Clients aus dem Katalog, der Grund des Servers daneben       | 8   |
-| F78  | Was ein Format ist und keine Übersetzung — Datum, Zonenname, Dateigröße (Bezug E8)                       | 8   |
-| F79  | Ein Satz, der um ein Element gebaut ist, ist keine Übersetzungseinheit                                   | 8   |
-| F80  | Ein Schlüssel ist ein Ort in der Oberfläche; wer eine Seite benennt, nimmt deren Schlüssel               | 9   |
-| F81  | Zwei Zähler in einem Satz brauchen einen Schlüssel je Kombination, solange kein Plural-Modul da ist      | 9   |
-| F82  | `admin.*` ist ein eigener Namensraum: die Clients teilen den Katalog, nicht die Sätze                    | 9   |
-| F83  | Gespeicherte Statuswörter bekommen Schlüsselfunktionen in `shared-models` — zwei Typen, zwei Räume       | 9   |
-| F84  | Eine Meldung aus einer wechselnden Zahl von Teilsätzen wird beim Handeln fertig, nicht beim Zeichnen     | 9   |
-| F85  | Ein Wert, den niemand übersetzen darf — ein Befehl, ein Tag, ein Dateiname — reist als Parameter         | 9   |
-| F86  | Der Katalog bekommt Sätze, nie die Auszeichnung um sie herum — Struktur ist Code                         | 10  |
-| F87  | Die Einheit des Rückfalls aus E24 ist **eine Mail**, nicht der Katalog und nicht ein Schlüssel           | 10  |
-| F88  | Text- und HTML-Teil sind zwei Darstellungen **eines** Satzes, nicht zwei Sätze                           | 10  |
-| F89  | In welchen Sprachen eine Instanz Mail schreiben kann, ist eine Laufzeitfrage, keine Konstante            | 10  |
-| F90  | Ein regionaler Tag ist auch für Mail eine eigene Sprache — kein Rückfall auf die Basissprache            | 10  |
-| F91  | Ein Platzhalter, den niemand füllt, bleibt in einer Mail **stehen** — anders als auf einem Bildschirm    | 10  |
-| F92  | Maskieren ist ein Typ, keine Gewohnheit: `Html` und die einzige Tür von `string` dorthin                 | 10  |
-| F93  | Drei Übersetzungstabellen mit `(elternteil, locale)` und `ON DELETE CASCADE`, kein polymorpher Schlüssel | 11  |
-| F94  | Was `?locale=` bedeutet: fehlend, unbekannt, unbrauchbar — und warum nur das dritte ein Fehler ist       | 11  |
-| F95  | Übersetzt wird **vor** dem Tor, nie danach — sonst gibt eine Übersetzung zurück, was F50 zurückhielt     | 11  |
-| F96  | Eine übersetzte Liste ist nach dem sortiert, was der Leser sieht — in der Geschäftsschicht               | 11  |
-| F97  | Ein Bildschirm ist eine Anfrage, ein Speichern ist ein Ding und eine Sprache                             | 11  |
-| F98  | Eine geleerte Übersetzung löscht ihre Zeile, und Schreiben ersetzt, statt zu mergen (F74 auf Inhalte)    | 11  |
-| F99  | Übersetzen und Anbieten sind zwei Entscheidungen — auch bei Inhalten (E30 auf Inhalte)                   | 11  |
-| F100 | Der Lese-Port liegt beim Elternteil, das Schreiben darüber — die Abhängigkeit läuft in eine Richtung     | 11  |
-| F101 | `type` statt `interface` für die Nutzlasten: nur so bleibt ein generischer Weg offen                     | 11  |
-| F102 | Die Identität eines Formulars ist (Ding, Sprache) — und eine Feldliste ist kein Grund zurückzusetzen     | 11  |
+| Nr.  | Inhalt                                                                                                      | AP  |
+| ---- | ----------------------------------------------------------------------------------------------------------- | --- |
+| F60  | `app_config` bekommt `organization_name` und `app_icon_path`; Ergänzung zu Schema 5.3 (E26)                 | 1   |
+| F61  | Übersetzungstabelle auch für `event_series`, und was **nicht** übersetzt wird (E25)                         | 11  |
+| F62  | Der Übersetzungskatalog wird vom Server ausgeliefert — so wird Kapitel 4 eingelöst (E22–E24)                | 6   |
+| F63  | `CORE_MODULES` listet nur Module, die es gibt; `newsletter` entfällt (E21, Bezug F8)                        | 4   |
+| F64  | Die Ersteinrichtung ist tokengeschützt; `ADMIN_BOOTSTRAP_*` bleibt der unbeaufsichtigte Weg (E28)           | 5   |
+| F65  | Die Schriftart ist ein mitgelieferter Katalog, kein Upload (E18, Bezug NFR 9)                               | 1   |
+| F66  | Wie ein Logo öffentlich wird, ohne die Anhänge mitzunehmen (E19, Bezug E9, F38)                             | 2   |
+| F67  | Welcher Kontrast geprüft wird — und warum nicht der gegen die berechnete Textfarbe (NFR 4, E17)             | 3   |
+| F68  | Wie die Kacheln der Event-Detailansicht entstehen (Mockups 5.2, Bezug F47)                                  | 4   |
+| F69  | Warum der Setup-Controller `@AllowAnonymous()` trägt — der Admin-Guard überschätzt (Bezug E16)              | 5   |
+| F70  | Gestalt und Herkunft eines Übersetzungsschlüssels; flach, gepunktet, `lowerCamelCase` (E22)                 | 6   |
+| F71  | Welche Sprachen eine frische Instanz anbietet — die, die das Image mitbringt (NFR 4)                        | 6   |
+| F72  | Transloco und zoneless: was die Vorprüfung wirklich fand (Bezug E20)                                        | 6   |
+| F73  | Vollständigkeit ist eine Zahl über die englische Schlüsselliste (E23)                                       | 7   |
+| F74  | Ein leerer Wert ist keine Übersetzung — und der mitgelieferte Text wird nicht gespeichert (E22)             | 7   |
+| F75  | Import ist ein Merge, und unbekannte Schlüssel werden genannt statt geschluckt                              | 7   |
+| F76  | Sprachen anbieten ist eine Entscheidung über `app_config`, nicht über die Übersetzungen (E30)               | 7   |
+| F77  | Eine Meldung hat zwei Hälften: der Satz des Clients aus dem Katalog, der Grund des Servers daneben          | 8   |
+| F78  | Was ein Format ist und keine Übersetzung — Datum, Zonenname, Dateigröße (Bezug E8)                          | 8   |
+| F79  | Ein Satz, der um ein Element gebaut ist, ist keine Übersetzungseinheit                                      | 8   |
+| F80  | Ein Schlüssel ist ein Ort in der Oberfläche; wer eine Seite benennt, nimmt deren Schlüssel                  | 9   |
+| F81  | Zwei Zähler in einem Satz brauchen einen Schlüssel je Kombination, solange kein Plural-Modul da ist         | 9   |
+| F82  | `admin.*` ist ein eigener Namensraum: die Clients teilen den Katalog, nicht die Sätze                       | 9   |
+| F83  | Gespeicherte Statuswörter bekommen Schlüsselfunktionen in `shared-models` — zwei Typen, zwei Räume          | 9   |
+| F84  | Eine Meldung aus einer wechselnden Zahl von Teilsätzen wird beim Handeln fertig, nicht beim Zeichnen        | 9   |
+| F85  | Ein Wert, den niemand übersetzen darf — ein Befehl, ein Tag, ein Dateiname — reist als Parameter            | 9   |
+| F86  | Der Katalog bekommt Sätze, nie die Auszeichnung um sie herum — Struktur ist Code                            | 10  |
+| F87  | Die Einheit des Rückfalls aus E24 ist **eine Mail**, nicht der Katalog und nicht ein Schlüssel              | 10  |
+| F88  | Text- und HTML-Teil sind zwei Darstellungen **eines** Satzes, nicht zwei Sätze                              | 10  |
+| F89  | In welchen Sprachen eine Instanz Mail schreiben kann, ist eine Laufzeitfrage, keine Konstante               | 10  |
+| F90  | Ein regionaler Tag ist auch für Mail eine eigene Sprache — kein Rückfall auf die Basissprache               | 10  |
+| F91  | Ein Platzhalter, den niemand füllt, bleibt in einer Mail **stehen** — anders als auf einem Bildschirm       | 10  |
+| F92  | Maskieren ist ein Typ, keine Gewohnheit: `Html` und die einzige Tür von `string` dorthin                    | 10  |
+| F93  | Drei Übersetzungstabellen mit `(elternteil, locale)` und `ON DELETE CASCADE`, kein polymorpher Schlüssel    | 11  |
+| F94  | Was `?locale=` bedeutet: fehlend, unbekannt, unbrauchbar — und warum nur das dritte ein Fehler ist          | 11  |
+| F95  | Übersetzt wird **vor** dem Tor, nie danach — sonst gibt eine Übersetzung zurück, was F50 zurückhielt        | 11  |
+| F96  | Eine übersetzte Liste ist nach dem sortiert, was der Leser sieht — in der Geschäftsschicht                  | 11  |
+| F97  | Ein Bildschirm ist eine Anfrage, ein Speichern ist ein Ding und eine Sprache                                | 11  |
+| F98  | Eine geleerte Übersetzung löscht ihre Zeile, und Schreiben ersetzt, statt zu mergen (F74 auf Inhalte)       | 11  |
+| F99  | Übersetzen und Anbieten sind zwei Entscheidungen — auch bei Inhalten (E30 auf Inhalte)                      | 11  |
+| F100 | Der Lese-Port liegt beim Elternteil, das Schreiben darüber — die Abhängigkeit läuft in eine Richtung        | 11  |
+| F101 | `type` statt `interface` für die Nutzlasten: nur so bleibt ein generischer Weg offen                        | 11  |
+| F102 | Die Identität eines Formulars ist (Ding, Sprache) — und eine Feldliste ist kein Grund zurückzusetzen        | 11  |
+| F103 | Das Manifest kommt vom Server und sitzt als Komposition über Konfiguration und Katalog (E26, Bezug F49)     | 12  |
+| F104 | Es spricht die Vorgabesprache der Instanz — die Sprache eines Manifests wählt niemand (Linie E24)           | 12  |
+| F105 | Ein hochgeladenes App-Icon ist nie `maskable` und ersetzt die mitgelieferten nur, wenn es installierbar ist | 12  |
+| F106 | Die Bildmaße kommen aus dem Dateikopf, ungespeichert — Lesen ist keine Prüfung (verfeinert AP 2)            | 12  |
+| F107 | `SHIPPED_APP_ICONS` ist ein Vertrag zwischen Server und Nutzer-Client, mit einem Test gegen die Dateien     | 12  |
+| F108 | `theme-color` schreibt der ThemeService, nicht `index.html`                                                 | 12  |
+| F109 | Ein Hinweis, den man nicht befolgen kann, ist Werbung — und `navigator.onLine` ist asymmetrisch             | 12  |
 
 Anhangspunkt 18 (TLS gehört zur Installations-Story) ist in AP 5 von „geplant"
 auf „umgesetzt" gezogen.
@@ -2032,3 +2039,132 @@ Was anders lief:
   eine Sprache zu übersetzen, die sich der Empfänger nicht ausgesucht hat, ist
   eine halbe Entscheidung. In Phase 3 bekommt ein Profil eine Sprache; dann
   bewegen sich beide Hälften zusammen. Steht in `todo.md`.
+
+### AP 12 — PWA-Ausbau (erledigt)
+
+Der Nutzer-Client installiert sich als die Organisation, nicht als Trefaro. Das
+Manifest baut der Server aus der Konfiguration (E26), `theme-color` folgt der
+Primärfarbe zur Laufzeit statt als Literal im Dokument zu stehen, ein Ausfall der
+Verbindung ist ein benannter Zustand statt einer Seite, die nichts tut, und wo
+ein Browser eine Installation anbietet, bietet der Client sie mit an. Keine
+`dataGroups` (E27) — die Anwendungshülle wird zwischengespeichert, Daten kommen
+immer aus dem Netz.
+
+Umgesetzt:
+
+- **`shared-models`** — `lib/config/pwa.ts` mit `WebManifest`,
+  `WebManifestIcon`, `WEB_MANIFEST_PATH`, `WEB_MANIFEST_MIME_TYPE`,
+  `MIN_INSTALLABLE_ICON_PX` und `SHIPPED_APP_ICONS` (die acht Icons, die der
+  Nutzer-Client mitbringt).
+- **`business/manifest/`** — `buildWebManifest` (rein), `webManifestEtag`,
+  `WebManifestService` und `GET /api/config/manifest.webmanifest` mit
+  `application/manifest+json`, `no-cache` und einem ETag über die
+  ausgelieferten Bytes. Ein eigenes Modul über `ConfigurationModule` und
+  `I18nModule` (F103).
+- **`imageDimensions`** in `business/attachments/` — PNG, JPEG (mit
+  Segmentlauf) und alle drei WebP-Formen, aus dem Dateikopf, ohne Abhängigkeit;
+  dazu `BrandingService.describe()`.
+- **`shared-theming`** — `ThemeService.apply()` schreibt zusätzlich
+  `<meta name="theme-color">` und legt das Tag an, wenn es fehlt.
+- **Nutzer-Client** — `features/pwa/` mit `ConnectivityService`,
+  `InstallPromptService`, `AppIconService`, `OfflineBanner` und `InstallHint`,
+  beide Bausteine in der Shell; `index.html` verweist auf das gelieferte
+  Manifest; `public/manifest.webmanifest` ist entfallen und aus
+  `ngsw-config.json` gestrichen. **Sieben neue Katalogschlüssel** (Katalog:
+  636 → **643**).
+- **`verify-proxy.mjs`** — Manifest, Farbe, Name, Wurzeladressen, jedes Icon
+  einzeln, die 304-Revalidierung, und `/api/config/manifest.webmanifest` in der
+  Liste der Adressen, die der Service Worker dem Netz überlässt.
+
+Sieben Entscheidungen, die sonst improvisiert worden wären:
+
+**Das Manifest ist eine Zusammensetzung, kein Feld von `/api/config`** (F103).
+Es braucht die Konfiguration _und_ einen Satz aus dem Katalog, und der Katalog
+liest bereits die Konfiguration — im `ConfigurationModule`, wo die URL es
+vermuten lässt, hätte derselbe Endpunkt einen `forwardRef` gebraucht. Also ein
+eigenes Modul darüber, dieselbe Linie wie `business/dashboard` (F49) und
+`business/content-translations` (F100). Der URL-Präfix `config` wird mit dem
+Konfigurations-Controller geteilt; das ist Absicht und genau der Punkt.
+
+**Das Manifest spricht die Vorgabesprache der Instanz** (F104). Ein Browser holt
+es aus einem `<link>`, während jemand installiert — ohne Zutun der Seite und ohne
+zweite Gelegenheit. Das ist die Lage, in der auch eine Mail ist (E24), und
+deshalb dieselbe Antwort: nicht die Sprache des Lesers, sondern die der Instanz,
+und `lang` sagt sie mit. `?locale=` wäre hier eine Zusage, die niemand einlösen
+kann.
+
+**Ein hochgeladenes App-Icon ist nie `maskable`** (F105, E26). Die
+mitgelieferten Icons tragen den Schutzrand, weil sie mit einem gezeichnet
+wurden; ihn für ein Bild zu behaupten, das niemand gesehen hat, ist der Weg, auf
+dem einem Logo die Ränder abrasiert werden. Und es **ersetzt** die
+mitgelieferten nur, wenn ein Browser davon installieren kann — quadratisch und
+mindestens 144 Pixel. Die Regel zeigt in beide Richtungen: die Icons daneben
+stehen zu lassen, hieße, dass ein Browser Trefaros Icon dem der Organisation
+vorzieht; sie für ein zu kleines, längliches oder unlesbares Bild wegzuwerfen,
+hieße, die Instanz **uninstallierbar** zu machen — ein Fehlschlag, den niemand
+bemerkt, bis er installieren will.
+
+**Die Maße kommen aus dem Dateikopf, und das ist keine Prüfung** (F106). AP 2
+hielt fest: kein Prüfen der Bildmaße, weil E26 ein Bildbearbeitungspaket
+ausschließt. Das gilt weiter — abgelehnt wird kein Upload, keine Spalte speichert
+etwas, und die Design-Seite bleibt der Ort, an dem ein schlechtes Icon auffällt.
+Was dazukommt, ist, dass das Manifest eine Größe **nennen** muss und ein Browser
+danach handelt: er wählt das nächstliegende Icon und verweigert die Installation,
+wenn alle zu klein sind. Zwanzig Zeilen Arithmetik an drei festen Offsets sind
+kein Paket; sie liegen neben `file-signature.ts`, aus demselben Grund, aus dem
+das dort steht. Sagt der Kopf nichts, heißt es `sizes: "any"` — und dann bleiben
+die mitgelieferten Icons daneben, sodass die Vermutung nichts trägt.
+
+**Die mitgelieferten Icons sind ein Vertrag zwischen zwei Projekten** (F107).
+Der Server schreibt acht Pfade in ein Dokument, und der Nutzer-Client ist der
+Container, der sie beantwortet — verbunden sind sie durch nichts als diese
+Liste. Sie steht deshalb in `shared-models`, und ein Test des Nutzer-Clients
+prüft jeden `src` gegen die Dateien auf der Platte. Ein umbenanntes Icon wäre
+sonst ein Manifest voller 404, und eine Instanz, deren Icons alle fehlen, ist
+gar nicht installierbar.
+
+**`theme-color` gehört dem `ThemeService`** (F108). Es ist der eine Teil der
+Marke, der _außerhalb_ des Dokuments gemalt wird — die Browserleiste auf Android,
+die Titelzeile eines installierten Clients —, und bis zu diesem Paket stand er
+als Literal in beiden `index.html`. Eine gebrandete Instanz hatte die Farbe der
+Organisation auf der Seite und Trefaros Grün darum herum. Jetzt schreibt die
+Stelle, die dem Dokument das Theme anlegt, auch dieses Tag; die Design-Vorschau
+bewegt es mit. Der Wert im Dokument bleibt als Farbe **vor** der Konfiguration.
+
+**Ein Hinweis, den man nicht befolgen kann, ist Werbung** (F109). Der
+Installationshinweis hängt vollständig an `beforeinstallprompt` — dem Ereignis,
+mit dem Chromium sagt, dass es installieren _würde_. Wo es das nicht gibt (jeder
+Browser auf iOS, Firefox), steht nichts; der Weg dorthin bleibt das
+Betriebssystem. Drei Dinge beenden das Angebot dauerhaft: installieren, „jetzt
+nicht" (in `localStorage`, wie die Sprache), und die Meldung des Browsers, dass
+die Anwendung schon installiert ist. Und `navigator.onLine` ist asymmetrisch:
+`false` heißt sicher kein Netz, `true` heißt nur, dass es eine Schnittstelle
+gibt — das Banner erklärt deshalb nur den Ausfall, dessen sich der Browser
+**sicher** ist, und jede Seite behält ihre eigene Fehlermeldung.
+
+Was anders lief:
+
+- **Das statische Manifest ist gelöscht, nicht überschrieben.**
+  `apps/user-client/public/manifest.webmanifest` und der Eintrag in
+  `ngsw-config.json` sind weg. Eine Datei, die noch da wäre und die niemand mehr
+  verlinkt, ist die Fassung, die beim nächsten Lesen für die richtige gehalten
+  wird.
+- **Der Service Worker speichert das Manifest jetzt nicht mehr mit.** Das ist die
+  Folge der Adresse, nicht eine zweite Entscheidung: es liegt unter `/api/`, und
+  `ngsw-config.json` hat dort weder Asset- noch (E27) Datengruppe. Geprüft am
+  gebauten `ngsw.json` — acht Icons im Cache, kein Manifest.
+- **`<html lang>` war schon fertig.** Der Punkt stand in `todo.md` in einem Atemzug
+  mit `theme-color`; die Sprache setzt `TranslationService` seit AP 6 bei jeder
+  Aktivierung. Nachgeprüft, nicht neu gebaut.
+- **`apps/user-client/tsconfig.spec.json` bekommt `"node"`.** Zwei Tests dieses
+  Clients lesen Dateien: die Icons in `public/` und die eine Adresse in
+  `index.html`, die TypeScript nicht typisieren kann. `libs/shared-i18n` macht es
+  seit AP 6 genauso, und aus demselben Grund — was auf der Platte liegt, wird von
+  der Platte geprüft.
+- **Playwright emuliert Offline in WebKit nicht.** Der Offline-Test läuft in
+  Chromium und Firefox und ist in WebKit mit Begründung übersprungen; die
+  Ereignisse, auf die das Banner hört, kommen dort nie an.
+- **Zwei Namen für dieselbe Anwendung.** Das Manifest trägt jetzt den Namen der
+  Organisation, `<title>` weiterhin „Trefaro" — der Punkt steht seit Phase 1 in
+  `todo.md` und braucht eine `TitleStrategy` in **beiden** Clients. Er gehört zu
+  AP 13, nicht hierher; hier ist er nur sichtbarer geworden.

@@ -8,6 +8,7 @@ import { DashboardModule } from './business/dashboard';
 import { EventSeriesModule } from './business/event-series';
 import { EventsModule } from './business/events';
 import { I18nModule } from './business/i18n';
+import { ManifestModule } from './business/manifest';
 import { InvitationsModule } from './business/invitations';
 import { LoginModule } from './business/login';
 import { MailModule } from './business/mail';
@@ -57,6 +58,11 @@ import { DataAccessModule } from './data-access/data-access.module';
     // (chapter 4, E22). Not optional: NFR 4 makes multilingualism a
     // requirement, and a client without its catalogue renders its keys.
     I18nModule,
+    // The manifest that makes the participant client installable (F20, E26).
+    // Above both of the above, because it needs the organization's name and one
+    // sentence of catalogue text — and the catalogue already reads the
+    // configuration, so this cannot live in either of them.
+    ManifestModule,
 
     // Event management — the survey put it ahead of community features.
     LoginModule,

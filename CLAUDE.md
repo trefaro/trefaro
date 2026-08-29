@@ -406,12 +406,12 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
   Installations-Story, nicht zur Härtung; `Secure` fallen zu lassen ist keine
   Alternative.
 
-## Stand Phase 2 (in Arbeit; AP 1–11 erledigt, Meilensteine M3 und M4 erreicht)
+## Stand Phase 2 (in Arbeit; AP 1–12 erledigt, Meilensteine M3 und M4 erreicht)
 
 Plan **und Protokoll**: `docs/PHASE2.md` — dreizehn Arbeitspakete, Entscheidungen
 **E17–E30** (die Zählung läuft über die Phasen weiter), Meilensteine M3
 (Whitelabel), M4 (alle P1: brandbar, konfigurierbar, selbst installierbar) und M5
-(Abschluss), Nachträge F60–F102. Was schon umgesetzt ist, steht dort unter
+(Abschluss), Nachträge F60–F109. Was schon umgesetzt ist, steht dort unter
 _Fortschritt_, je Paket ein Abschnitt „erledigt" mit den Abweichungen — dort
 zuerst nachsehen. **Jedes Paket einzeln von Marius freigeben** — nicht ohne
 Aufforderung mit dem nächsten anfangen.
@@ -470,7 +470,13 @@ Zusammensetzung darüber, `?locale=` auf allen öffentlichen Leseendpunkten
 (inkl. Selbstbedienung), `canonicalLocaleTag` in `shared-models`, im
 Veranstalter-Client `/series/:id/translations` und
 `…/events/:eventId/translations` mit einem Reiter je Zielsprache
-(Katalog 619 → **636**).
+(Katalog 619 → **636**) · **AP 12** PWA-Ausbau: `GET /api/config/manifest.webmanifest`
+aus der Konfiguration (`business/manifest/` über Konfiguration **und** Katalog),
+`imageDimensions` liest die Icongröße aus dem Dateikopf, `theme-color` schreibt
+der `ThemeService`, `features/pwa/` im Nutzer-Client (Offline-Banner,
+Installationshinweis, `apple-touch-icon` folgt der Konfiguration), das statische
+`manifest.webmanifest` ist entfallen, und `verify-proxy.mjs` prüft Manifest,
+Farbe, Name und jedes Icon einzeln (Katalog 636 → **643**).
 
 Reihenfolge: AP 1–3 Whitelabel (FR 1.4) · AP 4 Modulverwaltung (FR 1.5) · AP 5
 Installations-Story mit geführter Ersteinrichtung und TLS-Overlay (FR 1.1,
@@ -943,6 +949,53 @@ Regeln aus AP 11, die nicht erneut aufgerollt werden sollten:
   Mail wählt niemand (E24), und einen Inhalt in eine Sprache zu übersetzen, die
   sich der Empfänger nicht ausgesucht hat, ist eine halbe Entscheidung. Steht in
   `todo.md`.
+
+Regeln aus AP 12, die nicht erneut aufgerollt werden sollten:
+
+- **Das Manifest kommt vom Server, gebaut aus der Konfiguration** (E26, F103).
+  `GET /api/config/manifest.webmanifest`, gebaut in `business/manifest/` — einem
+  Modul **über** `ConfigurationModule` und `I18nModule`, weil es beides braucht
+  und der Katalog schon die Konfiguration liest (dieselbe Linie wie F49/F100).
+  Der URL-Präfix wird mit dem Konfigurations-Controller geteilt; das Modul nicht.
+  Ein statisches Manifest im Client-Image gibt es nicht mehr — und was aus
+  `public/` verschwindet, verschwindet auch aus `ngsw-config.json`.
+- **Ein Manifest hat keine Sprachwahl** (F104). Der Browser holt es aus einem
+  `<link>`, während jemand installiert; also die Vorgabesprache der Instanz und
+  `lang` dazu, genau wie bei einer Mail (E24). Kein `?locale=`.
+- **Ein hochgeladenes App-Icon ist nie `maskable`** (F105). Nur die
+  mitgelieferten Icons tragen den Schutzrand, weil sie mit einem gezeichnet
+  wurden. Und es **ersetzt** sie nur, wenn ein Browser davon installieren kann —
+  quadratisch und ≥ `MIN_INSTALLABLE_ICON_PX` (144). Sonst steht es davor und die
+  mitgelieferten dahinter: die Regel zeigt in beide Richtungen, weil die eine
+  Fehlrichtung Trefaros Icon auf einem fremden Startbildschirm ist und die andere
+  eine Instanz, die sich gar nicht installieren lässt.
+- **Maße aus dem Dateikopf zu lesen ist keine Prüfung** (F106). AP 2 bleibt
+  gültig: kein Upload wird wegen seiner Form abgelehnt, keine Spalte speichert
+  eine. `imageDimensions` (neben `file-signature.ts`, ohne Abhängigkeit) liest
+  PNG, JPEG und alle drei WebP-Formen, damit das Manifest eine Größe **nennen**
+  kann. Sagt der Kopf nichts, heißt es `sizes: "any"` — und dann bleiben die
+  mitgelieferten Icons daneben. Wer eine Bildeigenschaft braucht: aus den Bytes
+  lesen, nicht in eine zweite Spalte schreiben.
+- **`SHIPPED_APP_ICONS` ist ein Vertrag zwischen zwei Projekten** (F107). Der
+  Server schreibt die Pfade, der Nutzer-Client beantwortet sie, und verbunden
+  sind sie durch nichts sonst — deshalb steht die Liste in `shared-models` und
+  ein Test des Clients prüft jeden `src` gegen `public/icons`.
+- **`theme-color` schreibt der `ThemeService`** (F108), nicht `index.html`. Es
+  ist der Teil der Marke außerhalb des Dokuments; der Wert im Dokument ist die
+  Farbe **vor** der Konfiguration. Gilt für beide Clients.
+- **Ein Hinweis, den man nicht befolgen kann, ist Werbung** (F109). Der
+  Installationshinweis existiert nur hinter `beforeinstallprompt`; auf iOS und in
+  Firefox steht nichts. Und `navigator.onLine` ist asymmetrisch — `false` ist
+  eine Aussage, `true` ist keine: das Offline-Banner erklärt nur den Ausfall,
+  dessen der Browser sicher ist, jede Seite behält ihre eigene Fehlermeldung.
+- **Playwright emuliert Offline in WebKit nicht.** `context.setOffline()` wirkt in
+  Chromium und Firefox; in WebKit kommen die Ereignisse nie an, also ist dieser
+  eine Test dort mit Begründung übersprungen.
+- **Ein Client-Test, der Dateien liest, braucht `"node"` in
+  `tsconfig.spec.json`.** Zwei tun es: die Iconliste gegen `public/` und die
+  Manifest-Adresse gegen `index.html` — eine Adresse, die TypeScript nicht
+  typisieren kann und die falsch geschrieben nur dazu führt, dass sich nichts
+  mehr installieren lässt.
 
 ## Betriebskontext
 

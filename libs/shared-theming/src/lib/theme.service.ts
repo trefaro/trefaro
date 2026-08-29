@@ -17,6 +17,12 @@ export const FALLBACK_THEME: Theme = {
  * effect immediately across the whole application *and* inside every plug-in
  * web component — custom properties inherit through shadow DOM, which is what
  * lets plug-ins ship without any CSS of their own.
+ *
+ * Since AP 12 it also writes `<meta name="theme-color">`, which is the one part
+ * of the brand that is painted *outside* the document: the browser's own chrome
+ * on Android, and the title bar of an installed client. It was a literal in both
+ * `index.html` files until then, so a branded instance had the organization's
+ * colour on the page and Trefaro's around it.
  */
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
@@ -38,5 +44,29 @@ export class ThemeService {
     )) {
       root.style.setProperty(property, value);
     }
+
+    this.applyThemeColor(theme.primaryColor);
+  }
+
+  /**
+   * The colour the browser paints around the page.
+   *
+   * The tag is created when it is missing rather than required in the document:
+   * this service applies a theme to whatever document it is given, and a test
+   * fixture or a future third surface should not have to remember a `<meta>`.
+   * An installed client keeps the colour it was installed with — that one comes
+   * from the manifest (E26), and this is the running page.
+   */
+  private applyThemeColor(color: string): void {
+    const head = this.document.head;
+    if (!head) return;
+
+    const existing = head.querySelector<HTMLMetaElement>(
+      'meta[name="theme-color"]',
+    );
+    const meta = existing ?? this.document.createElement('meta');
+    meta.name = 'theme-color';
+    meta.content = color;
+    if (!existing) head.appendChild(meta);
   }
 }
