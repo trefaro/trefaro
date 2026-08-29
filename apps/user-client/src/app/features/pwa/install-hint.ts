@@ -3,7 +3,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { InstallPromptService } from './install-prompt.service';
 
 /**
- * Offers to put this client on the home screen (F20).
+ * Offers to put this client on the home screen (F20, F109).
  *
  * Shown only while the browser has actually offered an installation — see
  * {@link InstallPromptService} for why a hint that cannot be followed is not

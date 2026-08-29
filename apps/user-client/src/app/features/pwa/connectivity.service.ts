@@ -7,7 +7,7 @@ import {
 } from '@angular/core';
 
 /**
- * Whether this client currently has a network at all (F20, NFR 10).
+ * Whether this client currently has a network at all (F20, F110, NFR 10).
  *
  * The service worker caches the application shell (E27 keeps API answers out of
  * it), so a participant who has the client installed and loses their connection

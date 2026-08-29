@@ -3,7 +3,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { ConnectivityService } from './connectivity.service';
 
 /**
- * Says so when there is no network (F20, NFR 10).
+ * Says so when there is no network (F20, F110, NFR 10).
  *
  * The whole of "an offline state instead of a white page": the service worker
  * hands the shell back, this explains why nothing in it loads, and the pages

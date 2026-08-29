@@ -675,7 +675,8 @@ Wird beim jeweiligen Paket eingetragen, nicht am Ende gesammelt:
 | F106 | Die Bildmaße kommen aus dem Dateikopf, ungespeichert — Lesen ist keine Prüfung (verfeinert AP 2)            | 12  |
 | F107 | `SHIPPED_APP_ICONS` ist ein Vertrag zwischen Server und Nutzer-Client, mit einem Test gegen die Dateien     | 12  |
 | F108 | `theme-color` schreibt der ThemeService, nicht `index.html`                                                 | 12  |
-| F109 | Ein Hinweis, den man nicht befolgen kann, ist Werbung — und `navigator.onLine` ist asymmetrisch             | 12  |
+| F109 | Ein Hinweis, den man nicht befolgen kann, ist Werbung — angeboten wird nur, wo es geht                      | 12  |
+| F110 | `navigator.onLine` ist asymmetrisch: nur `false` ist eine Aussage                                           | 12  |
 
 Anhangspunkt 18 (TLS gehört zur Installations-Story) ist in AP 5 von „geplant"
 auf „umgesetzt" gezogen.
@@ -2076,7 +2077,7 @@ Umgesetzt:
   einzeln, die 304-Revalidierung, und `/api/config/manifest.webmanifest` in der
   Liste der Adressen, die der Service Worker dem Netz überlässt.
 
-Sieben Entscheidungen, die sonst improvisiert worden wären:
+Acht Entscheidungen, die sonst improvisiert worden wären:
 
 **Das Manifest ist eine Zusammensetzung, kein Feld von `/api/config`** (F103).
 Es braucht die Konfiguration _und_ einen Satz aus dem Katalog, und der Katalog
@@ -2133,14 +2134,27 @@ bewegt es mit. Der Wert im Dokument bleibt als Farbe **vor** der Konfiguration.
 
 **Ein Hinweis, den man nicht befolgen kann, ist Werbung** (F109). Der
 Installationshinweis hängt vollständig an `beforeinstallprompt` — dem Ereignis,
-mit dem Chromium sagt, dass es installieren _würde_. Wo es das nicht gibt (jeder
-Browser auf iOS, Firefox), steht nichts; der Weg dorthin bleibt das
-Betriebssystem. Drei Dinge beenden das Angebot dauerhaft: installieren, „jetzt
-nicht" (in `localStorage`, wie die Sprache), und die Meldung des Browsers, dass
-die Anwendung schon installiert ist. Und `navigator.onLine` ist asymmetrisch:
-`false` heißt sicher kein Netz, `true` heißt nur, dass es eine Schnittstelle
-gibt — das Banner erklärt deshalb nur den Ausfall, dessen sich der Browser
-**sicher** ist, und jede Seite behält ihre eigene Fehlermeldung.
+mit dem Chromium sagt, dass es installieren _würde_. Der Client fängt es ab
+(`preventDefault()` unterdrückt Chromes eigene Leiste) und bietet an seiner
+Stelle an, wo sich das erklären und ablehnen lässt. Wo es das Ereignis nicht
+gibt — jeder Browser auf iOS, Firefox —, steht **nichts**: dort heißt
+installieren „Teilen → Zum Home-Bildschirm", und das kann eine Seite nicht
+auslösen, sondern nur anpreisen. Drei Dinge beenden das Angebot dauerhaft:
+installieren, „jetzt nicht" (in `localStorage`, wie die Sprache), und die
+Meldung des Browsers, dass die Anwendung schon installiert ist. Und das
+abgefangene Ereignis ist **einmal** benutzbar, wird also beim Klick verworfen —
+ein Knopf, der stehen bliebe, täte beim zweiten Klick nichts, was kaputt
+aussieht und nicht abgelehnt.
+
+**`navigator.onLine` ist asymmetrisch, und nur die eine Hälfte wird geglaubt**
+(F110). `false` heißt: der Browser weiß, dass keine Verbindung besteht. `true`
+heißt nur, dass es eine Netzwerkschnittstelle gibt — ein WLAN mit Anmeldeseite,
+ein totes Uplink, ein kaputtes DNS sind alle `true`. Das Banner erscheint
+deshalb ausschließlich bei `false` und behauptet nie die Gegenrichtung. Und
+genau deshalb behält jede Seite ihre eigene Fehlermeldung: eine Anfrage, die
+fehlschlägt, während der Browser sich für online hält, ist ein Seitenfehler und
+kein Offline-Zustand — sie darf nicht unter einem Banner verschwinden, das die
+falsche Erklärung anbietet.
 
 Was anders lief:
 

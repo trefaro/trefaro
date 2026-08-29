@@ -24,7 +24,7 @@ const STORAGE_KEY = 'trefaro.install.dismissed';
 
 /**
  * Offers the installation, but only where a browser can actually perform it
- * (F20).
+ * (F20, F109).
  *
  * The participant client is installable from v1, and a client nobody knows is
  * installable is not much of one — so there is a hint. What it deliberately is

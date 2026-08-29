@@ -411,7 +411,7 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
 Plan **und Protokoll**: `docs/PHASE2.md` — dreizehn Arbeitspakete, Entscheidungen
 **E17–E30** (die Zählung läuft über die Phasen weiter), Meilensteine M3
 (Whitelabel), M4 (alle P1: brandbar, konfigurierbar, selbst installierbar) und M5
-(Abschluss), Nachträge F60–F109. Was schon umgesetzt ist, steht dort unter
+(Abschluss), Nachträge F60–F110. Was schon umgesetzt ist, steht dort unter
 _Fortschritt_, je Paket ein Abschnitt „erledigt" mit den Abweichungen — dort
 zuerst nachsehen. **Jedes Paket einzeln von Marius freigeben** — nicht ohne
 Aufforderung mit dem nächsten anfangen.
@@ -984,10 +984,17 @@ Regeln aus AP 12, die nicht erneut aufgerollt werden sollten:
   ist der Teil der Marke außerhalb des Dokuments; der Wert im Dokument ist die
   Farbe **vor** der Konfiguration. Gilt für beide Clients.
 - **Ein Hinweis, den man nicht befolgen kann, ist Werbung** (F109). Der
-  Installationshinweis existiert nur hinter `beforeinstallprompt`; auf iOS und in
-  Firefox steht nichts. Und `navigator.onLine` ist asymmetrisch — `false` ist
-  eine Aussage, `true` ist keine: das Offline-Banner erklärt nur den Ausfall,
-  dessen der Browser sicher ist, jede Seite behält ihre eigene Fehlermeldung.
+  Installationshinweis existiert nur hinter `beforeinstallprompt` — auf iOS und
+  in Firefox steht nichts, weil eine Seite „Teilen → Zum Home-Bildschirm" nicht
+  auslösen, sondern nur anpreisen kann. Das abgefangene Ereignis ist einmal
+  benutzbar und wird beim Klick verworfen; installieren, „jetzt nicht" (in
+  `localStorage`) und `appinstalled` beenden das Angebot dauerhaft.
+- **`navigator.onLine` ist asymmetrisch** (F110): `false` ist eine Aussage,
+  `true` ist keine — ein WLAN mit Anmeldeseite meldet `true`. Das Offline-Banner
+  erscheint deshalb nur bei `false` und behauptet nie die Gegenrichtung, und jede
+  Seite behält ihre eigene Fehlermeldung: eine Anfrage, die fehlschlägt, während
+  der Browser sich für online hält, ist ein Seitenfehler und darf nicht unter
+  einer falschen Erklärung verschwinden.
 - **Playwright emuliert Offline in WebKit nicht.** `context.setOffline()` wirkt in
   Chromium und Firefox; in WebKit kommen die Ereignisse nie an, also ist dieser
   eine Test dort mit Begründung übersprungen.
