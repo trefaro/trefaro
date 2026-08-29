@@ -3,6 +3,7 @@ export {
   MAX_ACTIVE_LOCALES,
   MAX_LOCALE_TAG_LENGTH,
   MAX_ORGANIZATION_NAME_LENGTH,
+  canonicalLocaleTag,
   isLocaleTag,
   type AppConfig,
   type AppConfigChange,

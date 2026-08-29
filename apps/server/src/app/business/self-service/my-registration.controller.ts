@@ -17,6 +17,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Throttle, minutes } from '@nestjs/throttler';
+import { ApiLocaleQuery, LocaleQueryPipe } from '../common/locale-query.pipe';
 import { MyRegistrationDto } from './dto/my-registration.dto';
 import { SelfServiceTokenDto } from './dto/self-service-token.dto';
 import { SELF_SERVICE_CALLS_PER_WINDOW } from './self-service.limits';
@@ -51,13 +52,20 @@ export class MyRegistrationController {
     name: 'token',
     description: 'From the personal link in the mail.',
   })
+  @ApiLocaleQuery()
   @ApiOkResponse({ type: MyRegistrationDto })
   @ApiBadRequestResponse({ description: 'Missing, forged or expired token.' })
   @ApiConflictResponse({
     description: 'The registration was cancelled, or is not confirmed yet.',
   })
-  view(@Query('token') token?: string): Promise<MyRegistrationDto> {
-    return this.selfService.view(required(token)) as Promise<MyRegistrationDto>;
+  view(
+    @Query('token') token?: string,
+    @Query('locale', LocaleQueryPipe) locale?: string,
+  ): Promise<MyRegistrationDto> {
+    return this.selfService.view(
+      required(token),
+      locale,
+    ) as Promise<MyRegistrationDto>;
   }
 
   @Post('cancellation')
@@ -70,10 +78,21 @@ export class MyRegistrationController {
       'disappearing. The seats in individual sessions go with it — somebody who ' +
       'is not coming is not coming to the workshop either.',
   })
+  // The language is in the query even here, where the token is in the body
+  // (F44): a rendering preference is not a secret, and every one of these
+  // answers is the whole self-service page. A page that fell back to English the
+  // moment somebody used it would change language when it is used.
+  @ApiLocaleQuery()
   @ApiOkResponse({ type: MyRegistrationDto })
   @ApiBadRequestResponse({ description: 'Missing, forged or expired token.' })
-  cancel(@Body() body: SelfServiceTokenDto): Promise<MyRegistrationDto> {
-    return this.selfService.cancel(body.token) as Promise<MyRegistrationDto>;
+  cancel(
+    @Body() body: SelfServiceTokenDto,
+    @Query('locale', LocaleQueryPipe) locale?: string,
+  ): Promise<MyRegistrationDto> {
+    return this.selfService.cancel(
+      body.token,
+      locale,
+    ) as Promise<MyRegistrationDto>;
   }
 }
 

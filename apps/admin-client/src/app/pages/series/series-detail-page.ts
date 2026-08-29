@@ -68,6 +68,9 @@ import { eventTypeKey } from '../../features/i18n/labels';
           <a [routerLink]="['/series', item.id, 'invitations']">
             {{ 'admin.invitations.title' | transloco }}
           </a>
+          <a [routerLink]="['/series', item.id, 'translations']">
+            {{ 'admin.translations.link' | transloco }}
+          </a>
           <a [routerLink]="['/series', item.id, 'edit']">
             {{ 'admin.series.editSeries' | transloco }}
           </a>

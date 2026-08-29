@@ -522,8 +522,11 @@ export class EventLandingPage {
   }));
 
   constructor() {
+    // The language is read here, not inside `load`, so a switch re-runs this
+    // effect: content is translated on the server (FR 3.12), and a page that
+    // only re-rendered would keep the sentences it already had.
     effect(() => {
-      void this.load(this.seriesSlug(), this.eventSlug());
+      void this.load(this.seriesSlug(), this.eventSlug(), this.i18n.locale());
     });
   }
 
@@ -582,12 +585,16 @@ export class EventLandingPage {
     }
   }
 
-  private async load(seriesSlug: string, eventSlug: string): Promise<void> {
+  private async load(
+    seriesSlug: string,
+    eventSlug: string,
+    locale: string,
+  ): Promise<void> {
     this.error.set(null);
     this.items.set([]);
     this.links.set([]);
     try {
-      this.event.set(await this.events.get(seriesSlug, eventSlug));
+      this.event.set(await this.events.get(seriesSlug, eventSlug, locale));
     } catch (error: unknown) {
       this.error.set(
         (error as ApiError)?.status === 404
@@ -601,7 +608,7 @@ export class EventLandingPage {
     // in the event's zone. Either one failing leaves the page standing — the
     // event's own facts are the part somebody came for.
     await Promise.all([
-      this.loadProgram(seriesSlug, eventSlug),
+      this.loadProgram(seriesSlug, eventSlug, locale),
       this.loadMediaLinks(seriesSlug, eventSlug),
     ]);
   }
@@ -609,9 +616,10 @@ export class EventLandingPage {
   private async loadProgram(
     seriesSlug: string,
     eventSlug: string,
+    locale: string,
   ): Promise<void> {
     try {
-      this.items.set(await this.program.list(seriesSlug, eventSlug));
+      this.items.set(await this.program.list(seriesSlug, eventSlug, locale));
     } catch {
       this.items.set([]);
     }

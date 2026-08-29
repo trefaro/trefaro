@@ -14,6 +14,7 @@ import { Invitations1787789900000 } from './1787789900000-Invitations';
 import { InstanceIdentity1787790000000 } from './1787790000000-InstanceIdentity';
 import { BrandingImages1787790100000 } from './1787790100000-BrandingImages';
 import { Translations1787790200000 } from './1787790200000-Translations';
+import { ContentTranslations1787790300000 } from './1787790300000-ContentTranslations';
 
 /**
  * Core migrations, in the order they must run.
@@ -38,4 +39,5 @@ export const CORE_MIGRATIONS = [
   InstanceIdentity1787790000000,
   BrandingImages1787790100000,
   Translations1787790200000,
+  ContentTranslations1787790300000,
 ];

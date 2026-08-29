@@ -7,6 +7,7 @@ import {
   fontFamilyStack,
   isFontFamilyKey,
 } from './fonts';
+import { canonicalLocaleTag, isLocaleTag } from './app-config';
 import {
   BRANDING_IMAGE_KINDS,
   BRANDING_MIME_TYPES,
@@ -151,5 +152,27 @@ describe('branding images', () => {
     // mobile-first client, and it is the one picture on the page that is not
     // content.
     expect(MAX_BRANDING_BYTES).toBeLessThan(MAX_UPLOAD_BYTES / 10);
+  });
+});
+
+describe('canonicalLocaleTag', () => {
+  it('is the one spelling everything else compares against', () => {
+    // `de-AT` and `de-at` are one language: two spellings would be two sets of
+    // rows for one translation and two tabs for one tab.
+    expect(canonicalLocaleTag('de-AT')).toBe('de-at');
+    expect(canonicalLocaleTag('  DE  ')).toBe('de');
+    expect(canonicalLocaleTag('pt-BR')).toBe('pt-br');
+  });
+
+  it('answers null for anything that is not a language tag', () => {
+    for (const value of ['de_DE', 'deutsch', '', ' ', '!', 42, null]) {
+      expect(canonicalLocaleTag(value)).toBeNull();
+    }
+  });
+
+  it('accepts exactly what isLocaleTag accepts', () => {
+    for (const value of ['en', 'de', 'de-AT', 'pt-BR', 'de_DE', 'x']) {
+      expect(canonicalLocaleTag(value) === null).toBe(!isLocaleTag(value));
+    }
   });
 });

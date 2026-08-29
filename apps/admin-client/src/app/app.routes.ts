@@ -83,6 +83,15 @@ export const appRoutes: Route[] = [
         title: 'Participants — Trefaro',
       },
       {
+        // Before `series/:seriesId/events/:eventId`, same reason again.
+        path: 'series/:seriesId/events/:eventId/translations',
+        loadComponent: () =>
+          import('./pages/translations/event-translations-page').then(
+            (m) => m.EventTranslationsPage,
+          ),
+        title: 'Translations — Trefaro',
+      },
+      {
         // Before `series/:seriesId/events/:eventId` for the same reason as the
         // participants route above.
         path: 'series/:seriesId/events/:eventId/program',
@@ -132,6 +141,17 @@ export const appRoutes: Route[] = [
             (m) => m.InvitationsPage,
           ),
         title: 'Invite former participants — Trefaro',
+      },
+      {
+        // Before `series/:id`, so "translations" is not read as an id — the same
+        // order every other sub-page of a series uses. The parameter is `id`
+        // because `withComponentInputBinding()` binds by name.
+        path: 'series/:id/translations',
+        loadComponent: () =>
+          import('./pages/translations/series-translations-page').then(
+            (m) => m.SeriesTranslationsPage,
+          ),
+        title: 'Translations — Trefaro',
       },
       {
         path: 'series/:id',

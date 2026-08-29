@@ -15,41 +15,62 @@ import { firstValueFrom } from 'rxjs';
  * Every call answers with the whole view. A seat can be taken between rendering
  * the page and pressing a button, so the page that just claimed the last one has
  * to be able to say what is left.
+ *
+ * And because every call answers with the whole view, every call carries the
+ * reader's language (FR 3.12) — in the query even where the token is in the
+ * body. A language is not a secret, and a page that fell back to English the
+ * moment somebody claimed a seat would change language when it is used.
  */
 @Injectable({ providedIn: 'root' })
 export class SelfServiceService {
   private readonly api = inject(ApiClient);
 
-  view(token: string): Promise<MyRegistration> {
+  view(token: string, locale: string): Promise<MyRegistration> {
     return firstValueFrom(
-      this.api.get<MyRegistration>('user/registrations/me', { token }),
+      this.api.get<MyRegistration>('user/registrations/me', {
+        token,
+        locale,
+      }),
     );
   }
 
-  signUp(itemId: string, token: string): Promise<MyRegistration> {
+  signUp(
+    itemId: string,
+    token: string,
+    locale: string,
+  ): Promise<MyRegistration> {
     return firstValueFrom(
       this.api.put<MyRegistration>(
         `user/program-items/${encodeURIComponent(itemId)}/signup`,
         { token },
+        { locale },
       ),
     );
   }
 
-  signOff(itemId: string, token: string): Promise<MyRegistration> {
+  signOff(
+    itemId: string,
+    token: string,
+    locale: string,
+  ): Promise<MyRegistration> {
     return firstValueFrom(
       this.api.delete<MyRegistration>(
         `user/program-items/${encodeURIComponent(itemId)}/signup`,
         { token },
+        { locale },
       ),
     );
   }
 
   /** Cancels the registration; the record stays, the seats do not (E11, E14). */
-  cancel(token: string): Promise<MyRegistration> {
+  cancel(token: string, locale: string): Promise<MyRegistration> {
     return firstValueFrom(
-      this.api.post<MyRegistration>('user/registrations/me/cancellation', {
-        token,
-      }),
+      this.api.post<MyRegistration>(
+        'user/registrations/me/cancellation',
+        { token },
+        undefined,
+        { locale },
+      ),
     );
   }
 }

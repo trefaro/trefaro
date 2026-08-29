@@ -10,6 +10,7 @@ import type {
   ProgramItem,
   ProgramItemChange,
   ProgramItemInput,
+  ProgramItemTranslation,
   PublicEvent,
   PublicProgramItem,
 } from '@trefaro/shared-models';
@@ -23,6 +24,10 @@ import {
   PROGRAM_ITEM_SIGNUP_REPOSITORY,
   type ProgramItemSignupRepository,
 } from './ports/program-item-signup.repository';
+import {
+  PROGRAM_ITEM_TRANSLATION_REPOSITORY,
+  type ProgramItemTranslationReader,
+} from './ports/program-item-translation.repository';
 import {
   PROGRAM_ITEM_REPOSITORY,
   type NewProgramItem,
@@ -78,6 +83,9 @@ export class ProgramService {
     @Inject(PROGRAM_ITEM_SIGNUP_REPOSITORY)
     private readonly signups: ProgramItemSignupRepository,
     private readonly events: EventsService,
+    // Reading only: what these sessions say in another language (FR 3.12).
+    @Inject(PROGRAM_ITEM_TRANSLATION_REPOSITORY)
+    private readonly translations: ProgramItemTranslationReader,
   ) {}
 
   /** One event's programme as the organizer manages it (FR 3.7). */
@@ -113,11 +121,15 @@ export class ProgramService {
   async listPublic(
     seriesSlug: string,
     eventSlug: string,
+    locale?: string,
   ): Promise<readonly PublicProgramItem[]> {
     const event = await this.events.getPublic(seriesSlug, eventSlug);
     const items = await this.items.findByEvent(event.id);
     const counts = await this.countsFor(items);
-    return items.map((item) => toPublicProgramItem(item, counts));
+    const translations = await this.translationsFor(items, locale);
+    return items.map((item) =>
+      toPublicProgramItem(item, counts, translations.get(item.id)),
+    );
   }
 
   /**
@@ -130,10 +142,33 @@ export class ProgramService {
    * not. The caller has established the right to see this event; what it gets is
    * the participant's shape of the programme, nothing more.
    */
-  async listForEvent(eventId: string): Promise<readonly PublicProgramItem[]> {
+  async listForEvent(
+    eventId: string,
+    locale?: string,
+  ): Promise<readonly PublicProgramItem[]> {
     const items = await this.items.findByEvent(eventId);
     const counts = await this.countsFor(items);
-    return items.map((item) => toPublicProgramItem(item, counts));
+    const translations = await this.translationsFor(items, locale);
+    return items.map((item) =>
+      toPublicProgramItem(item, counts, translations.get(item.id)),
+    );
+  }
+
+  /**
+   * The translations of a programme, or nothing at all.
+   *
+   * The order of a programme is never touched by this: a session is placed by
+   * the clock (F40), and a translated title does not move it in time.
+   */
+  private async translationsFor(
+    items: readonly ProgramItemRecord[],
+    locale: string | undefined,
+  ): Promise<ReadonlyMap<string, ProgramItemTranslation>> {
+    if (locale === undefined) return new Map();
+    return this.translations.findForParents(
+      items.map((item) => item.id),
+      locale,
+    );
   }
 
   async create(eventId: string, input: ProgramItemInput): Promise<ProgramItem> {
@@ -365,14 +400,23 @@ function optional(value: string | null | undefined): string | null {
  * @param counts sign-ups per item id; a session without any is simply absent,
  * which is why the default is spelled out here rather than in the query.
  */
+/**
+ * The participant's view of one session, in one language.
+ *
+ * Field by field and additive (E25): an untranslated description falls back to
+ * the original rather than to nothing. `speaker` has no translation — a person's
+ * name is what they are called — and the times have none, because an instant is
+ * one instant rendered in the event's zone (E8).
+ */
 function toPublicProgramItem(
   record: ProgramItemRecord,
   counts: ReadonlyMap<string, number>,
+  translation?: ProgramItemTranslation,
 ): PublicProgramItem {
   return {
     id: record.id,
-    title: record.title,
-    description: record.description,
+    title: translation?.title ?? record.title,
+    description: translation?.description ?? record.description,
     speaker: record.speaker,
     startsAt: record.startsAt.toISOString(),
     endsAt: record.endsAt.toISOString(),

@@ -3,7 +3,10 @@ import type { EventStatus, EventType } from '@trefaro/shared-models';
 import {
   EVENT_STATUSES,
   EVENT_TYPES,
+  MAX_CONTENT_DESCRIPTION_LENGTH,
+  MAX_CONTENT_NAME_LENGTH,
   MAX_FOLLOW_UP_LENGTH,
+  MAX_VENUE_NAME_LENGTH,
 } from '@trefaro/shared-models';
 import {
   ArrayMaxSize,
@@ -20,10 +23,15 @@ import {
 } from 'class-validator';
 import { MAX_SLUG_LENGTH } from '../../common/slug';
 
-/** Bounds that also match the columns, so a request cannot fail in the database. */
-const MAX_NAME_LENGTH = 200;
-const MAX_DESCRIPTION_LENGTH = 5_000;
-const MAX_VENUE_NAME_LENGTH = 200;
+/**
+ * Bounds that also match the columns, so a request cannot fail in the database.
+ *
+ * The three shared with a translation come from `shared-models` (AP 11): a
+ * translated name has to fit the same column and the same heading as the name
+ * it translates, and two numbers for one column is one number waiting to move.
+ */
+const MAX_NAME_LENGTH = MAX_CONTENT_NAME_LENGTH;
+const MAX_DESCRIPTION_LENGTH = MAX_CONTENT_DESCRIPTION_LENGTH;
 const MAX_VENUE_ADDRESS_LENGTH = 2_000;
 const MAX_TIMEZONE_LENGTH = 64;
 const MAX_LANGUAGES = 20;

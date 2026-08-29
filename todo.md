@@ -395,6 +395,16 @@ answer, not an opinion.
       already works per language, so a participant's own locale replaces the
       lookup and nothing else changes.
 
+- [ ] **The event's name in a mail follows the mail's language.** AP 11 of phase
+      2 translates content on the public read endpoints; a mail still carries
+      the originals. Deliberate: the language of a mail is the instance's
+      default (E24) and nobody chooses it, so translating the content into it
+      would be half a decision — and the half that is missing is the reader's.
+      Once a profile carries a language, both halves move together: the mail
+      locale and the content locale become the same value, read in the same
+      place. Verify: a participant whose profile says German gets a German mail
+      naming the event's German title.
+
 - [ ] **The participant overview gains its profile-status column.** FR 3.3 asks
       for it, and phase 1 left it out rather than shipping a column that always
       says "no profile" (E13 of [`docs/PHASE1.md`](docs/PHASE1.md)). Verify: a
@@ -434,6 +444,15 @@ answer, not an opinion.
 
 ## Checkable after phase 4 — plug-ins
 
+- [ ] **A plug-in reads the originals, not the translations.** `PluginProgramReads`
+      (E12, F45) hands a plug-in five fields of a programme item, and since AP 11
+      of phase 2 those are the untranslated ones. Right for the room planning
+      plug-in, which an organizer uses in the instance's own language; wrong for
+      anything a _participant_ reads — the individual programme plan is the
+      candidate. The fix is a locale on the port and a minor bump of
+      `PLUGIN_API_VERSION`, not a second port. Decide it when the first
+      participant-facing plug-in exists, not before.
+
 - [ ] **Build the three remaining curated plug-ins.**
       `apps/server/src/plugins/{forum,program-proposals,qr-checkin}` hold only a
       README; they are deliberately not registered as no-op plug-ins. Order from
@@ -469,6 +488,25 @@ answer, not an opinion.
       added to `EventDashboard` and to the tile grid.)
 
 ## Checkable after phase 5 — hardening and release
+
+- [ ] **Decide whether the registration form and the media links are content
+      too.** E25 lists what is translated, and the labels an organizer writes on
+      the registration form (`registration_field_def.label`, `help_text`,
+      `options_json`) and the titles of media links are not on it. Both are text
+      an organization writes, both appear on a translated page, and both were
+      left out of AP 11 to keep it to what FR 3.12 names. The shape is settled
+      if it is wanted — a table per parent, exactly like the three that exist —
+      but the field labels have a wrinkle the others do not: an _answer_ is
+      stored under a field key (F35), so a translated label must not become a
+      second key. Verify with the pilot partner first: a form with three
+      questions in two languages may or may not be something anybody asks for.
+
+- [ ] **A shared link into the participant client does not carry its language.**
+      The reader's language lives in `localStorage` (AP 6), so a link somebody
+      sends shows the recipient's language rather than the sender's. That is
+      arguably right, and it is also not a decision anybody made. If it should
+      be shareable, the client route needs its own parameter — the API already
+      has one (`?locale=`, F94) — and the two must agree about which wins.
 
 - [ ] **Re-measure the participant overview at a size no pilot event reaches.**
       AP 5 proved the acceptance criterion at 2 000 registrations per event, in

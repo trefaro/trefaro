@@ -7,6 +7,7 @@ import {
   Param,
   ParseUUIDPipe,
   Put,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -17,6 +18,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Throttle, minutes } from '@nestjs/throttler';
+import { ApiLocaleQuery, LocaleQueryPipe } from '../common/locale-query.pipe';
 import { MyRegistrationDto } from './dto/my-registration.dto';
 import { SelfServiceTokenDto } from './dto/self-service-token.dto';
 import { SELF_SERVICE_CALLS_PER_WINDOW } from './self-service.limits';
@@ -55,6 +57,7 @@ export class ProgramSignupController {
       'already taken place, and one whose seats are gone — the last of those ' +
       'decided when the seat is written, not when the page was rendered.',
   })
+  @ApiLocaleQuery()
   @ApiOkResponse({ type: MyRegistrationDto })
   @ApiBadRequestResponse({ description: 'Missing, forged or expired token.' })
   @ApiConflictResponse({
@@ -69,10 +72,12 @@ export class ProgramSignupController {
   signUp(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: SelfServiceTokenDto,
+    @Query('locale', LocaleQueryPipe) locale?: string,
   ): Promise<MyRegistrationDto> {
     return this.selfService.signUp(
       id,
       body.token,
+      locale,
     ) as Promise<MyRegistrationDto>;
   }
 
@@ -85,16 +90,19 @@ export class ProgramSignupController {
       'switched off and even after it has started: somebody who cannot come ' +
       'says so, and a rule that traps people in a list makes the list wrong.',
   })
+  @ApiLocaleQuery()
   @ApiOkResponse({ type: MyRegistrationDto })
   @ApiBadRequestResponse({ description: 'Missing, forged or expired token.' })
   @ApiNotFoundResponse({ description: 'No such session in their own event.' })
   signOff(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: SelfServiceTokenDto,
+    @Query('locale', LocaleQueryPipe) locale?: string,
   ): Promise<MyRegistrationDto> {
     return this.selfService.signOff(
       id,
       body.token,
+      locale,
     ) as Promise<MyRegistrationDto>;
   }
 }

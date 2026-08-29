@@ -406,12 +406,12 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
   Installations-Story, nicht zur Härtung; `Secure` fallen zu lassen ist keine
   Alternative.
 
-## Stand Phase 2 (in Arbeit; AP 1–10 erledigt, Meilensteine M3 und M4 erreicht)
+## Stand Phase 2 (in Arbeit; AP 1–11 erledigt, Meilensteine M3 und M4 erreicht)
 
 Plan **und Protokoll**: `docs/PHASE2.md` — dreizehn Arbeitspakete, Entscheidungen
 **E17–E30** (die Zählung läuft über die Phasen weiter), Meilensteine M3
 (Whitelabel), M4 (alle P1: brandbar, konfigurierbar, selbst installierbar) und M5
-(Abschluss), Nachträge F60–F92. Was schon umgesetzt ist, steht dort unter
+(Abschluss), Nachträge F60–F102. Was schon umgesetzt ist, steht dort unter
 _Fortschritt_, je Paket ein Abschnitt „erledigt" mit den Abweichungen — dort
 zuerst nachsehen. **Jedes Paket einzeln von Marius freigeben** — nicht ohne
 Aufforderung mit dem nächsten anfangen.
@@ -463,7 +463,14 @@ Mails aus demselben Katalog: `templates/de.ts` und `templates/en.ts` entfallen,
 `MailTemplate` aus Schlüsselliste **und** Renderer, `MailCatalogue` mit E24,
 `CatalogueService.ownTexts`/`servableLocales`, der Einrichtungsassistent fragt
 die Mailsprachen zur Laufzeit — und `verify-mail.mjs` prüft alle vier Briefe in
-Mailpit, in beiden Sprachen.
+Mailpit, in beiden Sprachen · **AP 11** Inhaltsübersetzungen: drei Tabellen
+(`event_series_translation`, `event_translation`, `program_item_translation`),
+drei Ports beim jeweiligen Elternteil, `business/content-translations` als
+Zusammensetzung darüber, `?locale=` auf allen öffentlichen Leseendpunkten
+(inkl. Selbstbedienung), `canonicalLocaleTag` in `shared-models`, im
+Veranstalter-Client `/series/:id/translations` und
+`…/events/:eventId/translations` mit einem Reiter je Zielsprache
+(Katalog 619 → **636**).
 
 Reihenfolge: AP 1–3 Whitelabel (FR 1.4) · AP 4 Modulverwaltung (FR 1.5) · AP 5
 Installations-Story mit geführter Ersteinrichtung und TLS-Overlay (FR 1.1,
@@ -871,6 +878,71 @@ Regeln aus AP 10, die nicht erneut aufgerollt werden sollten:
   **nächsten** Mail, und stellt die Instanz auf eine halb übersetzte Sprache, um
   E24 zu zeigen. `LOCALE=de` schaltet die Instanz für einen Lauf um und wieder
   zurück.
+
+Regeln aus AP 11, die nicht erneut aufgerollt werden sollten:
+
+- **Eine Übersetzung hängt an einem echten Fremdschlüssel** (F93). Drei Tabellen
+  mit `(elternteil_id, locale)` und `ON DELETE CASCADE`, keine polymorphe
+  `(entity_type, entity_id)`-Tabelle: der Fremdschlüssel _ist_ der Grund, warum
+  niemand Übersetzungen aufräumen muss, und eine verwaiste Zeile tauchte
+  irgendwann unter einem neuen Event mit derselben Id auf. Jede Textspalte
+  nullbar — `NULL` heißt „nimm das Original", nicht „leer".
+- **Nicht übersetzt werden Adresse, Personenname, Zeit und `languages`** (F61,
+  E25). Eine übersetzte Straße schickt Menschen an den falschen Ort; ein Name
+  ist, wie jemand heißt; ein Zeitpunkt ist ein Zeitpunkt (E8); und in welchen
+  Sprachen eine Veranstaltung _stattfindet_ (FR 3.1) ist eine Tatsache über sie,
+  keine Darstellung von ihr — eine englischsprachige Konferenz darf eine
+  deutsche Landingpage haben.
+- **`?locale=` hat drei Antworten, und nur eine ist ein Fehler** (F94). Fehlt der
+  Parameter, stehen die Originale (und es kostet keine Abfrage). Eine
+  wohlgeformte Sprache, in die niemand übersetzt hat, ist **kein** Fehler — ein
+  geteilter Link muss weiter eine Seite zeigen. Was kein Sprachtag ist, ist ein 400. In der Query, nicht in `Accept-Language`. `LocaleQueryPipe` +
+  `ApiLocaleQuery()` in `business/common/`.
+- **Übersetzt wird vor dem Tor** (F95). Die Überlagerung passiert **in**
+  `toPublicEvent`, vor der `hasEnded`-Prüfung: nachträglich gelegt, hätte eine
+  Übersetzung genau den Follow-Up-Text zurückgegeben, den F50 zurückhält.
+- **Eine übersetzte Liste wird nach dem Übersetzen sortiert** (F96) — nur die
+  Reihenliste, mit `Intl.Collator` in der Sprache des Lesers und dem Slug als
+  letztem Kriterium. Events und Programmpunkte stehen nach der Uhr (F40); ein
+  übersetzter Name verschiebt nichts in der Zeit.
+- **Ein Bildschirm ist eine Anfrage, ein Speichern ist ein Ding und eine
+  Sprache** (F97). `GET …/events/:id/translations` bringt Event **und** Programm
+  (F49); geschrieben wird je Ding, damit ein Fehler in der neunzehnten Session
+  die achtzehn davor nicht wegwirft.
+- **Eine geleerte Übersetzung löscht ihre Zeile, und Schreiben ersetzt** (F98,
+  F74 auf Inhalte). Alles, was übersetzte Sprachen zählt, zählt Zeilen; und ein
+  Merge machte ein geleertes Feld unausdrückbar.
+- **Übersetzen und Anbieten bleiben zwei Entscheidungen** (F99, E30). Geschrieben
+  werden darf für jeden wohlgeformten Tag. Die Reiter sind `active_locales`
+  **ohne die Vorgabesprache** (das Hauptformular _ist_ sie) **plus** alles, wofür
+  schon eine Übersetzung existiert — `targetLocales()` im Veranstalter-Client.
+- **Der Lese-Port liegt beim Elternteil, das Schreiben darüber** (F100). Die drei
+  Module bekommen nur die Lesehälfte ihres Ports; `ContentTranslationsModule`
+  sitzt über allen dreien (F49-Linie, kein `forwardRef`). Der gemeinsame Port
+  musste dafür nach `business/common/**ports**/` — die Linter-Regel lässt die
+  Datenzugriffsschicht nur auf `ports/` zugreifen, und die Regel wird nicht
+  gelockert, sondern der Port richtig gelegt.
+- **`type` statt `interface` für die Nutzlasten** (F101). Nur ein Objekt-`type`
+  bekommt eine implizite Indexsignatur, und daran hängen der eine generische
+  Port, das eine generische Repository und das eine Formularbauteil.
+- **Die Identität eines Übersetzungsformulars ist (Ding, Sprache)** (F102). Der
+  Entwurf wird zurückgesetzt, wenn der Reiter oder die Session wechselt — **nicht**,
+  wenn ein Elternteil eine neue Feldliste baut: die wird `untracked` gelesen.
+  Der erste Entwurf baute sie in einer Template-Methode, und das Formular leerte
+  sich zwischen zwei Tastenanschlägen. **Gefunden hat es nur der
+  Browserdurchlauf** — ein Unit-Test setzt Eingaben genau einmal.
+- **`ApiClient.put/delete/post` nehmen jetzt Query-Parameter.** Die
+  Selbstbedienung antwortet auf jeden Klick mit der ganzen Seite, also muss auch
+  ein `PUT` die Sprache tragen; kodiert wird sie über denselben Mechanismus wie
+  bei `get`.
+- **Eine Seite, deren Inhalt der Server übersetzt, lädt bei einem Sprachwechsel
+  neu.** Jede betroffene Seite des Nutzer-Clients liest `i18n.locale()` **im
+  `effect()`**, nicht in `load()` — ein Client, der nur neu zeichnete, behielte
+  die Sätze, die er schon hat.
+- **Mails übersetzen keine Inhalte** — bewusst bis Phase 3: die Sprache einer
+  Mail wählt niemand (E24), und einen Inhalt in eine Sprache zu übersetzen, die
+  sich der Empfänger nicht ausgesucht hat, ist eine halbe Entscheidung. Steht in
+  `todo.md`.
 
 ## Betriebskontext
 

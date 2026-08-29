@@ -3,9 +3,14 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
-import type { OrganizerEvent, PublicEvent } from '@trefaro/shared-models';
+import type {
+  OrganizerEvent,
+  ProgramItemTranslation,
+  PublicEvent,
+} from '@trefaro/shared-models';
 import { MAX_PROGRAM_ITEMS } from '@trefaro/shared-models';
 import type { EventsService } from '../events';
+import type { ProgramItemTranslationReader } from './ports/program-item-translation.repository';
 import { ProgramService } from './program.service';
 import type {
   ProgramItemParticipant,
@@ -140,6 +145,32 @@ const KEYNOTE = {
   endsAt: '2027-06-14T08:30:00.000Z',
 } as const;
 
+/** What a session says in another language (FR 3.12). */
+class FakeItemTranslations implements ProgramItemTranslationReader {
+  private readonly rows = new Map<
+    string,
+    Map<string, ProgramItemTranslation>
+  >();
+
+  set(
+    id: string,
+    locale: string,
+    value: Partial<ProgramItemTranslation>,
+  ): void {
+    const byId = this.rows.get(locale) ?? new Map();
+    byId.set(id, { title: null, description: null, ...value });
+    this.rows.set(locale, byId);
+  }
+
+  async findForParents(
+    ids: readonly string[],
+    locale: string,
+  ): Promise<ReadonlyMap<string, ProgramItemTranslation>> {
+    const byId = this.rows.get(locale) ?? new Map();
+    return new Map([...byId].filter(([id]) => ids.includes(id)));
+  }
+}
+
 describe('ProgramService', () => {
   let repository: FakeProgramItemRepository;
   let signups: FakeSignupRepository;
@@ -148,11 +179,13 @@ describe('ProgramService', () => {
     getForOrganizer: jest.Mock;
     getPublic: jest.Mock;
   };
+  let translations: FakeItemTranslations;
   let service: ProgramService;
 
   beforeEach(() => {
     repository = new FakeProgramItemRepository();
     signups = new FakeSignupRepository();
+    translations = new FakeItemTranslations();
     const state = { event: EVENT };
     events = {
       get event() {
@@ -171,6 +204,7 @@ describe('ProgramService', () => {
       repository,
       signups,
       events as unknown as EventsService,
+      translations,
     );
   });
 
@@ -473,6 +507,52 @@ describe('ProgramService', () => {
       expect(read.signupCount).toBe(0);
       expect(read.registrationEnabled).toBe(false);
       expect(read.capacity).toBeNull();
+    });
+
+    describe('in another language (FR 3.12, E25)', () => {
+      const SPOKEN = {
+        ...KEYNOTE,
+        description: 'How a citizens’ assembly works.',
+        speaker: 'Ada Lovelace',
+      };
+
+      it('shows the translation where there is one', async () => {
+        const item = await service.create(EVENT.id, SPOKEN);
+        translations.set(item.id, 'de', { title: 'Eröffnungsvortrag' });
+
+        const [read] = await service.listPublic('series', 'kickoff', 'de');
+
+        expect(read.title).toBe('Eröffnungsvortrag');
+        // Field by field: the abstract was not translated, so the original
+        // stands rather than an empty paragraph.
+        expect(read.description).toBe('How a citizens’ assembly works.');
+      });
+
+      it('never translates the speaker — a name is what somebody is called', async () => {
+        const item = await service.create(EVENT.id, SPOKEN);
+        translations.set(item.id, 'de', { title: 'Eröffnungsvortrag' });
+
+        const [read] = await service.listPublic('series', 'kickoff', 'de');
+
+        expect(read.speaker).toBe('Ada Lovelace');
+      });
+
+      it('shows the original for a language nobody has translated into', async () => {
+        await service.create(EVENT.id, KEYNOTE);
+
+        const [read] = await service.listPublic('series', 'kickoff', 'fr');
+
+        expect(read.title).toBe(KEYNOTE.title);
+      });
+
+      it('translates the self-service view too, which reads by event id', async () => {
+        const item = await service.create(EVENT.id, KEYNOTE);
+        translations.set(item.id, 'de', { title: 'Eröffnungsvortrag' });
+
+        const [read] = await service.listForEvent(EVENT.id, 'de');
+
+        expect(read.title).toBe('Eröffnungsvortrag');
+      });
     });
   });
 

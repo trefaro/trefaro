@@ -3,6 +3,7 @@ import { CURATED_PLUGINS } from '../plugins';
 import { AttachmentsModule } from './business/attachments';
 import { ChatModule } from './business/chat';
 import { ConfigurationModule } from './business/config';
+import { ContentTranslationsModule } from './business/content-translations';
 import { DashboardModule } from './business/dashboard';
 import { EventSeriesModule } from './business/event-series';
 import { EventsModule } from './business/events';
@@ -79,6 +80,10 @@ import { DataAccessModule } from './data-access/data-access.module';
     // Above the modules it composes: the dashboard asks the registration,
     // programme and series modules for their numbers and owns none of them.
     DashboardModule,
+    // Above its three parts for the same reason (FR 3.12): translating a series,
+    // an event or a session needs each of them to refuse an unknown id its own
+    // way, and none of them knows this module exists.
+    ContentTranslationsModule,
     // Optional (FR 1.5) and the first module that is: switched off, its
     // endpoints answer 404 rather than only vanishing from /api/config (F53).
     MediaLinksModule,

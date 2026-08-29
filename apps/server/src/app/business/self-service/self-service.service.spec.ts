@@ -149,7 +149,18 @@ describe('SelfServiceService', () => {
       expect(
         (service as unknown as { program: { listForEvent: jest.Mock } }).program
           .listForEvent,
-      ).toHaveBeenCalledWith(EVENT.id);
+      ).toHaveBeenCalledWith(EVENT.id, undefined);
+    });
+
+    it('carries the reader’s language into both lookups (FR 3.12)', async () => {
+      await service.view(linkFor(), 'de');
+
+      const inner = service as unknown as {
+        program: { listForEvent: jest.Mock };
+        events: { locate: jest.Mock };
+      };
+      expect(inner.program.listForEvent).toHaveBeenCalledWith(EVENT.id, 'de');
+      expect(inner.events.locate).toHaveBeenCalledWith(EVENT.id, 'de');
     });
 
     it('refuses a token signed for confirming rather than for self-service', async () => {

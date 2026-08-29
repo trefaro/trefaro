@@ -1,7 +1,9 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
+import type { EventSeriesTranslation } from '@trefaro/shared-models';
 import type { RegistrationTally } from '../registration/ports/registration-tally';
 import type { AttachmentsService } from '../attachments';
 import { EventSeriesService } from './event-series.service';
+import type { EventSeriesTranslationReader } from './ports/event-series-translation.repository';
 import {
   EventSeriesSlugTakenError,
   type EventSeriesChanges,
@@ -102,10 +104,38 @@ class FakeAttachmentsService {
   }
 }
 
+/**
+ * What a series says in another language (FR 3.12).
+ *
+ * Keyed by language and then by series, the way the port is asked; a translation
+ * for a language nobody requested must never turn up in an answer.
+ */
+class FakeSeriesTranslations implements EventSeriesTranslationReader {
+  private readonly rows = new Map<
+    string,
+    Map<string, EventSeriesTranslation>
+  >();
+
+  set(id: string, locale: string, value: EventSeriesTranslation): void {
+    const byId = this.rows.get(locale) ?? new Map();
+    byId.set(id, value);
+    this.rows.set(locale, byId);
+  }
+
+  async findForParents(
+    ids: readonly string[],
+    locale: string,
+  ): Promise<ReadonlyMap<string, EventSeriesTranslation>> {
+    const byId = this.rows.get(locale) ?? new Map();
+    return new Map([...byId].filter(([id]) => ids.includes(id)));
+  }
+}
+
 describe('EventSeriesService', () => {
   let repository: FakeEventSeriesRepository;
   let tally: FakeRegistrationTally;
   let attachments: FakeAttachmentsService;
+  let translations: FakeSeriesTranslations;
   let service: EventSeriesService;
 
   const minimal = {
@@ -117,10 +147,12 @@ describe('EventSeriesService', () => {
     repository = new FakeEventSeriesRepository();
     tally = new FakeRegistrationTally();
     attachments = new FakeAttachmentsService();
+    translations = new FakeSeriesTranslations();
     service = new EventSeriesService(
       repository,
       tally,
       attachments as unknown as AttachmentsService,
+      translations,
     );
   });
 
@@ -254,6 +286,95 @@ describe('EventSeriesService', () => {
       const series = await service.getPublicBySlug('climate-conference-2027');
 
       expect(series.name).toBe('Climate Conference 2027');
+    });
+  });
+
+  describe('in another language (FR 3.12, E25)', () => {
+    let published: string;
+
+    beforeEach(async () => {
+      published = (await service.create({ ...minimal, status: 'published' }))
+        .id;
+    });
+
+    it('shows the translation where there is one', async () => {
+      translations.set(published, 'de', {
+        name: 'Klimakonferenz 2027',
+        description: 'Drei Tage Bürgerbeteiligung.',
+      });
+
+      const series = await service.getPublicBySlug(
+        'climate-conference-2027',
+        'de',
+      );
+
+      expect(series.name).toBe('Klimakonferenz 2027');
+      expect(series.description).toBe('Drei Tage Bürgerbeteiligung.');
+    });
+
+    it('falls back field by field, so a half-translated series has no hole', async () => {
+      translations.set(published, 'de', {
+        name: 'Klimakonferenz 2027',
+        description: null,
+      });
+
+      const series = await service.getPublicBySlug(
+        'climate-conference-2027',
+        'de',
+      );
+
+      expect(series.name).toBe('Klimakonferenz 2027');
+      expect(series.description).toBe('Three days on citizen participation.');
+    });
+
+    it('leaves the address alone — a link must not change with a language', async () => {
+      translations.set(published, 'de', {
+        name: 'Klimakonferenz 2027',
+        description: null,
+      });
+
+      const series = await service.getPublicBySlug(
+        'climate-conference-2027',
+        'de',
+      );
+
+      expect(series.slug).toBe('climate-conference-2027');
+    });
+
+    it('shows the original for a language nobody has translated into', async () => {
+      const series = await service.getPublicBySlug(
+        'climate-conference-2027',
+        'fr',
+      );
+
+      expect(series.name).toBe('Climate Conference 2027');
+    });
+
+    it('orders the list by the name the reader sees', async () => {
+      const zulu = await service.create({
+        ...minimal,
+        name: 'Zulu Assembly',
+        status: 'published',
+      });
+      // In English "Climate…" sorts first; in German the translations reverse
+      // that, and the list has to follow what is on the screen.
+      translations.set(published, 'de', {
+        name: 'Zusammenkunft',
+        description: null,
+      });
+      translations.set(zulu.id, 'de', {
+        name: 'Andere Versammlung',
+        description: null,
+      });
+
+      expect((await service.listPublic()).map((s) => s.name)).toEqual([
+        'Climate Conference 2027',
+        'Zulu Assembly',
+      ]);
+      expect((await service.listPublic('de')).map((s) => s.name)).toEqual([
+        'Andere Versammlung',
+        'Zusammenkunft',
+      ]);
     });
   });
 

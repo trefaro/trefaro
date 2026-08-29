@@ -192,8 +192,11 @@ export class SeriesDetailPage {
   );
 
   constructor() {
+    // The language is read here so a switch re-runs the effect: names and
+    // descriptions are translated on the server (FR 3.12), and a page that only
+    // re-rendered would keep the sentences it already had.
     effect(() => {
-      void this.load(this.slug());
+      void this.load(this.slug(), this.i18n.locale());
     });
   }
 
@@ -227,13 +230,13 @@ export class SeriesDetailPage {
       : place;
   }
 
-  private async load(slug: string): Promise<void> {
+  private async load(slug: string, locale: string): Promise<void> {
     this.error.set(null);
     this.loadingEvents.set(true);
     try {
       const [series, events] = await Promise.all([
-        this.seriesService.bySlug(slug),
-        this.eventsService.listBySeries(slug),
+        this.seriesService.bySlug(slug, locale),
+        this.eventsService.listBySeries(slug, locale),
       ]);
       this.series.set(series);
       this.events.set(events);

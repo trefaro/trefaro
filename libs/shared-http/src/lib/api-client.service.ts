@@ -71,9 +71,13 @@ export class ApiClient {
     path: string,
     body: unknown,
     headers?: RequestHeaders,
+    params?: QueryParams,
   ): Observable<T> {
     return this.request(
-      this.http.post<T>(this.url(path), body, headers ? { headers } : {}),
+      this.http.post<T>(this.url(path), body, {
+        ...(headers ? { headers } : {}),
+        ...(params ? { params: toHttpParams(params) } : {}),
+      }),
     );
   }
 
@@ -90,17 +94,34 @@ export class ApiClient {
     );
   }
 
-  put<T>(path: string, body: unknown): Observable<T> {
-    return this.request(this.http.put<T>(this.url(path), body));
+  /**
+   * A PUT, optionally with query parameters.
+   *
+   * Parameters on a write are not a contradiction: what the body carries is what
+   * changes, what the query carries is how the answer should be rendered — the
+   * participant's language on a call that answers with a whole page (FR 3.12).
+   * Through the same mechanism as {@link get}, so encoding stays in one place.
+   */
+  put<T>(path: string, body: unknown, params?: QueryParams): Observable<T> {
+    return this.request(
+      this.http.put<T>(
+        this.url(path),
+        body,
+        params ? { params: toHttpParams(params) } : {},
+      ),
+    );
   }
 
   patch<T>(path: string, body: unknown): Observable<T> {
     return this.request(this.http.patch<T>(this.url(path), body));
   }
 
-  delete<T>(path: string, body?: unknown): Observable<T> {
+  delete<T>(path: string, body?: unknown, params?: QueryParams): Observable<T> {
     return this.request(
-      this.http.delete<T>(this.url(path), body === undefined ? {} : { body }),
+      this.http.delete<T>(this.url(path), {
+        ...(body === undefined ? {} : { body }),
+        ...(params ? { params: toHttpParams(params) } : {}),
+      }),
     );
   }
 

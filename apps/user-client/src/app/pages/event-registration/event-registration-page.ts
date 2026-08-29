@@ -349,8 +349,10 @@ export class EventRegistrationPage {
   constructor() {
     // The event is shown for reassurance, not needed to submit: someone who
     // followed a link should see which event they are registering for.
+    // The language is read here so a switch re-runs the effect: the event's
+    // name is translated on the server (FR 3.12).
     effect(() => {
-      void this.load(this.seriesSlug(), this.eventSlug());
+      void this.load(this.seriesSlug(), this.eventSlug(), this.i18n.locale());
     });
 
     effect(() => {
@@ -514,9 +516,13 @@ export class EventRegistrationPage {
     }
   }
 
-  private async load(seriesSlug: string, eventSlug: string): Promise<void> {
+  private async load(
+    seriesSlug: string,
+    eventSlug: string,
+    locale: string,
+  ): Promise<void> {
     try {
-      this.event.set(await this.events.get(seriesSlug, eventSlug));
+      this.event.set(await this.events.get(seriesSlug, eventSlug, locale));
     } catch {
       // Deliberately quiet: the form still works, and the server decides
       // whether this event can be registered for at all.

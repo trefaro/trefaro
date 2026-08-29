@@ -1,10 +1,11 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { ApiLocaleQuery, LocaleQueryPipe } from '../common/locale-query.pipe';
 import { PublicProgramItemDto } from './dto/program-item.dto';
 import { ProgramService } from './program.service';
 
@@ -32,13 +33,15 @@ export class PublicProgramController {
       'the reader’s (E8). No ids of anything but the items themselves — a room ' +
       'is the room planning plug-in’s to answer for (F21).',
   })
+  @ApiLocaleQuery()
   @ApiOkResponse({ type: [PublicProgramItemDto] })
   @ApiNotFoundResponse({ description: 'No published event at that address.' })
   list(
     @Param('seriesSlug') seriesSlug: string,
     @Param('eventSlug') eventSlug: string,
+    @Query('locale', LocaleQueryPipe) locale?: string,
   ): Promise<PublicProgramItemDto[]> {
-    return this.program.listPublic(seriesSlug, eventSlug) as Promise<
+    return this.program.listPublic(seriesSlug, eventSlug, locale) as Promise<
       PublicProgramItemDto[]
     >;
   }

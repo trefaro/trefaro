@@ -1,4 +1,17 @@
 export {
+  isEmptyTranslation,
+  translatedText,
+  type EventSeriesTranslation,
+  type EventSeriesTranslations,
+  type EventTranslation,
+  type EventTranslations,
+  type ProgramItemTranslation,
+  type ProgramItemTranslations,
+  type TranslatableItem,
+  type TranslatedText,
+  type TranslationsByLocale,
+} from './content';
+export {
   FALLBACK_LOCALE,
   MAX_TRANSLATION_KEY_LENGTH,
   MAX_TRANSLATION_VALUE_LENGTH,

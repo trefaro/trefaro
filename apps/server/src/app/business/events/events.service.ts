@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import type {
   EventStatus,
+  EventTranslation,
   EventType,
   OrganizerEvent,
   PublicEvent,
@@ -19,6 +20,10 @@ import {
   REGISTRATION_TALLY,
   type RegistrationTally,
 } from '../registration/ports/registration-tally';
+import {
+  EVENT_TRANSLATION_REPOSITORY,
+  type EventTranslationReader,
+} from './ports/event-translation.repository';
 import {
   EVENT_REPOSITORY,
   EventSlugTakenError,
@@ -96,6 +101,10 @@ export class EventsService {
     // removes rows but no files (E9) — so the files go first, while the rows
     // that name them still exist.
     private readonly attachments: AttachmentsService,
+    // Reading only: what this event says in another language (FR 3.12). The
+    // write half of the same port belongs to the translation module above.
+    @Inject(EVENT_TRANSLATION_REPOSITORY)
+    private readonly translations: EventTranslationReader,
   ) {}
 
   /** Every event of a series, drafts included (FR 2.3, organizer side). */
@@ -110,22 +119,42 @@ export class EventsService {
     return toOrganizerEvent(await this.require(id));
   }
 
-  /** Published events of a published series (FR 2.3, participant side). */
-  async listPublic(seriesSlug: string): Promise<readonly PublicEvent[]> {
+  /**
+   * Published events of a published series (FR 2.3, participant side).
+   *
+   * The series is resolved without a language: only its id is wanted here, and
+   * translating a name nobody renders would be a second query for nothing.
+   * Events keep the database's order, which is by date — a translated name does
+   * not move an event in time (unlike a series list, which is ordered by name).
+   */
+  async listPublic(
+    seriesSlug: string,
+    locale?: string,
+  ): Promise<readonly PublicEvent[]> {
     const series = await this.series.getPublicBySlug(seriesSlug);
-    return (await this.events.findPublishedBySeries(series.id)).map(
-      toPublicEvent,
+    const found = await this.events.findPublishedBySeries(series.id);
+    const translations = await this.translationsFor(
+      found.map((record) => record.id),
+      locale,
+    );
+    return found.map((record) =>
+      toPublicEvent(record, translations.get(record.id)),
     );
   }
 
   /** 404 for a draft event, and for any event of a series that is not public. */
-  async getPublic(seriesSlug: string, eventSlug: string): Promise<PublicEvent> {
+  async getPublic(
+    seriesSlug: string,
+    eventSlug: string,
+    locale?: string,
+  ): Promise<PublicEvent> {
     const series = await this.series.getPublicBySlug(seriesSlug);
     const found = await this.events.findBySlug(series.id, eventSlug);
     if (!found || found.status !== 'published') {
       throw new NotFoundException(`No event at "${seriesSlug}/${eventSlug}"`);
     }
-    return toPublicEvent(found);
+    const translations = await this.translationsFor([found.id], locale);
+    return toPublicEvent(found, translations.get(found.id));
   }
 
   /**
@@ -137,10 +166,28 @@ export class EventsService {
    * in people's inboxes must not turn those links into errors. The token is what
    * grants access here, not the event's status.
    */
-  async locate(id: string): Promise<EventLocation> {
+  async locate(id: string, locale?: string): Promise<EventLocation> {
     const record = await this.require(id);
     const series = await this.series.getForOrganizer(record.seriesId);
-    return { event: toPublicEvent(record), seriesSlug: series.slug };
+    const translations = await this.translationsFor([record.id], locale);
+    return {
+      event: toPublicEvent(record, translations.get(record.id)),
+      seriesSlug: series.slug,
+    };
+  }
+
+  /**
+   * The translations of a set of events, or nothing at all.
+   *
+   * `undefined` short-circuits before the query: an instance that serves one
+   * language should not pay for a lookup that can only come back empty.
+   */
+  private async translationsFor(
+    ids: readonly string[],
+    locale: string | undefined,
+  ): Promise<ReadonlyMap<string, EventTranslation>> {
+    if (locale === undefined) return new Map();
+    return this.translations.findForParents(ids, locale);
   }
 
   async create(
@@ -411,24 +458,32 @@ function normalizeOptional(value: string | null | undefined): string | null {
  * helper the series list splits upcoming from past with, so "over" means one
  * thing in this application.
  */
-function toPublicEvent(record: EventRecord): PublicEvent {
+function toPublicEvent(
+  record: EventRecord,
+  translation?: EventTranslation,
+): PublicEvent {
   const endsAt = record.endsAt.toISOString();
+  const followUpBody = translation?.followUpBody ?? record.followUpBody;
   return {
     id: record.id,
     slug: record.slug,
-    name: record.name,
-    description: record.description,
+    name: translation?.name ?? record.name,
+    description: translation?.description ?? record.description,
     // Never written either — see the same note in `event-series.service.ts`.
     logoUrl: null,
     eventType: record.eventType,
     startsAt: record.startsAt.toISOString(),
     endsAt,
     timezone: record.timezone,
-    venueName: record.venueName,
+    venueName: translation?.venueName ?? record.venueName,
+    // Never translated (E25): a street is the same street in every language, and
+    // a translated one sends people to a place that does not exist.
     venueAddress: record.venueAddress,
     onlineUrl: record.onlineUrl,
     languages: record.languages,
-    followUpBody: hasEnded({ endsAt }) ? record.followUpBody : null,
+    // Translated *before* the gate, never after: overlaying a translation on
+    // the finished object would put the text back that F50 just withheld.
+    followUpBody: hasEnded({ endsAt }) ? followUpBody : null,
   };
 }
 

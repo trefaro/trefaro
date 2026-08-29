@@ -113,6 +113,21 @@ export function isLocaleTag(value: unknown): value is string {
 }
 
 /**
+ * The one spelling of a language tag this application stores and compares.
+ *
+ * Trimmed and lower-cased, or `null` for anything {@link isLocaleTag} refuses.
+ * `de-AT` and `de-at` are one language, so two spellings would be two sets of
+ * rows for one translation, two cached catalogues for one answer, and two tabs
+ * for one tab. Every place that takes a tag from outside — a URL, a query
+ * parameter, a request body, an imported file — puts it through here first, and
+ * `null` is the whole of "that was not a language tag".
+ */
+export function canonicalLocaleTag(value: unknown): string | null {
+  const trimmed = typeof value === 'string' ? value.trim() : '';
+  return isLocaleTag(trimmed) ? trimmed.toLowerCase() : null;
+}
+
+/**
  * How many languages one instance may offer at once.
  *
  * A bound rather than a product rule: `active_locales` is read on every

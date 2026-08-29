@@ -3,7 +3,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ATTACHMENT_REPOSITORY } from '../business/attachments/ports/attachment.repository';
 import { FILE_STORE } from '../business/attachments/ports/file-store';
 import { APP_CONFIG_REPOSITORY } from '../business/config/ports/app-config.repository';
+import { EVENT_SERIES_TRANSLATION_REPOSITORY } from '../business/event-series/ports/event-series-translation.repository';
 import { EVENT_SERIES_REPOSITORY } from '../business/event-series/ports/event-series.repository';
+import { EVENT_TRANSLATION_REPOSITORY } from '../business/events/ports/event-translation.repository';
 import { EVENT_REPOSITORY } from '../business/events/ports/event.repository';
 import { SHIPPED_CATALOGUE_READER } from '../business/i18n/ports/shipped-catalogue.reader';
 import { TRANSLATION_OVERRIDE_REPOSITORY } from '../business/i18n/ports/translation-override.repository';
@@ -14,6 +16,7 @@ import { MEDIA_LINK_TALLY } from '../business/media-links/ports/media-link-tally
 import { MEDIA_LINK_REPOSITORY } from '../business/media-links/ports/media-link.repository';
 import { MODULE_CONFIG_REPOSITORY } from '../business/config/ports/module-config.repository';
 import { PROGRAM_ITEM_SIGNUP_REPOSITORY } from '../business/program/ports/program-item-signup.repository';
+import { PROGRAM_ITEM_TRANSLATION_REPOSITORY } from '../business/program/ports/program-item-translation.repository';
 import { PROGRAM_ITEM_REPOSITORY } from '../business/program/ports/program-item.repository';
 import { PROGRAM_TALLY } from '../business/program/ports/program-tally';
 import { PUSH_SUBSCRIPTION_REPOSITORY } from '../business/push/ports/push-subscription.repository';
@@ -35,12 +38,15 @@ import { TypeormAdminSessionRepository } from './repositories/typeorm-admin-sess
 import { TypeormAdminUserRepository } from './repositories/typeorm-admin-user.repository';
 import { TypeormAppConfigRepository } from './repositories/typeorm-app-config.repository';
 import { TypeormAttachmentRepository } from './repositories/typeorm-attachment.repository';
+import { TypeormEventSeriesTranslationRepository } from './repositories/typeorm-event-series-translation.repository';
 import { TypeormEventSeriesRepository } from './repositories/typeorm-event-series.repository';
+import { TypeormEventTranslationRepository } from './repositories/typeorm-event-translation.repository';
 import { TypeormEventRepository } from './repositories/typeorm-event.repository';
 import { TypeormInvitationRepository } from './repositories/typeorm-invitation.repository';
 import { TypeormMediaLinkRepository } from './repositories/typeorm-media-link.repository';
 import { TypeormModuleConfigRepository } from './repositories/typeorm-module-config.repository';
 import { TypeormProgramItemSignupRepository } from './repositories/typeorm-program-item-signup.repository';
+import { TypeormProgramItemTranslationRepository } from './repositories/typeorm-program-item-translation.repository';
 import { TypeormProgramItemRepository } from './repositories/typeorm-program-item.repository';
 import { TypeormPushSubscriptionRepository } from './repositories/typeorm-push-subscription.repository';
 import { TypeormRegistrationFieldRepository } from './repositories/typeorm-registration-field.repository';
@@ -83,11 +89,14 @@ export class DataAccessModule {
         TypeormAdminSessionRepository,
         TypeormAppConfigRepository,
         TypeormEventSeriesRepository,
+        TypeormEventSeriesTranslationRepository,
         TypeormEventRepository,
+        TypeormEventTranslationRepository,
         TypeormInvitationRepository,
         TypeormMediaLinkRepository,
         TypeormModuleConfigRepository,
         TypeormProgramItemRepository,
+        TypeormProgramItemTranslationRepository,
         TypeormProgramItemSignupRepository,
         TypeormPushSubscriptionRepository,
         TypeormRegistrationRepository,
@@ -120,9 +129,20 @@ export class DataAccessModule {
           provide: EVENT_SERIES_REPOSITORY,
           useExisting: TypeormEventSeriesRepository,
         },
+        // Content translations sit with the thing they translate (FR 3.12): the
+        // service that renders a series reads its own translation port, and the
+        // module that writes translations sits above all three parents.
+        {
+          provide: EVENT_SERIES_TRANSLATION_REPOSITORY,
+          useExisting: TypeormEventSeriesTranslationRepository,
+        },
         {
           provide: EVENT_REPOSITORY,
           useExisting: TypeormEventRepository,
+        },
+        {
+          provide: EVENT_TRANSLATION_REPOSITORY,
+          useExisting: TypeormEventTranslationRepository,
         },
         {
           provide: INVITATION_REPOSITORY,
@@ -145,6 +165,10 @@ export class DataAccessModule {
         {
           provide: PROGRAM_ITEM_REPOSITORY,
           useExisting: TypeormProgramItemRepository,
+        },
+        {
+          provide: PROGRAM_ITEM_TRANSLATION_REPOSITORY,
+          useExisting: TypeormProgramItemTranslationRepository,
         },
         {
           provide: PROGRAM_ITEM_SIGNUP_REPOSITORY,
@@ -193,13 +217,16 @@ export class DataAccessModule {
         ATTACHMENT_REPOSITORY,
         FILE_STORE,
         EVENT_SERIES_REPOSITORY,
+        EVENT_SERIES_TRANSLATION_REPOSITORY,
         EVENT_REPOSITORY,
+        EVENT_TRANSLATION_REPOSITORY,
         INVITATION_REPOSITORY,
         MEDIA_LINK_REPOSITORY,
         MEDIA_LINK_TALLY,
         MODULE_CONFIG_REPOSITORY,
         PROGRAM_ITEM_REPOSITORY,
         PROGRAM_ITEM_SIGNUP_REPOSITORY,
+        PROGRAM_ITEM_TRANSLATION_REPOSITORY,
         PROGRAM_TALLY,
         PUSH_SUBSCRIPTION_REPOSITORY,
         REGISTRATION_REPOSITORY,

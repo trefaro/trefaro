@@ -322,8 +322,10 @@ export class MyRegistrationPage {
   protected readonly busy = signal(false);
 
   constructor() {
+    // The language is read here so a switch re-runs the effect: the event's name
+    // and the session titles are translated on the server (FR 3.12).
     effect(() => {
-      void this.load(this.tokenValue());
+      void this.load(this.tokenValue(), this.i18n.locale());
     });
   }
 
@@ -414,13 +416,21 @@ export class MyRegistrationPage {
 
   protected signUp(session: MyProgramItem): Promise<void> {
     return this.change(() =>
-      this.selfService.signUp(session.id, this.tokenValue()),
+      this.selfService.signUp(
+        session.id,
+        this.tokenValue(),
+        this.i18n.locale(),
+      ),
     );
   }
 
   protected signOff(session: MyProgramItem): Promise<void> {
     return this.change(() =>
-      this.selfService.signOff(session.id, this.tokenValue()),
+      this.selfService.signOff(
+        session.id,
+        this.tokenValue(),
+        this.i18n.locale(),
+      ),
     );
   }
 
@@ -428,14 +438,18 @@ export class MyRegistrationPage {
     if (!confirm(this.i18n.translate('mine.confirmCancel'))) {
       return;
     }
-    await this.change(() => this.selfService.cancel(this.tokenValue()));
+    // Every one of these answers with the whole page, so every one carries the
+    // language: without it, claiming a seat would switch the page to English.
+    await this.change(() =>
+      this.selfService.cancel(this.tokenValue(), this.i18n.locale()),
+    );
   }
 
-  private async load(token: string): Promise<void> {
+  private async load(token: string, locale: string): Promise<void> {
     if (!token) return;
     this.error.set(null);
     try {
-      this.registration.set(await this.selfService.view(token));
+      this.registration.set(await this.selfService.view(token, locale));
     } catch (error: unknown) {
       this.registration.set(null);
       this.report(error, 'mine.error.load');
@@ -460,7 +474,7 @@ export class MyRegistrationPage {
       // The refusal is usually "somebody else took the last seat", so the page
       // is reloaded: showing the old numbers beside the message would invite the
       // same click again.
-      await this.load(this.tokenValue());
+      await this.load(this.tokenValue(), this.i18n.locale());
     } finally {
       this.busy.set(false);
     }

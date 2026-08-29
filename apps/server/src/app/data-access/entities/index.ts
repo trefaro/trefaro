@@ -2,13 +2,16 @@ import { AdminSessionEntity } from './admin-session.entity';
 import { AdminUserEntity } from './admin-user.entity';
 import { AppConfigEntity } from './app-config.entity';
 import { AttachmentEntity } from './attachment.entity';
+import { EventSeriesTranslationEntity } from './event-series-translation.entity';
 import { EventSeriesEntity } from './event-series.entity';
+import { EventTranslationEntity } from './event-translation.entity';
 import { EventEntity } from './event.entity';
 import { InvitationRecipientEntity } from './invitation-recipient.entity';
 import { InvitationEntity } from './invitation.entity';
 import { MediaLinkEntity } from './media-link.entity';
 import { ModuleConfigEntity } from './module-config.entity';
 import { ProgramItemSignupEntity } from './program-item-signup.entity';
+import { ProgramItemTranslationEntity } from './program-item-translation.entity';
 import { ProgramItemEntity } from './program-item.entity';
 import { PushSubscriptionEntity } from './push-subscription.entity';
 import { RegistrationFieldEntity } from './registration-field.entity';
@@ -19,7 +22,9 @@ export { AdminSessionEntity } from './admin-session.entity';
 export { AdminUserEntity } from './admin-user.entity';
 export { APP_CONFIG_SINGLETON_ID, AppConfigEntity } from './app-config.entity';
 export { AttachmentEntity } from './attachment.entity';
+export { EventSeriesTranslationEntity } from './event-series-translation.entity';
 export { EventSeriesEntity } from './event-series.entity';
+export { EventTranslationEntity } from './event-translation.entity';
 export { EventEntity } from './event.entity';
 export {
   InvitationRecipientEntity,
@@ -29,6 +34,7 @@ export { InvitationEntity } from './invitation.entity';
 export { MediaLinkEntity } from './media-link.entity';
 export { ModuleConfigEntity } from './module-config.entity';
 export { ProgramItemSignupEntity } from './program-item-signup.entity';
+export { ProgramItemTranslationEntity } from './program-item-translation.entity';
 export { ProgramItemEntity } from './program-item.entity';
 export { PushSubscriptionEntity } from './push-subscription.entity';
 export { RegistrationFieldEntity } from './registration-field.entity';
@@ -44,12 +50,15 @@ export const CORE_ENTITIES = [
   AdminSessionEntity,
   AppConfigEntity,
   EventSeriesEntity,
+  EventSeriesTranslationEntity,
   EventEntity,
+  EventTranslationEntity,
   InvitationEntity,
   InvitationRecipientEntity,
   MediaLinkEntity,
   ModuleConfigEntity,
   ProgramItemEntity,
+  ProgramItemTranslationEntity,
   ProgramItemSignupEntity,
   PushSubscriptionEntity,
   RegistrationEntity,

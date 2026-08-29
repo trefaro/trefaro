@@ -1,10 +1,11 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { ApiLocaleQuery, LocaleQueryPipe } from '../common/locale-query.pipe';
 import { PublicEventDto } from './dto/event.dto';
 import { EventsService } from './events.service';
 
@@ -26,18 +27,21 @@ export class PublicEventsController {
     description:
       'Requires no authentication. Upcoming and past together (FR 2.3).',
   })
+  @ApiLocaleQuery()
   @ApiOkResponse({ type: [PublicEventDto] })
   @ApiNotFoundResponse({ description: 'No published series at that address.' })
   list(
     @Param('seriesSlug') seriesSlug: string,
+    @Query('locale', LocaleQueryPipe) locale?: string,
   ): Promise<readonly PublicEventDto[]> {
-    return this.events.listPublic(seriesSlug) as Promise<
+    return this.events.listPublic(seriesSlug, locale) as Promise<
       readonly PublicEventDto[]
     >;
   }
 
   @Get(':eventSlug')
   @ApiOperation({ summary: 'One published event, by its address' })
+  @ApiLocaleQuery()
   @ApiOkResponse({ type: PublicEventDto })
   @ApiNotFoundResponse({
     description:
@@ -48,10 +52,12 @@ export class PublicEventsController {
   get(
     @Param('seriesSlug') seriesSlug: string,
     @Param('eventSlug') eventSlug: string,
+    @Query('locale', LocaleQueryPipe) locale?: string,
   ): Promise<PublicEventDto> {
     return this.events.getPublic(
       seriesSlug,
       eventSlug,
+      locale,
     ) as Promise<PublicEventDto>;
   }
 }

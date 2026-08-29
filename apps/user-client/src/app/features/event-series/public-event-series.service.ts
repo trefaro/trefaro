@@ -13,14 +13,17 @@ import { firstValueFrom } from 'rxjs';
 export class PublicEventSeriesService {
   private readonly api = inject(ApiClient);
 
-  list(): Promise<readonly PublicEventSeries[]> {
-    return firstValueFrom(this.api.get<PublicEventSeries[]>('user/series'));
+  list(locale: string): Promise<readonly PublicEventSeries[]> {
+    return firstValueFrom(
+      this.api.get<PublicEventSeries[]>('user/series', { locale }),
+    );
   }
 
-  bySlug(slug: string): Promise<PublicEventSeries> {
+  bySlug(slug: string, locale: string): Promise<PublicEventSeries> {
     return firstValueFrom(
       this.api.get<PublicEventSeries>(
         `user/series/${encodeURIComponent(slug)}`,
+        { locale },
       ),
     );
   }

@@ -1,11 +1,13 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  effect,
   inject,
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslationService } from '@trefaro/shared-i18n';
 import { problemOf, type ApiError, type Problem } from '@trefaro/shared-http';
 import type { PublicEventSeries } from '@trefaro/shared-models';
 import { PublicEventSeriesService } from '../../features/event-series/public-event-series.service';
@@ -108,6 +110,7 @@ import { PublicEventSeriesService } from '../../features/event-series/public-eve
 })
 export class StartPage {
   private readonly seriesService = inject(PublicEventSeriesService);
+  private readonly i18n = inject(TranslationService);
 
   protected readonly series = signal<readonly PublicEventSeries[]>([]);
   protected readonly loading = signal(true);
@@ -122,12 +125,17 @@ export class StartPage {
   protected readonly error = signal<Problem | null>(null);
 
   constructor() {
-    void this.load();
+    // An effect rather than one call: series names and descriptions are
+    // translated on the server (FR 3.12), so a language switch has to fetch the
+    // list again. Re-rendering alone would keep the sentences it already had.
+    effect(() => {
+      void this.load(this.i18n.locale());
+    });
   }
 
-  private async load(): Promise<void> {
+  private async load(locale: string): Promise<void> {
     try {
-      this.series.set(await this.seriesService.list());
+      this.series.set(await this.seriesService.list(locale));
     } catch (error: unknown) {
       this.error.set(
         problemOf(

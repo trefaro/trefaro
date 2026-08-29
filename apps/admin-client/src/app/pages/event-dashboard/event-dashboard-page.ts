@@ -99,6 +99,17 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
               {{ 'admin.series.publish' | transloco }}
             </button>
           }
+          <a
+            [routerLink]="[
+              '/series',
+              seriesId(),
+              'events',
+              eventId(),
+              'translations',
+            ]"
+          >
+            {{ 'admin.translations.link' | transloco }}
+          </a>
           <a [routerLink]="['/series', seriesId()]">
             {{ 'admin.dashboard.backToSeries' | transloco }}
           </a>

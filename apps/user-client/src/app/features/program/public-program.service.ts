@@ -21,12 +21,14 @@ export class PublicProgramService {
   list(
     seriesSlug: string,
     eventSlug: string,
+    locale: string,
   ): Promise<readonly PublicProgramItem[]> {
     return firstValueFrom(
       this.api.get<PublicProgramItem[]>(
         `user/series/${encodeURIComponent(seriesSlug)}/events/${encodeURIComponent(
           eventSlug,
         )}/program`,
+        { locale },
       ),
     );
   }

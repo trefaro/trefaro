@@ -63,9 +63,16 @@ export class SelfServiceService {
     private readonly tokens: TokenSigner,
   ) {}
 
-  /** The participant's own registration and the programme, with their seats. */
-  async view(token: string): Promise<MyRegistration> {
-    return this.compose(await this.require(token));
+  /**
+   * The participant's own registration and the programme, with their seats.
+   *
+   * `locale` is carried through every operation below, not just this one: all
+   * four answer with the whole view, and a page that fell back to English the
+   * moment somebody claimed a seat would be a page that changes language when it
+   * is used.
+   */
+  async view(token: string, locale?: string): Promise<MyRegistration> {
+    return this.compose(await this.require(token), locale);
   }
 
   /**
@@ -75,22 +82,30 @@ export class SelfServiceService {
    * taken between rendering the page and pressing the button, so the page that
    * just claimed the last one has to be able to say what is left.
    */
-  async signUp(itemId: string, token: string): Promise<MyRegistration> {
+  async signUp(
+    itemId: string,
+    token: string,
+    locale?: string,
+  ): Promise<MyRegistration> {
     const registration = await this.require(token);
     await this.signups.signUp(itemId, {
       registrationId: registration.id,
       eventId: registration.eventId,
     });
-    return this.compose(registration);
+    return this.compose(registration, locale);
   }
 
-  async signOff(itemId: string, token: string): Promise<MyRegistration> {
+  async signOff(
+    itemId: string,
+    token: string,
+    locale?: string,
+  ): Promise<MyRegistration> {
     const registration = await this.require(token);
     await this.signups.signOff(itemId, {
       registrationId: registration.id,
       eventId: registration.eventId,
     });
-    return this.compose(registration);
+    return this.compose(registration, locale);
   }
 
   /**
@@ -105,7 +120,7 @@ export class SelfServiceService {
    * not coming to the workshop either, and leaving those rows would keep a
    * workshop full for a person who cancelled.
    */
-  async cancel(token: string): Promise<MyRegistration> {
+  async cancel(token: string, locale?: string): Promise<MyRegistration> {
     const registration = await this.require(token);
 
     for (const itemId of await this.signups.seatsOf(registration.id)) {
@@ -125,7 +140,7 @@ export class SelfServiceService {
 
     const cancelled = await this.registrations.findById(registration.id);
     if (!cancelled) throw new NotFoundException(GONE);
-    return this.compose(cancelled);
+    return this.compose(cancelled, locale);
   }
 
   /**
@@ -163,15 +178,17 @@ export class SelfServiceService {
 
   private async compose(
     registration: RegistrationRecord,
+    locale?: string,
   ): Promise<MyRegistration> {
     const { event, seriesSlug } = await this.events.locate(
       registration.eventId,
+      locale,
     );
     // By id and not through the public address: an event that went back to being
     // a draft must not turn a self-service link into an error, for the same
     // reason `locate` above does not check its status.
     const [items, seats] = await Promise.all([
-      this.program.listForEvent(registration.eventId),
+      this.program.listForEvent(registration.eventId, locale),
       this.signups.seatsOf(registration.id),
     ]);
 

@@ -3,11 +3,16 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
-import type { EventSeries, PublicEventSeries } from '@trefaro/shared-models';
+import type {
+  EventSeries,
+  EventTranslation,
+  PublicEventSeries,
+} from '@trefaro/shared-models';
 import type { AttachmentsService } from '../attachments';
 import type { EventSeriesService } from '../event-series/event-series.service';
 import type { RegistrationTally } from '../registration/ports/registration-tally';
 import { EventsService, type CreateEventInput } from './events.service';
+import type { EventTranslationReader } from './ports/event-translation.repository';
 import {
   EventSlugTakenError,
   type EventChanges,
@@ -137,11 +142,37 @@ class FakeAttachmentsService {
   }
 }
 
+/** What an event says in another language (FR 3.12). */
+class FakeEventTranslations implements EventTranslationReader {
+  private readonly rows = new Map<string, Map<string, EventTranslation>>();
+
+  set(id: string, locale: string, value: Partial<EventTranslation>): void {
+    const byId = this.rows.get(locale) ?? new Map();
+    byId.set(id, {
+      name: null,
+      description: null,
+      venueName: null,
+      followUpBody: null,
+      ...value,
+    });
+    this.rows.set(locale, byId);
+  }
+
+  async findForParents(
+    ids: readonly string[],
+    locale: string,
+  ): Promise<ReadonlyMap<string, EventTranslation>> {
+    const byId = this.rows.get(locale) ?? new Map();
+    return new Map([...byId].filter(([id]) => ids.includes(id)));
+  }
+}
+
 describe('EventsService', () => {
   let repository: FakeEventRepository;
   let series: FakeEventSeriesService;
   let tally: FakeRegistrationTally;
   let attachments: FakeAttachmentsService;
+  let translations: FakeEventTranslations;
   let service: EventsService;
 
   const onsite: CreateEventInput = {
@@ -160,11 +191,13 @@ describe('EventsService', () => {
     series = new FakeEventSeriesService();
     tally = new FakeRegistrationTally();
     attachments = new FakeAttachmentsService();
+    translations = new FakeEventTranslations();
     service = new EventsService(
       repository,
       series as unknown as EventSeriesService,
       tally,
       attachments as unknown as AttachmentsService,
+      translations,
     );
   });
 
@@ -476,6 +509,97 @@ describe('EventsService', () => {
         // The same mapping answers both, which is the point of gating it there:
         // a second place to remember would be a place to forget.
         expect(event.followUpBody).toBeNull();
+      });
+    });
+
+    describe('in another language (FR 3.12, E25)', () => {
+      it('shows the translation where there is one', async () => {
+        const event = await service.create('series-1', {
+          ...onsite,
+          status: 'published',
+        });
+        translations.set(event.id, 'de', {
+          name: 'Auftakt in Köln',
+          venueName: 'Bürgerhaus Kalk (Saal)',
+        });
+
+        const translated = await service.getPublic(
+          'climate-2027',
+          event.slug,
+          'de',
+        );
+
+        expect(translated.name).toBe('Auftakt in Köln');
+        expect(translated.venueName).toBe('Bürgerhaus Kalk (Saal)');
+        // Field by field: the description was not translated, so the original
+        // stands rather than a gap.
+        expect(translated.description).toBe('The opening weekend.');
+      });
+
+      it('never translates the address — a street is one street (E25)', async () => {
+        const event = await service.create('series-1', {
+          ...onsite,
+          status: 'published',
+          venueAddress: 'Kalker Hauptstraße 247, 51103 Köln',
+        });
+        translations.set(event.id, 'de', { name: 'Auftakt in Köln' });
+
+        const translated = await service.getPublic(
+          'climate-2027',
+          event.slug,
+          'de',
+        );
+
+        expect(translated.venueAddress).toBe(
+          'Kalker Hauptstraße 247, 51103 Köln',
+        );
+      });
+
+      it('shows the original for a language nobody has translated into', async () => {
+        const event = await service.create('series-1', {
+          ...onsite,
+          status: 'published',
+        });
+
+        expect(
+          (await service.getPublic('climate-2027', event.slug, 'fr')).name,
+        ).toBe('Kickoff in Cologne');
+      });
+
+      it('withholds a translated follow-up until the event has ended (F50)', async () => {
+        const event = await service.create('series-1', {
+          ...onsite,
+          status: 'published',
+          followUpBody: 'Thank you for coming.',
+        });
+        translations.set(event.id, 'de', {
+          followUpBody: 'Danke für Ihren Besuch.',
+        });
+
+        // Translating happens before the gate, never after: overlaying onto the
+        // finished object would put back exactly what F50 had withheld.
+        expect(
+          (await service.getPublic('climate-2027', event.slug, 'de'))
+            .followUpBody,
+        ).toBeNull();
+      });
+
+      it('shows the translated follow-up once the event is over', async () => {
+        const event = await service.create('series-1', {
+          ...onsite,
+          status: 'published',
+          startsAt: '2020-03-14T08:00:00.000Z',
+          endsAt: '2020-03-14T16:00:00.000Z',
+          followUpBody: 'Thank you for coming.',
+        });
+        translations.set(event.id, 'de', {
+          followUpBody: 'Danke für Ihren Besuch.',
+        });
+
+        expect(
+          (await service.getPublic('climate-2027', event.slug, 'de'))
+            .followUpBody,
+        ).toBe('Danke für Ihren Besuch.');
       });
     });
   });

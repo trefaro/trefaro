@@ -1,9 +1,9 @@
 # Phase 2 — Whitelabel, Konfiguration, Mehrsprachigkeit, PWA
 
-**Status: in Arbeit** (29.08.2026). **AP 1 bis AP 10 sind erledigt** (siehe
+**Status: in Arbeit** (29.08.2026). **AP 1 bis AP 11 sind erledigt** (siehe
 _Fortschritt_) — damit sind **Meilenstein M3** und **Meilenstein M4** erreicht;
 die Abschnitte oberhalb davon sind Plan, nicht Protokoll. Wie in Phase 1 gibt
-Marius jedes Paket einzeln frei — AP 11 wartet auf seine Freigabe.
+Marius jedes Paket einzeln frei — AP 12 wartet auf seine Freigabe.
 
 **Die Entscheidungen E17–E29 sind am 28.08.2026 von Marius bestätigt** — sie
 werden nicht erneut aufgerollt, sondern nur gegen die Umsetzung geprüft (wie
@@ -344,25 +344,27 @@ Kein Schema für das Setup-Token (E28: Speicher) und keins für die Schriftarten
 
 ## API-Oberfläche
 
-| Methode + Pfad                                              | Zweck                                                              | AP  |
-| ----------------------------------------------------------- | ------------------------------------------------------------------ | --- |
-| `GET/PATCH /api/admin/config`                               | FR 1.4: Name, Farben, Schrift, Locales                             | 1   |
-| `PUT/DELETE /api/admin/config/logo`                         | Logo hoch- und wegnehmen                                           | 2   |
-| `PUT/DELETE /api/admin/config/app-icon`                     | App-Icon (E26)                                                     | 2   |
-| `GET /api/media/branding/logo` · `app-icon`                 | öffentlich, ohne Pfad vom Aufrufer (E19)                           | 2   |
-| `GET /api/admin/modules`                                    | FR 1.5: Kernmodule und Plug-ins mit Zustand                        | 4   |
-| `PATCH /api/admin/modules/:key`                             | an/aus, mit `refresh()` auf beiden Registries                      | 4   |
-| `GET /api/setup/state` · `POST /api/setup/admin`            | FR 1.1: geführte Ersteinrichtung, 404 danach (E28)                 | 5   |
-| `GET /api/i18n/:locale`                                     | Katalog, öffentlich (E22)                                          | 6   |
-| `GET /api/admin/i18n` · `GET /api/admin/i18n/:locale`       | Locales mit Vollständigkeit, dann eine Locale je Schlüssel (E23)   | 7   |
-| `PUT /api/admin/i18n/:locale`                               | Änderungen der Instanz schreiben — ein Schlüssel oder ein Import   | 7   |
-| `DELETE /api/admin/i18n/:locale/:key`                       | einen Schlüssel auf den mitgelieferten Text zurücksetzen           | 7   |
-| `PUT /api/admin/config/locales`                             | welche Sprachen angeboten werden, und welche die Vorgabe ist (E30) | 7   |
-| `GET /api/config/manifest.webmanifest`                      | F20, aus der Konfiguration gebaut (E26)                            | 12  |
-| `GET/PUT/DELETE /api/admin/series/:id/translations/:locale` | FR 3.12                                                            | 11  |
-| `GET/PUT/DELETE /api/admin/events/:id/translations/:locale` | FR 3.12                                                            | 11  |
-| `… /api/admin/program-items/:id/translations/:locale`       | FR 3.12                                                            | 11  |
-| `GET /api/user/**?locale=…`                                 | die öffentlichen Leseendpunkte nehmen eine Locale (E25)            | 11  |
+| Methode + Pfad                                             | Zweck                                                              | AP  |
+| ---------------------------------------------------------- | ------------------------------------------------------------------ | --- |
+| `GET/PATCH /api/admin/config`                              | FR 1.4: Name, Farben, Schrift, Locales                             | 1   |
+| `PUT/DELETE /api/admin/config/logo`                        | Logo hoch- und wegnehmen                                           | 2   |
+| `PUT/DELETE /api/admin/config/app-icon`                    | App-Icon (E26)                                                     | 2   |
+| `GET /api/media/branding/logo` · `app-icon`                | öffentlich, ohne Pfad vom Aufrufer (E19)                           | 2   |
+| `GET /api/admin/modules`                                   | FR 1.5: Kernmodule und Plug-ins mit Zustand                        | 4   |
+| `PATCH /api/admin/modules/:key`                            | an/aus, mit `refresh()` auf beiden Registries                      | 4   |
+| `GET /api/setup/state` · `POST /api/setup/admin`           | FR 1.1: geführte Ersteinrichtung, 404 danach (E28)                 | 5   |
+| `GET /api/i18n/:locale`                                    | Katalog, öffentlich (E22)                                          | 6   |
+| `GET /api/admin/i18n` · `GET /api/admin/i18n/:locale`      | Locales mit Vollständigkeit, dann eine Locale je Schlüssel (E23)   | 7   |
+| `PUT /api/admin/i18n/:locale`                              | Änderungen der Instanz schreiben — ein Schlüssel oder ein Import   | 7   |
+| `DELETE /api/admin/i18n/:locale/:key`                      | einen Schlüssel auf den mitgelieferten Text zurücksetzen           | 7   |
+| `PUT /api/admin/config/locales`                            | welche Sprachen angeboten werden, und welche die Vorgabe ist (E30) | 7   |
+| `GET /api/config/manifest.webmanifest`                     | F20, aus der Konfiguration gebaut (E26)                            | 12  |
+| `GET /api/admin/series/:id/translations`                   | FR 3.12: ein Bildschirm, eine Anfrage (F97)                        | 11  |
+| `PUT/DELETE /api/admin/series/:id/translations/:locale`    | FR 3.12: geschrieben wird je Ding und Sprache                      | 11  |
+| `GET /api/admin/events/:id/translations`                   | FR 3.12: Event **und** Programm in einer Antwort                   | 11  |
+| `PUT/DELETE /api/admin/events/:id/translations/:locale`    | FR 3.12                                                            | 11  |
+| `GET/PUT/DELETE /api/admin/program-items/:id/translations` | FR 3.12, `:locale` beim Schreiben und Löschen                      | 11  |
+| `GET /api/user/**?locale=…`                                | die öffentlichen Leseendpunkte nehmen eine Locale (E25, F94)       | 11  |
 
 `GET /api/config` wächst um `organizationName`, `publicUserClientUrl` (damit der
 Veranstalter-Client auf die öffentliche Seite verlinken kann — steht seit AP 10
@@ -566,7 +568,7 @@ prüft `verify-proxy.mjs`.
 ### AP 13 — Abschluss der Phase → **Meilenstein M5**
 
 `todo.md` unter _Checkable after phase 2_ durchgehen (abhaken oder mit Begründung
-verschieben), F60–F68 im Referenzdokument nachtragen, den Fünf-Container-Stack
+verschieben), F60–F102 im Referenzdokument nachtragen, den Fünf-Container-Stack
 aus dem Stand hochfahren, `tools/spike-verification/` und `tools/demo-seed/` auf
 den neuen Stand ziehen (der Seed sollte künftig auch Übersetzungen und ein Logo
 anlegen), `docs/PHASE2.md` von Plan auf Protokoll korrigieren und _Was anders
@@ -622,41 +624,51 @@ entscheidet Marius.
 
 Wird beim jeweiligen Paket eingetragen, nicht am Ende gesammelt:
 
-| Nr. | Inhalt                                                                                                | AP  |
-| --- | ----------------------------------------------------------------------------------------------------- | --- |
-| F60 | `app_config` bekommt `organization_name` und `app_icon_path`; Ergänzung zu Schema 5.3 (E26)           | 1   |
-| F61 | Übersetzungstabelle auch für `event_series`, und was **nicht** übersetzt wird (E25)                   | 11  |
-| F62 | Der Übersetzungskatalog wird vom Server ausgeliefert — so wird Kapitel 4 eingelöst (E22–E24)          | 6   |
-| F63 | `CORE_MODULES` listet nur Module, die es gibt; `newsletter` entfällt (E21, Bezug F8)                  | 4   |
-| F64 | Die Ersteinrichtung ist tokengeschützt; `ADMIN_BOOTSTRAP_*` bleibt der unbeaufsichtigte Weg (E28)     | 5   |
-| F65 | Die Schriftart ist ein mitgelieferter Katalog, kein Upload (E18, Bezug NFR 9)                         | 1   |
-| F66 | Wie ein Logo öffentlich wird, ohne die Anhänge mitzunehmen (E19, Bezug E9, F38)                       | 2   |
-| F67 | Welcher Kontrast geprüft wird — und warum nicht der gegen die berechnete Textfarbe (NFR 4, E17)       | 3   |
-| F68 | Wie die Kacheln der Event-Detailansicht entstehen (Mockups 5.2, Bezug F47)                            | 4   |
-| F69 | Warum der Setup-Controller `@AllowAnonymous()` trägt — der Admin-Guard überschätzt (Bezug E16)        | 5   |
-| F70 | Gestalt und Herkunft eines Übersetzungsschlüssels; flach, gepunktet, `lowerCamelCase` (E22)           | 6   |
-| F71 | Welche Sprachen eine frische Instanz anbietet — die, die das Image mitbringt (NFR 4)                  | 6   |
-| F72 | Transloco und zoneless: was die Vorprüfung wirklich fand (Bezug E20)                                  | 6   |
-| F73 | Vollständigkeit ist eine Zahl über die englische Schlüsselliste (E23)                                 | 7   |
-| F74 | Ein leerer Wert ist keine Übersetzung — und der mitgelieferte Text wird nicht gespeichert (E22)       | 7   |
-| F75 | Import ist ein Merge, und unbekannte Schlüssel werden genannt statt geschluckt                        | 7   |
-| F76 | Sprachen anbieten ist eine Entscheidung über `app_config`, nicht über die Übersetzungen (E30)         | 7   |
-| F77 | Eine Meldung hat zwei Hälften: der Satz des Clients aus dem Katalog, der Grund des Servers daneben    | 8   |
-| F78 | Was ein Format ist und keine Übersetzung — Datum, Zonenname, Dateigröße (Bezug E8)                    | 8   |
-| F79 | Ein Satz, der um ein Element gebaut ist, ist keine Übersetzungseinheit                                | 8   |
-| F80 | Ein Schlüssel ist ein Ort in der Oberfläche; wer eine Seite benennt, nimmt deren Schlüssel            | 9   |
-| F81 | Zwei Zähler in einem Satz brauchen einen Schlüssel je Kombination, solange kein Plural-Modul da ist   | 9   |
-| F82 | `admin.*` ist ein eigener Namensraum: die Clients teilen den Katalog, nicht die Sätze                 | 9   |
-| F83 | Gespeicherte Statuswörter bekommen Schlüsselfunktionen in `shared-models` — zwei Typen, zwei Räume    | 9   |
-| F84 | Eine Meldung aus einer wechselnden Zahl von Teilsätzen wird beim Handeln fertig, nicht beim Zeichnen  | 9   |
-| F85 | Ein Wert, den niemand übersetzen darf — ein Befehl, ein Tag, ein Dateiname — reist als Parameter      | 9   |
-| F86 | Der Katalog bekommt Sätze, nie die Auszeichnung um sie herum — Struktur ist Code                      | 10  |
-| F87 | Die Einheit des Rückfalls aus E24 ist **eine Mail**, nicht der Katalog und nicht ein Schlüssel        | 10  |
-| F88 | Text- und HTML-Teil sind zwei Darstellungen **eines** Satzes, nicht zwei Sätze                        | 10  |
-| F89 | In welchen Sprachen eine Instanz Mail schreiben kann, ist eine Laufzeitfrage, keine Konstante         | 10  |
-| F90 | Ein regionaler Tag ist auch für Mail eine eigene Sprache — kein Rückfall auf die Basissprache         | 10  |
-| F91 | Ein Platzhalter, den niemand füllt, bleibt in einer Mail **stehen** — anders als auf einem Bildschirm | 10  |
-| F92 | Maskieren ist ein Typ, keine Gewohnheit: `Html` und die einzige Tür von `string` dorthin              | 10  |
+| Nr.  | Inhalt                                                                                                   | AP  |
+| ---- | -------------------------------------------------------------------------------------------------------- | --- |
+| F60  | `app_config` bekommt `organization_name` und `app_icon_path`; Ergänzung zu Schema 5.3 (E26)              | 1   |
+| F61  | Übersetzungstabelle auch für `event_series`, und was **nicht** übersetzt wird (E25)                      | 11  |
+| F62  | Der Übersetzungskatalog wird vom Server ausgeliefert — so wird Kapitel 4 eingelöst (E22–E24)             | 6   |
+| F63  | `CORE_MODULES` listet nur Module, die es gibt; `newsletter` entfällt (E21, Bezug F8)                     | 4   |
+| F64  | Die Ersteinrichtung ist tokengeschützt; `ADMIN_BOOTSTRAP_*` bleibt der unbeaufsichtigte Weg (E28)        | 5   |
+| F65  | Die Schriftart ist ein mitgelieferter Katalog, kein Upload (E18, Bezug NFR 9)                            | 1   |
+| F66  | Wie ein Logo öffentlich wird, ohne die Anhänge mitzunehmen (E19, Bezug E9, F38)                          | 2   |
+| F67  | Welcher Kontrast geprüft wird — und warum nicht der gegen die berechnete Textfarbe (NFR 4, E17)          | 3   |
+| F68  | Wie die Kacheln der Event-Detailansicht entstehen (Mockups 5.2, Bezug F47)                               | 4   |
+| F69  | Warum der Setup-Controller `@AllowAnonymous()` trägt — der Admin-Guard überschätzt (Bezug E16)           | 5   |
+| F70  | Gestalt und Herkunft eines Übersetzungsschlüssels; flach, gepunktet, `lowerCamelCase` (E22)              | 6   |
+| F71  | Welche Sprachen eine frische Instanz anbietet — die, die das Image mitbringt (NFR 4)                     | 6   |
+| F72  | Transloco und zoneless: was die Vorprüfung wirklich fand (Bezug E20)                                     | 6   |
+| F73  | Vollständigkeit ist eine Zahl über die englische Schlüsselliste (E23)                                    | 7   |
+| F74  | Ein leerer Wert ist keine Übersetzung — und der mitgelieferte Text wird nicht gespeichert (E22)          | 7   |
+| F75  | Import ist ein Merge, und unbekannte Schlüssel werden genannt statt geschluckt                           | 7   |
+| F76  | Sprachen anbieten ist eine Entscheidung über `app_config`, nicht über die Übersetzungen (E30)            | 7   |
+| F77  | Eine Meldung hat zwei Hälften: der Satz des Clients aus dem Katalog, der Grund des Servers daneben       | 8   |
+| F78  | Was ein Format ist und keine Übersetzung — Datum, Zonenname, Dateigröße (Bezug E8)                       | 8   |
+| F79  | Ein Satz, der um ein Element gebaut ist, ist keine Übersetzungseinheit                                   | 8   |
+| F80  | Ein Schlüssel ist ein Ort in der Oberfläche; wer eine Seite benennt, nimmt deren Schlüssel               | 9   |
+| F81  | Zwei Zähler in einem Satz brauchen einen Schlüssel je Kombination, solange kein Plural-Modul da ist      | 9   |
+| F82  | `admin.*` ist ein eigener Namensraum: die Clients teilen den Katalog, nicht die Sätze                    | 9   |
+| F83  | Gespeicherte Statuswörter bekommen Schlüsselfunktionen in `shared-models` — zwei Typen, zwei Räume       | 9   |
+| F84  | Eine Meldung aus einer wechselnden Zahl von Teilsätzen wird beim Handeln fertig, nicht beim Zeichnen     | 9   |
+| F85  | Ein Wert, den niemand übersetzen darf — ein Befehl, ein Tag, ein Dateiname — reist als Parameter         | 9   |
+| F86  | Der Katalog bekommt Sätze, nie die Auszeichnung um sie herum — Struktur ist Code                         | 10  |
+| F87  | Die Einheit des Rückfalls aus E24 ist **eine Mail**, nicht der Katalog und nicht ein Schlüssel           | 10  |
+| F88  | Text- und HTML-Teil sind zwei Darstellungen **eines** Satzes, nicht zwei Sätze                           | 10  |
+| F89  | In welchen Sprachen eine Instanz Mail schreiben kann, ist eine Laufzeitfrage, keine Konstante            | 10  |
+| F90  | Ein regionaler Tag ist auch für Mail eine eigene Sprache — kein Rückfall auf die Basissprache            | 10  |
+| F91  | Ein Platzhalter, den niemand füllt, bleibt in einer Mail **stehen** — anders als auf einem Bildschirm    | 10  |
+| F92  | Maskieren ist ein Typ, keine Gewohnheit: `Html` und die einzige Tür von `string` dorthin                 | 10  |
+| F93  | Drei Übersetzungstabellen mit `(elternteil, locale)` und `ON DELETE CASCADE`, kein polymorpher Schlüssel | 11  |
+| F94  | Was `?locale=` bedeutet: fehlend, unbekannt, unbrauchbar — und warum nur das dritte ein Fehler ist       | 11  |
+| F95  | Übersetzt wird **vor** dem Tor, nie danach — sonst gibt eine Übersetzung zurück, was F50 zurückhielt     | 11  |
+| F96  | Eine übersetzte Liste ist nach dem sortiert, was der Leser sieht — in der Geschäftsschicht               | 11  |
+| F97  | Ein Bildschirm ist eine Anfrage, ein Speichern ist ein Ding und eine Sprache                             | 11  |
+| F98  | Eine geleerte Übersetzung löscht ihre Zeile, und Schreiben ersetzt, statt zu mergen (F74 auf Inhalte)    | 11  |
+| F99  | Übersetzen und Anbieten sind zwei Entscheidungen — auch bei Inhalten (E30 auf Inhalte)                   | 11  |
+| F100 | Der Lese-Port liegt beim Elternteil, das Schreiben darüber — die Abhängigkeit läuft in eine Richtung     | 11  |
+| F101 | `type` statt `interface` für die Nutzlasten: nur so bleibt ein generischer Weg offen                     | 11  |
+| F102 | Die Identität eines Formulars ist (Ding, Sprache) — und eine Feldliste ist kein Grund zurückzusetzen     | 11  |
 
 Anhangspunkt 18 (TLS gehört zur Installations-Story) ist in AP 5 von „geplant"
 auf „umgesetzt" gezogen.
@@ -676,7 +688,7 @@ auf „umgesetzt" gezogen.
    `tools/spike-verification/` belegt.
 4. `docs/INSTALL.md` existiert und ist von jemandem nachvollziehbar, der dieses
    Repository nicht kennt (NFR 8).
-5. `todo.md` unter _Checkable after phase 2_ ist durchgearbeitet, F60–F68 stehen
+5. `todo.md` unter _Checkable after phase 2_ ist durchgearbeitet, F60–F102 stehen
    im Referenzdokument.
 6. Dieses Dokument ist von Plan auf Protokoll korrigiert und hat einen Abschnitt
    _Was anders lief_.
@@ -1831,3 +1843,192 @@ Was anders lief:
   Anfragen je Minute je Adresse) und wird nicht gelockert; die Suiten laufen
   nacheinander, wie in der CI. Mit AP 10 hat das nichts zu tun — 21 Schlüssel
   mehr sind mehr Bytes, nicht mehr Anfragen.
+
+### AP 11 — Inhaltsübersetzungen (erledigt)
+
+Was eine Organisation selbst schreibt — Reihen, Events, Programmpunkte — hat
+jetzt je Sprache eine zweite Fassung. Drei Tabellen, drei Ports, ein
+`ContentTranslationsService`, `?locale=` auf allen öffentlichen Leseendpunkten,
+und im Veranstalter-Client je Reihe und Event eine eigene Übersetzungsseite mit
+einem Reiter je Zielsprache. Ein Event mit deutscher Übersetzung erscheint auf
+Deutsch deutsch und auf Englisch englisch; ein Programmpunkt ohne Übersetzung
+zeigt sein Original; `venue_address` ist in jeder Sprache dieselbe Straße; und
+das Löschen eines Events nimmt seine Übersetzungen mit.
+
+Umgesetzt:
+
+- **`shared-models`** — `lib/i18n/content.ts` mit `EventSeriesTranslation`,
+  `EventTranslation`, `ProgramItemTranslation`, den Bildschirmtypen
+  (`TranslatableItem`, `EventTranslations` mit `programItems`) und den beiden
+  Regeln als Funktionen (`translatedText`, `isEmptyTranslation`); dazu
+  `canonicalLocaleTag` neben `isLocaleTag` und die Spaltengrenzen
+  `MAX_CONTENT_NAME_LENGTH`, `MAX_CONTENT_DESCRIPTION_LENGTH`,
+  `MAX_VENUE_NAME_LENGTH`, die bis dahin als private Kopien in zwei DTO-Dateien
+  standen.
+- **Schema** — `event_series_translation`, `event_translation`,
+  `program_item_translation`; Migration `1787790300000-ContentTranslations`.
+- **Ports** — `business/common/ports/content-translation.port.ts` (die gemeinsame
+  Form, Lese- und Schreibhälfte getrennt) plus je ein Token im Modul des
+  Elternteils; drei TypeORM-Implementierungen über einer generischen Basis.
+- **Überlagerung** — `EventSeriesService`, `EventsService`, `ProgramService` und
+  `SelfServiceService` nehmen ein optionales `locale` und legen die Übersetzung
+  feldweise über das Original.
+- **`business/content-translations/`** — der Schreibdienst und drei Controller
+  (`/api/admin/{series,events,program-items}/:id/translations[/:locale]`).
+- **`LocaleQueryPipe`** und `ApiLocaleQuery()` in `business/common/`.
+- **Nutzer-Client** — die vier öffentlichen Dienste tragen die Sprache; fünf
+  Seiten laden neu, wenn sie sich ändert. `ApiClient.put/delete/post` nehmen
+  dafür Query-Parameter.
+- **Veranstalter-Client** — `features/content-translations/`, die Seiten
+  `/series/:id/translations` und
+  `/series/:seriesId/events/:eventId/translations`, die Bausteine
+  `translation-fields.ts`, `translation-languages.ts` und `target-locales.ts`,
+  **17 neue Katalogschlüssel** unter `admin.translations.` (Katalog: 619 →
+  **636**).
+
+Zehn Entscheidungen, die sonst improvisiert worden wären:
+
+**Drei Tabellen, kein polymorpher Fremdschlüssel** (F93). Eine Tabelle mit
+`(entity_type, entity_id)` wäre eine Tabelle ohne Fremdschlüssel — und der
+Fremdschlüssel ist hier der ganze Punkt: `ON DELETE CASCADE` ist der Grund,
+warum niemand daran denken muss, Übersetzungen aufzuräumen. Eine verwaiste Zeile
+wäre nicht nur Müll, sie tauchte irgendwann unter einem **neuen** Event auf, das
+zufällig dieselbe Id bekommt. Der Schlüssel ist je Tabelle
+`(<elternteil>_id, locale)`, jede Textspalte ist nullbar, und `NULL` heißt
+„nimm das Original", nicht „leer". Was **fehlt**, ist die andere Hälfte der
+Entscheidung (F61): `venue_address` und `speaker` haben keine Übersetzung — eine
+übersetzte Straße schickt Menschen an einen Ort, den es nicht gibt, und ein Name
+ist, wie jemand heißt. `event.languages` fehlt ebenfalls: in welchen Sprachen
+eine Veranstaltung **stattfindet** (FR 3.1), ist eine Tatsache über sie und
+keine Darstellung von ihr — deshalb darf eine englischsprachige Konferenz eine
+deutsche Landingpage haben.
+
+**`?locale=` hat drei Antworten, und nur eine ist ein Fehler** (F94). Fehlt der
+Parameter, stehen die Originale — der Normalfall, der keine Abfrage kostet. Ist
+er eine wohlgeformte Sprache, in die niemand übersetzt hat, ist das **kein**
+Fehler: ein Link, den jemand letztes Jahr geteilt hat, muss weiter eine Seite
+zeigen, auch wenn die Organisation diese Sprache längst nicht mehr anbietet. Nur
+was gar kein Sprachtag ist (`de_DE`, ein Satz), ist ein 400 — das kommt aus
+keinem echten Link, und die englische Seite auszuliefern versteckte den Fehler
+hinter einer Seite, die richtig aussieht. In der Query und nicht in
+`Accept-Language`, weil eine geteilte oder zwischengespeicherte URL dieselbe
+Seite zeigen muss.
+
+**Übersetzt wird vor dem Tor** (F95). Der Follow-Up-Text verlässt den Server erst
+nach `ends_at` (F50). Die Übersetzung nachträglich über das fertige Objekt zu
+legen hätte genau den Text zurückgegeben, den F50 gerade zurückgehalten hat — die
+Überlagerung passiert deshalb **in** `toPublicEvent`, vor der Prüfung. Ein Test
+hält das fest, in beide Richtungen.
+
+**Eine übersetzte Liste ist nach dem sortiert, was der Leser sieht** (F96). Die
+Datenbank ordnet die Reihen nach dem Namen, den der Veranstalter getippt hat;
+eine Liste deutscher Namen in der Reihenfolge ihrer englischen Originale ist in
+gar keiner Reihenfolge. Sobald eine Sprache im Spiel ist, sortiert die
+Geschäftsschicht neu, mit `Intl.Collator` in der Sprache des Lesers und dem Slug
+als letztem Kriterium. Events und Programmpunkte sind davon nicht betroffen: sie
+stehen nach der Uhr, und ein übersetzter Name verschiebt nichts in der Zeit.
+
+**Ein Bildschirm ist eine Anfrage, ein Speichern ist ein Ding und eine Sprache**
+(F97). `GET …/events/:id/translations` liefert das Event **und** sein ganzes
+Programm in einer Antwort (F49) — wer ein Event übersetzt, macht Kopf und
+Sessions in einem Zug, und eine Anfrage je Session wäre eine Anfrage je Zeile.
+Geschrieben wird dagegen einzeln: ein zu langer Titel in der neunzehnten Session
+darf die achtzehn davor nicht wegwerfen, und eine Übersetzerin arbeitet ohnehin
+Session für Session.
+
+**Eine geleerte Übersetzung löscht ihre Zeile** (F98) — F74 auf Inhalte
+angewandt. Jedes Feld wird beschnitten, ein leeres wird `NULL`, und eine
+Übersetzung, in der nichts mehr steht, verschwindet, statt als Zeile
+dazustehen, die nichts sagt: alles, was übersetzte Sprachen zählt, zählt Zeilen.
+Und geschrieben wird **ersetzend**, nicht mergend — der Bildschirm schickt die
+ganze Übersetzung eines Dings, ein fehlendes Feld ist also ein geleertes Feld.
+Anders herum ließe sich „ich habe das gelöscht" gar nicht ausdrücken.
+
+**Übersetzen und Anbieten bleiben zwei Entscheidungen** (F99) — E30, jetzt für
+Inhalte. Geschrieben werden darf für **jeden** wohlgeformten Tag, ob die Instanz
+ihn anbietet oder nicht; sonst müsste man eine Sprache erst den Besuchern zeigen,
+um das erste Wort übersetzen zu können. Die Reiter des Editors sind deshalb
+`active_locales` **ohne die Vorgabesprache** — das Hauptformular _ist_ die
+Vorgabesprache, ein Reiter dafür wäre eine zweite Stelle für denselben Satz —
+**plus** alles, wofür schon eine Übersetzung existiert: eine abbestellte Sprache
+behält ihre Arbeit, und ein verschwundener Reiter machte sie unerreichbar.
+
+**Der Lese-Port liegt beim Elternteil, das Schreiben darüber** (F100). Jedes der
+drei Module liest nur die **Lesehälfte** seines eigenen Ports — die Zusammensetzung,
+die schreibt, sitzt über allen dreien (dieselbe Linie wie `business/dashboard`,
+F49). Damit läuft die Abhängigkeit in eine Richtung: `EventsModule` weiß nicht,
+dass es ein Übersetzungsmodul gibt, und kein Dienst, der eine Landingpage
+zeichnet, kann eine Übersetzung schreiben. Der gemeinsame Port musste dafür nach
+`business/common/**ports**/` — die Layer-Regel des Linters lässt die
+Datenzugriffsschicht nur auf `ports/` zugreifen, und das ist richtig so: er
+_ist_ ein Port.
+
+**`type` statt `interface`** (F101). TypeScript gibt einem Objekt**typ** eine
+implizite Indexsignatur und einem Interface keine. Nur deshalb sind die drei
+Nutzlasten `Record<string, TranslatedText>`-verträglich — und daran hängen der
+eine generische Port, das eine generische Repository und das eine
+Formularbauteil. Wer eine davon in ein `interface` zurückverwandelt, verteilt
+Casts über drei Dateien.
+
+**Die Identität eines Formulars ist (Ding, Sprache)** (F102). Das
+Übersetzungsformular füllt sich neu, wenn es ein anderes Formular wird — anderer
+Reiter, andere Session — und **nicht**, wenn ein Elternteil zufällig eine neue
+Feldliste baut. Die Feldliste wird deshalb `untracked` gelesen. Warum das eine
+Entscheidung und keine Feinheit ist, steht unten unter _Was anders lief_.
+
+Nachgewiesen:
+
+- **Unit:** `content-translations.service.spec.ts` (14 Fälle: Bildschirm,
+  Schreiben, Löschen, `de-AT`/`de-at`, unbekannte Sprache, 404 vor dem
+  Schreiben); die Überlagerung in `event-series.service.spec.ts`,
+  `events.service.spec.ts` (inkl. F95 in beide Richtungen) und
+  `program.service.spec.ts`; `locale-query.pipe.spec.ts`; `content.spec.ts` und
+  `canonicalLocaleTag` in `shared-models`; `target-locales.spec.ts` und
+  `series-translations-page.spec.ts` im Veranstalter-Client. Server **700 Tests**.
+- **API-Vertrag:** `apps/server-e2e/src/api/content-translations.spec.ts` — 22
+  Fälle gegen eine echte Datenbank, darunter der Kaskadentest, der Guard, die
+  400er und dass eine geleerte Übersetzung keine Zeile hinterlässt.
+  `nx e2e server-e2e` **359 Tests** grün.
+- **Browser:** `user-client-e2e/src/content-translations.spec.ts` (die
+  Abnahmekriterien aus der Sicht der Teilnehmenden, in drei Engines) und
+  `admin-client-e2e/src/content-translations.spec.ts` (die Seiten, die Reiter,
+  je Abschnitt ein Speichern, das Entfernen). **180** bzw. **260** Tests grün,
+  nacheinander gefahren.
+
+Was anders lief:
+
+- **Ein Formular, das sich beim Tippen selbst leerte.** Die Sessions bekamen ihre
+  Feldliste aus einer Template-Methode, also je Änderungslauf ein neues Array;
+  der Effekt im Formularbauteil beobachtete diese Liste und setzte den Entwurf
+  jedes Mal auf den gespeicherten Stand zurück. Wer tippte, verlor das Getippte
+  zwischen zwei Tastenanschlägen, und „Speichern" schrieb eine leere Übersetzung
+  — die dann auch noch korrekt ihre Zeile löschte (F98). Der Abschnitt des
+  Events war nicht betroffen, weil seine Liste aus einem `computed()` kam. Zwei
+  Änderungen: die Sessions bekommen ein memoisiertes Sichtmodell, und der Effekt
+  liest die Feldliste `untracked` und hängt stattdessen an der Formularidentität
+  (F102). **Gefunden hat es nur der Browserdurchlauf** — jeder Unit-Test des
+  Bauteils setzt die Eingaben genau einmal.
+- **Ein Test, der schon grün war, bevor er etwas geprüft hatte.** „Gespeichert."
+  ist eine Meldung für alle Abschnitte; die zweite Prüfung fand die Meldung der
+  **ersten** Speicherung vor und ging durch, bevor die eigene Anfrage überhaupt
+  raus war. Die Suite wartet jetzt auf die `PUT`-Antwort selbst.
+- **Zwei Elemente mit demselben Text.** `getByText(seriesName)` traf auf der
+  Übersetzungsseite die Brotkrume _und_ den Originalblock — dieselbe Klasse von
+  Fehlschlag wie `exact: true` in AP 13 der Phase 1. Der Test nennt jetzt die
+  Rolle.
+- **Zwei private Kopien einer Spaltengrenze.** `MAX_NAME_LENGTH = 200` stand in
+  `create-event.dto.ts` **und** in `create-event-series.dto.ts`, und die
+  Übersetzung hätte eine dritte gebraucht. Sie stehen jetzt in `shared-models`:
+  eine Übersetzung, die länger sein dürfte als ihr Original, passt in kein
+  Layout, in das das Original passt.
+- **`ApiClient` konnte an einem `PUT` keine Query-Parameter.** Die
+  Selbstbedienung antwortet auf jeden Klick mit der **ganzen** Seite, also muss
+  auch ein `PUT` die Sprache mitnehmen — sonst wechselt die Seite beim Benutzen
+  ins Englische. `put`, `delete` und `post` nehmen jetzt denselben
+  Parameter-Mechanismus wie `get`, damit das Kodieren an einer Stelle bleibt.
+- **Mails übersetzen keine Inhalte, mit Absicht.** Der Eventname in einer
+  Bestätigungsmail bleibt das Original. Die Sprache einer Mail wählt in Phase 2
+  niemand — sie ist die Standardsprache der Instanz (E24) —, und einen Inhalt in
+  eine Sprache zu übersetzen, die sich der Empfänger nicht ausgesucht hat, ist
+  eine halbe Entscheidung. In Phase 3 bekommt ein Profil eine Sprache; dann
+  bewegen sich beide Hälften zusammen. Steht in `todo.md`.

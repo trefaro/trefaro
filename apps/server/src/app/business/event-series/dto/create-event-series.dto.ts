@@ -1,6 +1,10 @@
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import type { EventSeriesStatus } from '@trefaro/shared-models';
-import { EVENT_SERIES_STATUSES } from '@trefaro/shared-models';
+import {
+  EVENT_SERIES_STATUSES,
+  MAX_CONTENT_DESCRIPTION_LENGTH,
+  MAX_CONTENT_NAME_LENGTH,
+} from '@trefaro/shared-models';
 import {
   IsEmail,
   IsIn,
@@ -11,9 +15,14 @@ import {
 } from 'class-validator';
 import { MAX_SLUG_LENGTH } from '../../common/slug';
 
-/** Bounds that also match the columns, so a request cannot fail in the database. */
-const MAX_NAME_LENGTH = 200;
-const MAX_DESCRIPTION_LENGTH = 5_000;
+/**
+ * Bounds that also match the columns, so a request cannot fail in the database.
+ *
+ * From `shared-models` since AP 11: the same two numbers bound a translation of
+ * these fields, and one column may not have two limits.
+ */
+const MAX_NAME_LENGTH = MAX_CONTENT_NAME_LENGTH;
+const MAX_DESCRIPTION_LENGTH = MAX_CONTENT_DESCRIPTION_LENGTH;
 
 export class CreateEventSeriesDto {
   @ApiProperty({ example: 'Climate Conference 2027' })

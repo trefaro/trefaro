@@ -7,6 +7,7 @@ import {
 import type {
   EventSeries,
   EventSeriesStatus,
+  EventSeriesTranslation,
   PublicEventSeries,
 } from '@trefaro/shared-models';
 import { AttachmentsService } from '../attachments';
@@ -15,6 +16,10 @@ import {
   REGISTRATION_TALLY,
   type RegistrationTally,
 } from '../registration/ports/registration-tally';
+import {
+  EVENT_SERIES_TRANSLATION_REPOSITORY,
+  type EventSeriesTranslationReader,
+} from './ports/event-series-translation.repository';
 import {
   EVENT_SERIES_REPOSITORY,
   EventSeriesSlugTakenError,
@@ -63,14 +68,37 @@ export class EventSeriesService {
     // Deleting a series cascades all the way to its registrations, and a
     // cascade removes rows but no files (E9).
     private readonly attachments: AttachmentsService,
+    // Reading only: what this series says in another language (FR 3.12). The
+    // write half of the same port belongs to the translation module, which sits
+    // above this one — a service that renders a page cannot translate one.
+    @Inject(EVENT_SERIES_TRANSLATION_REPOSITORY)
+    private readonly translations: EventSeriesTranslationReader,
   ) {}
 
   async listForOrganizer(): Promise<readonly EventSeries[]> {
     return (await this.series.findAll()).map(toEventSeries);
   }
 
-  async listPublic(): Promise<readonly PublicEventSeries[]> {
-    return (await this.series.findPublished()).map(toPublicEventSeries);
+  /**
+   * The participant start page, in the language they are reading (E25).
+   *
+   * Sorted here rather than in SQL as soon as a language is involved: the
+   * database orders by the name the organizer typed, and a list of German names
+   * ordered by their English originals is a list in no order at all. `undefined`
+   * keeps the database's order, which is the same answer for an instance that
+   * has never translated anything.
+   */
+  async listPublic(locale?: string): Promise<readonly PublicEventSeries[]> {
+    const found = await this.series.findPublished();
+    const translations = await this.translationsFor(
+      found.map((record) => record.id),
+      locale,
+    );
+
+    const listed = found.map((record) =>
+      toPublicEventSeries(record, translations.get(record.id)),
+    );
+    return locale === undefined ? listed : sortByName(listed, locale);
   }
 
   async getForOrganizer(id: string): Promise<EventSeries> {
@@ -80,12 +108,31 @@ export class EventSeriesService {
   }
 
   /** 404 for a series that is not published — it must look absent, not hidden. */
-  async getPublicBySlug(slug: string): Promise<PublicEventSeries> {
+  async getPublicBySlug(
+    slug: string,
+    locale?: string,
+  ): Promise<PublicEventSeries> {
     const found = await this.series.findBySlug(slug);
     if (!found || found.status !== 'published') {
       throw new NotFoundException(`No event series at "${slug}"`);
     }
-    return toPublicEventSeries(found);
+    const translations = await this.translationsFor([found.id], locale);
+    return toPublicEventSeries(found, translations.get(found.id));
+  }
+
+  /**
+   * The translations of a set of series, or nothing at all.
+   *
+   * `undefined` short-circuits before the query: most instances serve one
+   * language, and a page that is not asking for a translation should not pay for
+   * a lookup that can only come back empty.
+   */
+  private async translationsFor(
+    ids: readonly string[],
+    locale: string | undefined,
+  ): Promise<ReadonlyMap<string, EventSeriesTranslation>> {
+    if (locale === undefined) return new Map();
+    return this.translations.findForParents(ids, locale);
   }
 
   async create(input: CreateEventSeriesInput): Promise<EventSeries> {
@@ -239,12 +286,24 @@ function normalizeOptional(value: string | null | undefined): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function toPublicEventSeries(record: EventSeriesRecord): PublicEventSeries {
+/**
+ * The participant's view, in one language.
+ *
+ * A translation is field by field and additive (E25): every field that has no
+ * translation falls back to what the organizer wrote, so a half-translated
+ * series reads as half-translated rather than half-empty. The slug is never
+ * translated — it is the address, and an address that changes with a language is
+ * a link that breaks when somebody switches.
+ */
+function toPublicEventSeries(
+  record: EventSeriesRecord,
+  translation?: EventSeriesTranslation,
+): PublicEventSeries {
   return {
     id: record.id,
     slug: record.slug,
-    name: record.name,
-    description: record.description,
+    name: translation?.name ?? record.name,
+    description: translation?.description ?? record.description,
     // A series has no logo upload, so this column is never written. AP 2 of
     // phase 2 removed the path-based media URL (E19): a per-series logo will
     // need a path-free route of its own — noted in `todo.md`.
@@ -261,4 +320,24 @@ function toEventSeries(record: EventSeriesRecord): EventSeries {
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
   };
+}
+
+/**
+ * By name, in the reader's language.
+ *
+ * `localeCompare` and not `<`: German sorts „Ärztetag" beside „Arzt" and a code
+ * point comparison puts it after „Zukunft". The tie-break on the slug keeps two
+ * series of the same name in a stable order — the same reason every paginated
+ * list in this application ends its sort on the id.
+ */
+function sortByName(
+  series: readonly PublicEventSeries[],
+  locale: string,
+): readonly PublicEventSeries[] {
+  const collator = new Intl.Collator(locale);
+  return [...series].sort(
+    (left, right) =>
+      collator.compare(left.name, right.name) ||
+      left.slug.localeCompare(right.slug),
+  );
 }

@@ -114,6 +114,19 @@ export interface EventInput {
 export const MAX_FOLLOW_UP_LENGTH = 5000;
 
 /**
+ * How long the texts a name and a description may be, on a series and an event
+ * alike.
+ *
+ * The numbers were the columns' since phase 1 and sat in two private copies in
+ * two DTO files; they are here because AP 11 gives every one of these fields a
+ * second, translated value that has to fit the same column and the same layout.
+ * One bound per column, read by the form, the request and the translation.
+ */
+export const MAX_CONTENT_NAME_LENGTH = 200;
+export const MAX_CONTENT_DESCRIPTION_LENGTH = 5_000;
+export const MAX_VENUE_NAME_LENGTH = 200;
+
+/**
  * The public address of an event, relative to the participant client.
  *
  * In one place because the shape is a decision (F28): slugs are unique per
