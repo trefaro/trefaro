@@ -406,12 +406,12 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
   Installations-Story, nicht zur Härtung; `Secure` fallen zu lassen ist keine
   Alternative.
 
-## Stand Phase 2 (in Arbeit; AP 1–8 erledigt, Meilensteine M3 und M4 erreicht)
+## Stand Phase 2 (in Arbeit; AP 1–9 erledigt, Meilensteine M3 und M4 erreicht)
 
 Plan **und Protokoll**: `docs/PHASE2.md` — dreizehn Arbeitspakete, Entscheidungen
 **E17–E30** (die Zählung läuft über die Phasen weiter), Meilensteine M3
 (Whitelabel), M4 (alle P1: brandbar, konfigurierbar, selbst installierbar) und M5
-(Abschluss), Nachträge F60–F79. Was schon umgesetzt ist, steht dort unter
+(Abschluss), Nachträge F60–F85. Was schon umgesetzt ist, steht dort unter
 _Fortschritt_, je Paket ein Abschnitt „erledigt" mit den Abweichungen — dort
 zuerst nachsehen. **Jedes Paket einzeln von Marius freigeben** — nicht ohne
 Aufforderung mit dem nächsten anfangen.
@@ -451,7 +451,13 @@ mitgelieferten Katalogen, sieben Seiten plus Diagnoseseite und Shell, die
 Datums-/Zeit-/Größenformate bekommen die Sprache des **Lesers** (E8 unberührt),
 `MEDIA_LINK_KIND_LABELS`/`uploadTypeLabel`/der rohe Anmeldestatus sind
 Katalogschlüssel geworden, `Problem = { key, detail }` in `shared-http` (F77) —
-und die Playwright-Suite prüft gegen den Katalog statt gegen englische Wörter.
+und die Playwright-Suite prüft gegen den Katalog statt gegen englische Wörter ·
+**AP 9** Veranstalter-Client übersetzt: **598 Schlüssel** in beiden
+mitgelieferten Katalogen (443 unter `admin.`), sechzehn Seiten plus Shell, der
+in AP 6 zurückgestellte Sprachumschalter auf dem Anmeldeformular, alle siebzehn
+`error()`-Signale halten `Problem`, `eventStatusKey`/`eventSeriesStatusKey` in
+`shared-models`, und die Browsersuite dieses Clients prüft ebenfalls gegen
+Schlüssel (`support/catalogue.ts` mit dem neuen `tPattern()`).
 
 Reihenfolge: AP 1–3 Whitelabel (FR 1.4) · AP 4 Modulverwaltung (FR 1.5) · AP 5
 Installations-Story mit geführter Ersteinrichtung und TLS-Overlay (FR 1.1,
@@ -758,6 +764,56 @@ Regeln aus AP 7, die nicht erneut aufgerollt werden sollten:
   Teilstrings; ohne `exact: true` beweist so ein Test das Gegenteil dessen, was
   er behauptet. Und zwei Tabellen auf einer Seite brauchen `aria-label`, sonst
   trifft ein Zeilen-Locator auch die Kopfzeile der anderen.
+
+Regeln aus AP 9, die nicht erneut aufgerollt werden sollten:
+
+- **Ein Schlüssel ist ein Ort in der Oberfläche, kein Wort** (F80). Menüeintrag,
+  Knopf und Überschrift, die auf dieselbe Seite zeigen, teilen deren Schlüssel
+  (`admin.series.title`, `admin.events.new`, `admin.participants.title`) — zwei
+  Schlüssel mit gleichem Text wären zwei Stellen, an denen eine Umbenennung
+  ankommen kann, und nur eine täte es. Und die Gegenrichtung, die wichtigere:
+  **gleicher englischer Text heißt nicht gleicher Schlüssel.** `Cancel` ist auf
+  einem Formular „Abbrechen" und auf einer Anmeldung „Stornieren"; ein
+  gemeinsamer `admin.common.cancel` hätte einen Veranstalter dazu gebracht, eine
+  Anmeldung abzubrechen. Vor dem Zusammenlegen fragen, welche **Handlung**
+  gemeint ist, nicht welche Zeichenkette dasteht.
+- **`admin.*` ist der Namensraum dieses Clients** (F82). Beide Clients lesen
+  denselben Katalog und teilen nur, was **dasselbe Ding** benennt:
+  `registration.status.*`, `mediaLinks.kind.*`, `modules.*.title`,
+  `common.loading`. „On site and online" (Teilnehmende) und „Hybrid"
+  (Veranstalter) sind dasselbe Feld und trotzdem zwei Schlüssel — zwei
+  Zielgruppen, zwei Vokabulare.
+- **Ein gespeichertes Statuswort bekommt eine Schlüsselfunktion in
+  `shared-models`** (F83): `eventStatusKey`, `eventSeriesStatusKey` neben
+  `registrationStatusKey`. Je Typ eine, aus demselben Grund, aus dem die Typen
+  getrennt sind. Was **kein** gespeicherter Zustand ist, bleibt im Client —
+  `admin.eventType.*` steht in `apps/admin-client/src/app/features/i18n/labels.ts`.
+- **Zwei Zähler in einem Satz brauchen einen Schlüssel je Kombination** (F81),
+  solange kein Plural-Modul installiert ist: `…metaSeats.oneOne`, `.oneMany`,
+  `.manyOne`, `.manyMany`. Der Satz in zwei Fragmente zu zerlegen ist das, was
+  F79 ausschließt. Ein Satz mit **einer** Zahl bleibt bei `.one`/`.many`.
+- **Eine Meldung hält Schlüssel und Parameter, nicht den fertigen Satz** (F84) —
+  sie steht auf dem Bildschirm und muss einem Sprachwechsel folgen (F72).
+  Ausnahme ist die Sprachverwaltung: „Saved: 3 written, 1 reset …" setzt sich aus
+  einer wechselnden Zahl von Teilsätzen zusammen, hat also keinen Schlüssel, und
+  behält die Sprache der Handlung.
+- **Ein Wert, den niemand übersetzen darf, reist als Parameter** (F85) —
+  `docker compose logs server`, `Secure`, `docs/INSTALL.md`, Beispiel-Tags. Der
+  Satz wird ein Schlüssel, das `<code>` fällt weg, der Literal bleibt im Code.
+- **Die Browsersuite dieses Clients nennt Schlüssel**, wie die des
+  Nutzer-Clients: `support/catalogue.ts` (dieselbe Datei) plus `tPattern()` für
+  Sätze, deren Parameter ein Test nicht nachbauen kann. Literal bleibt nur
+  Fixture-Text, ein Bezeichner, eine Uhrzeit — oder eine **Server**meldung
+  (F77). `expectNoRawKeys(page)` **nicht** auf der Sprachverwaltung: die zeigt
+  Katalogschlüssel, das ist ihre Funktion.
+- **Eine Prozentzahl über 598 Schlüssel bewegt sich nicht.** Ein übersetzter
+  Schlüssel sind 0,17 % und runden auf 0 % — deshalb steht die **Anzahl** neben
+  der Zahl, und deshalb zählt der Browsertest der Sprachverwaltung („1 von 598
+  Schlüsseln") statt zu runden.
+- **Zwei Anzeigen bleiben englisch, mit Absicht:** die Schriftartennamen im
+  Design-Formular (drei Eigennamen, der vierte laut Katalogkommentar bewusst so
+  formuliert — E18) und der Ladehinweis in `index.html`, der gezeichnet wird,
+  bevor es einen Katalog gibt.
 
 ## Betriebskontext
 

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { requireCredentials } from './support/admin-session';
+import { t } from './support/catalogue';
 
 /**
  * The administrative login in a real browser (UC 01, FR 1.3).
@@ -14,9 +15,9 @@ async function signIn(
   page: import('@playwright/test').Page,
   password: string,
 ): Promise<void> {
-  await page.getByLabel('E-mail address').fill(credentials.email);
-  await page.getByLabel('Password').fill(password);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByLabel(t('admin.login.email')).fill(credentials.email);
+  await page.getByLabel(t('admin.login.password')).fill(password);
+  await page.getByRole('button', { name: t('admin.login.title') }).click();
 }
 
 test.describe('administrative login', () => {
@@ -25,11 +26,13 @@ test.describe('administrative login', () => {
   }) => {
     await page.goto('/');
 
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: t('admin.login.title') }),
+    ).toBeVisible();
     await expect(page).toHaveURL(/\/login$/);
     // The workspace navigation must not be rendered at all.
     await expect(
-      page.getByRole('navigation', { name: 'Main navigation' }),
+      page.getByRole('navigation', { name: t('admin.nav.label') }),
     ).toBeHidden();
   });
 
@@ -40,7 +43,7 @@ test.describe('administrative login', () => {
     await signIn(page, 'definitely-not-the-password');
 
     await expect(page.getByRole('alert')).toHaveText(
-      'Wrong e-mail address or password.',
+      t('admin.login.errorCredentials'),
     );
     await expect(page).toHaveURL(/\/login/);
   });
@@ -55,7 +58,7 @@ test.describe('administrative login', () => {
     await signIn(page, credentials.password);
 
     await expect(
-      page.getByRole('heading', { name: 'Administrators' }),
+      page.getByRole('heading', { name: t('admin.admins.title') }),
     ).toBeVisible();
     await expect(page).toHaveURL(/\/administrators$/);
     // The account the server created is listed, with its address in the table —
@@ -64,12 +67,16 @@ test.describe('administrative login', () => {
       page.getByRole('cell', { name: credentials.email }),
     ).toBeVisible();
 
-    await page.getByRole('button', { name: 'Sign out' }).click();
+    await page.getByRole('button', { name: t('admin.nav.signOut') }).click();
 
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: t('admin.login.title') }),
+    ).toBeVisible();
 
     // And the session is really gone, not just navigated away from.
     await page.goto('/administrators');
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: t('admin.login.title') }),
+    ).toBeVisible();
   });
 });

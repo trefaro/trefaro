@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { AppConfigService } from '@trefaro/shared-config';
+import type { Problem } from '@trefaro/shared-http';
 import { provideTranslationsForTest } from '@trefaro/shared-i18n';
 import type {
   MediaLink,
@@ -44,7 +45,7 @@ function link(overrides: Partial<MediaLink> = {}): MediaLink {
 
 /** The template drives protected members; the tests reach them the same way. */
 interface PageInternals {
-  error: () => string | null;
+  error: () => Problem | null;
   edit: (id: string, patch: Partial<Record<string, unknown>>) => void;
   changed: (link: MediaLink) => boolean;
   save: (link: MediaLink) => Promise<void>;
@@ -112,6 +113,9 @@ async function render(
         'mediaLinks.kind.stream.one': 'Live stream',
         'mediaLinks.kind.recording.one': 'Recording',
         'mediaLinks.kind.material.one': 'Material',
+        'admin.mediaLinks.wholeEvent': 'The whole event',
+        'admin.mediaLinks.moduleOff':
+          'The media links module is switched off for this instance.',
       }),
       {
         provide: EventsAdminService,
@@ -222,7 +226,7 @@ describe('MediaLinksPage', () => {
     });
     await page.add();
 
-    expect(page.error()).toContain('http');
+    expect(page.error()?.key).toBe('admin.mediaLinks.errorUrl');
     expect(mediaLinks.created).toEqual([]);
   });
 

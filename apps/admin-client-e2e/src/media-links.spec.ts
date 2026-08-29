@@ -4,6 +4,7 @@ import {
   SERIES_SLUG_PREFIX,
   fixtureLabel,
 } from './support/admin-session';
+import { t } from './support/catalogue';
 
 /**
  * The media links of an event in the browser (FR 3.6, F10) — AP 11.
@@ -106,11 +107,11 @@ test.describe('the media links of an event', () => {
     );
 
   const addForm = (page: Page) =>
-    page.getByRole('region', { name: 'Add a link', exact: true });
+    page.getByRole('region', { name: t('admin.mediaLinks.add'), exact: true });
 
   const rows = (page: Page) =>
     page
-      .getByRole('region', { name: 'Links', exact: true })
+      .getByRole('region', { name: t('admin.mediaLinks.heading'), exact: true })
       .getByRole('listitem');
 
   /** Fills the add form and waits until the link is actually saved. */
@@ -122,14 +123,22 @@ test.describe('the media links of an event', () => {
     belongsTo = 'The whole event',
   ): Promise<void> => {
     const form = addForm(page);
-    await form.getByLabel('Kind').selectOption({ label: kind });
-    await form.getByLabel('Title').fill(title);
-    await form.getByLabel('Address').fill(url);
-    await form.getByLabel('Belongs to').selectOption({ label: belongsTo });
-    await form.getByRole('button', { name: 'Add link' }).click();
+    await form
+      .getByLabel(t('admin.mediaLinks.kind'))
+      .selectOption({ label: kind });
+    await form.getByLabel(t('admin.mediaLinks.linkTitle')).fill(title);
+    await form.getByLabel(t('admin.mediaLinks.address')).fill(url);
+    await form
+      .getByLabel(t('admin.mediaLinks.belongsTo'))
+      .selectOption({ label: belongsTo });
+    await form
+      .getByRole('button', { name: t('admin.mediaLinks.addSubmit') })
+      .click();
     // The form clears itself once the server has answered; waiting for that
     // rather than for a row means the next fill cannot be wiped by the reset.
-    await expect(form.getByLabel('Title')).toHaveValue('');
+    await expect(form.getByLabel(t('admin.mediaLinks.linkTitle'))).toHaveValue(
+      '',
+    );
   };
 
   test('adds a link and shows it as a link that leaves the page', async ({
@@ -153,7 +162,9 @@ test.describe('the media links of an event', () => {
     // instance sent the visitor (NFR 9, F51).
     await expect(target).toHaveAttribute('target', '_blank');
     await expect(target).toHaveAttribute('rel', 'noopener noreferrer');
-    await expect(rows(page).first()).toContainText('Recording');
+    await expect(rows(page).first()).toContainText(
+      t('mediaLinks.kind.recording.one'),
+    );
   });
 
   test('shows them in the order participants read them, whatever the order they were added', async ({
@@ -176,8 +187,12 @@ test.describe('the media links of an event', () => {
 
     // The kind is the order: what is on now, then what can be read (F52).
     await expect(rows(page)).toHaveCount(2);
-    await expect(rows(page).first()).toContainText('Live stream');
-    await expect(rows(page).nth(1)).toContainText('Material');
+    await expect(rows(page).first()).toContainText(
+      t('mediaLinks.kind.stream.one'),
+    );
+    await expect(rows(page).nth(1)).toContainText(
+      t('mediaLinks.kind.material.one'),
+    );
   });
 
   test('attaches a link to a session of this event', async ({ page }) => {
@@ -194,8 +209,12 @@ test.describe('the media links of an event', () => {
     // Read back from the server, so what the row shows is what was stored —
     // both selects, which is what the marked-option binding is for.
     const row = rows(page).first();
-    await expect(row.getByLabel('Belongs to')).toHaveValue(seeded.sessionId);
-    await expect(row.getByLabel('Kind')).toHaveValue('recording');
+    await expect(row.getByLabel(t('admin.mediaLinks.belongsTo'))).toHaveValue(
+      seeded.sessionId,
+    );
+    await expect(row.getByLabel(t('admin.mediaLinks.kind'))).toHaveValue(
+      'recording',
+    );
   });
 
   test('refuses an address a click could not follow, without asking the server', async ({
@@ -204,15 +223,25 @@ test.describe('the media links of an event', () => {
     await open(page);
 
     const form = addForm(page);
-    await form.getByLabel('Kind').selectOption({ label: 'Recording' });
-    await form.getByLabel('Title').fill('Pasted the page title by mistake');
-    await form.getByLabel('Address').fill('tube.example.org/w/keynote');
-    await form.getByRole('button', { name: 'Add link' }).click();
+    await form
+      .getByLabel(t('admin.mediaLinks.kind'))
+      .selectOption({ label: 'Recording' });
+    await form
+      .getByLabel(t('admin.mediaLinks.linkTitle'))
+      .fill('Pasted the page title by mistake');
+    await form
+      .getByLabel(t('admin.mediaLinks.address'))
+      .fill('tube.example.org/w/keynote');
+    await form
+      .getByRole('button', { name: t('admin.mediaLinks.addSubmit') })
+      .click();
 
-    await expect(page.getByRole('alert')).toContainText('http');
+    await expect(page.getByRole('alert')).toContainText(
+      t('admin.mediaLinks.errorUrl'),
+    );
     await expect(rows(page)).toHaveCount(0);
     // Still typed, so the organizer can fix the address rather than retype it.
-    await expect(form.getByLabel('Title')).toHaveValue(
+    await expect(form.getByLabel(t('admin.mediaLinks.linkTitle'))).toHaveValue(
       'Pasted the page title by mistake',
     );
   });
@@ -227,10 +256,13 @@ test.describe('the media links of an event', () => {
     );
 
     page.once('dialog', (dialog) => void dialog.accept());
-    await rows(page).first().getByRole('button', { name: 'Delete' }).click();
+    await rows(page)
+      .first()
+      .getByRole('button', { name: t('admin.common.delete') })
+      .click();
 
     await expect(rows(page)).toHaveCount(0);
-    await expect(page.getByText('No links yet')).toBeVisible();
+    await expect(page.getByText(t('admin.mediaLinks.empty'))).toBeVisible();
   });
 
   test('is reachable from the event dashboard, which counts what is there', async ({
@@ -245,11 +277,20 @@ test.describe('the media links of an event', () => {
     );
 
     await page.goto(`/series/${seeded.seriesId}/events/${seeded.eventId}`);
-    const tile = page.getByRole('article').filter({ hasText: 'Media links' });
+    const tile = page
+      .getByRole('article')
+      .filter({ hasText: t('modules.mediaLinks.title') });
     await expect(tile).toContainText('1');
-    await expect(tile).toContainText('1 stream');
+    await expect(tile).toContainText(
+      t('admin.dashboard.metaCount', {
+        count: 1,
+        label: t('mediaLinks.kind.stream.one'),
+      }),
+    );
 
-    await page.getByRole('link', { name: 'Media links' }).click();
+    await page
+      .getByRole('link', { name: t('modules.mediaLinks.title') })
+      .click();
     await expect(page).toHaveURL(/\/media-links$/);
   });
 });

@@ -8,6 +8,7 @@ import {
   seedParticipants,
   type SeededEvent,
 } from './support/registration-fixtures';
+import { expectNoRawKeys, t, tPattern } from './support/catalogue';
 
 /**
  * The participant overview in the browser (UC 08, FR 3.3) — AP 5.
@@ -48,27 +49,68 @@ test.describe('participant overview', () => {
     await page.goto(overview());
 
     await expect(
-      page.getByRole('heading', { name: 'Participants' }),
+      page.getByRole('heading', { name: t('admin.participants.title') }),
     ).toBeVisible();
     // Visible without a click — the usability correction of the thesis.
     const amina = page.getByRole('row', { name: /Okonkwo, Amina/ });
     await expect(amina).toContainText('@participants.example.org');
 
     // The default page holds 25 of 28 rows, so there is a second one.
-    await expect(page.getByText(`${TOTAL_ROWS} registrations`)).toBeVisible();
-    await expect(page.getByText('Page 1 of 2')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Previous' })).toBeDisabled();
+    await expect(
+      page.getByText(
+        t('admin.participants.matchAll.many', { shown: TOTAL_ROWS }),
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByText(t('admin.participants.pageOf', { page: 1, pages: 2 })),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: t('admin.common.previous') }),
+    ).toBeDisabled();
 
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: t('admin.common.next') }).click();
 
-    await expect(page.getByText('Page 2 of 2')).toBeVisible();
+    await expect(
+      page.getByText(t('admin.participants.pageOf', { page: 2, pages: 2 })),
+    ).toBeVisible();
     await expect(page).toHaveURL(/[?&]page=2/);
-    await expect(page.getByRole('button', { name: 'Next' })).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: t('admin.common.next') }),
+    ).toBeDisabled();
 
     // The graph is there, and says what it shows without being seen.
     await expect(
-      page.getByRole('img', { name: /Registrations per week/ }),
+      page.getByRole('img', {
+        name: tPattern('admin.participants.chartLabel.many'),
+      }),
     ).toBeVisible();
+  });
+
+  test('keeps the e-mail column where it is in German too', async ({
+    page,
+  }) => {
+    await page.goto(overview());
+    await page
+      .getByRole('combobox', { name: t('language.switcher.label') })
+      .selectOption('de');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'de');
+
+    // The one correction the usability test produced (E13) is about *where* the
+    // address is, so the check is the order of the headers rather than their
+    // presence — in the language the organizer picked.
+    const headers = await page.getByRole('columnheader').allInnerTexts();
+    expect(headers.map((text) => text.replace(/[↑↓]/g, '').trim())).toEqual([
+      t('admin.participants.colName', {}, 'de'),
+      t('admin.participants.colEmail', {}, 'de'),
+      t('admin.participants.colStatus', {}, 'de'),
+      t('admin.participants.colRegistered', {}, 'de'),
+      t('admin.participants.colNewsletter', {}, 'de'),
+      '',
+    ]);
+    await expect(
+      page.getByRole('row', { name: /Okonkwo, Amina/ }),
+    ).toContainText('@participants.example.org');
+    await expectNoRawKeys(page);
   });
 
   test('searches by name and keeps the search in the address', async ({
@@ -76,7 +118,7 @@ test.describe('participant overview', () => {
   }) => {
     await page.goto(overview());
 
-    await page.getByLabel('Search').fill('okonkwo amina');
+    await page.getByLabel(t('admin.participants.search')).fill('okonkwo amina');
 
     // One of two Okonkwos: both words have to match.
     await expect(
@@ -86,7 +128,14 @@ test.describe('participant overview', () => {
       page.getByRole('row', { name: /Okonkwo, Chiara/ }),
     ).toBeHidden();
     await expect(
-      page.getByText(`1 of ${TOTAL_ROWS} registrations`),
+      page.getByText(
+        // The noun agrees with the number it follows, which in a filtered
+        // count is the total — "1 of 28 registrations".
+        t('admin.participants.matchFiltered.many', {
+          shown: 1,
+          total: TOTAL_ROWS,
+        }),
+      ),
     ).toBeVisible();
     // In the URL, so the view can be sent to a colleague.
     await expect(page).toHaveURL(/[?&]search=okonkwo%20amina/);
@@ -102,11 +151,20 @@ test.describe('participant overview', () => {
     ).toBeVisible();
     await expect(page.getByRole('row', { name: /Adeyemi/ })).toBeHidden();
     await expect(
-      page.getByText(`1 of ${TOTAL_ROWS} registrations`),
+      page.getByText(
+        // The noun agrees with the number it follows, which in a filtered
+        // count is the total — "1 of 28 registrations".
+        t('admin.participants.matchFiltered.many', {
+          shown: 1,
+          total: TOTAL_ROWS,
+        }),
+      ),
     ).toBeVisible();
 
     await page.getByRole('button', { name: /^All \(/ }).click();
-    await page.getByRole('button', { name: 'Name' }).click();
+    await page
+      .getByRole('button', { name: t('admin.participants.colName') })
+      .click();
 
     // Ascending by surname: Adeyemi comes before every filler person.
     const firstRow = page.getByRole('row').nth(1);
@@ -133,22 +191,26 @@ test.describe('participant overview', () => {
     await expect(detail).toContainText('Leipzig');
     // Confirmed, so a date rather than "not yet" — and that is what makes
     // reinstating able to restore the confirmation later.
-    await expect(detail).not.toContainText('not yet');
+    await expect(detail).not.toContainText(t('admin.participants.notYet'));
     // Linkable: the opened registration is part of the address.
     await expect(page).toHaveURL(/[?&]selected=/);
 
     page.once('dialog', (dialog) => void dialog.accept());
-    await detail.getByRole('button', { name: 'Cancel registration' }).click();
+    await detail
+      .getByRole('button', { name: t('admin.participants.cancelRegistration') })
+      .click();
 
-    await expect(detail).toContainText('cancelled');
+    await expect(detail).toContainText(t('registration.status.cancelled'));
     await expect(
       page.getByRole('button', { name: /^Cancelled \(2\)/ }),
     ).toBeVisible();
 
-    await detail.getByRole('button', { name: 'Reinstate' }).click();
+    await detail
+      .getByRole('button', { name: t('admin.participants.reinstate') })
+      .click();
 
     // Back to confirmed, because the participant had confirmed themselves.
-    await expect(detail).toContainText('confirmed');
+    await expect(detail).toContainText(t('registration.status.confirmed'));
     await expect(
       page.getByRole('button', { name: /^Cancelled \(1\)/ }),
     ).toBeVisible();
@@ -159,12 +221,12 @@ test.describe('participant overview', () => {
 
     await page
       .getByRole('row', { name: new RegExp(seeded.eventName) })
-      .getByRole('link', { name: 'Participants', exact: true })
+      .getByRole('link', { name: t('admin.participants.title'), exact: true })
       .click();
 
     await expect(page).toHaveURL(/\/participants$/);
     await expect(
-      page.getByRole('heading', { name: 'Participants' }),
+      page.getByRole('heading', { name: t('admin.participants.title') }),
     ).toBeVisible();
   });
 });

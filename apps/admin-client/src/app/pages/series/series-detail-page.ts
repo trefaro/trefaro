@@ -8,11 +8,19 @@ import {
   signal,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import type { ApiError } from '@trefaro/shared-http';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { problemOf, type ApiError, type Problem } from '@trefaro/shared-http';
+import { TranslationService } from '@trefaro/shared-i18n';
 import type { EventSeries, OrganizerEvent } from '@trefaro/shared-models';
-import { formatEventPeriod, hasEnded } from '@trefaro/shared-models';
+import {
+  eventSeriesStatusKey,
+  eventStatusKey,
+  formatEventPeriod,
+  hasEnded,
+} from '@trefaro/shared-models';
 import { EventSeriesAdminService } from '../../features/event-series/event-series-admin.service';
 import { EventsAdminService } from '../../features/events/events-admin.service';
+import { eventTypeKey } from '../../features/i18n/labels';
 
 /**
  * One event series with its events, split into upcoming and past (FR 2.3).
@@ -28,10 +36,15 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
 @Component({
   selector: 'trefaro-series-detail-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, TranslocoPipe],
   template: `
-    @if (error()) {
-      <p class="error" role="alert">{{ error() }}</p>
+    @if (error(); as problem) {
+      <p class="error" role="alert">
+        {{ problem.key | transloco }}
+        @if (problem.detail; as detail) {
+          <span class="error__detail">{{ detail }}</span>
+        }
+      </p>
     }
 
     @if (series(); as item) {
@@ -40,7 +53,7 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
           <h1>{{ item.name }}</h1>
           <p class="meta">
             <span class="status" [class]="'status--' + item.status">
-              {{ item.status }}
+              {{ seriesStatusKey(item.status) | transloco }}
             </span>
             <code>/series/{{ item.slug }}</code>
           </p>
@@ -50,36 +63,37 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
             class="button"
             [routerLink]="['/series', item.id, 'events', 'new']"
           >
-            New event
+            {{ 'admin.events.new' | transloco }}
           </a>
           <a [routerLink]="['/series', item.id, 'invitations']">
-            Invite former participants
+            {{ 'admin.invitations.title' | transloco }}
           </a>
-          <a [routerLink]="['/series', item.id, 'edit']">Edit series</a>
+          <a [routerLink]="['/series', item.id, 'edit']">
+            {{ 'admin.series.editSeries' | transloco }}
+          </a>
           <button type="button" (click)="removeSeries(item)">
-            Delete series
+            {{ 'admin.series.deleteSeries' | transloco }}
           </button>
         </div>
       </header>
 
       <section>
-        <h2>Upcoming events</h2>
+        <h2>{{ 'admin.series.upcoming' | transloco }}</h2>
         @if (upcoming().length === 0) {
           <p class="meta">
             {{
-              loading()
-                ? 'Loading…'
-                : 'No upcoming events. Create the first one.'
+              (loading() ? 'common.loading' : 'admin.series.noUpcoming')
+                | transloco
             }}
           </p>
         } @else {
           <table>
             <thead>
               <tr>
-                <th>Name</th>
-                <th>When</th>
-                <th>Type</th>
-                <th>Status</th>
+                <th>{{ 'admin.series.name' | transloco }}</th>
+                <th>{{ 'admin.series.when' | transloco }}</th>
+                <th>{{ 'admin.series.type' | transloco }}</th>
+                <th>{{ 'admin.series.status' | transloco }}</th>
                 <th></th>
               </tr>
             </thead>
@@ -92,10 +106,10 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
                     </a>
                   </td>
                   <td>{{ when(event) }}</td>
-                  <td>{{ event.eventType }}</td>
+                  <td>{{ typeKey(event.eventType) | transloco }}</td>
                   <td>
                     <span class="status" [class]="'status--' + event.status">
-                      {{ event.status }}
+                      {{ statusKey(event.status) | transloco }}
                     </span>
                   </td>
                   <td class="actions">
@@ -108,22 +122,22 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
                         'participants',
                       ]"
                     >
-                      Participants
+                      {{ 'admin.participants.title' | transloco }}
                     </a>
                     @if (event.status === 'published') {
                       <button type="button" (click)="setStatus(event, 'draft')">
-                        Unpublish
+                        {{ 'admin.series.unpublish' | transloco }}
                       </button>
                     } @else {
                       <button
                         type="button"
                         (click)="setStatus(event, 'published')"
                       >
-                        Publish
+                        {{ 'admin.series.publish' | transloco }}
                       </button>
                     }
                     <button type="button" (click)="removeEvent(event)">
-                      Delete
+                      {{ 'admin.common.delete' | transloco }}
                     </button>
                   </td>
                 </tr>
@@ -135,14 +149,14 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
 
       @if (past().length > 0) {
         <section>
-          <h2>Past events</h2>
+          <h2>{{ 'admin.series.past' | transloco }}</h2>
           <table>
             <thead>
               <tr>
-                <th>Name</th>
-                <th>When</th>
-                <th>Type</th>
-                <th>Status</th>
+                <th>{{ 'admin.series.name' | transloco }}</th>
+                <th>{{ 'admin.series.when' | transloco }}</th>
+                <th>{{ 'admin.series.type' | transloco }}</th>
+                <th>{{ 'admin.series.status' | transloco }}</th>
                 <th></th>
               </tr>
             </thead>
@@ -155,10 +169,10 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
                     </a>
                   </td>
                   <td>{{ when(event) }}</td>
-                  <td>{{ event.eventType }}</td>
+                  <td>{{ typeKey(event.eventType) | transloco }}</td>
                   <td>
                     <span class="status" [class]="'status--' + event.status">
-                      {{ event.status }}
+                      {{ statusKey(event.status) | transloco }}
                     </span>
                   </td>
                   <td class="actions">
@@ -173,7 +187,7 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
                         'participants',
                       ]"
                     >
-                      Participants
+                      {{ 'admin.participants.title' | transloco }}
                     </a>
                   </td>
                 </tr>
@@ -183,7 +197,9 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
         </section>
       }
 
-      <p><a routerLink="/">Back to all series</a></p>
+      <p>
+        <a routerLink="/">{{ 'admin.series.backToList' | transloco }}</a>
+      </p>
     }
   `,
   styles: `
@@ -272,11 +288,16 @@ export class SeriesDetailPage {
   private readonly seriesAdmin = inject(EventSeriesAdminService);
   private readonly eventsAdmin = inject(EventsAdminService);
   private readonly router = inject(Router);
+  private readonly i18n = inject(TranslationService);
 
   protected readonly series = signal<EventSeries | null>(null);
   protected readonly events = signal<readonly OrganizerEvent[]>([]);
   protected readonly loading = signal(true);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
+
+  protected readonly seriesStatusKey = eventSeriesStatusKey;
+  protected readonly statusKey = eventStatusKey;
+  protected readonly typeKey = eventTypeKey;
 
   /**
    * Split on the end, not the start: a three-day conference is not "past" on
@@ -300,7 +321,7 @@ export class SeriesDetailPage {
   }
 
   protected when(event: OrganizerEvent): string {
-    return formatEventPeriod(event);
+    return formatEventPeriod(event, this.i18n.locale());
   }
 
   protected setStatus(
@@ -314,7 +335,10 @@ export class SeriesDetailPage {
   }
 
   protected removeEvent(event: OrganizerEvent): void {
-    if (!confirm(`Delete the event "${event.name}"?`)) return;
+    const question = this.i18n.translate('admin.series.confirmDeleteEvent', {
+      name: event.name,
+    });
+    if (!confirm(question)) return;
     void this.run(async () => {
       await this.eventsAdmin.remove(event.id);
       await this.load(this.id());
@@ -323,11 +347,22 @@ export class SeriesDetailPage {
 
   protected removeSeries(series: EventSeries): void {
     const count = this.events().length;
+    // Two sentences rather than one with a clause in it: a plural is a second
+    // key here (the same shape as the participant client's counted labels), and
+    // a series with no events must not be told about the events it has none of.
     const consequence =
       count === 0
         ? ''
-        : ` Its ${count} event${count === 1 ? '' : 's'} will be deleted too.`;
-    if (!confirm(`Delete the event series "${series.name}"?${consequence}`)) {
+        : ` ${this.i18n.translate(
+            count === 1
+              ? 'admin.series.confirmDeleteEvents.one'
+              : 'admin.series.confirmDeleteEvents.many',
+            { count },
+          )}`;
+    const question = this.i18n.translate('admin.series.confirmDelete', {
+      name: series.name,
+    });
+    if (!confirm(`${question}${consequence}`)) {
       return;
     }
 
@@ -350,8 +385,8 @@ export class SeriesDetailPage {
     } catch (error: unknown) {
       this.error.set(
         (error as ApiError)?.status === 404
-          ? 'This event series no longer exists.'
-          : ((error as ApiError)?.message ?? 'Loading failed.'),
+          ? { key: 'admin.series.errorMissing', detail: null }
+          : problemOf(error, 'admin.common.loadingFailed'),
       );
     } finally {
       this.loading.set(false);
@@ -363,7 +398,7 @@ export class SeriesDetailPage {
     try {
       await action();
     } catch (error: unknown) {
-      this.error.set((error as ApiError)?.message ?? 'The request failed.');
+      this.error.set(problemOf(error, 'admin.common.requestFailed'));
     }
   }
 }

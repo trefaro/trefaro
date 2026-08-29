@@ -5,6 +5,7 @@ import {
   RouterLinkActive,
   RouterOutlet,
 } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { AppConfigService } from '@trefaro/shared-config';
 import { LanguageSwitcher } from '@trefaro/shared-i18n';
 import { PluginSlot } from '@trefaro/shared-plugins';
@@ -30,6 +31,7 @@ import { AuthService } from './features/auth/auth.service';
     RouterLinkActive,
     PluginSlot,
     LanguageSwitcher,
+    TranslocoPipe,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',

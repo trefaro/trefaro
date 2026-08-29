@@ -7,6 +7,7 @@ import {
   seedParticipants,
   type SeededEvent,
 } from './support/registration-fixtures';
+import { t } from './support/catalogue';
 
 /**
  * Inviting former participants in the browser (FR 2.4, E15) — AP 12.
@@ -54,20 +55,23 @@ test.describe('inviting former participants', () => {
   const open = (page: Page) =>
     page.goto(`/series/${seeded.seriesId}/invitations`);
 
-  const who = (page: Page) => page.getByRole('region', { name: 'Who' });
-  const what = (page: Page) => page.getByRole('region', { name: 'What' });
-  const log = (page: Page) => page.getByRole('region', { name: 'Sent before' });
+  const who = (page: Page) =>
+    page.getByRole('region', { name: t('admin.invitations.who') });
+  const what = (page: Page) =>
+    page.getByRole('region', { name: t('admin.invitations.what') });
+  const log = (page: Page) =>
+    page.getByRole('region', { name: t('admin.invitations.sentBefore') });
 
   test('is reachable from the series and lists only who may be written to', async ({
     page,
   }) => {
     await page.goto(`/series/${seeded.seriesId}`);
     await page
-      .getByRole('link', { name: 'Invite former participants' })
+      .getByRole('link', { name: t('admin.invitations.title') })
       .click();
 
     await expect(
-      page.getByRole('heading', { name: 'Invite former participants' }),
+      page.getByRole('heading', { name: t('admin.invitations.title') }),
     ).toBeVisible();
 
     const rows = who(page).getByRole('row');
@@ -93,7 +97,7 @@ test.describe('inviting former participants', () => {
 
     // The whole difference between this and a newsletter: every recipient comes
     // from the list.
-    await expect(page.getByLabel('E-mail')).toHaveCount(0);
+    await expect(page.getByLabel(t('admin.invitations.email'))).toHaveCount(0);
     await expect(page.locator('input[type="email"]')).toHaveCount(0);
   });
 
@@ -114,11 +118,13 @@ test.describe('inviting former participants', () => {
     await open(page);
 
     const send = what(page).getByRole('button');
-    await expect(send).toHaveText('Select somebody first');
+    await expect(send).toHaveText(t('admin.invitations.selectFirst'));
     await expect(send).toBeDisabled();
 
     await who(page).getByRole('checkbox').first().check();
-    await expect(send).toHaveText('Send to 1 address');
+    await expect(send).toHaveText(
+      t('admin.invitations.sendTo.one', { count: 1 }),
+    );
     await expect(send).toBeEnabled();
   });
 
@@ -127,22 +133,30 @@ test.describe('inviting former participants', () => {
   }) => {
     await open(page);
 
-    await who(page).getByRole('button', { name: 'All' }).click();
+    await who(page)
+      .getByRole('button', { name: t('admin.invitations.all') })
+      .click();
     await expect(what(page).getByRole('button')).toHaveText(
       `Send to ${CONFIRMED.length} addresses`,
     );
 
-    await who(page).getByRole('button', { name: 'None' }).click();
+    await who(page)
+      .getByRole('button', { name: t('admin.invitations.none') })
+      .click();
     await expect(what(page).getByRole('button')).toHaveText(
-      'Select somebody first',
+      t('admin.invitations.selectFirst'),
     );
   });
 
   test('narrows the list by a search', async ({ page }) => {
     await open(page);
 
-    await who(page).getByLabel('Search').fill('zimmermann');
-    await who(page).getByRole('button', { name: 'Search' }).click();
+    await who(page)
+      .getByLabel(t('admin.invitations.search'))
+      .fill('zimmermann');
+    await who(page)
+      .getByRole('button', { name: t('admin.invitations.search') })
+      .click();
 
     await expect(who(page).getByText('Zimmermann, Dieter')).toBeVisible();
     await expect(who(page).getByText('Okonkwo, Amina')).toBeHidden();
@@ -153,24 +167,32 @@ test.describe('inviting former participants', () => {
   }) => {
     await open(page);
 
-    await who(page).getByRole('button', { name: 'All' }).click();
-    await what(page).getByLabel('Subject').fill('Come to the next one');
+    await who(page)
+      .getByRole('button', { name: t('admin.invitations.all') })
+      .click();
     await what(page)
-      .getByLabel('Message')
+      .getByLabel(t('admin.invitations.subject'))
+      .fill('Come to the next one');
+    await what(page)
+      .getByLabel(t('admin.invitations.message'))
       .fill('we would love to see you again.\n\nRegistration is open.');
     await what(page).getByRole('button').click();
 
     // The answer comes before the mails do, so the page says so.
-    await expect(page.getByRole('status')).toContainText('on their way');
-    await expect(page.getByRole('status')).toContainText('leave this page');
+    await expect(page.getByRole('status')).toContainText(
+      t('admin.invitations.onTheWay.many', { count: CONFIRMED.length }),
+    );
 
     const row = log(page).getByRole('row', { name: /Come to the next one/ });
     await expect(row).toBeVisible();
     // And it ends up saying they went out, without the organizer doing
     // anything: the page polls until nothing is pending.
-    await expect(row).toContainText(`${CONFIRMED.length} sent`, {
-      timeout: 30_000,
-    });
+    await expect(row).toContainText(
+      t('admin.invitations.progressDone', { sent: CONFIRMED.length }),
+      {
+        timeout: 30_000,
+      },
+    );
   });
 
   test('keeps the form and the selection when the message is empty', async ({
@@ -178,8 +200,12 @@ test.describe('inviting former participants', () => {
   }) => {
     await open(page);
 
-    await who(page).getByRole('button', { name: 'All' }).click();
-    await what(page).getByLabel('Subject').fill('Only a subject');
+    await who(page)
+      .getByRole('button', { name: t('admin.invitations.all') })
+      .click();
+    await what(page)
+      .getByLabel(t('admin.invitations.subject'))
+      .fill('Only a subject');
     await what(page).getByRole('button').click();
 
     // Nothing was sent, so the selection is still the organizer's to use.
@@ -193,7 +219,7 @@ test.describe('inviting former participants', () => {
   test('offers the events of the series to invite to', async ({ page }) => {
     await open(page);
 
-    const invite = what(page).getByLabel('Invite to');
+    const invite = what(page).getByLabel(t('admin.invitations.inviteTo'));
     await expect(invite).toBeVisible();
     // The event of the fixture is offered by name; selected by its id, which is
     // what the invitation stores.
@@ -210,7 +236,7 @@ test.describe('inviting former participants', () => {
     await open(page);
 
     await expect(
-      log(page).getByText('Nothing has been sent for this series yet.'),
+      log(page).getByText(t('admin.invitations.nothingSent')),
     ).toBeVisible();
   });
 });

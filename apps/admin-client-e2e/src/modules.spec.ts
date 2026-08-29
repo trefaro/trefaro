@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { ADMIN_STORAGE_STATE } from './support/admin-session';
+import { t } from './support/catalogue';
 
 /**
  * The module administration in the browser (FR 1.5, UC 1) — phase 2, AP 4.
@@ -34,9 +35,13 @@ interface Module {
 
 async function openModules(page: Page): Promise<void> {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Modules' }).click();
+  await page.getByRole('link', { name: t('admin.modules.title') }).click();
   await expect(
-    page.getByRole('heading', { level: 1, name: 'Modules', exact: true }),
+    page.getByRole('heading', {
+      level: 1,
+      name: t('admin.modules.title'),
+      exact: true,
+    }),
   ).toBeVisible();
   // The table is filled from `GET /api/admin/modules`; without waiting for a row
   // every assertion below would race it.
@@ -77,10 +82,14 @@ test.describe('the module administration in the browser', () => {
     // came here for. A page built from `/api/config` could not show it at all.
     await expect(row(page, 'room-planning')).toBeVisible();
     await expect(
-      row(page, 'room-planning').getByRole('button', { name: 'Enable' }),
+      row(page, 'room-planning').getByRole('button', {
+        name: t('admin.modules.enable'),
+      }),
     ).toBeVisible();
     await expect(
-      row(page, 'media-links').getByRole('button', { name: 'Disable' }),
+      row(page, 'media-links').getByRole('button', {
+        name: t('admin.modules.disable'),
+      }),
     ).toBeVisible();
   });
 
@@ -89,11 +98,15 @@ test.describe('the module administration in the browser', () => {
   }) => {
     await openModules(page);
 
-    await expect(row(page, 'room-planning')).toContainText('Plug-in');
+    await expect(row(page, 'room-planning')).toContainText(
+      t('admin.modules.plugin'),
+    );
     await expect(row(page, 'room-planning')).toContainText(
       '/api/plugins/room-planning/main.js',
     );
-    await expect(row(page, 'media-links')).toContainText('Core module');
+    await expect(row(page, 'media-links')).toContainText(
+      t('admin.modules.core'),
+    );
   });
 
   test('shows no module this version does not ship (E21)', async ({ page }) => {
@@ -125,29 +138,41 @@ test.describe('the module administration in the browser', () => {
 
     try {
       await openModules(page);
-      await row(page, 'push').getByRole('button', { name: 'Enable' }).click();
+      await row(page, 'push')
+        .getByRole('button', { name: t('admin.modules.enable') })
+        .click();
 
       // The state in the row is what the server answered, not what was clicked.
       await expect(
-        row(page, 'push').getByRole('button', { name: 'Disable' }),
+        row(page, 'push').getByRole('button', {
+          name: t('admin.modules.disable'),
+        }),
       ).toBeVisible();
-      await expect(row(page, 'push')).toContainText('enabled');
+      await expect(row(page, 'push')).toContainText(t('admin.modules.enabled'));
       // And the page says what a client has to do for the change to show up in
       // it (E20) — rather than leaving an organizer waiting for a redraw.
-      await expect(page.getByRole('status')).toContainText('Reload');
+      await expect(page.getByRole('status')).toContainText(
+        t('admin.modules.switchedOn', { name: t('modules.push.title') }),
+      );
 
       // It really was written: a reload finds it on.
       await page.reload();
-      await expect(row(page, 'push')).toContainText('enabled');
+      await expect(row(page, 'push')).toContainText(t('admin.modules.enabled'));
       expect((await storedModule(page, 'push')).enabled).toBe(true);
 
-      await row(page, 'push').getByRole('button', { name: 'Disable' }).click();
+      await row(page, 'push')
+        .getByRole('button', { name: t('admin.modules.disable') })
+        .click();
 
       await expect(
-        row(page, 'push').getByRole('button', { name: 'Enable' }),
+        row(page, 'push').getByRole('button', {
+          name: t('admin.modules.enable'),
+        }),
       ).toBeVisible();
       // Switching off deletes nothing, and the page is the place that says so.
-      await expect(page.getByRole('status')).toContainText('data is untouched');
+      await expect(page.getByRole('status')).toContainText(
+        t('admin.modules.switchedOff', { name: t('modules.push.title') }),
+      );
     } finally {
       await restore(page, before);
     }

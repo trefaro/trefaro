@@ -6,8 +6,9 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { AppConfigService } from '@trefaro/shared-config';
-import type { ApiError } from '@trefaro/shared-http';
+import { problemOf, type Problem } from '@trefaro/shared-http';
 import { TranslationService } from '@trefaro/shared-i18n';
 import type {
   LocaleCatalogueDetail,
@@ -79,33 +80,33 @@ interface LocaleRow {
 @Component({
   selector: 'trefaro-languages-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [TranslocoPipe],
   template: `
-    <h1>Languages</h1>
-    <p class="lead">
-      Every language this instance can serve. English is the list of keys and
-      the last resort: a key nobody has translated yet is shown in English
-      rather than left blank, so a language is usable long before it is
-      complete. What you change here takes effect on the next load of either
-      client — nothing is rebuilt.
-    </p>
+    <h1>{{ 'admin.languages.title' | transloco }}</h1>
+    <p class="lead">{{ 'admin.languages.lead' | transloco }}</p>
 
-    @if (error()) {
-      <p class="error" role="alert">{{ error() }}</p>
+    @if (error(); as problem) {
+      <p class="error" role="alert">
+        {{ problem.key | transloco }}
+        @if (problem.detail; as detail) {
+          <span class="error__detail">{{ detail }}</span>
+        }
+      </p>
     }
     @if (notice()) {
       <p class="notice" role="status">{{ notice() }}</p>
     }
 
     <section>
-      <h2>Offered languages</h2>
+      <h2>{{ 'admin.languages.offered' | transloco }}</h2>
 
-      <table aria-label="Languages">
+      <table [attr.aria-label]="'admin.languages.title' | transloco">
         <thead>
           <tr>
-            <th>Language</th>
-            <th>Translated</th>
-            <th>Offered</th>
-            <th>Default</th>
+            <th>{{ 'admin.languages.colLanguage' | transloco }}</th>
+            <th>{{ 'admin.languages.colTranslated' | transloco }}</th>
+            <th>{{ 'admin.languages.colOffered' | transloco }}</th>
+            <th>{{ 'admin.languages.colDefault' | transloco }}</th>
             <th></th>
           </tr>
         </thead>
@@ -116,15 +117,27 @@ interface LocaleRow {
                 <strong>{{ row.name }}</strong>
                 <br /><code>{{ row.summary.locale }}</code>
                 @if (!row.summary.shipped) {
-                  <br /><small>added by this organization</small>
+                  <br /><small>
+                    {{ 'admin.languages.addedByOrg' | transloco }}
+                  </small>
                 }
               </td>
               <td>
                 <span class="percent">{{ row.percent }}%</span>
                 <br /><small>
-                  {{ row.summary.translated }} of {{ row.summary.total }} keys
+                  {{
+                    'admin.languages.keysOf'
+                      | transloco
+                        : {
+                            translated: row.summary.translated,
+                            total: row.summary.total,
+                          }
+                  }}
                   @if (row.summary.overrides > 0) {
-                    · {{ row.summary.overrides }} written here
+                    {{
+                      'admin.languages.writtenHere'
+                        | transloco: { count: row.summary.overrides }
+                    }}
                   }
                 </small>
               </td>
@@ -137,7 +150,10 @@ interface LocaleRow {
                     (change)="setOffered(row.summary.locale, $event)"
                   />
                   <span class="visually-hidden">
-                    Offer {{ row.name }} to visitors
+                    {{
+                      'admin.languages.offerVisitors'
+                        | transloco: { name: row.name }
+                    }}
                   </span>
                 </label>
               </td>
@@ -151,7 +167,10 @@ interface LocaleRow {
                     (change)="setDefault(row.summary.locale)"
                   />
                   <span class="visually-hidden">
-                    Make {{ row.name }} the default language
+                    {{
+                      'admin.languages.makeDefault'
+                        | transloco: { name: row.name }
+                    }}
                   </span>
                 </label>
               </td>
@@ -161,13 +180,18 @@ interface LocaleRow {
                   [disabled]="busy() !== null"
                   (click)="edit(row.summary.locale)"
                 >
-                  Translate
+                  {{ 'admin.languages.translate' | transloco }}
                 </button>
               </td>
             </tr>
           } @empty {
             <tr>
-              <td colspan="5">{{ loading() ? 'Loading…' : 'No language.' }}</td>
+              <td colspan="5">
+                {{
+                  (loading() ? 'common.loading' : 'admin.languages.noLanguage')
+                    | transloco
+                }}
+              </td>
             </tr>
           }
         </tbody>
@@ -179,17 +203,19 @@ interface LocaleRow {
           [disabled]="!localesDirty() || busy() !== null"
           (click)="saveLocales()"
         >
-          Save offered languages
+          {{ 'admin.languages.saveOffered' | transloco }}
         </button>
         @if (localesDirty()) {
           <button type="button" [disabled]="busy() !== null" (click)="reload()">
-            Discard
+            {{ 'admin.languages.discard' | transloco }}
           </button>
         }
       </p>
 
       <form class="add" (submit)="addLanguage($event)">
-        <label for="new-locale">Add a language</label>
+        <label for="new-locale">
+          {{ 'admin.languages.addLanguage' | transloco }}
+        </label>
         <input
           id="new-locale"
           name="new-locale"
@@ -199,11 +225,17 @@ interface LocaleRow {
           autocomplete="off"
           aria-describedby="new-locale-hint"
         />
-        <button type="submit" [disabled]="busy() !== null">Add</button>
+        <button type="submit" [disabled]="busy() !== null">
+          {{ 'admin.languages.add' | transloco }}
+        </button>
+        <!-- The three example tags travel as parameters: they are identifiers,
+             not words, and a key with them inside would invite translating
+             them. -->
         <small id="new-locale-hint">
-          A language tag such as <code>fr</code>, <code>pt-BR</code> or
-          <code>tr</code>. It appears here immediately so you can translate it;
-          visitors see it once it is offered and saved.
+          {{
+            'admin.languages.addHint'
+              | transloco: { first: 'fr', second: 'pt-BR', third: 'tr' }
+          }}
         </small>
       </form>
     </section>
@@ -226,25 +258,25 @@ interface LocaleRow {
               [checked]="onlyMissing()"
               (change)="onlyMissing.set(asChecked($event))"
             />
-            Only untranslated keys
+            {{ 'admin.languages.onlyMissing' | transloco }}
           </label>
 
           <label class="search">
-            <span>Search</span>
+            <span>{{ 'admin.languages.search' | transloco }}</span>
             <input
               type="search"
               [value]="search()"
               (input)="search.set(asValue($event))"
-              placeholder="key or English text"
+              [placeholder]="'admin.languages.searchPlaceholder' | transloco"
             />
           </label>
 
           <button type="button" [disabled]="!detail()" (click)="exportFile()">
-            Export JSON
+            {{ 'admin.languages.exportJson' | transloco }}
           </button>
 
           <label class="import">
-            <span>Import JSON</span>
+            <span>{{ 'admin.languages.importJson' | transloco }}</span>
             <input
               type="file"
               accept="application/json,.json"
@@ -268,16 +300,19 @@ interface LocaleRow {
               [disabled]="busy() !== null"
               (click)="discardDrafts()"
             >
-              Discard changes
+              {{ 'admin.design.discard' | transloco }}
             </button>
           }
         </p>
 
-        <table class="entries" aria-label="Translations">
+        <table
+          class="entries"
+          [attr.aria-label]="'admin.languages.tableEntries' | transloco"
+        >
           <thead>
             <tr>
-              <th>Key</th>
-              <th>English</th>
+              <th>{{ 'admin.languages.colKey' | transloco }}</th>
+              <th>{{ 'admin.languages.colEnglish' | transloco }}</th>
               <th>{{ languageName(locale) }}</th>
               <th></th>
             </tr>
@@ -301,7 +336,7 @@ interface LocaleRow {
                 </td>
                 <td>
                   <span [class]="'state state--' + row.entry.state">
-                    {{ stateLabel(row.entry.state) }}
+                    {{ stateKey(row.entry.state) | transloco }}
                   </span>
                   @if (row.entry.override !== null) {
                     <br /><button
@@ -309,7 +344,7 @@ interface LocaleRow {
                       [disabled]="busy() !== null"
                       (click)="resetKey(row.entry.key)"
                     >
-                      Reset
+                      {{ 'admin.languages.reset' | transloco }}
                     </button>
                   }
                 </td>
@@ -318,9 +353,10 @@ interface LocaleRow {
               <tr>
                 <td colspan="4">
                   {{
-                    detail()
-                      ? 'No key matches this filter.'
-                      : 'Loading this language…'
+                    (detail()
+                      ? 'admin.languages.noKeyMatches'
+                      : 'admin.languages.loadingLanguage'
+                    ) | transloco
                   }}
                 </td>
               </tr>
@@ -482,7 +518,15 @@ export class LanguagesPage {
   protected readonly detail = signal<LocaleCatalogueDetail | null>(null);
   protected readonly selected = signal<string | null>(null);
   protected readonly loading = signal(true);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
+  /**
+   * A finished sentence, not a key.
+   *
+   * Unlike every other notice in this client, this one is assembled from a
+   * variable number of clauses ("3 written, 1 reset, 2 unknown keys ignored"),
+   * so there is no single key to hand the template. It is the record of an
+   * action at the moment it happened, and it keeps the language it happened in.
+   */
   protected readonly notice = signal<string | null>(null);
   /** What is being written right now, so one click disables every button. */
   protected readonly busy = signal<string | null>(null);
@@ -572,9 +616,15 @@ export class LanguagesPage {
    */
   /** The save button's own text, so the template holds no arithmetic. */
   protected readonly saveLabel = computed(() => {
+    this.i18n.locale();
     const count = this.dirtyRows().length;
-    if (count === 0) return 'Save changes';
-    return count === 1 ? 'Save 1 change' : `Save ${count} changes`;
+    if (count === 0) return this.i18n.translate('admin.languages.saveChanges');
+    return this.i18n.translate(
+      count === 1
+        ? 'admin.languages.saveCount.one'
+        : 'admin.languages.saveCount.many',
+      { count },
+    );
   });
 
   protected readonly dirtyRows = computed<readonly EditorRow[]>(() => {
@@ -595,10 +645,8 @@ export class LanguagesPage {
     return translationCompleteness(summary);
   }
 
-  protected stateLabel(state: TranslationEntry['state']): string {
-    if (state === 'overridden') return 'written here';
-    if (state === 'shipped') return 'from the image';
-    return 'untranslated';
+  protected stateKey(state: TranslationEntry['state']): string {
+    return `admin.languages.state.${state}`;
   }
 
   /** Reads a value out of an input event without a cast at every call site. */
@@ -652,16 +700,18 @@ export class LanguagesPage {
     this.notice.set(null);
 
     if (!isLocaleTag(tag)) {
-      this.error.set(
-        'A language tag looks like fr, de-AT or pt-BR — two or three letters, then up to two subtags.',
-      );
+      this.error.set({ key: 'admin.languages.errorTag', detail: null });
       return;
     }
 
     const overview = this.overview();
     if (overview?.locales.some((summary) => summary.locale === tag)) {
       this.newTag.set('');
-      this.notice.set(`${this.languageName(tag)} is already on the list.`);
+      this.notice.set(
+        this.i18n.translate('admin.languages.alreadyOnList', {
+          name: this.languageName(tag),
+        }),
+      );
       void this.edit(tag);
       return;
     }
@@ -672,7 +722,9 @@ export class LanguagesPage {
     if (overview) this.overview.set(this.merged(overview));
     this.newTag.set('');
     this.notice.set(
-      `${this.languageName(tag)} is ready to translate. Tick “Offered” and save to show it to visitors.`,
+      this.i18n.translate('admin.languages.readyToTranslate', {
+        name: this.languageName(tag),
+      }),
     );
     void this.edit(tag);
   }
@@ -685,7 +737,7 @@ export class LanguagesPage {
     try {
       this.detail.set(await this.translations.detail(locale));
     } catch (error: unknown) {
-      this.report(error, 'This language could not be loaded.');
+      this.report(error, 'admin.languages.errorDetail');
     }
   }
 
@@ -703,11 +755,9 @@ export class LanguagesPage {
       // This client's own switcher reads the cached configuration, so it has to
       // re-read before the new language appears in it.
       await this.config.reload();
-      this.notice.set(
-        'Saved. The participant client offers the new set the next time it loads (nothing pushes configuration to a running client).',
-      );
+      this.notice.set(this.i18n.translate('admin.languages.savedLocales'));
     } catch (error: unknown) {
-      this.report(error, 'The offered languages could not be saved.');
+      this.report(error, 'admin.languages.errorSaveLocales');
     } finally {
       this.busy.set(null);
     }
@@ -729,9 +779,9 @@ export class LanguagesPage {
       const result = await this.translations.write(locale, entries);
       this.drafts.set(new Map());
       await Promise.all([this.refreshDetail(locale), this.refreshOverview()]);
-      this.notice.set(describe(result));
+      this.notice.set(this.describe(result));
     } catch (error: unknown) {
-      this.report(error, 'The translations could not be saved.');
+      this.report(error, 'admin.languages.errorSaveDrafts');
     } finally {
       this.busy.set(null);
     }
@@ -752,9 +802,11 @@ export class LanguagesPage {
       next.delete(key);
       this.drafts.set(next);
       await Promise.all([this.refreshDetail(locale), this.refreshOverview()]);
-      this.notice.set(`${key} is back to what the image ships.`);
+      this.notice.set(
+        this.i18n.translate('admin.languages.resetDone', { key }),
+      );
     } catch (error: unknown) {
-      this.report(error, 'The key could not be reset.');
+      this.report(error, 'admin.languages.errorReset');
     } finally {
       this.busy.set(null);
     }
@@ -803,9 +855,14 @@ export class LanguagesPage {
       const result = await this.translations.write(locale, entries);
       this.drafts.set(new Map());
       await Promise.all([this.refreshDetail(locale), this.refreshOverview()]);
-      this.notice.set(describe(result));
+      this.notice.set(this.describe(result));
     } catch (error: unknown) {
-      this.report(error, 'The file could not be imported.');
+      this.report(
+        error,
+        error instanceof CatalogueFileError
+          ? error.key
+          : 'admin.languages.errorImport',
+      );
     } finally {
       this.busy.set(null);
     }
@@ -823,7 +880,7 @@ export class LanguagesPage {
       );
       this.draftDefault.set(overview.defaultLocale);
     } catch (error: unknown) {
-      this.report(error, 'The languages could not be loaded.');
+      this.report(error, 'admin.languages.errorLoad');
     } finally {
       this.loading.set(false);
     }
@@ -888,25 +945,66 @@ export class LanguagesPage {
     });
   }
 
-  private report(error: unknown, fallback: string): void {
-    this.error.set((error as ApiError)?.message ?? fallback);
+  /** What a write did, in one sentence — the server's counts, not a guess. */
+  private describe(result: TranslationWriteResult): string {
+    const parts: string[] = [];
+    if (result.written > 0) {
+      parts.push(
+        this.i18n.translate('admin.languages.written', {
+          count: result.written,
+        }),
+      );
+    }
+    if (result.reset > 0) {
+      parts.push(
+        this.i18n.translate('admin.languages.resetCount', {
+          count: result.reset,
+        }),
+      );
+    }
+    if (result.unchanged > 0) {
+      parts.push(
+        this.i18n.translate('admin.languages.unchanged', {
+          count: result.unchanged,
+        }),
+      );
+    }
+    if (result.ignored.length > 0) {
+      parts.push(
+        this.i18n.translate(
+          result.ignored.length === 1
+            ? 'admin.languages.ignored.one'
+            : 'admin.languages.ignored.many',
+          { count: result.ignored.length, keys: result.ignored.join(', ') },
+        ),
+      );
+    }
+    return parts.length > 0
+      ? this.i18n.translate('admin.languages.savedSummary', {
+          parts: parts.join(', '),
+        })
+      : this.i18n.translate('admin.languages.nothingChanged');
+  }
+
+  private report(error: unknown, key: string): void {
+    this.error.set(problemOf(error, key));
   }
 }
 
-/** What a write did, in one sentence — the server's counts, not a guess. */
-function describe(result: TranslationWriteResult): string {
-  const parts: string[] = [];
-  if (result.written > 0) parts.push(`${result.written} written`);
-  if (result.reset > 0) parts.push(`${result.reset} reset`);
-  if (result.unchanged > 0) parts.push(`${result.unchanged} unchanged`);
-  if (result.ignored.length > 0) {
-    parts.push(
-      `${result.ignored.length} unknown key${
-        result.ignored.length === 1 ? '' : 's'
-      } ignored (${result.ignored.join(', ')})`,
-    );
+/**
+ * A file this page refused, with the key that says why.
+ *
+ * The reason is written here, so it is this client's sentence and belongs in
+ * the catalogue — unlike a refusal from the server, which arrives in English
+ * beside a key of ours (F77).
+ */
+class CatalogueFileError extends Error {
+  constructor(
+    readonly key: string,
+    readonly params?: Readonly<Record<string, unknown>>,
+  ) {
+    super(key);
   }
-  return parts.length > 0 ? `Saved: ${parts.join(', ')}.` : 'Nothing changed.';
 }
 
 /**
@@ -922,25 +1020,25 @@ function parseCatalogueFile(text: string): Record<string, string> {
   try {
     parsed = JSON.parse(text);
   } catch {
-    throw new Error('That file is not JSON.');
+    throw new CatalogueFileError('admin.languages.importNotJson');
   }
 
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-    throw new Error(
-      'A translation file is one JSON object of keys and texts, such as {"modules.push.title": "…"}.',
-    );
+    throw new CatalogueFileError('admin.languages.importNotObject');
   }
 
   const entries: Record<string, string> = {};
   for (const [key, value] of Object.entries(parsed)) {
     if (typeof value !== 'string') {
-      throw new Error(`The value of ${key} is not a text.`);
+      throw new CatalogueFileError('admin.languages.importValueNotText', {
+        key,
+      });
     }
     entries[key] = value;
   }
 
   if (Object.keys(entries).length === 0) {
-    throw new Error('That file contains no key.');
+    throw new CatalogueFileError('admin.languages.importEmpty');
   }
   return entries;
 }

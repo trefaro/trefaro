@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { ADMIN_STORAGE_STATE } from './support/admin-session';
+import { t } from './support/catalogue';
 
 /**
  * The language administration in a browser (chapter 4) — AP 7.
@@ -70,10 +71,12 @@ test.describe('language administration', () => {
   }) => {
     await page.goto('/languages');
     await expect(
-      page.getByRole('heading', { level: 1, name: 'Languages' }),
+      page.getByRole('heading', { level: 1, name: t('admin.languages.title') }),
     ).toBeVisible();
 
-    const languages = page.getByRole('table', { name: 'Languages' });
+    const languages = page.getByRole('table', {
+      name: t('admin.languages.title'),
+    });
     const german = languages.getByRole('row').filter({ hasText: 'German' });
     await expect(german).toBeVisible();
     // English is the key list, so it is complete by definition (E23).
@@ -110,48 +113,72 @@ test.describe('language administration', () => {
 
       try {
         await page.goto('/languages');
-        await page.getByLabel('Add a language').fill(LOCALE);
-        await page.getByRole('button', { name: 'Add', exact: true }).click();
+        await page.getByLabel(t('admin.languages.addLanguage')).fill(LOCALE);
+        await page
+          .getByRole('button', { name: t('admin.languages.add'), exact: true })
+          .click();
 
         // On the list at once, and at nought per cent: a language exists because
         // somebody translated it, and this is the moment before anybody has.
         // Through the labelled table: the editor's own header carries the
         // language's name too, so an unscoped row locator matches two things.
         const row = page
-          .getByRole('table', { name: 'Languages' })
+          .getByRole('table', { name: t('admin.languages.title') })
           .getByRole('row')
           .filter({ hasText: 'Occitan' });
         await expect(row).toBeVisible();
         // `exact`, because a substring match would find the 0 of "20%" later on.
         await expect(row.getByText('0%', { exact: true })).toBeVisible();
+        await expect(row).toContainText(
+          t('admin.languages.keysOf', { translated: 0, total: keys.length }),
+        );
 
         // The editor opened by itself, on the language just added.
         const field = page.getByRole('textbox', { name: key });
         await expect(field).toBeVisible();
         await expect(field).toHaveValue('');
-        await expect(page.getByText('untranslated').first()).toBeVisible();
+        await expect(
+          page.getByText(t('admin.languages.state.missing')).first(),
+        ).toBeVisible();
 
         await field.fill('Lenga occitana');
-        await page.getByRole('button', { name: 'Save 1 change' }).click();
+        await page
+          .getByRole('button', {
+            name: t('admin.languages.saveCount.one', { count: 1 }),
+          })
+          .click();
 
-        await expect(page.getByRole('status')).toContainText('1 written');
-        // The figure the acceptance criterion asks about: from 0 % to a real
-        // value, without anything being rebuilt.
-        await expect(row.getByText('0%', { exact: true })).toBeHidden();
-        await expect(row.getByText('written here')).toBeVisible();
+        await expect(page.getByRole('status')).toContainText(
+          t('admin.languages.written', { count: 1 }),
+        );
+        // The figure the acceptance criterion asks about, counted rather than
+        // rounded: since AP 9 the catalogue has hundreds of keys, so one of
+        // them is a fraction of a per cent and the percentage still reads 0 %.
+        // The count beside it is what makes the first translation visible —
+        // which is why the page shows both.
+        await expect(row).toContainText(
+          t('admin.languages.keysOf', { translated: 1, total: keys.length }),
+        );
+        await expect(
+          row.getByText(t('admin.languages.state.overridden')),
+        ).toBeVisible();
 
         // Only what is left, which is what a translator works through.
-        await page.getByLabel('Only untranslated keys').check();
+        await page.getByLabel(t('admin.languages.onlyMissing')).check();
         await expect(page.getByRole('textbox', { name: key })).toBeHidden();
         await expect(
           page.getByRole('textbox', { name: keys[1] }),
         ).toBeVisible();
-        await page.getByLabel('Only untranslated keys').uncheck();
+        await page.getByLabel(t('admin.languages.onlyMissing')).uncheck();
 
         // And back to what the image ships — which for a language the image does
         // not ship means back to nothing, so the key is untranslated again.
-        await page.getByRole('button', { name: 'Reset' }).click();
-        await expect(page.getByRole('status')).toContainText('back to what');
+        await page
+          .getByRole('button', { name: t('admin.languages.reset') })
+          .click();
+        await expect(page.getByRole('status')).toContainText(
+          t('admin.languages.resetDone', { key }),
+        );
         await expect(page.getByRole('textbox', { name: key })).toHaveValue('');
         await expect(row.getByText('0%', { exact: true })).toBeVisible();
       } finally {
@@ -172,15 +199,19 @@ test.describe('language administration', () => {
 
       try {
         await page.goto('/languages');
-        await page.getByLabel('Add a language').fill(LOCALE);
-        await page.getByRole('button', { name: 'Add', exact: true }).click();
+        await page.getByLabel(t('admin.languages.addLanguage')).fill(LOCALE);
+        await page
+          .getByRole('button', { name: t('admin.languages.add'), exact: true })
+          .click();
         await expect(
           page.getByRole('textbox', { name: keys[0] }),
         ).toBeVisible();
 
         const download = await Promise.all([
           page.waitForEvent('download'),
-          page.getByRole('button', { name: 'Export JSON' }).click(),
+          page
+            .getByRole('button', { name: t('admin.languages.exportJson') })
+            .click(),
         ]).then(([event]) => event);
 
         expect(download.suggestedFilename()).toBe(`trefaro-${LOCALE}.json`);
@@ -200,13 +231,15 @@ test.describe('language administration', () => {
 
         // The file a translator hands back: the same file, with a blank filled in.
         exported[keys[0]] = 'Tornat de la revirada';
-        await page.getByLabel('Import JSON').setInputFiles({
+        await page.getByLabel(t('admin.languages.importJson')).setInputFiles({
           name: `trefaro-${LOCALE}.json`,
           mimeType: 'application/json',
           buffer: Buffer.from(JSON.stringify(exported)),
         });
 
-        await expect(page.getByRole('status')).toContainText('1 written');
+        await expect(page.getByRole('status')).toContainText(
+          t('admin.languages.written', { count: 1 }),
+        );
         await expect(page.getByRole('textbox', { name: keys[0] })).toHaveValue(
           'Tornat de la revirada',
         );
@@ -218,11 +251,15 @@ test.describe('language administration', () => {
 
   test('refuses something that is not a language tag', async ({ page }) => {
     await page.goto('/languages');
-    await page.getByLabel('Add a language').fill('Occitan please');
-    await page.getByRole('button', { name: 'Add', exact: true }).click();
+    await page
+      .getByLabel(t('admin.languages.addLanguage'))
+      .fill('Occitan please');
+    await page
+      .getByRole('button', { name: t('admin.languages.add'), exact: true })
+      .click();
 
     await expect(page.getByRole('alert')).toContainText(
-      'A language tag looks like',
+      t('admin.languages.errorTag'),
     );
   });
 });

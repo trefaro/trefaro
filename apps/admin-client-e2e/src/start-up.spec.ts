@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { ADMIN_STORAGE_STATE } from './support/admin-session';
+import { t } from './support/catalogue';
 
 /**
  * The organizer client's start sequence.
@@ -17,12 +18,14 @@ test.describe('organizer client startup', () => {
     await page.goto('/');
 
     await expect(
-      page.getByRole('heading', { name: 'Event series' }),
+      page.getByRole('heading', { name: t('admin.series.title') }),
     ).toBeVisible();
     await expect(
-      page.getByRole('navigation', { name: 'Main navigation' }),
+      page.getByRole('navigation', { name: t('admin.nav.label') }),
     ).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Modules' })).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: t('admin.modules.title') }),
+    ).toBeVisible();
   });
 
   test('applies the same theme as the participant client', async ({ page }) => {
@@ -41,12 +44,16 @@ test.describe('organizer client startup', () => {
     page,
   }) => {
     await page.goto('/');
-    await page.getByRole('link', { name: 'Modules' }).click();
+    await page.getByRole('link', { name: t('admin.modules.title') }).click();
 
     // `level: 1` and `exact` are both needed: accessible-name matching is a
     // substring match, and the sidebar entry carries the same word.
     await expect(
-      page.getByRole('heading', { level: 1, name: 'Modules', exact: true }),
+      page.getByRole('heading', {
+        level: 1,
+        name: t('admin.modules.title'),
+        exact: true,
+      }),
     ).toBeVisible();
     // Since AP 4 of phase 2 a *disabled* module has a row too — that is what
     // makes the page a switch rather than a report. What each row says, and what
@@ -76,7 +83,9 @@ test.describe('organizer client startup', () => {
   }) => {
     await page.goto('/');
 
-    await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: t('admin.nav.signOut') }),
+    ).toBeVisible();
   });
 
   test('starts without console errors', async ({ page }) => {
@@ -88,7 +97,7 @@ test.describe('organizer client startup', () => {
 
     await page.goto('/');
     await expect(
-      page.getByRole('heading', { name: 'Event series' }),
+      page.getByRole('heading', { name: t('admin.series.title') }),
     ).toBeVisible();
 
     expect(errors).toEqual([]);

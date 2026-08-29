@@ -35,3 +35,12 @@ table {
   outline: 2px solid var(--trefaro-color-accent-strong, #a86f13);
   outline-offset: 2px;
 }
+
+.error__detail {
+  /* The server's own reason, beside this client's sentence (F77). English, and
+     quieter than the sentence above it — it explains, it does not announce. */
+  display: block;
+  margin-block-start: 0.15rem;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}

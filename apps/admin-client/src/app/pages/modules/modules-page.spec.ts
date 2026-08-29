@@ -1,7 +1,10 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AppConfigService } from '@trefaro/shared-config';
-import { TranslationService } from '@trefaro/shared-i18n';
+import {
+  provideTranslationsForTest,
+  TranslationService,
+} from '@trefaro/shared-i18n';
 import type { ModuleSummary } from '@trefaro/shared-models';
 import {
   PluginLoaderService,
@@ -147,6 +150,25 @@ describe('ModulesPage', () => {
 
     TestBed.configureTestingModule({
       providers: [
+        // The words this page is asserted on. The module *names* come from the
+        // fake translation service below, which is the one thing this page
+        // resolves in TypeScript rather than with the pipe.
+        provideTranslationsForTest({
+          'admin.modules.enabled': 'enabled',
+          'admin.modules.disabled': 'disabled',
+          'admin.modules.enable': 'Enable',
+          'admin.modules.disable': 'Disable',
+          'admin.modules.core': 'Core module',
+          'admin.modules.plugin': 'Plug-in',
+          'admin.modules.default': 'default: {{state}}',
+          'admin.modules.version': 'version {{version}}',
+          'admin.modules.bundle.failed': 'failed',
+          'admin.modules.empty': 'This image ships no optional module.',
+          'admin.modules.switchedOff':
+            '{{name}} is switched off. Its data is untouched.',
+          'admin.modules.switchedOn':
+            '{{name}} is switched on. Reload this page to load its parts.',
+        }),
         { provide: TranslationService, useValue: translations },
         { provide: ModulesAdminService, useValue: admin },
         {
@@ -266,7 +288,11 @@ describe('ModulesPage', () => {
   it('keeps the list and shows the message when the server refuses', async () => {
     const page = render({ modules: [core('media-links', true)] });
     await page.settle();
-    page.admin.failWith = { status: 404, message: 'No module "media-links"' };
+    page.admin.failWith = {
+      status: 404,
+      message: 'No module "media-links"',
+      explained: true,
+    };
 
     page.buttons()[0].click();
     await page.settle();

@@ -1,3 +1,5 @@
+import type { Problem } from '@trefaro/shared-http';
+import { provideTranslationsForTest } from '@trefaro/shared-i18n';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import type {
@@ -69,8 +71,11 @@ interface PageInternals {
   go: (step: number) => void;
   progress: (invitation: Invitation) => string;
   sendLabel: () => string;
-  notice: () => string | null;
-  error: () => string | null;
+  notice: () => {
+    key: string;
+    params: Readonly<Record<string, unknown>>;
+  } | null;
+  error: () => Problem | null;
   send: (event: Event) => Promise<void>;
   form: {
     setValue: (value: {
@@ -93,7 +98,7 @@ class FakeInvitationsAdminService {
   };
   readonly queries: ContactQuery[] = [];
   readonly sentInput: InvitationInput[] = [];
-  failure: { message: string } | null = null;
+  failure: { message: string; explained: boolean } | null = null;
   contactReads = 0;
   invitationReads = 0;
 
@@ -133,7 +138,7 @@ async function render(
   seeded: {
     contactPages?: SeriesContactPage[];
     invitationPage?: InvitationPage;
-    failure?: { message: string };
+    failure?: { message: string; explained: boolean };
   } = {},
 ): Promise<{
   page: PageInternals;
@@ -148,6 +153,24 @@ async function render(
 
   TestBed.configureTestingModule({
     providers: [
+      // The texts this spec is about: the two counted labels and the sentences
+      // an organizer is told to read. Everything else stays a key.
+      provideTranslationsForTest({
+        'admin.invitations.hint':
+          'These are the addresses that registered for an event of this ' +
+          'series and confirmed. An address that has objected is in no list ' +
+          'here any more.',
+        'admin.invitations.selectFirst': 'Select somebody first',
+        'admin.invitations.sendTo.one': 'Send to {{count}} address',
+        'admin.invitations.progressSending': 'Sending… {{sent}} of {{total}}',
+        'admin.invitations.progressFailed':
+          '{{sent}} sent, {{failed}} could not be delivered',
+        'admin.invitations.progressDone': '{{sent}} sent',
+        'admin.invitations.nothingSent':
+          'Nothing has been sent for this series yet.',
+        'admin.invitations.noContacts':
+          'Nobody has confirmed a registration for this series yet.',
+      }),
       provideRouter([]),
       { provide: InvitationsAdminService, useValue: invitations },
       {
@@ -302,8 +325,10 @@ describe('InvitationsPage', () => {
     await page.send(new Event('submit'));
     await settle();
 
-    expect(page.notice()).toMatch(/on their way/);
-    expect(page.notice()).toMatch(/leave this page/);
+    // The key and its count, not a finished sentence: the notice stays on
+    // screen and follows a language change like everything else (F72).
+    expect(page.notice()?.key).toBe('admin.invitations.onTheWay.one');
+    expect(page.notice()?.params).toEqual({ count: 1 });
   });
 
   it('clears the selection and the form after sending', async () => {
@@ -353,6 +378,9 @@ describe('InvitationsPage', () => {
     const { page, settle } = await render({
       failure: {
         message: '1 of the selected addresses can no longer be written to',
+        // The server's own reason, which is what the page shows beside its
+        // sentence (F77); a status word would not be `explained`.
+        explained: true,
       },
     });
 
@@ -365,7 +393,8 @@ describe('InvitationsPage', () => {
     await page.send(new Event('submit'));
     await settle();
 
-    expect(page.error()).toMatch(/no longer be written to/);
+    expect(page.error()?.key).toBe('admin.invitations.errorSend');
+    expect(page.error()?.detail).toMatch(/no longer be written to/);
     expect(page.notice()).toBeNull();
   });
 

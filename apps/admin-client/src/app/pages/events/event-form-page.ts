@@ -9,10 +9,13 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { AppConfigService } from '@trefaro/shared-config';
-import type { ApiError } from '@trefaro/shared-http';
+import { problemOf, type ApiError, type Problem } from '@trefaro/shared-http';
+import { TranslationService } from '@trefaro/shared-i18n';
 import type { EventType } from '@trefaro/shared-models';
 import {
+  eventStatusKey,
   EVENT_STATUSES,
   EVENT_TYPES,
   MAX_FOLLOW_UP_LENGTH,
@@ -22,6 +25,7 @@ import {
   wallClockToInstant,
 } from '@trefaro/shared-models';
 import { EventsAdminService } from '../../features/events/events-admin.service';
+import { eventTypeKey } from '../../features/i18n/labels';
 
 /**
  * Create and edit an event (UC 04, UC 05, FR 3.1, FR 3.2, FR 3.9).
@@ -45,63 +49,69 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
 @Component({
   selector: 'trefaro-event-form-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, TranslocoPipe],
   template: `
     <header class="head">
-      <h1>{{ isNew() ? 'New event' : 'Edit event' }}</h1>
+      <h1>
+        {{ (isNew() ? 'admin.events.new' : 'admin.events.edit') | transloco }}
+      </h1>
       @if (!isNew()) {
         <nav class="head__links">
           <!-- The event's dashboard is the hub (FR 3.8); this form is one of
                the things reachable from it, so it only leads back. -->
           <a [routerLink]="['/series', seriesId(), 'events', eventId()]">
-            Back to the event
+            {{ 'admin.events.back' | transloco }}
           </a>
         </nav>
       }
     </header>
 
-    @if (error()) {
-      <p class="error" role="alert">{{ error() }}</p>
+    @if (error(); as problem) {
+      <p class="error" role="alert">
+        {{ problem.key | transloco }}
+        @if (problem.detail; as detail) {
+          <span class="error__detail">{{ detail }}</span>
+        }
+      </p>
     }
 
     <form [formGroup]="form" (ngSubmit)="submit()">
-      <label for="name">Name</label>
+      <label for="name">{{ 'admin.events.name' | transloco }}</label>
       <input id="name" formControlName="name" required />
 
-      <label for="description">Description</label>
+      <label for="description">
+        {{ 'admin.events.description' | transloco }}
+      </label>
       <textarea id="description" formControlName="description" rows="5">
       </textarea>
 
-      <label for="slug">Public address</label>
+      <label for="slug">{{ 'admin.events.publicAddress' | transloco }}</label>
       <input
         id="slug"
         formControlName="slug"
-        placeholder="derived from the name"
+        [placeholder]="'admin.common.slugPlaceholder' | transloco"
       />
-      <small>
-        Part of the link participants share, within this series. Leave it empty
-        and the name decides; changing it later breaks links already out there.
-      </small>
+      <small>{{ 'admin.events.slugHint' | transloco }}</small>
 
-      <label for="eventType">Event type</label>
+      <label for="eventType">{{ 'admin.events.type' | transloco }}</label>
       <select id="eventType" formControlName="eventType">
         @for (type of types; track type) {
-          <option [value]="type">{{ type }}</option>
+          <option [value]="type">{{ typeKey(type) | transloco }}</option>
         }
       </select>
 
-      <label for="timezone">Time zone</label>
+      <!-- The zone list stays as it is: Europe/Berlin is an identifier, and
+           translating one would be translating an address. (No backticks in a
+           template comment — they end the template literal.) -->
+      <label for="timezone">{{ 'admin.events.timezone' | transloco }}</label>
       <select id="timezone" formControlName="timezone">
         @for (zone of zones; track zone) {
           <option [value]="zone">{{ zone }}</option>
         }
       </select>
-      <small>
-        Times below are read in this zone — that is also how participants see
-        them, wherever they are.
-      </small>
+      <small>{{ 'admin.events.timezoneHint' | transloco }}</small>
 
-      <label for="startsAt">Starts</label>
+      <label for="startsAt">{{ 'admin.events.startsAt' | transloco }}</label>
       <input
         id="startsAt"
         type="datetime-local"
@@ -109,7 +119,7 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
         required
       />
 
-      <label for="endsAt">Ends</label>
+      <label for="endsAt">{{ 'admin.events.endsAt' | transloco }}</label>
       <input
         id="endsAt"
         type="datetime-local"
@@ -118,21 +128,27 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
       />
 
       @if (needsVenue()) {
-        <label for="venueName">Venue</label>
+        <label for="venueName">{{
+          'admin.events.venueName' | transloco
+        }}</label>
         <input id="venueName" formControlName="venueName" />
 
-        <label for="venueAddress">Address</label>
+        <label for="venueAddress">
+          {{ 'admin.events.venueAddress' | transloco }}
+        </label>
         <textarea id="venueAddress" formControlName="venueAddress" rows="3">
         </textarea>
       }
 
       @if (needsLink()) {
-        <label for="onlineUrl">Online link</label>
+        <label for="onlineUrl">{{
+          'admin.events.onlineUrl' | transloco
+        }}</label>
         <input id="onlineUrl" type="url" formControlName="onlineUrl" />
       }
 
       <fieldset>
-        <legend>Languages</legend>
+        <legend>{{ 'admin.events.languages' | transloco }}</legend>
         @for (locale of locales(); track locale) {
           <label class="check">
             <input
@@ -141,13 +157,17 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
               [checked]="languages().includes(locale)"
               (change)="toggleLanguage(locale)"
             />
-            {{ locale }}
+            <!-- The language's own name rather than its tag: "de" is what the
+                 database stores, "Deutsch" is what the box is asking about. -->
+            {{ languageName(locale) }}
           </label>
         }
-        <small>The languages the event is held in.</small>
+        <small>{{ 'admin.events.languagesHint' | transloco }}</small>
       </fieldset>
 
-      <label for="followUpBody">After the event</label>
+      <label for="followUpBody">{{
+        'admin.events.followUp' | transloco
+      }}</label>
       <textarea
         id="followUpBody"
         formControlName="followUpBody"
@@ -156,26 +176,32 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
       >
       </textarea>
       <small>
-        {{ followUpHint() }} Recordings and material are links of their own —
-        add those under "Media links".
+        {{ followUpHintKey() | transloco }}
+        <!-- The page's own name, from the module's key, so renaming the module
+             renames it here too. -->
+        {{
+          'admin.events.followUpMedia'
+            | transloco: { page: 'modules.mediaLinks.title' | transloco }
+        }}
       </small>
 
-      <label for="status">Status</label>
+      <label for="status">{{ 'admin.events.status' | transloco }}</label>
       <select id="status" formControlName="status">
         @for (status of statuses; track status) {
-          <option [value]="status">{{ status }}</option>
+          <option [value]="status">{{ statusKey(status) | transloco }}</option>
         }
       </select>
-      <small>
-        Publishing needs whatever makes the event reachable: a venue, a link, or
-        both.
-      </small>
+      <small>{{ 'admin.events.statusHint' | transloco }}</small>
 
       <div class="actions">
         <button type="submit" [disabled]="busy()">
-          {{ busy() ? 'Saving…' : 'Save' }}
+          {{
+            (busy() ? 'admin.common.saving' : 'admin.common.save') | transloco
+          }}
         </button>
-        <a [routerLink]="cancelTarget()">Cancel</a>
+        <a [routerLink]="cancelTarget()">
+          {{ 'admin.common.cancel' | transloco }}
+        </a>
       </div>
     </form>
   `,
@@ -290,12 +316,15 @@ export class EventFormPage {
       : ['/series', this.seriesId()];
   });
   protected readonly busy = signal(false);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
   protected readonly languages = signal<readonly string[]>([]);
+  protected readonly typeKey = eventTypeKey;
+  protected readonly statusKey = eventStatusKey;
 
   private readonly events = inject(EventsAdminService);
   private readonly config = inject(AppConfigService);
   private readonly router = inject(Router);
+  private readonly i18n = inject(TranslationService);
 
   /** The locales this instance maintains, which is what an event can be held in. */
   protected readonly locales = computed<readonly string[]>(
@@ -349,10 +378,15 @@ export class EventFormPage {
    * finished last week is told the text is live — and one planning next June's
    * is told it is not yet.
    */
-  protected followUpHint(): string {
+  protected followUpHintKey(): string {
     return this.over()
-      ? 'This event has ended, so this text is on its landing page now.'
-      : 'Shown on the landing page once the event has ended, not before.';
+      ? 'admin.events.followUpLive'
+      : 'admin.events.followUpPending';
+  }
+
+  /** "Deutsch" rather than "de", in the language the organizer is reading. */
+  protected languageName(locale: string): string {
+    return this.i18n.languageName(locale);
   }
 
   protected toggleLanguage(locale: string): void {
@@ -370,7 +404,7 @@ export class EventFormPage {
       return;
     }
     if (this.languages().length === 0) {
-      this.error.set('Pick at least one language the event is held in.');
+      this.error.set({ key: 'admin.events.errorNoLanguage', detail: null });
       return;
     }
 
@@ -412,7 +446,7 @@ export class EventFormPage {
         await this.router.navigate(['/series', this.seriesId()]);
       }
     } catch (error: unknown) {
-      this.error.set((error as ApiError)?.message ?? 'Saving failed.');
+      this.error.set(problemOf(error, 'admin.common.savingFailed'));
     } finally {
       this.busy.set(false);
     }
@@ -444,8 +478,8 @@ export class EventFormPage {
     } catch (error: unknown) {
       this.error.set(
         (error as ApiError)?.status === 404
-          ? 'This event no longer exists.'
-          : ((error as ApiError)?.message ?? 'Loading failed.'),
+          ? { key: 'admin.events.errorMissing', detail: null }
+          : problemOf(error, 'admin.common.loadingFailed'),
       );
     }
   }

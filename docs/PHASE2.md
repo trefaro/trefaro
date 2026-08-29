@@ -1,9 +1,9 @@
 # Phase 2 — Whitelabel, Konfiguration, Mehrsprachigkeit, PWA
 
-**Status: in Arbeit** (29.08.2026). **AP 1 bis AP 8 sind erledigt** (siehe
+**Status: in Arbeit** (29.08.2026). **AP 1 bis AP 9 sind erledigt** (siehe
 _Fortschritt_) — damit sind **Meilenstein M3** und **Meilenstein M4** erreicht;
 die Abschnitte oberhalb davon sind Plan, nicht Protokoll. Wie in Phase 1 gibt
-Marius jedes Paket einzeln frei — AP 9 wartet auf seine Freigabe.
+Marius jedes Paket einzeln frei — AP 10 wartet auf seine Freigabe.
 
 **Die Entscheidungen E17–E29 sind am 28.08.2026 von Marius bestätigt** — sie
 werden nicht erneut aufgerollt, sondern nur gegen die Umsetzung geprüft (wie
@@ -622,28 +622,34 @@ entscheidet Marius.
 
 Wird beim jeweiligen Paket eingetragen, nicht am Ende gesammelt:
 
-| Nr. | Inhalt                                                                                             | AP  |
-| --- | -------------------------------------------------------------------------------------------------- | --- |
-| F60 | `app_config` bekommt `organization_name` und `app_icon_path`; Ergänzung zu Schema 5.3 (E26)        | 1   |
-| F61 | Übersetzungstabelle auch für `event_series`, und was **nicht** übersetzt wird (E25)                | 11  |
-| F62 | Der Übersetzungskatalog wird vom Server ausgeliefert — so wird Kapitel 4 eingelöst (E22–E24)       | 6   |
-| F63 | `CORE_MODULES` listet nur Module, die es gibt; `newsletter` entfällt (E21, Bezug F8)               | 4   |
-| F64 | Die Ersteinrichtung ist tokengeschützt; `ADMIN_BOOTSTRAP_*` bleibt der unbeaufsichtigte Weg (E28)  | 5   |
-| F65 | Die Schriftart ist ein mitgelieferter Katalog, kein Upload (E18, Bezug NFR 9)                      | 1   |
-| F66 | Wie ein Logo öffentlich wird, ohne die Anhänge mitzunehmen (E19, Bezug E9, F38)                    | 2   |
-| F67 | Welcher Kontrast geprüft wird — und warum nicht der gegen die berechnete Textfarbe (NFR 4, E17)    | 3   |
-| F68 | Wie die Kacheln der Event-Detailansicht entstehen (Mockups 5.2, Bezug F47)                         | 4   |
-| F69 | Warum der Setup-Controller `@AllowAnonymous()` trägt — der Admin-Guard überschätzt (Bezug E16)     | 5   |
-| F70 | Gestalt und Herkunft eines Übersetzungsschlüssels; flach, gepunktet, `lowerCamelCase` (E22)        | 6   |
-| F71 | Welche Sprachen eine frische Instanz anbietet — die, die das Image mitbringt (NFR 4)               | 6   |
-| F72 | Transloco und zoneless: was die Vorprüfung wirklich fand (Bezug E20)                               | 6   |
-| F73 | Vollständigkeit ist eine Zahl über die englische Schlüsselliste (E23)                              | 7   |
-| F74 | Ein leerer Wert ist keine Übersetzung — und der mitgelieferte Text wird nicht gespeichert (E22)    | 7   |
-| F75 | Import ist ein Merge, und unbekannte Schlüssel werden genannt statt geschluckt                     | 7   |
-| F76 | Sprachen anbieten ist eine Entscheidung über `app_config`, nicht über die Übersetzungen (E30)      | 7   |
-| F77 | Eine Meldung hat zwei Hälften: der Satz des Clients aus dem Katalog, der Grund des Servers daneben | 8   |
-| F78 | Was ein Format ist und keine Übersetzung — Datum, Zonenname, Dateigröße (Bezug E8)                 | 8   |
-| F79 | Ein Satz, der um ein Element gebaut ist, ist keine Übersetzungseinheit                             | 8   |
+| Nr. | Inhalt                                                                                               | AP  |
+| --- | ---------------------------------------------------------------------------------------------------- | --- |
+| F60 | `app_config` bekommt `organization_name` und `app_icon_path`; Ergänzung zu Schema 5.3 (E26)          | 1   |
+| F61 | Übersetzungstabelle auch für `event_series`, und was **nicht** übersetzt wird (E25)                  | 11  |
+| F62 | Der Übersetzungskatalog wird vom Server ausgeliefert — so wird Kapitel 4 eingelöst (E22–E24)         | 6   |
+| F63 | `CORE_MODULES` listet nur Module, die es gibt; `newsletter` entfällt (E21, Bezug F8)                 | 4   |
+| F64 | Die Ersteinrichtung ist tokengeschützt; `ADMIN_BOOTSTRAP_*` bleibt der unbeaufsichtigte Weg (E28)    | 5   |
+| F65 | Die Schriftart ist ein mitgelieferter Katalog, kein Upload (E18, Bezug NFR 9)                        | 1   |
+| F66 | Wie ein Logo öffentlich wird, ohne die Anhänge mitzunehmen (E19, Bezug E9, F38)                      | 2   |
+| F67 | Welcher Kontrast geprüft wird — und warum nicht der gegen die berechnete Textfarbe (NFR 4, E17)      | 3   |
+| F68 | Wie die Kacheln der Event-Detailansicht entstehen (Mockups 5.2, Bezug F47)                           | 4   |
+| F69 | Warum der Setup-Controller `@AllowAnonymous()` trägt — der Admin-Guard überschätzt (Bezug E16)       | 5   |
+| F70 | Gestalt und Herkunft eines Übersetzungsschlüssels; flach, gepunktet, `lowerCamelCase` (E22)          | 6   |
+| F71 | Welche Sprachen eine frische Instanz anbietet — die, die das Image mitbringt (NFR 4)                 | 6   |
+| F72 | Transloco und zoneless: was die Vorprüfung wirklich fand (Bezug E20)                                 | 6   |
+| F73 | Vollständigkeit ist eine Zahl über die englische Schlüsselliste (E23)                                | 7   |
+| F74 | Ein leerer Wert ist keine Übersetzung — und der mitgelieferte Text wird nicht gespeichert (E22)      | 7   |
+| F75 | Import ist ein Merge, und unbekannte Schlüssel werden genannt statt geschluckt                       | 7   |
+| F76 | Sprachen anbieten ist eine Entscheidung über `app_config`, nicht über die Übersetzungen (E30)        | 7   |
+| F77 | Eine Meldung hat zwei Hälften: der Satz des Clients aus dem Katalog, der Grund des Servers daneben   | 8   |
+| F78 | Was ein Format ist und keine Übersetzung — Datum, Zonenname, Dateigröße (Bezug E8)                   | 8   |
+| F79 | Ein Satz, der um ein Element gebaut ist, ist keine Übersetzungseinheit                               | 8   |
+| F80 | Ein Schlüssel ist ein Ort in der Oberfläche; wer eine Seite benennt, nimmt deren Schlüssel           | 9   |
+| F81 | Zwei Zähler in einem Satz brauchen einen Schlüssel je Kombination, solange kein Plural-Modul da ist  | 9   |
+| F82 | `admin.*` ist ein eigener Namensraum: die Clients teilen den Katalog, nicht die Sätze                | 9   |
+| F83 | Gespeicherte Statuswörter bekommen Schlüsselfunktionen in `shared-models` — zwei Typen, zwei Räume   | 9   |
+| F84 | Eine Meldung aus einer wechselnden Zahl von Teilsätzen wird beim Handeln fertig, nicht beim Zeichnen | 9   |
+| F85 | Ein Wert, den niemand übersetzen darf — ein Befehl, ein Tag, ein Dateiname — reist als Parameter     | 9   |
 
 Anhangspunkt 18 (TLS gehört zur Installations-Story) ist in AP 5 von „geplant"
 auf „umgesetzt" gezogen.
@@ -1520,3 +1526,152 @@ Was anders lief:
 Was AP 8 **nicht** enthält: den Veranstalter-Client (AP 9, bis auf die eine
 Zeile in der Medien-Link-Seite), die Mails (AP 10), Inhalte (AP 11) und deutsche
 **Server**meldungen (`todo.md`).
+
+### AP 9 — Veranstalter-Client übersetzen (erledigt)
+
+Sechzehn Seiten plus die Shell. Der Katalog wächst von 149 auf **598 Schlüssel**
+in beiden mitgelieferten Sprachen, 443 davon unter `admin.`; ein Veranstalter
+bedient die Anwendung von der Anmeldung bis zum Einladungsversand auf Deutsch.
+Der Sprachumschalter, der in AP 6 auf dem Anmeldeformular gefehlt hat, ist
+nachgezogen — es ist die einzige Seite dieses Clients mit einem eigenen, weil
+die Seitenleiste erst nach der Anmeldung gezeichnet wird.
+
+Fünf Entscheidungen waren mehr als „Zeichenketten verschieben":
+
+**Ein Schlüssel ist ein Ort in der Oberfläche, kein Wort** (F80). Die Navigation
+sagt „Event series", die Startseite auch — und beides ist derselbe Ort: der
+Menüeintrag benennt die Seite, auf die er führt, also nimmt er ihren Schlüssel
+(`admin.series.title`). Genauso „New event" (Knopf und Überschrift),
+„Participants" und „Invite former participants". Zwei Schlüssel mit demselben
+Text wären zwei Stellen, an denen eine Umbenennung ankommen kann — und nur eine
+davon würde es. Die Gegenprobe steht im selben Paket: **`Cancel` ist zweimal
+etwas anderes.** Auf einem Formular heißt es „Abbrechen", auf einer Anmeldung
+„Stornieren" — ein gemeinsamer `common.cancel` hätte im Deutschen einen
+Veranstalter dazu gebracht, eine Anmeldung abzubrechen. Gleiche Wörter, die im
+Englischen zusammenfallen, sind der häufigste Weg, eine Übersetzung falsch zu
+machen.
+
+**`admin.*` ist ein eigener Namensraum** (F82). Beide Clients lesen denselben
+Katalog, und die 149 Schlüssel aus AP 8 gehören dem Nutzer-Client. Sie werden
+nicht wiederverwendet — auch nicht dort, wo der englische Text gleich ist: der
+Teilnehmenden-Client sagt „On site and online", weil jemand entscheidet, ob er
+reist; der Veranstalter-Client sagt „Hybrid" in einer Spalte „Art". Zwei
+Zielgruppen, zwei Vokabulare. Wiederverwendet wird nur, was **dasselbe Ding**
+benennt: `registration.status.*`, `mediaLinks.kind.*`, `modules.*.title`,
+`common.loading` — und `register.submit` in der Design-Vorschau, die ja genau
+den Knopf zeigt, den Teilnehmende drücken.
+
+**Gespeicherte Statuswörter bekommen eine Schlüsselfunktion** (F83), wie
+`registrationStatusKey` sie in AP 8 bekommen hat: `eventStatusKey` und
+`eventSeriesStatusKey` in `shared-models`. Zwei Funktionen, nicht eine — genau
+aus dem Grund, aus dem `EventStatus` und `EventSeriesStatus` zwei Typen sind
+(ein Event bekommt eher einmal ein `cancelled` als eine Reihe). Ein gemeinsamer
+Schlüsselraum hätte die Kopplung wiederhergestellt, die die Typen vermeiden.
+Der Feldtyp des Baukastens (`text`, `select`, `checkbox`, `file`) zieht
+mit — die Karte druckte bis hier `select` an einen Menschen —, und zwar aus
+**denselben** vier Schlüsseln, die das Auswahlfeld „Art der Antwort" benutzt:
+zwei Vokabulare für eine Sache auf einem Bildschirm wären schlimmer als ein
+langes Wort in einer kleinen Pille. `admin.eventType.*` bleibt dagegen im
+Client (`features/i18n/labels.ts`), weil es kein gespeicherter Zustand ist,
+sondern die Wortwahl dieses Clients.
+
+**Zwei Zähler in einem Satz brauchen einen Schlüssel je Kombination** (F81).
+„9 seats taken in 2 sessions" zählt zweimal, Transloco bringt hier keine
+Pluralregeln mit, und die Alternative — „9 Plätze belegt" plus „in 2 Sitzungen"
+als zwei Fragmente — ist genau das, was F79 ausschließt: was schon
+zusammengeklebt ankommt, kann eine Übersetzerin nicht umstellen. Also vier
+Schlüssel (`metaSeats.oneOne`, `.oneMany`, `.manyOne`, `.manyMany`). Das ist der
+ehrliche Preis, und er ist ein Hinweis: ein Satz, der zweimal zählt, ist ein
+Satz, den man beim nächsten Mal anders schneidet.
+
+**Eine Meldung aus wechselnd vielen Teilsätzen wird beim Handeln fertig** (F84).
+„Saved: 3 written, 1 reset, 2 unknown keys ignored (…)" hat keine feste Gestalt,
+also gibt es keinen Schlüssel, den ein Template halten könnte; die Sprachseite
+speichert deshalb den **fertigen Satz** und behält die Sprache, in der die
+Handlung passiert ist. Jede andere Meldung dieses Clients speichert Schlüssel
+und Parameter (`{ key, params }`) und folgt einem Sprachwechsel wie alles andere
+— so machen es die Modul- und die Einladungsseite. Der Unterschied ist die
+wechselnde Zahl der Teilsätze, nicht die Flüchtigkeit.
+
+Dazu kommt eine Erweiterung von F79: **ein Wert, den niemand übersetzen darf,
+reist als Parameter** (F85) — `docker compose logs server`, `Secure`,
+`docs/INSTALL.md`, die drei Beispiel-Sprachkürzel `fr`/`pt-BR`/`tr`. Sie standen
+in `<code>`-Elementen mitten im Satz; der Satz ist jetzt ein Schlüssel, die
+Auszeichnung entfällt, und der Literal bleibt im Code statt im Katalog, wo ihn
+jemand übersetzen könnte.
+
+Fehlermeldungen folgen F77 unverändert: der Satz dieses Clients aus dem Katalog,
+der Grund des Servers englisch daneben in `.error__detail` (jetzt global in
+`apps/admin-client/src/styles.scss`). Alle siebzehn `error()`-Signale dieses
+Clients halten jetzt `Problem` statt `string` — sechzehn Seiten und das Bild-Feld
+der Design-Seite. Wo dieser Client den Grund selbst kennt — 401 und 429
+auf dem Login, 401 und 404 in der Ersteinrichtung, 404 auf einer Reihe oder
+einem Event —, setzt er `detail: null`; ein 409 der Ersteinrichtung dagegen
+bringt den Grund mit, weil nur er sagt, **welcher** Wert abgelehnt wurde. Neu
+ist ein `CatalogueFileError` auf der Sprachseite: eine Datei, die dieser Client
+selbst ablehnt („kein JSON", „kein Objekt aus Text"), trägt einen Schlüssel
+statt eines englischen Satzes — anders als eine Ablehnung des Servers.
+
+Formate folgen F78: `formatInstant`, `formatEventPeriod`, `formatProgramTime`,
+`groupProgramByDay` und `formatBytes` bekommen überall
+`TranslationService.locale()`. Die Programmseite las bis hier
+`config.defaultLocale` — die Sprache der **Instanz** statt die des Lesers; das
+war derselbe Fehler, den F78 im Nutzer-Client benannt hat, und er stand hier
+noch. Die Zeitzone bleibt die des Events (E8); die Zeitstempel der
+Administratorenliste stehen dagegen in der Zone des Lesers, weil eine Anmeldung
+zu keinem Event gehört (`localTimeZone()`).
+
+**Die Browsersuite prüft gegen Schlüssel.** `support/catalogue.ts` ist dieselbe
+Datei wie im Teilnehmenden-Client, um `tPattern()` erweitert: für die Sätze,
+deren Parameter ein Browsertest nicht nachbauen kann (ein formatierter Zeitraum,
+eine Zonenabkürzung, die der Sprache des Lesers folgt) wird der Schlüsseltext zu
+einem regulären Ausdruck mit `.+` an den Platzhaltern — statt ein englisches
+Fragment zu behaupten. 250 Zeichenketten sind Nachschläge geworden; was literal
+bleibt, ist Fixture-Text, ein Bezeichner, eine Uhrzeit oder eine **Server**meldung
+(F77). Rund 350 Nachschläge stehen jetzt in den fünfzehn Dateien; zwei Tests
+sind neu und prüfen genau das Abnahmekriterium: ein
+Rundgang auf Deutsch durch Startseite, Zugänge und Design (mit
+`expectNoRawKeys` auf jeder), und die Teilnehmerübersicht auf Deutsch — deren
+Spaltenreihenfolge zeigt, dass die E-Mail-Spalte an derselben Stelle steht
+(E13), in der Sprache, die der Veranstalter gewählt hat.
+
+**Was anders lief:**
+
+- **Der größere Katalog macht eine Prozentzahl unbrauchbar.** Der Browsertest
+  der Sprachverwaltung prüfte, dass die Vollständigkeit „von 0 % auf einen
+  echten Wert" springt, sobald ein Schlüssel übersetzt ist. Bei 149 Schlüsseln
+  war ein Schlüssel 0,67 % und rundete auf 1 %; bei 598 sind es 0,17 % und die
+  Zahl bleibt bei 0 %. Das ist kein Fehler, sondern eine Rundung — und genau
+  deshalb steht die **Anzahl** neben der Prozentzahl. Der Test zählt jetzt
+  („1 von 598 Schlüsseln") statt zu runden. Für eine Organisation heißt das:
+  eine neue Sprache zeigt ihren Fortschritt zuerst in der Zahl, nicht im
+  Prozentwert.
+- **Die Extraktion fand eine Anzeige, die niemand übersetzt hätte.** Das
+  Event-Formular listete die Sprachen einer Veranstaltung als `de`, `en` — die
+  gespeicherten Tags. Sie heißen jetzt „Deutsch" und „English"
+  (`TranslationService.languageName`), wie überall sonst in beiden Clients. Kein
+  Katalogeintrag, sondern `Intl.DisplayNames` — die Entscheidung aus AP 6.
+- **Ein Backtick in einem Template-Kommentar, erneut.** Diesmal um
+  `Europe/Berlin`; der Compiler meldete zehn Folgefehler an anderen Stellen
+  (`Cannot find name 'Berlin'`). Die Regel steht seit Phase 1 in `CLAUDE.md` und
+  ist trotzdem wieder passiert — jetzt steht die Begründung im Kommentar selbst.
+- **`admin.invitations.colSubject` und `admin.invitations.subject` heißen beide
+  „Subject".** Die automatische Umstellung der Browsersuite griff zum
+  Spaltenkopf, wo das Formularfeld gemeint war; der Test wäre grün geblieben und
+  hätte nach einer deutschen Umformulierung des einen den anderen gesucht. Wo
+  zwei Schlüssel denselben englischen Text tragen, entscheidet der Ort, nicht
+  die Zeichenkette — das ist F80 von der anderen Seite.
+- **Ein Fake, der `translate()` nicht kann, bricht erst im Browser.** Der
+  Sprachdienst-Fake der Sprachverwaltung hatte nur `languageName` und `locale`;
+  die Seite ruft seit diesem Paket auch `translate()`. Er hat es gelernt,
+  einschließlich der Platzhalter — und bleibt so nicht-reaktiv wie Transloco
+  (dieselbe Linie wie in AP 6 und AP 8).
+- **Zwei Anzeigen bleiben roh, mit Absicht.** Die Schriftartennamen im
+  Design-Formular („System font", „Inter", „Lora") — drei sind Eigennamen, und
+  der vierte ist laut Katalogkommentar bewusst so formuliert, dass er keine
+  Übersetzung braucht (E18). Und der Ladehinweis in `index.html` („Loading
+  Trefaro…"), der gezeichnet wird, bevor es einen Katalog gibt; im
+  Teilnehmenden-Client steht er aus demselben Grund englisch da.
+
+Was AP 9 **nicht** enthält: die Mails (AP 10), Inhalte wie Event- und
+Programmtexte (AP 11) und deutsche **Server**meldungen (`todo.md`).

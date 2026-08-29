@@ -10,7 +10,9 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import type { ApiError } from '@trefaro/shared-http';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { problemOf, type Problem } from '@trefaro/shared-http';
+import { TranslationService } from '@trefaro/shared-i18n';
 import type {
   EventSeries,
   Invitation,
@@ -24,6 +26,7 @@ import {
   MAX_INVITATION_SUBJECT_LENGTH,
   formatEventPeriod,
   formatInstant,
+  localTimeZone,
 } from '@trefaro/shared-models';
 import { EventSeriesAdminService } from '../../features/event-series/event-series-admin.service';
 import { EventsAdminService } from '../../features/events/events-admin.service';
@@ -31,6 +34,12 @@ import { InvitationsAdminService } from '../../features/invitations/invitations-
 
 /** How often the page asks how far a send has got, while one is running. */
 const POLL_MS = 2000;
+
+/** A confirmation that outlives the click that produced it. */
+interface Notice {
+  readonly key: string;
+  readonly params: Readonly<Record<string, unknown>>;
+}
 
 /**
  * Writing to former participants of a series (UC 03, FR 2.4).
@@ -58,15 +67,20 @@ const POLL_MS = 2000;
 @Component({
   selector: 'trefaro-invitations-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, TranslocoPipe],
   template: `
-    @if (error()) {
-      <p class="error" role="alert">{{ error() }}</p>
+    @if (error(); as problem) {
+      <p class="error" role="alert">
+        {{ problem.key | transloco }}
+        @if (problem.detail; as detail) {
+          <span class="error__detail">{{ detail }}</span>
+        }
+      </p>
     }
 
     <header class="head">
       <div>
-        <h1>Invite former participants</h1>
+        <h1>{{ 'admin.invitations.title' | transloco }}</h1>
         <p class="meta">
           @if (series(); as item) {
             <a [routerLink]="['/series', item.id]">{{ item.name }}</a>
@@ -75,38 +89,37 @@ const POLL_MS = 2000;
       </div>
     </header>
 
-    <p class="hint">
-      These are the addresses that registered for an event of this series and
-      confirmed. Every message carries a link to object, and an address that has
-      objected is in no list here any more.
-    </p>
+    <p class="hint">{{ 'admin.invitations.hint' | transloco }}</p>
 
     <!-- Named sections, so a reader — and a test — can tell the address list
          from the log of what was sent without counting tables. -->
-    <section aria-label="Who">
-      <h2>Who</h2>
+    <section [attr.aria-label]="'admin.invitations.who' | transloco">
+      <h2>{{ 'admin.invitations.who' | transloco }}</h2>
 
       <form class="filter" (submit)="apply($event)">
         <label>
-          <span>Search</span>
+          <span>{{ 'admin.invitations.search' | transloco }}</span>
           <input
             type="search"
             name="search"
             [value]="search()"
             (input)="typed($event)"
-            placeholder="Name or address"
+            [placeholder]="'admin.invitations.searchPlaceholder' | transloco"
           />
         </label>
-        <button type="submit">Search</button>
+        <button type="submit">
+          {{ 'admin.invitations.search' | transloco }}
+        </button>
       </form>
 
       @if (contacts(); as page) {
         @if (page.rows.length === 0) {
           <p class="meta">
             {{
-              search()
-                ? 'No address matches that search.'
-                : 'Nobody has confirmed a registration for this series yet.'
+              (search()
+                ? 'admin.invitations.noMatch'
+                : 'admin.invitations.noContacts'
+              ) | transloco
             }}
           </p>
         } @else {
@@ -115,13 +128,18 @@ const POLL_MS = 2000;
               <tr>
                 <th class="tick">
                   <button type="button" (click)="selectPage(page.rows)">
-                    {{ allOnPage(page.rows) ? 'None' : 'All' }}
+                    {{
+                      (allOnPage(page.rows)
+                        ? 'admin.invitations.none'
+                        : 'admin.invitations.all'
+                      ) | transloco
+                    }}
                   </button>
                 </th>
-                <th>Name</th>
-                <th>E-mail</th>
-                <th>Events</th>
-                <th>Registered</th>
+                <th>{{ 'admin.invitations.name' | transloco }}</th>
+                <th>{{ 'admin.invitations.email' | transloco }}</th>
+                <th>{{ 'admin.invitations.events' | transloco }}</th>
+                <th>{{ 'admin.invitations.registered' | transloco }}</th>
               </tr>
             </thead>
             <tbody>
@@ -147,28 +165,35 @@ const POLL_MS = 2000;
 
           <div class="pager">
             <button type="button" [disabled]="page.page <= 1" (click)="go(-1)">
-              Previous
+              {{ 'admin.common.previous' | transloco }}
             </button>
             <span class="meta">
-              {{ range(page) }} of {{ page.total }} addresses ·
-              {{ selected().size }} selected
+              {{
+                'admin.invitations.range'
+                  | transloco
+                    : {
+                        range: range(page),
+                        total: page.total,
+                        selected: selected().size,
+                      }
+              }}
             </span>
             <button type="button" [disabled]="!hasMore(page)" (click)="go(1)">
-              Next
+              {{ 'admin.common.next' | transloco }}
             </button>
           </div>
         }
       } @else {
-        <p class="meta">Loading…</p>
+        <p class="meta">{{ 'common.loading' | transloco }}</p>
       }
     </section>
 
-    <section aria-label="What">
-      <h2>What</h2>
+    <section [attr.aria-label]="'admin.invitations.what' | transloco">
+      <h2>{{ 'admin.invitations.what' | transloco }}</h2>
       <form [formGroup]="form" (submit)="send($event)">
         <fieldset [disabled]="busy()">
           <label>
-            <span>Subject</span>
+            <span>{{ 'admin.invitations.subject' | transloco }}</span>
             <input
               type="text"
               formControlName="subject"
@@ -177,25 +202,29 @@ const POLL_MS = 2000;
           </label>
 
           <label>
-            <span>Message</span>
+            <span>{{ 'admin.invitations.message' | transloco }}</span>
             <textarea
               formControlName="body"
               rows="8"
               [maxlength]="maxBody"
             ></textarea>
             <small class="meta">
-              Plain text. A blank line starts a new paragraph. The greeting and
-              the objection link are added for you.
+              {{ 'admin.invitations.messageHint' | transloco }}
             </small>
           </label>
 
           <label>
-            <span>Invite to</span>
+            <span>{{ 'admin.invitations.inviteTo' | transloco }}</span>
             <select formControlName="eventId">
-              <option value="">No particular event</option>
+              <option value="">
+                {{ 'admin.invitations.noEvent' | transloco }}
+              </option>
               @for (event of events(); track event.id) {
                 <option [value]="event.id">
-                  {{ event.name }} — {{ period(event) }}
+                  {{
+                    'admin.invitations.eventOption'
+                      | transloco: { name: event.name, period: period(event) }
+                  }}
                 </option>
               }
             </select>
@@ -206,24 +235,28 @@ const POLL_MS = 2000;
           </button>
         </fieldset>
       </form>
-      @if (notice()) {
-        <p class="notice" role="status">{{ notice() }}</p>
+      @if (notice(); as said) {
+        <p class="notice" role="status">
+          {{ said.key | transloco: said.params }}
+        </p>
       }
     </section>
 
-    <section aria-label="Sent before">
-      <h2>Sent before</h2>
+    <section [attr.aria-label]="'admin.invitations.sentBefore' | transloco">
+      <h2>{{ 'admin.invitations.sentBefore' | transloco }}</h2>
       @if (invitations(); as page) {
         @if (page.rows.length === 0) {
-          <p class="meta">Nothing has been sent for this series yet.</p>
+          <p class="meta">
+            {{ 'admin.invitations.nothingSent' | transloco }}
+          </p>
         } @else {
           <table>
             <thead>
               <tr>
-                <th>Subject</th>
-                <th>Sent</th>
-                <th>Recipients</th>
-                <th>Progress</th>
+                <th>{{ 'admin.invitations.colSubject' | transloco }}</th>
+                <th>{{ 'admin.invitations.colSent' | transloco }}</th>
+                <th>{{ 'admin.invitations.colRecipients' | transloco }}</th>
+                <th>{{ 'admin.invitations.colProgress' | transloco }}</th>
               </tr>
             </thead>
             <tbody>
@@ -239,7 +272,7 @@ const POLL_MS = 2000;
           </table>
         }
       } @else {
-        <p class="meta">Loading…</p>
+        <p class="meta">{{ 'common.loading' | transloco }}</p>
       }
     </section>
   `,
@@ -342,6 +375,7 @@ export class InvitationsPage {
   private readonly seriesApi = inject(EventSeriesAdminService);
   private readonly eventsApi = inject(EventsAdminService);
   private readonly forms = inject(FormBuilder);
+  private readonly i18n = inject(TranslationService);
 
   protected readonly maxSubject = MAX_INVITATION_SUBJECT_LENGTH;
   protected readonly maxBody = MAX_INVITATION_BODY_LENGTH;
@@ -350,8 +384,8 @@ export class InvitationsPage {
   protected readonly events = signal<readonly OrganizerEvent[]>([]);
   protected readonly contacts = signal<SeriesContactPage | null>(null);
   protected readonly invitations = signal<InvitationPage | null>(null);
-  protected readonly error = signal<string | null>(null);
-  protected readonly notice = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
+  protected readonly notice = signal<Notice | null>(null);
   protected readonly busy = signal(false);
 
   /**
@@ -373,12 +407,25 @@ export class InvitationsPage {
     eventId: [''],
   });
 
+  /**
+   * A label built in TypeScript, so it reads the language itself.
+   *
+   * A `computed()` is memoised: without {@link TranslationService.locale} in its
+   * body it would keep the words of the language the page was opened in (F72).
+   */
   protected readonly sendLabel = computed(() => {
-    if (this.busy()) return 'Sending…';
+    this.i18n.locale();
+    if (this.busy()) return this.i18n.translate('admin.invitations.sending');
     const count = this.selected().size;
-    return count === 0
-      ? 'Select somebody first'
-      : `Send to ${count} ${count === 1 ? 'address' : 'addresses'}`;
+    if (count === 0) {
+      return this.i18n.translate('admin.invitations.selectFirst');
+    }
+    return this.i18n.translate(
+      count === 1
+        ? 'admin.invitations.sendTo.one'
+        : 'admin.invitations.sendTo.many',
+      { count },
+    );
   });
 
   constructor() {
@@ -447,20 +494,28 @@ export class InvitationsPage {
   }
 
   protected when(iso: string): string {
-    return formatInstant(iso, this.zone());
+    return formatInstant(iso, this.zone(), this.i18n.locale());
   }
 
   protected period(event: OrganizerEvent): string {
-    return formatEventPeriod(event);
+    return formatEventPeriod(event, this.i18n.locale());
   }
 
   protected progress(invitation: Invitation): string {
     if (invitation.state === 'sending') {
-      return `Sending… ${invitation.sent} of ${invitation.recipients}`;
+      return this.i18n.translate('admin.invitations.progressSending', {
+        sent: invitation.sent,
+        total: invitation.recipients,
+      });
     }
     return invitation.failed > 0
-      ? `${invitation.sent} sent, ${invitation.failed} could not be delivered`
-      : `${invitation.sent} sent`;
+      ? this.i18n.translate('admin.invitations.progressFailed', {
+          sent: invitation.sent,
+          failed: invitation.failed,
+        })
+      : this.i18n.translate('admin.invitations.progressDone', {
+          sent: invitation.sent,
+        });
   }
 
   protected async send(event: Event): Promise<void> {
@@ -480,21 +535,20 @@ export class InvitationsPage {
         recipients: [...this.selected()],
       });
 
-      this.notice.set(
-        `${invitation.recipients} ${
-          invitation.recipients === 1 ? 'message is' : 'messages are'
-        } on their way. You can leave this page — sending continues.`,
-      );
+      this.notice.set({
+        key:
+          invitation.recipients === 1
+            ? 'admin.invitations.onTheWay.one'
+            : 'admin.invitations.onTheWay.many',
+        params: { count: invitation.recipients },
+      });
       this.form.reset({ subject: '', body: '', eventId: '' });
       this.selected.set(new Set());
       // The addresses may have changed: somebody could have objected between
       // loading the list and sending.
       await Promise.all([this.loadContacts(), this.loadInvitations()]);
     } catch (failure: unknown) {
-      this.error.set(
-        (failure as ApiError)?.message ??
-          'The invitation could not be sent. Please try again.',
-      );
+      this.error.set(problemOf(failure, 'admin.invitations.errorSend'));
     } finally {
       this.busy.set(false);
     }
@@ -513,9 +567,7 @@ export class InvitationsPage {
       this.series.set(series);
       this.events.set(events);
     } catch (failure: unknown) {
-      this.error.set(
-        (failure as ApiError)?.message ?? 'This event series no longer exists.',
-      );
+      this.error.set(problemOf(failure, 'admin.series.errorMissing'));
       return;
     }
 
@@ -531,9 +583,7 @@ export class InvitationsPage {
         }),
       );
     } catch (failure: unknown) {
-      this.error.set(
-        (failure as ApiError)?.message ?? 'The address list could not be read.',
-      );
+      this.error.set(problemOf(failure, 'admin.invitations.errorContacts'));
     }
   }
 
@@ -543,10 +593,7 @@ export class InvitationsPage {
       this.invitations.set(page);
       this.watch(page);
     } catch (failure: unknown) {
-      this.error.set(
-        (failure as ApiError)?.message ??
-          'What has been sent could not be read.',
-      );
+      this.error.set(problemOf(failure, 'admin.invitations.errorSent'));
     }
   }
 
@@ -574,6 +621,6 @@ export class InvitationsPage {
 
   /** The organizer's own zone: an invitation is not an event with a venue. */
   private zone(): string {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return localTimeZone();
   }
 }

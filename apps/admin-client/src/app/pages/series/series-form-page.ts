@@ -9,8 +9,12 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import type { ApiError } from '@trefaro/shared-http';
-import { EVENT_SERIES_STATUSES } from '@trefaro/shared-models';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { problemOf, type ApiError, type Problem } from '@trefaro/shared-http';
+import {
+  eventSeriesStatusKey,
+  EVENT_SERIES_STATUSES,
+} from '@trefaro/shared-models';
 import { EventSeriesAdminService } from '../../features/event-series/event-series-admin.service';
 
 /**
@@ -27,19 +31,28 @@ import { EventSeriesAdminService } from '../../features/event-series/event-serie
 @Component({
   selector: 'trefaro-series-form-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, TranslocoPipe],
   template: `
-    <h1>{{ isNew() ? 'New event series' : 'Edit event series' }}</h1>
+    <h1>
+      {{ (isNew() ? 'admin.series.new' : 'admin.series.edit') | transloco }}
+    </h1>
 
-    @if (error()) {
-      <p class="error" role="alert">{{ error() }}</p>
+    @if (error(); as problem) {
+      <p class="error" role="alert">
+        {{ problem.key | transloco }}
+        @if (problem.detail; as detail) {
+          <span class="error__detail">{{ detail }}</span>
+        }
+      </p>
     }
 
     <form [formGroup]="form" (ngSubmit)="submit()">
-      <label for="name">Name</label>
+      <label for="name">{{ 'admin.series.name' | transloco }}</label>
       <input id="name" formControlName="name" required />
 
-      <label for="description">Description</label>
+      <label for="description">
+        {{ 'admin.series.description' | transloco }}
+      </label>
       <textarea
         id="description"
         formControlName="description"
@@ -48,38 +61,39 @@ import { EventSeriesAdminService } from '../../features/event-series/event-serie
       >
       </textarea>
 
-      <label for="slug">Public address</label>
+      <label for="slug">{{ 'admin.series.publicAddress' | transloco }}</label>
       <input
         id="slug"
         formControlName="slug"
-        placeholder="derived from the name"
+        [placeholder]="'admin.common.slugPlaceholder' | transloco"
       />
-      <small>
-        Part of the link participants share. Leave it empty and the name
-        decides; changing it later breaks links that are already out there.
-      </small>
+      <small>{{ 'admin.series.slugHint' | transloco }}</small>
 
-      <label for="websiteUrl">Website</label>
+      <label for="websiteUrl">{{ 'admin.series.website' | transloco }}</label>
       <input id="websiteUrl" type="url" formControlName="websiteUrl" />
 
-      <label for="contactEmail">Contact e-mail address</label>
+      <label for="contactEmail">
+        {{ 'admin.series.contactEmail' | transloco }}
+      </label>
       <input id="contactEmail" type="email" formControlName="contactEmail" />
 
-      <label for="status">Status</label>
+      <label for="status">{{ 'admin.series.status' | transloco }}</label>
       <select id="status" formControlName="status">
         @for (status of statuses; track status) {
-          <option [value]="status">{{ status }}</option>
+          <option [value]="status">{{ statusKey(status) | transloco }}</option>
         }
       </select>
-      <small>
-        Only a published series is visible to participants — a draft is not.
-      </small>
+      <small>{{ 'admin.series.statusHint' | transloco }}</small>
 
       <div class="actions">
         <button type="submit" [disabled]="busy()">
-          {{ busy() ? 'Saving…' : 'Save' }}
+          {{
+            (busy() ? 'admin.common.saving' : 'admin.common.save') | transloco
+          }}
         </button>
-        <a [routerLink]="isNew() ? '/' : ['/series', id()]">Cancel</a>
+        <a [routerLink]="isNew() ? '/' : ['/series', id()]">
+          {{ 'admin.common.cancel' | transloco }}
+        </a>
       </div>
     </form>
   `,
@@ -137,9 +151,10 @@ export class SeriesFormPage {
   readonly id = input<string | undefined>(undefined);
 
   protected readonly statuses = EVENT_SERIES_STATUSES;
+  protected readonly statusKey = eventSeriesStatusKey;
   protected readonly isNew = computed(() => !this.id());
   protected readonly busy = signal(false);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
 
   private readonly admin = inject(EventSeriesAdminService);
   private readonly router = inject(Router);
@@ -190,7 +205,7 @@ export class SeriesFormPage {
         : await this.admin.create(payload);
       await this.router.navigate(['/series', saved.id]);
     } catch (error: unknown) {
-      this.error.set((error as ApiError)?.message ?? 'Saving failed.');
+      this.error.set(problemOf(error, 'admin.common.savingFailed'));
     } finally {
       this.busy.set(false);
     }
@@ -214,8 +229,8 @@ export class SeriesFormPage {
     } catch (error: unknown) {
       this.error.set(
         (error as ApiError)?.status === 404
-          ? 'This event series no longer exists.'
-          : ((error as ApiError)?.message ?? 'Loading failed.'),
+          ? { key: 'admin.series.errorMissing', detail: null }
+          : problemOf(error, 'admin.common.loadingFailed'),
       );
     }
   }

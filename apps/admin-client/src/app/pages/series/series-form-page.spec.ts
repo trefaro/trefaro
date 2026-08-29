@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { provideTranslationsForTest } from '@trefaro/shared-i18n';
 import type { EventSeries, EventSeriesInput } from '@trefaro/shared-models';
 import { EventSeriesAdminService } from '../../features/event-series/event-series-admin.service';
 import { SeriesFormPage } from './series-form-page';
@@ -33,6 +34,7 @@ function render(options: { id?: string } = {}) {
 
   TestBed.configureTestingModule({
     providers: [
+      provideTranslationsForTest(),
       provideRouter([]),
       {
         provide: EventSeriesAdminService,

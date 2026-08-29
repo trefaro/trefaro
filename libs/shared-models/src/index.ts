@@ -11,6 +11,8 @@ export type {
   AdminSessionInfo,
 } from './lib/auth';
 export {
+  eventSeriesStatusKey,
+  eventStatusKey,
   EVENT_SERIES_STATUSES,
   EVENT_STATUSES,
   EVENT_TYPES,

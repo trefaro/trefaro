@@ -1,4 +1,5 @@
 export {
+  eventSeriesStatusKey,
   EVENT_SERIES_STATUSES,
   type EventSeries,
   type EventSeriesInput,
@@ -6,6 +7,7 @@ export {
   type PublicEventSeries,
 } from './event-series';
 export {
+  eventStatusKey,
   EVENT_STATUSES,
   EVENT_TYPES,
   MAX_FOLLOW_UP_LENGTH,

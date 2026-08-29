@@ -20,6 +20,19 @@ export const EVENT_SERIES_STATUSES: readonly EventSeriesStatus[] = [
   'archived',
 ];
 
+/**
+ * The catalogue key that names a status to a person.
+ *
+ * `draft` is a database word, and the organizer client used to print it into a
+ * table cell — the same slip {@link registrationStatusKey} was written for. Its
+ * own key space rather than the event's, for the reason the two types are
+ * separate: an event may grow a state a series never has, and one shared set of
+ * keys would make that a change to both.
+ */
+export function eventSeriesStatusKey(status: EventSeriesStatus): string {
+  return `eventSeriesStatus.${status}`;
+}
+
 /** What a participant sees, with no login (UC 08 start page). */
 export interface PublicEventSeries {
   readonly id: string;

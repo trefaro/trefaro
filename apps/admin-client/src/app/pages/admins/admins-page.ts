@@ -5,9 +5,11 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import type { ApiError } from '@trefaro/shared-http';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { problemOf, type Problem } from '@trefaro/shared-http';
+import { TranslationService } from '@trefaro/shared-i18n';
+import { formatInstant, localTimeZone } from '@trefaro/shared-models';
 import { AdminAccountsService } from '../../features/admins/admin-accounts.service';
 import { AuthService } from '../../features/auth/auth.service';
 
@@ -19,24 +21,33 @@ const MIN_PASSWORD_LENGTH = 12;
  *
  * Your own account has no delete button: the server refuses it anyway, and that
  * refusal is what keeps an instance from ending up with no administrator at all.
+ *
+ * The one timestamp on this page is not an event's, so it is shown in the
+ * reader's own zone rather than in one hanging off a record (E8 is about event
+ * times); the language it is written in is the reader's too (F78).
  */
 @Component({
   selector: 'trefaro-admins-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, DatePipe],
+  imports: [ReactiveFormsModule, TranslocoPipe],
   template: `
-    <h1>Administrators</h1>
+    <h1>{{ 'admin.admins.title' | transloco }}</h1>
 
-    @if (error()) {
-      <p class="error" role="alert">{{ error() }}</p>
+    @if (error(); as problem) {
+      <p class="error" role="alert">
+        {{ problem.key | transloco }}
+        @if (problem.detail; as detail) {
+          <span class="error__detail">{{ detail }}</span>
+        }
+      </p>
     }
 
     <table>
       <thead>
         <tr>
-          <th>Name</th>
-          <th>E-mail address</th>
-          <th>Last sign-in</th>
+          <th>{{ 'admin.admins.name' | transloco }}</th>
+          <th>{{ 'admin.admins.email' | transloco }}</th>
+          <th>{{ 'admin.admins.lastLogin' | transloco }}</th>
           <th></th>
         </tr>
       </thead>
@@ -46,36 +57,41 @@ const MIN_PASSWORD_LENGTH = 12;
             <td>{{ account.name }}</td>
             <td>{{ account.email }}</td>
             <td>
-              {{
-                account.lastLoginAt
-                  ? (account.lastLoginAt | date: 'medium')
-                  : 'never'
-              }}
+              @if (account.lastLoginAt; as at) {
+                {{ when(at) }}
+              } @else {
+                {{ 'admin.admins.never' | transloco }}
+              }
             </td>
             <td>
               @if (account.id === ownId()) {
-                <span class="self">you</span>
+                <span class="self">{{ 'admin.admins.you' | transloco }}</span>
               } @else {
-                <button type="button" (click)="remove(account)">Delete</button>
+                <button type="button" (click)="remove(account)">
+                  {{ 'admin.common.delete' | transloco }}
+                </button>
               }
             </td>
           </tr>
         } @empty {
           <tr>
             <td colspan="4">
-              {{ accounts.isLoading() ? 'Loading…' : 'No accounts.' }}
+              {{
+                (accounts.isLoading() ? 'common.loading' : 'admin.admins.empty')
+                  | transloco
+              }}
             </td>
           </tr>
         }
       </tbody>
     </table>
 
-    <h2>Add an administrator</h2>
+    <h2>{{ 'admin.admins.addHeading' | transloco }}</h2>
     <form [formGroup]="form" (ngSubmit)="submit()">
-      <label for="new-name">Name</label>
+      <label for="new-name">{{ 'admin.admins.name' | transloco }}</label>
       <input id="new-name" formControlName="name" required />
 
-      <label for="new-email">E-mail address</label>
+      <label for="new-email">{{ 'admin.admins.email' | transloco }}</label>
       <input
         id="new-email"
         type="email"
@@ -85,7 +101,9 @@ const MIN_PASSWORD_LENGTH = 12;
         required
       />
 
-      <label for="new-password">Password</label>
+      <label for="new-password">
+        {{ 'admin.admins.password' | transloco }}
+      </label>
       <input
         id="new-password"
         type="password"
@@ -94,11 +112,14 @@ const MIN_PASSWORD_LENGTH = 12;
         required
       />
       <small>
-        At least {{ minPasswordLength }} characters. A long passphrase beats a
-        short password with a symbol in it.
+        {{
+          'admin.admins.passwordHint' | transloco: { count: minPasswordLength }
+        }}
       </small>
 
-      <button type="submit" [disabled]="busy()">Create account</button>
+      <button type="submit" [disabled]="busy()">
+        {{ 'admin.admins.create' | transloco }}
+      </button>
     </form>
   `,
   styles: `
@@ -161,8 +182,9 @@ export class AdminsPage {
   protected readonly accounts = inject(AdminAccountsService);
   protected readonly minPasswordLength = MIN_PASSWORD_LENGTH;
   protected readonly busy = signal(false);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
 
+  private readonly i18n = inject(TranslationService);
   private readonly auth = inject(AuthService);
   protected readonly ownId = computed(() => this.auth.admin()?.id ?? null);
 
@@ -191,34 +213,42 @@ export class AdminsPage {
       await this.accounts.create(this.form.getRawValue());
       this.form.reset();
     } catch (error: unknown) {
-      this.error.set(
-        (error as ApiError)?.message ?? 'Creating the account failed.',
-      );
+      this.error.set(problemOf(error, 'admin.admins.errorCreate'));
     } finally {
       this.busy.set(false);
     }
   }
 
   protected async remove(account: { id: string; name: string }): Promise<void> {
-    if (!confirm(`Delete the account of ${account.name}?`)) return;
+    const question = this.i18n.translate('admin.admins.confirmDelete', {
+      name: account.name,
+    });
+    if (!confirm(question)) return;
 
     this.error.set(null);
     try {
       await this.accounts.remove(account.id);
     } catch (error: unknown) {
-      this.error.set(
-        (error as ApiError)?.message ?? 'Deleting the account failed.',
-      );
+      this.error.set(problemOf(error, 'admin.admins.errorDelete'));
     }
+  }
+
+  /**
+   * A method rather than a `computed()`: it takes an argument, and the pipes on
+   * this page mark the view when the language changes, so it is re-evaluated
+   * with it (F72).
+   */
+  protected when(iso: string): string {
+    // The reader's own zone: a sign-in belongs to no event, and E8 is about
+    // event times.
+    return formatInstant(iso, localTimeZone(), this.i18n.locale());
   }
 
   private async load(): Promise<void> {
     try {
       await this.accounts.reload();
     } catch (error: unknown) {
-      this.error.set(
-        (error as ApiError)?.message ?? 'Loading the accounts failed.',
-      );
+      this.error.set(problemOf(error, 'admin.admins.errorLoad'));
     }
   }
 }

@@ -9,8 +9,9 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { AppConfigService } from '@trefaro/shared-config';
-import type { ApiError } from '@trefaro/shared-http';
+import { problemOf, type Problem } from '@trefaro/shared-http';
 import { TranslationService } from '@trefaro/shared-i18n';
 import type {
   MediaLink,
@@ -65,53 +66,56 @@ interface LinkDraft {
 @Component({
   selector: 'trefaro-media-links-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, TranslocoPipe],
   template: `
     <header class="head">
       <div>
-        <h1>Media links</h1>
+        <!-- The module's own name, from its descriptor's key: the page, the
+             dashboard tile and the module administration are one thing. -->
+        <h1>{{ 'modules.mediaLinks.title' | transloco }}</h1>
         <p class="meta">
           @if (event(); as item) {
             <a [routerLink]="['/series', seriesId(), 'events', item.id]">
               {{ item.name }}
             </a>
           }
-          <span>
-            Links to streams, recordings and material somebody else hosts.
-            Nothing is uploaded here, and nothing is embedded — participants
-            follow the link.
-          </span>
+          <span>{{ 'admin.mediaLinks.intro' | transloco }}</span>
         </p>
       </div>
       <a
         class="back"
         [routerLink]="['/series', seriesId(), 'events', eventId()]"
       >
-        Back to the event
+        {{ 'admin.events.back' | transloco }}
       </a>
     </header>
 
     @if (!moduleEnabled()) {
       <p class="hint" role="status">
-        The media links module is switched off for this instance, so there is
-        nothing to manage here. Switching it on again leaves every link that was
-        stored in place.
+        {{ 'admin.mediaLinks.moduleOff' | transloco }}
       </p>
     } @else {
-      @if (error()) {
-        <p class="error" role="alert">{{ error() }}</p>
+      @if (error(); as problem) {
+        <p class="error" role="alert">
+          {{ problem.key | transloco }}
+          @if (problem.detail; as detail) {
+            <span class="error__detail">{{ detail }}</span>
+          }
+        </p>
       }
 
       <section aria-labelledby="links-heading">
-        <h2 id="links-heading">Links</h2>
-        <p class="meta">
-          Participants see them in this order: live streams, then recordings,
-          then materials. Within one kind, the order they were added.
-        </p>
+        <h2 id="links-heading">
+          {{ 'admin.mediaLinks.heading' | transloco }}
+        </h2>
+        <p class="meta">{{ 'admin.mediaLinks.orderHint' | transloco }}</p>
 
         @if (links().length === 0) {
           <p class="meta">
-            {{ loading() ? 'Loading…' : 'No links yet. Add the first one.' }}
+            {{
+              (loading() ? 'common.loading' : 'admin.mediaLinks.empty')
+                | transloco
+            }}
           </p>
         }
 
@@ -131,7 +135,7 @@ interface LinkDraft {
               </div>
 
               <label>
-                <span>Kind</span>
+                <span>{{ 'admin.mediaLinks.kind' | transloco }}</span>
                 <!-- The chosen option is marked, rather than the select being
                      given a value: Angular writes the value property on the
                      element before the options exist, and the assignment is
@@ -152,7 +156,7 @@ interface LinkDraft {
               </label>
 
               <label>
-                <span>Title</span>
+                <span>{{ 'admin.mediaLinks.linkTitle' | transloco }}</span>
                 <input
                   [attr.maxlength]="maxTitleLength"
                   [value]="draft(link.id).title"
@@ -161,7 +165,7 @@ interface LinkDraft {
               </label>
 
               <label>
-                <span>Address</span>
+                <span>{{ 'admin.mediaLinks.address' | transloco }}</span>
                 <input
                   type="url"
                   [value]="draft(link.id).url"
@@ -170,7 +174,7 @@ interface LinkDraft {
               </label>
 
               <label>
-                <span>Belongs to</span>
+                <span>{{ 'admin.mediaLinks.belongsTo' | transloco }}</span>
                 <select
                   (change)="edit(link.id, { programItemId: value($event) })"
                 >
@@ -178,7 +182,7 @@ interface LinkDraft {
                     value=""
                     [selected]="draft(link.id).programItemId === ''"
                   >
-                    The whole event
+                    {{ 'admin.mediaLinks.wholeEvent' | transloco }}
                   </option>
                   @for (session of sessions(); track session.id) {
                     <option
@@ -197,7 +201,7 @@ interface LinkDraft {
                   [disabled]="busy() || !changed(link)"
                   (click)="save(link)"
                 >
-                  Save
+                  {{ 'admin.common.save' | transloco }}
                 </button>
                 <button
                   type="button"
@@ -205,7 +209,7 @@ interface LinkDraft {
                   [disabled]="busy()"
                   (click)="remove(link)"
                 >
-                  Delete
+                  {{ 'admin.common.delete' | transloco }}
                 </button>
               </div>
             </li>
@@ -214,11 +218,10 @@ interface LinkDraft {
       </section>
 
       <section aria-labelledby="add-heading">
-        <h2 id="add-heading">Add a link</h2>
+        <h2 id="add-heading">{{ 'admin.mediaLinks.add' | transloco }}</h2>
         @if (full()) {
           <p class="meta">
-            An event holds at most {{ maxLinks }} links. Delete one to add
-            another.
+            {{ 'admin.mediaLinks.full' | transloco: { count: maxLinks } }}
           </p>
         } @else {
           <form [formGroup]="form" (ngSubmit)="add()" novalidate>
@@ -227,7 +230,7 @@ interface LinkDraft {
                  wiped by the reset. -->
             <fieldset [disabled]="busy()">
               <label>
-                <span>Kind</span>
+                <span>{{ 'admin.mediaLinks.kind' | transloco }}</span>
                 <select formControlName="kind">
                   @for (kind of kinds; track kind) {
                     <option [value]="kind">{{ kindLabel(kind) }}</option>
@@ -236,16 +239,20 @@ interface LinkDraft {
               </label>
 
               <label>
-                <span>Title</span>
+                <span>{{ 'admin.mediaLinks.linkTitle' | transloco }}</span>
                 <input
                   formControlName="title"
                   [attr.maxlength]="maxTitleLength"
-                  placeholder="Recording of the opening keynote"
+                  [placeholder]="
+                    'admin.mediaLinks.titlePlaceholder' | transloco
+                  "
                 />
               </label>
 
               <label>
-                <span>Address</span>
+                <span>{{ 'admin.mediaLinks.address' | transloco }}</span>
+                <!-- The address stays as it is: an example URL is not a
+                     sentence, and a translated host name would be a dead one. -->
                 <input
                   formControlName="url"
                   type="url"
@@ -254,16 +261,20 @@ interface LinkDraft {
               </label>
 
               <label>
-                <span>Belongs to</span>
+                <span>{{ 'admin.mediaLinks.belongsTo' | transloco }}</span>
                 <select formControlName="programItemId">
-                  <option value="">The whole event</option>
+                  <option value="">
+                    {{ 'admin.mediaLinks.wholeEvent' | transloco }}
+                  </option>
                   @for (session of sessions(); track session.id) {
                     <option [value]="session.id">{{ session.title }}</option>
                   }
                 </select>
               </label>
 
-              <button type="submit">Add link</button>
+              <button type="submit">
+                {{ 'admin.mediaLinks.addSubmit' | transloco }}
+              </button>
             </fieldset>
           </form>
         }
@@ -412,7 +423,7 @@ export class MediaLinksPage {
   protected readonly event = signal<OrganizerEvent | null>(null);
   protected readonly links = signal<readonly MediaLink[]>([]);
   protected readonly sessions = signal<readonly ProgramItem[]>([]);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
 
@@ -501,10 +512,7 @@ export class MediaLinksPage {
     // title instead of the address should not have to wait for a round trip to
     // find out.
     if (!isWebUrl(raw.url)) {
-      this.error.set(
-        'An address has to start with http:// or https:// — that is what a ' +
-          'participant follows by clicking it.',
-      );
+      this.error.set({ key: 'admin.mediaLinks.errorUrl', detail: null });
       return;
     }
 
@@ -522,10 +530,7 @@ export class MediaLinksPage {
   protected async save(link: MediaLink): Promise<void> {
     const draft = this.draft(link.id);
     if (!isWebUrl(draft.url)) {
-      this.error.set(
-        'An address has to start with http:// or https:// — that is what a ' +
-          'participant follows by clicking it.',
-      );
+      this.error.set({ key: 'admin.mediaLinks.errorUrl', detail: null });
       return;
     }
 
@@ -540,7 +545,10 @@ export class MediaLinksPage {
   }
 
   protected async remove(link: MediaLink): Promise<void> {
-    if (!confirm(`Remove the link "${link.title}"?`)) return;
+    const question = this.i18n.translate('admin.mediaLinks.confirmRemove', {
+      title: link.title,
+    });
+    if (!confirm(question)) return;
     await this.change(() => this.mediaLinks.remove(link.id));
   }
 
@@ -551,7 +559,7 @@ export class MediaLinksPage {
     } catch (error: unknown) {
       this.event.set(null);
       this.loading.set(false);
-      this.report(error, 'This event no longer exists.');
+      this.report(error, 'admin.events.errorMissing');
       return;
     }
 
@@ -574,7 +582,7 @@ export class MediaLinksPage {
       this.sessions.set(sessions);
       this.error.set(null);
     } catch (error: unknown) {
-      this.report(error, 'The media links could not be loaded.');
+      this.report(error, 'admin.mediaLinks.errorLoad');
     } finally {
       this.loading.set(false);
     }
@@ -598,14 +606,14 @@ export class MediaLinksPage {
       // the order is the kind (F52).
       this.apply(await this.mediaLinks.list(this.eventId()));
     } catch (error: unknown) {
-      this.report(error, 'The change could not be saved.');
+      this.report(error, 'admin.fields.errorSave');
     } finally {
       this.busy.set(false);
     }
   }
 
-  private report(error: unknown, fallback: string): void {
-    this.error.set((error as ApiError)?.message ?? fallback);
+  private report(error: unknown, key: string): void {
+    this.error.set(problemOf(error, key));
   }
 }
 

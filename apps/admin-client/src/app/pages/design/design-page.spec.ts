@@ -1,4 +1,6 @@
 import { TestBed } from '@angular/core/testing';
+import type { Problem } from '@trefaro/shared-http';
+import { provideTranslationsForTest } from '@trefaro/shared-i18n';
 import { AppConfigService } from '@trefaro/shared-config';
 import type {
   AppConfig,
@@ -44,7 +46,7 @@ interface PageInternals {
   };
   changed: () => boolean;
   readings: () => readonly {
-    label: string;
+    labelKey: string;
     onColor: number;
     surface: boolean;
     tooPale: boolean;
@@ -52,7 +54,7 @@ interface PageInternals {
   save: () => Promise<void>;
   discard: () => void;
   reread: () => Promise<void>;
-  error: () => string | null;
+  error: () => Problem | null;
 }
 
 class FakeConfigAdminService {
@@ -95,6 +97,11 @@ describe('DesignPage', () => {
     config = new FakeAppConfigService();
     TestBed.configureTestingModule({
       providers: [
+        provideTranslationsForTest({
+          'admin.design.tooPale':
+            'Below {{ratio}}:1 against the page — the menu, the buttons and ' +
+            'every link drawn in this colour will be hard to make out.',
+        }),
         { provide: ConfigAdminService, useValue: admin },
         { provide: AppConfigService, useValue: config },
       ],
@@ -207,14 +214,19 @@ describe('DesignPage', () => {
 
   it('keeps the message and the form when the save is refused', async () => {
     const { fixture, page } = await render();
-    admin.failWith = { status: 400, message: 'Not a hexadecimal colour.' };
+    admin.failWith = {
+      status: 400,
+      message: 'Not a hexadecimal colour.',
+      explained: true,
+    };
     page.form.patchValue({ organizationName: 'Kept' });
     fixture.detectChanges();
 
     await page.save();
     fixture.detectChanges();
 
-    expect(page.error()).toBe('Not a hexadecimal colour.');
+    expect(page.error()?.key).toBe('admin.design.errorSave');
+    expect(page.error()?.detail).toBe('Not a hexadecimal colour.');
     expect(page.form.getRawValue()['organizationName']).toBe('Kept');
     expect(page.changed()).toBe(true);
   });
@@ -226,7 +238,7 @@ describe('DesignPage', () => {
     fixture.detectChanges();
 
     expect(page.readings()[0]).toMatchObject({
-      label: 'Primary colour',
+      labelKey: 'admin.setup.primaryColor',
       tooPale: true,
     });
     expect(text()).toContain('hard to make out');
@@ -241,7 +253,7 @@ describe('DesignPage', () => {
     // top, and the focus ring uses the darkened shade. A warning here would fire
     // out of the box and train an organizer to ignore the panel.
     expect(page.readings()[1]).toMatchObject({
-      label: 'Accent colour',
+      labelKey: 'admin.setup.accentColor',
       surface: false,
       tooPale: false,
     });

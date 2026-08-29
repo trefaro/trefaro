@@ -10,20 +10,26 @@
       <span class="sidebar__title">{{ config.organizationName() }}</span>
     </div>
 
-    <nav class="sidebar__nav" aria-label="Main navigation">
+    <nav class="sidebar__nav" [attr.aria-label]="'admin.nav.label' | transloco">
       <a
         routerLink="/"
         routerLinkActive="is-active"
         [routerLinkActiveOptions]="{ exact: true }"
       >
-        Event series
+        {{ 'admin.series.title' | transloco }}
       </a>
       <a routerLink="/administrators" routerLinkActive="is-active">
-        Administrators
+        {{ 'admin.admins.title' | transloco }}
       </a>
-      <a routerLink="/design" routerLinkActive="is-active">Design</a>
-      <a routerLink="/modules" routerLinkActive="is-active">Modules</a>
-      <a routerLink="/languages" routerLinkActive="is-active">Languages</a>
+      <a routerLink="/design" routerLinkActive="is-active">
+        {{ 'admin.design.title' | transloco }}
+      </a>
+      <a routerLink="/modules" routerLinkActive="is-active">
+        {{ 'admin.modules.title' | transloco }}
+      </a>
+      <a routerLink="/languages" routerLinkActive="is-active">
+        {{ 'admin.languages.title' | transloco }}
+      </a>
       <!-- Plug-in hook point one: the navigation bar. -->
       <trefaro-plugin-slot mountPoint="navigation" />
     </nav>
@@ -34,7 +40,7 @@
       <trefaro-language-switcher />
       <span class="sidebar__account-name">{{ auth.admin()?.name }}</span>
       <button type="button" class="sidebar__signout" (click)="signOut()">
-        Sign out
+        {{ 'admin.nav.signOut' | transloco }}
       </button>
     </div>
   </aside>

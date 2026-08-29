@@ -8,8 +8,9 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { AppConfigService } from '@trefaro/shared-config';
-import type { ApiError } from '@trefaro/shared-http';
+import { problemOf, type Problem } from '@trefaro/shared-http';
 import type { AppConfigSettings, Theme } from '@trefaro/shared-models';
 import {
   DEFAULT_FONT_FAMILY_KEY,
@@ -31,14 +32,15 @@ import { BrandingImageField } from './branding-image-field';
 
 /** What the contrast panel says about one of the two brand colours. */
 interface ContrastReading {
-  readonly label: string;
+  /** Catalogue key, not a word: the panel is built here and drawn there. */
+  readonly labelKey: string;
   readonly color: string;
   /** Against the text colour the theme derives for it — never below 4.5:1. */
   readonly onColor: number;
   /** Against the page both clients paint white. */
   readonly onPage: number;
   /** What the colour is for, in one clause — the reason the two differ. */
-  readonly role: string;
+  readonly roleKey: string;
   /**
    * Whether this colour is what somebody has to *find* on the page.
    *
@@ -76,24 +78,24 @@ interface ContrastReading {
 @Component({
   selector: 'trefaro-design-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, BrandingImageField],
+  imports: [ReactiveFormsModule, BrandingImageField, TranslocoPipe],
   template: `
     <header class="head">
-      <h1>Design</h1>
-      <p class="meta">
-        The name, the colours, the font and the two images this instance shows —
-        in both clients and inside every plug-in. A save takes effect the next
-        time a client is loaded; nothing repaints a page somebody already has
-        open.
-      </p>
+      <h1>{{ 'admin.design.title' | transloco }}</h1>
+      <p class="meta">{{ 'admin.design.lead' | transloco }}</p>
     </header>
 
-    @if (error()) {
-      <p class="error" role="alert">{{ error() }}</p>
+    @if (error(); as problem) {
+      <p class="error" role="alert">
+        {{ problem.key | transloco }}
+        @if (problem.detail; as detail) {
+          <span class="error__detail">{{ detail }}</span>
+        }
+      </p>
     }
     @if (saved()) {
       <p class="status" role="status">
-        Saved. Participants see it the next time they load the app.
+        {{ 'admin.design.saved' | transloco }}
       </p>
     }
 
@@ -103,7 +105,9 @@ interface ContrastReading {
              label that contains its own explanation makes the accessible name a
              paragraph. -->
         <div class="field">
-          <label for="organization-name">Organization name</label>
+          <label for="organization-name">
+            {{ 'admin.design.organizationName' | transloco }}
+          </label>
           <input
             id="organization-name"
             aria-describedby="organization-name-hint"
@@ -112,13 +116,15 @@ interface ContrastReading {
             autocomplete="organization"
           />
           <small id="organization-name-hint" class="meta">
-            Shown in the header of both clients, in page titles and in mails.
+            {{ 'admin.design.organizationNameHint' | transloco }}
           </small>
         </div>
 
         <div class="colours">
           <div class="field">
-            <label for="primary-color">Primary colour</label>
+            <label for="primary-color">
+              {{ 'admin.setup.primaryColor' | transloco }}
+            </label>
             <input
               id="primary-color"
               type="color"
@@ -127,7 +133,9 @@ interface ContrastReading {
             <small class="meta">{{ draft().primaryColor }}</small>
           </div>
           <div class="field">
-            <label for="accent-color">Accent colour</label>
+            <label for="accent-color">
+              {{ 'admin.setup.accentColor' | transloco }}
+            </label>
             <input
               id="accent-color"
               type="color"
@@ -138,60 +146,75 @@ interface ContrastReading {
         </div>
 
         <div class="field">
-          <label for="font-family">Font</label>
+          <label for="font-family">
+            {{ 'admin.design.font' | transloco }}
+          </label>
           <select
             id="font-family"
             aria-describedby="font-family-hint"
             formControlName="fontFamily"
           >
+            <!-- The family names stay as they are: three are proper nouns,
+                 and the fourth is worded so it needs no translation (E18, and
+                 the note on FontFamilyOption.label). -->
             @for (font of fonts; track font.key) {
               <option [value]="font.key">{{ font.label }}</option>
             }
           </select>
           <small id="font-family-hint" class="meta">
-            Served by this instance, never from a foreign origin. The system
-            font downloads nothing at all.
+            {{ 'admin.design.fontHint' | transloco }}
           </small>
         </div>
       </fieldset>
 
       <div class="actions">
         <button type="submit" [disabled]="loading() || busy() || !changed()">
-          Save
+          {{ 'admin.common.save' | transloco }}
         </button>
         <button
           type="button"
           [disabled]="loading() || busy() || !changed()"
           (click)="discard()"
         >
-          Discard changes
+          {{ 'admin.design.discard' | transloco }}
         </button>
       </div>
     </form>
 
     <section aria-labelledby="contrast-heading">
-      <h2 id="contrast-heading">Legibility</h2>
+      <h2 id="contrast-heading">
+        {{ 'admin.design.legibility' | transloco }}
+      </h2>
       <p class="meta">
-        Text on a brand colour is chosen automatically — black or white,
-        whichever reads better — so it never falls below
-        {{ minDerivedTextContrast }}:1, whatever you pick. What cannot be chosen
-        for you is whether the primary colour stands out from the white page: it
-        is the menu, the buttons and the colour links are drawn in.
+        {{
+          'admin.design.legibilityIntro'
+            | transloco: { ratio: minDerivedTextContrast }
+        }}
       </p>
       <ul class="readings">
-        @for (reading of readings(); track reading.label) {
+        @for (reading of readings(); track reading.labelKey) {
           <li>
             <span class="swatch" [style.background]="reading.color"></span>
+            <!-- One key for the whole line: three fragments around a bold name
+                 cannot be reordered by a translator (F79). -->
             <span>
-              <strong>{{ reading.label }}</strong>
-              ({{ reading.role }}) — text on it: {{ ratio(reading.onColor) }}:1,
-              against the page: {{ ratio(reading.onPage) }}:1
+              {{
+                'admin.design.reading'
+                  | transloco
+                    : {
+                        label: reading.labelKey | transloco,
+                        role: reading.roleKey | transloco,
+                        onColor: ratio(reading.onColor),
+                        onPage: ratio(reading.onPage),
+                      }
+              }}
             </span>
             @if (reading.tooPale) {
               <span class="warning" role="status">
-                Below {{ minSurfaceContrast }}:1 against the page — the menu,
-                the buttons and every link drawn in this colour will be hard to
-                make out. A darker shade of the same hue fixes it.
+                {{
+                  'admin.design.tooPale'
+                    | transloco: { ratio: minSurfaceContrast }
+                }}
               </span>
             }
           </li>
@@ -200,11 +223,8 @@ interface ContrastReading {
     </section>
 
     <section aria-labelledby="preview-heading">
-      <h2 id="preview-heading">Preview</h2>
-      <p class="meta">
-        The colours and the font are applied to this whole page as you change
-        them. The name and the images below appear in the menu once saved.
-      </p>
+      <h2 id="preview-heading">{{ 'admin.design.preview' | transloco }}</h2>
+      <p class="meta">{{ 'admin.design.previewHint' | transloco }}</p>
       <div class="card">
         <div class="card__brand">
           @if (logoUrl(); as url) {
@@ -212,39 +232,38 @@ interface ContrastReading {
           }
           <strong>{{ draft().organizationName }}</strong>
         </div>
-        <p class="card__text">
-          A heading, a line of body text and the two buttons participants press.
-        </p>
+        <p class="card__text">{{ 'admin.design.cardText' | transloco }}</p>
         <div class="card__actions">
-          <span class="card__button card__button--primary">Register</span>
-          <span class="card__button card__button--accent">Add to calendar</span>
+          <!-- The participant client's own word for its button, so renaming it
+               renames the preview too. -->
+          <span class="card__button card__button--primary">
+            {{ 'register.submit' | transloco }}
+          </span>
+          <span class="card__button card__button--accent">
+            {{ 'admin.design.cardCalendar' | transloco }}
+          </span>
         </div>
       </div>
     </section>
 
     <section aria-labelledby="images-heading">
-      <h2 id="images-heading">Images</h2>
-      <p class="meta">
-        An upload takes effect at once — it is not part of Discard above.
-      </p>
+      <h2 id="images-heading">{{ 'admin.design.images' | transloco }}</h2>
+      <p class="meta">{{ 'admin.design.imagesHint' | transloco }}</p>
 
       <trefaro-branding-image-field
         kind="logo"
-        heading="Logo"
-        fileLabel="Choose a logo file"
-        hint="Shown in the header of both clients. Wide is fine; transparency is
-              kept."
+        [heading]="'admin.design.logoHeading' | transloco"
+        [fileLabel]="'admin.design.logoFileLabel' | transloco"
+        [hint]="'admin.design.logoHint' | transloco"
         [currentUrl]="logoUrl()"
         (changed)="reread()"
       />
 
       <trefaro-branding-image-field
         kind="app-icon"
-        heading="App icon"
-        fileLabel="Choose an app icon file"
-        hint="What a participant sees on their home screen after installing the
-              app. Should be square — nothing here can check that, so look at
-              the preview. Without one, the Trefaro icons apply."
+        [heading]="'admin.design.iconHeading' | transloco"
+        [fileLabel]="'admin.design.iconFileLabel' | transloco"
+        [hint]="'admin.design.iconHint' | transloco"
         [currentUrl]="appIconUrl()"
         [square]="true"
         (changed)="reread()"
@@ -456,7 +475,7 @@ export class DesignPage {
 
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
   protected readonly saved = signal(false);
 
   /** What the server stores, as last read. The baseline for Discard. */
@@ -529,15 +548,15 @@ export class DesignPage {
    */
   protected readonly readings = computed<readonly ContrastReading[]>(() => [
     reading(
-      'Primary colour',
+      'admin.setup.primaryColor',
       this.draft().primaryColor,
-      'menu, buttons, links',
+      'admin.design.primaryRole',
       true,
     ),
     reading(
-      'Accent colour',
+      'admin.setup.accentColor',
       this.draft().accentColor,
-      'badges and highlights',
+      'admin.design.accentRole',
       false,
     ),
   ]);
@@ -574,7 +593,7 @@ export class DesignPage {
       await this.reread();
       this.saved.set(true);
     } catch (error: unknown) {
-      this.report(error, 'The design could not be saved.');
+      this.report(error, 'admin.design.errorSave');
     } finally {
       this.busy.set(false);
     }
@@ -600,7 +619,7 @@ export class DesignPage {
       const config = await this.config.reload();
       this.theme.apply(config.theme);
     } catch (error: unknown) {
-      this.report(error, 'The new configuration could not be read back.');
+      this.report(error, 'admin.design.errorReread');
     }
   }
 
@@ -608,7 +627,7 @@ export class DesignPage {
     try {
       this.adopt(await this.settings.getSettings());
     } catch (error: unknown) {
-      this.report(error, 'The design settings could not be loaded.');
+      this.report(error, 'admin.design.errorLoad');
     } finally {
       this.loading.set(false);
     }
@@ -646,24 +665,24 @@ export class DesignPage {
     };
   }
 
-  private report(error: unknown, fallback: string): void {
-    this.error.set((error as ApiError)?.message ?? fallback);
+  private report(error: unknown, key: string): void {
+    this.error.set(problemOf(error, key));
   }
 }
 
 function reading(
-  label: string,
+  labelKey: string,
   color: string,
-  role: string,
+  roleKey: string,
   surface: boolean,
 ): ContrastReading {
   const onPage = contrastRatio(color, PAGE_BACKGROUND_COLOR);
   return {
-    label,
+    labelKey,
     color,
     onColor: contrastRatio(color, readableTextColor(color)),
     onPage,
-    role,
+    roleKey,
     surface,
     tooPale: surface && onPage < MIN_SURFACE_CONTRAST,
   };

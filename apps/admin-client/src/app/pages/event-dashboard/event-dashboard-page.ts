@@ -8,16 +8,21 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import type { ApiError } from '@trefaro/shared-http';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { problemOf, type ApiError, type Problem } from '@trefaro/shared-http';
+import { TranslationService } from '@trefaro/shared-i18n';
 import type {
   EventDashboard,
   MediaLinkSummary,
   OrganizerEvent,
 } from '@trefaro/shared-models';
 import {
+  eventStatusKey,
   formatEventPeriod,
   formatInstant,
+  mediaLinkKindKey,
   publicEventPath,
+  registrationStatusKey,
 } from '@trefaro/shared-models';
 import { EventsAdminService } from '../../features/events/events-admin.service';
 
@@ -46,14 +51,24 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
  *    different origin, and this client is not told which one (that arrives with
  *    the configuration work of phase 2). A link that works in production and
  *    404s in development would be worse than the address itself.
+ *
+ * The lines under the numbers are assembled here rather than in the template,
+ * so each is a method that reads the catalogue — and a method, not a
+ * `computed()`, because the pipes on this page mark the view when the language
+ * changes and a memoised value would keep the old words (F72).
  */
 @Component({
   selector: 'trefaro-event-dashboard-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, TranslocoPipe],
   template: `
-    @if (error()) {
-      <p class="error" role="alert">{{ error() }}</p>
+    @if (error(); as problem) {
+      <p class="error" role="alert">
+        {{ problem.key | transloco }}
+        @if (problem.detail; as detail) {
+          <span class="error__detail">{{ detail }}</span>
+        }
+      </p>
     }
 
     @if (dashboard(); as view) {
@@ -62,7 +77,7 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
           <h1>{{ view.event.name }}</h1>
           <p class="meta">
             <span class="status" [class]="'status--' + view.event.status">
-              {{ view.event.status }}
+              {{ statusKey(view.event.status) | transloco }}
             </span>
             <span>{{ when() }}</span>
             <code>{{ address() }}</code>
@@ -73,22 +88,27 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
             class="button"
             [routerLink]="['/series', seriesId(), 'events', eventId(), 'edit']"
           >
-            Edit event
+            {{ 'admin.events.edit' | transloco }}
           </a>
           @if (view.event.status === 'published') {
             <button type="button" (click)="setStatus('draft')">
-              Unpublish
+              {{ 'admin.series.unpublish' | transloco }}
             </button>
           } @else {
             <button type="button" (click)="setStatus('published')">
-              Publish
+              {{ 'admin.series.publish' | transloco }}
             </button>
           }
-          <a [routerLink]="['/series', seriesId()]">Back to the series</a>
+          <a [routerLink]="['/series', seriesId()]">
+            {{ 'admin.dashboard.backToSeries' | transloco }}
+          </a>
         </div>
       </header>
 
-      <section class="tiles" aria-label="Summary">
+      <section
+        class="tiles"
+        [attr.aria-label]="'admin.dashboard.summary' | transloco"
+      >
         <article class="tile">
           <h2>
             <a
@@ -100,12 +120,16 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
                 'participants',
               ]"
             >
-              Participants
+              {{ 'admin.participants.title' | transloco }}
             </a>
           </h2>
+          <!-- Number and unit are drawn at two sizes, so the unit is a key of
+               its own rather than part of a sentence. -->
           <p class="tile__value">
             {{ view.registrations.confirmed }}
-            <span class="tile__unit">confirmed</span>
+            <span class="tile__unit">
+              {{ 'registration.status.confirmed' | transloco }}
+            </span>
           </p>
           <p class="tile__meta">{{ participantsMeta() }}</p>
         </article>
@@ -121,13 +145,18 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
                 'program',
               ]"
             >
-              Programme
+              {{ 'admin.program.title' | transloco }}
             </a>
           </h2>
           <p class="tile__value">
             {{ view.program.items }}
             <span class="tile__unit">
-              {{ view.program.items === 1 ? 'session' : 'sessions' }}
+              {{
+                (view.program.items === 1
+                  ? 'admin.dashboard.sessions.one'
+                  : 'admin.dashboard.sessions.many'
+                ) | transloco
+              }}
             </span>
           </p>
           <p class="tile__meta">{{ programMeta() }}</p>
@@ -144,14 +173,17 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
                 'registration-form',
               ]"
             >
-              Registration form
+              {{ 'admin.fields.title' | transloco }}
             </a>
           </h2>
           <p class="tile__value">
             {{ view.form.questions }}
             <span class="tile__unit">
               {{
-                view.form.questions === 1 ? 'extra question' : 'extra questions'
+                (view.form.questions === 1
+                  ? 'admin.dashboard.questions.one'
+                  : 'admin.dashboard.questions.many'
+                ) | transloco
               }}
             </span>
           </p>
@@ -169,13 +201,18 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
                   'media-links',
                 ]"
               >
-                Media links
+                {{ 'modules.mediaLinks.title' | transloco }}
               </a>
             </h2>
             <p class="tile__value">
               {{ media.links }}
               <span class="tile__unit">
-                {{ media.links === 1 ? 'link' : 'links' }}
+                {{
+                  (media.links === 1
+                    ? 'admin.dashboard.links.one'
+                    : 'admin.dashboard.links.many'
+                  ) | transloco
+                }}
               </span>
             </p>
             <p class="tile__meta">{{ mediaMeta(media) }}</p>
@@ -188,7 +225,7 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
 
       <section>
         <div class="section-head">
-          <h2>Latest registrations</h2>
+          <h2>{{ 'admin.dashboard.latest' | transloco }}</h2>
           <a
             [routerLink]="[
               '/series',
@@ -198,27 +235,26 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
               'participants',
             ]"
           >
-            All participants
+            {{ 'admin.dashboard.allParticipants' | transloco }}
           </a>
         </div>
 
         @if (latest().length === 0) {
           <p class="meta">
             {{
-              loading()
-                ? 'Loading…'
-                : 'Nobody has registered for this event yet.'
+              (loading() ? 'common.loading' : 'admin.dashboard.empty')
+                | transloco
             }}
           </p>
         } @else {
           <table>
             <thead>
               <tr>
-                <th>Name</th>
+                <th>{{ 'admin.dashboard.name' | transloco }}</th>
                 <!-- In the table, not behind a click (E13). -->
-                <th>E-mail</th>
-                <th>Status</th>
-                <th>Registered</th>
+                <th>{{ 'admin.dashboard.email' | transloco }}</th>
+                <th>{{ 'admin.dashboard.status' | transloco }}</th>
+                <th>{{ 'admin.dashboard.registered' | transloco }}</th>
               </tr>
             </thead>
             <tbody>
@@ -228,7 +264,7 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
                   <td>{{ row.email }}</td>
                   <td>
                     <span class="status" [class]="'status--' + row.status">
-                      {{ row.status }}
+                      {{ registrationStatusKey(row.status) | transloco }}
                     </span>
                   </td>
                   <td>{{ registeredAt(row.registeredAt) }}</td>
@@ -239,7 +275,7 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
         }
       </section>
     } @else if (loading()) {
-      <p class="meta">Loading…</p>
+      <p class="meta">{{ 'common.loading' | transloco }}</p>
     }
   `,
   styles: `
@@ -381,10 +417,13 @@ export class EventDashboardPage {
   readonly eventId = input.required<string>();
 
   private readonly events = inject(EventsAdminService);
+  private readonly i18n = inject(TranslationService);
 
   protected readonly dashboard = signal<EventDashboard | null>(null);
   protected readonly loading = signal(true);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
+  protected readonly statusKey = eventStatusKey;
+  protected readonly registrationStatusKey = registrationStatusKey;
 
   protected readonly event = computed(() => this.dashboard()?.event ?? null);
   protected readonly latest = computed(
@@ -397,10 +436,13 @@ export class EventDashboardPage {
     });
   }
 
-  /** The period in the event's own zone, never the browser's (E8). */
+  /**
+   * The period in the event's own zone, never the browser's (E8) — spelled out
+   * in the reader's language, which is a different question (F78).
+   */
   protected when(): string {
     const event = this.event();
-    return event ? formatEventPeriod(event) : '';
+    return event ? formatEventPeriod(event, this.i18n.locale()) : '';
   }
 
   protected address(): string {
@@ -410,7 +452,7 @@ export class EventDashboardPage {
 
   protected registeredAt(iso: string): string {
     const zone = this.event()?.timezone;
-    return zone ? formatInstant(iso, zone) : iso;
+    return zone ? formatInstant(iso, zone, this.i18n.locale()) : iso;
   }
 
   /**
@@ -422,29 +464,44 @@ export class EventDashboardPage {
   protected participantsMeta(): string {
     const counts = this.dashboard()?.registrations;
     if (!counts) return '';
-    if (counts.total === 0) return 'Nobody has registered yet.';
+    if (counts.total === 0) return this.say('admin.dashboard.metaNobody');
 
     const parts: string[] = [];
     if (counts.pending > 0) {
-      parts.push(`${counts.pending} awaiting confirmation`);
+      parts.push(this.say('admin.dashboard.metaPending', counts.pending));
     }
-    if (counts.cancelled > 0) parts.push(`${counts.cancelled} cancelled`);
+    if (counts.cancelled > 0) {
+      parts.push(this.say('admin.dashboard.metaCancelled', counts.cancelled));
+    }
     return parts.length > 0
       ? parts.join(' · ')
-      : 'Every registration is confirmed.';
+      : this.say('admin.dashboard.metaAllConfirmed');
   }
 
+  /**
+   * Two counts in one sentence, so one key per combination.
+   *
+   * Transloco carries no plural rules of its own here, and the alternative —
+   * "3 seats taken" plus "in 2 sessions" as two fragments — is what F79 rules
+   * out: a translator cannot reorder what arrives already glued. Four keys is
+   * the honest price of a sentence that counts twice.
+   */
   protected programMeta(): string {
     const program = this.dashboard()?.program;
     if (!program) return '';
-    if (program.items === 0) return 'No programme yet.';
-    if (program.withSignup === 0) return 'No session asks who is coming.';
+    if (program.items === 0) return this.say('admin.dashboard.metaNoProgram');
+    if (program.withSignup === 0) {
+      return this.say('admin.dashboard.metaNoSignup');
+    }
 
-    const seats = program.signups === 1 ? 'seat' : 'seats';
-    const sessions = program.withSignup === 1 ? 'session' : 'sessions';
-    return (
-      `${program.signups} ${seats} taken in ` +
-      `${program.withSignup} ${sessions}`
+    const seats = program.signups === 1 ? 'one' : 'many';
+    const sessions = program.withSignup === 1 ? 'One' : 'Many';
+    return this.i18n.translate(
+      `admin.dashboard.metaSeats.${seats}${sessions}`,
+      {
+        seats: program.signups,
+        sessions: program.withSignup,
+      },
     );
   }
 
@@ -456,21 +513,24 @@ export class EventDashboardPage {
    * of three zeros would not.
    */
   protected mediaMeta(media: MediaLinkSummary): string {
-    if (media.links === 0) return 'Nothing linked yet.';
+    if (media.links === 0) return this.say('admin.dashboard.metaNoMedia');
 
     const parts: string[] = [];
-    if (media.streams > 0) {
-      parts.push(`${media.streams} stream${media.streams === 1 ? '' : 's'}`);
-    }
-    if (media.recordings > 0) {
-      parts.push(
-        `${media.recordings} recording${media.recordings === 1 ? '' : 's'}`,
-      );
-    }
-    if (media.materials > 0) {
-      parts.push(
-        `${media.materials} material${media.materials === 1 ? '' : 's'}`,
-      );
+    // The kinds are named once, in `shared-models`, and counted here: a second
+    // set of words for "recording" would be a second thing to keep in step.
+    for (const [kind, count] of [
+      ['stream', media.streams],
+      ['recording', media.recordings],
+      ['material', media.materials],
+    ] as const) {
+      if (count > 0) {
+        parts.push(
+          this.i18n.translate('admin.dashboard.metaCount', {
+            count,
+            label: this.i18n.translate(mediaLinkKindKey(kind, count)),
+          }),
+        );
+      }
     }
     return parts.join(' · ');
   }
@@ -478,10 +538,20 @@ export class EventDashboardPage {
   protected formMeta(): string {
     const form = this.dashboard()?.form;
     if (!form) return '';
-    if (form.questions === 0) return 'Only the standard fields.';
+    if (form.questions === 0) {
+      return this.say('admin.dashboard.metaStandardFields');
+    }
     return form.required === 0
-      ? 'None of them required.'
-      : `${form.required} of them required.`;
+      ? this.say('admin.dashboard.metaNoneRequired')
+      : this.say('admin.dashboard.metaRequired', form.required);
+  }
+
+  /** One counted line of a tile, in the reader's language. */
+  private say(key: string, count?: number): string {
+    return this.i18n.translate(
+      key,
+      count === undefined ? undefined : { count },
+    );
   }
 
   protected setStatus(status: OrganizerEvent['status']): void {
@@ -500,8 +570,8 @@ export class EventDashboardPage {
       this.dashboard.set(null);
       this.error.set(
         (error as ApiError)?.status === 404
-          ? 'This event no longer exists.'
-          : ((error as ApiError)?.message ?? 'Loading failed.'),
+          ? { key: 'admin.events.errorMissing', detail: null }
+          : problemOf(error, 'admin.common.loadingFailed'),
       );
     } finally {
       this.loading.set(false);
@@ -513,7 +583,7 @@ export class EventDashboardPage {
     try {
       await action();
     } catch (error: unknown) {
-      this.error.set((error as ApiError)?.message ?? 'The request failed.');
+      this.error.set(problemOf(error, 'admin.common.requestFailed'));
     }
   }
 }

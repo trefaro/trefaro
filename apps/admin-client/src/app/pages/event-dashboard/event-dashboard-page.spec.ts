@@ -1,3 +1,4 @@
+import { provideTranslationsForTest } from '@trefaro/shared-i18n';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import type {
@@ -113,6 +114,32 @@ async function render(
 
   TestBed.configureTestingModule({
     providers: [
+      // The lines under the tiles are assembled here, so this spec brings the
+      // English texts they are assembled from rather than the keys.
+      provideTranslationsForTest({
+        'admin.participants.title': 'Participants',
+        'admin.program.title': 'Programme',
+        'admin.fields.title': 'Registration form',
+        'modules.mediaLinks.title': 'Media links',
+        'admin.dashboard.allParticipants': 'All participants',
+        'admin.dashboard.empty': 'Nobody has registered for this event yet.',
+        'admin.dashboard.metaNobody': 'Nobody has registered yet.',
+        'admin.dashboard.metaPending': '{{count}} awaiting confirmation',
+        'admin.dashboard.metaCancelled': '{{count}} cancelled',
+        'admin.dashboard.metaAllConfirmed': 'Every registration is confirmed.',
+        'admin.dashboard.metaNoProgram': 'No programme yet.',
+        'admin.dashboard.metaNoSignup': 'No session asks who is coming.',
+        'admin.dashboard.metaSeats.manyMany':
+          '{{seats}} seats taken in {{sessions}} sessions',
+        'admin.dashboard.metaNoMedia': 'Nothing linked yet.',
+        'admin.dashboard.metaCount': '{{count}} {{label}}',
+        'mediaLinks.kind.stream.one': 'stream',
+        'mediaLinks.kind.recording.many': 'recordings',
+        'admin.dashboard.metaStandardFields': 'Only the standard fields.',
+        'admin.dashboard.metaRequired': '{{count}} of them required.',
+        'admin.events.errorMissing': 'This event no longer exists.',
+        'eventStatus.draft': 'draft',
+      }),
       provideRouter([]),
       { provide: EventsAdminService, useValue: events },
     ],

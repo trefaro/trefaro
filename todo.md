@@ -356,9 +356,12 @@ answer, not an opinion.
       opt-in mail arrives in it.
 
 - [ ] **The server refuses in English, whatever language the page is in.** Since
-      AP 8 of phase 2 the participant client says its own half from the catalogue
-      and puts the server's reason beside it (F77) — "Die Anmeldung konnte nicht
-      gesendet werden." followed by `"Passport scan" takes files up to 5 MB`.
+      AP 8 and AP 9 of phase 2 both clients say their own half from the catalogue
+      and put the server's reason beside it (F77) — "Die Anmeldung konnte nicht
+      gesendet werden." followed by `"Passport scan" takes files up to 5 MB`. It
+      is the more visible arrangement in the organizer client, which refuses more
+      often: a programme item outside its event, a selection field with no
+      choices, a colour that is not hexadecimal.
       That is the honest arrangement and not the right one: the reason is the
       half a person actually reads. Making it translatable is a different piece
       of work, and a large one — every `BadRequestException` in the business

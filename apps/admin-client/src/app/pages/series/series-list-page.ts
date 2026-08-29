@@ -5,8 +5,10 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import type { ApiError } from '@trefaro/shared-http';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { problemOf, type Problem } from '@trefaro/shared-http';
 import type { EventSeries } from '@trefaro/shared-models';
+import { eventSeriesStatusKey } from '@trefaro/shared-models';
 import { EventSeriesAdminService } from '../../features/event-series/event-series-admin.service';
 
 /**
@@ -23,23 +25,30 @@ import { EventSeriesAdminService } from '../../features/event-series/event-serie
 @Component({
   selector: 'trefaro-series-list-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, TranslocoPipe],
   template: `
     <header class="head">
-      <h1>Event series</h1>
-      <a class="button" routerLink="/series/new">New event series</a>
+      <h1>{{ 'admin.series.title' | transloco }}</h1>
+      <a class="button" routerLink="/series/new">
+        {{ 'admin.series.new' | transloco }}
+      </a>
     </header>
 
-    @if (error()) {
-      <p class="error" role="alert">{{ error() }}</p>
+    @if (error(); as problem) {
+      <p class="error" role="alert">
+        {{ problem.key | transloco }}
+        @if (problem.detail; as detail) {
+          <span class="error__detail">{{ detail }}</span>
+        }
+      </p>
     }
 
     <table>
       <thead>
         <tr>
-          <th>Name</th>
-          <th>Public address</th>
-          <th>Status</th>
+          <th>{{ 'admin.series.name' | transloco }}</th>
+          <th>{{ 'admin.series.publicAddress' | transloco }}</th>
+          <th>{{ 'admin.series.status' | transloco }}</th>
           <th></th>
         </tr>
       </thead>
@@ -54,17 +63,17 @@ import { EventSeriesAdminService } from '../../features/event-series/event-serie
             </td>
             <td>
               <span class="status" [class]="'status--' + item.status">
-                {{ item.status }}
+                {{ statusKey(item.status) | transloco }}
               </span>
             </td>
             <td class="actions">
               @if (item.status === 'published') {
                 <button type="button" (click)="setStatus(item, 'draft')">
-                  Unpublish
+                  {{ 'admin.series.unpublish' | transloco }}
                 </button>
               } @else {
                 <button type="button" (click)="setStatus(item, 'published')">
-                  Publish
+                  {{ 'admin.series.publish' | transloco }}
                 </button>
               }
             </td>
@@ -73,9 +82,8 @@ import { EventSeriesAdminService } from '../../features/event-series/event-serie
           <tr>
             <td colspan="4">
               {{
-                admin.isLoading()
-                  ? 'Loading…'
-                  : 'No event series yet. Create the first one.'
+                (admin.isLoading() ? 'common.loading' : 'admin.series.empty')
+                  | transloco
               }}
             </td>
           </tr>
@@ -150,7 +158,8 @@ import { EventSeriesAdminService } from '../../features/event-series/event-serie
 })
 export class SeriesListPage {
   protected readonly admin = inject(EventSeriesAdminService);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
+  protected readonly statusKey = eventSeriesStatusKey;
 
   constructor() {
     void this.run(() => this.admin.reload());
@@ -168,7 +177,7 @@ export class SeriesListPage {
     try {
       await action();
     } catch (error: unknown) {
-      this.error.set((error as ApiError)?.message ?? 'The request failed.');
+      this.error.set(problemOf(error, 'admin.common.requestFailed'));
     }
   }
 }

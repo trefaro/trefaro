@@ -8,6 +8,7 @@ import {
   seedParticipants,
   type SeededEvent,
 } from './support/registration-fixtures';
+import { t } from './support/catalogue';
 
 /**
  * The event dashboard in the browser (FR 3.8) — AP 10.
@@ -123,26 +124,31 @@ test.describe('event dashboard', () => {
     ).toBeVisible();
 
     // Confirmed is the headline: it is who is actually coming.
-    const participants = tile(page, 'Participants');
+    const participants = tile(page, t('admin.participants.title'));
     await expect(participants).toContainText(`${CONFIRMED}`);
     await expect(participants).toContainText(
-      `${AWAITING} awaiting confirmation · ${CANCELLED} cancelled`,
+      `${t('admin.dashboard.metaPending', { count: AWAITING })} · ` +
+        t('admin.dashboard.metaCancelled', { count: CANCELLED }),
     );
 
-    const programme = tile(page, 'Programme');
+    const programme = tile(page, t('admin.program.title'));
     await expect(programme).toContainText('2');
-    await expect(programme).toContainText('0 seats taken in 1 session');
+    await expect(programme).toContainText(
+      t('admin.dashboard.metaSeats.manyOne', { seats: 0, sessions: 1 }),
+    );
 
-    const form = tile(page, 'Registration form');
-    await expect(form).toContainText('1 extra question');
-    await expect(form).toContainText('1 of them required.');
+    const form = tile(page, t('admin.fields.title'));
+    await expect(form).toContainText(`1 ${t('admin.dashboard.questions.one')}`);
+    await expect(form).toContainText(
+      t('admin.dashboard.metaRequired', { count: 1 }),
+    );
 
     // The media links module ships switched on (FR 1.5), and this event has
     // nothing linked yet: a zero is right here, because the tile leads
     // somewhere. Its absence is what a switched-off module looks like (F53).
-    const media = tile(page, 'Media links');
+    const media = tile(page, t('modules.mediaLinks.title'));
     await expect(media).toContainText('0');
-    await expect(media).toContainText('Nothing linked yet.');
+    await expect(media).toContainText(t('admin.dashboard.metaNoMedia'));
   });
 
   test('lists the newest registrations with their addresses', async ({
@@ -158,7 +164,7 @@ test.describe('event dashboard', () => {
     // Five rows and a way to the rest.
     await expect(page.getByRole('table').getByRole('row')).toHaveCount(6);
     await expect(
-      page.getByRole('link', { name: 'All participants' }),
+      page.getByRole('link', { name: t('admin.dashboard.allParticipants') }),
     ).toBeVisible();
   });
 
@@ -166,27 +172,31 @@ test.describe('event dashboard', () => {
     await page.goto(dashboard());
     // Exact: "All participants" below the tiles leads to the same page, and a
     // substring match would find both.
-    await page.getByRole('link', { name: 'Participants', exact: true }).click();
+    await page
+      .getByRole('link', { name: t('admin.participants.title'), exact: true })
+      .click();
     await expect(page).toHaveURL(/\/participants$/);
 
     await page.goto(dashboard());
-    await page.getByRole('link', { name: 'Programme' }).click();
+    await page.getByRole('link', { name: t('admin.program.title') }).click();
     await expect(page).toHaveURL(/\/program$/);
 
     await page.goto(dashboard());
-    await page.getByRole('link', { name: 'Registration form' }).click();
+    await page.getByRole('link', { name: t('admin.fields.title') }).click();
     await expect(page).toHaveURL(/\/registration-form$/);
 
     await page.goto(dashboard());
-    await page.getByRole('link', { name: 'Media links' }).click();
+    await page
+      .getByRole('link', { name: t('modules.mediaLinks.title') })
+      .click();
     await expect(page).toHaveURL(/\/media-links$/);
 
     await page.goto(dashboard());
-    await page.getByRole('link', { name: 'Edit event' }).click();
+    await page.getByRole('link', { name: t('admin.events.edit') }).click();
     await expect(page).toHaveURL(/\/edit$/);
-    await expect(page.getByLabel('Name', { exact: true })).toHaveValue(
-      seeded.eventName,
-    );
+    await expect(
+      page.getByLabel(t('admin.dashboard.name'), { exact: true }),
+    ).toHaveValue(seeded.eventName);
   });
 
   test('publishes and unpublishes the event where its numbers are', async ({
@@ -196,10 +206,16 @@ test.describe('event dashboard', () => {
 
     // The fixture publishes the event, so the first thing on offer is the
     // opposite.
-    await page.getByRole('button', { name: 'Unpublish' }).click();
-    await expect(page.getByText('draft', { exact: true })).toBeVisible();
+    await page
+      .getByRole('button', { name: t('admin.series.unpublish') })
+      .click();
+    await expect(
+      page.getByText(t('eventStatus.draft'), { exact: true }),
+    ).toBeVisible();
 
-    await page.getByRole('button', { name: 'Publish' }).click();
-    await expect(page.getByText('published', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: t('admin.series.publish') }).click();
+    await expect(
+      page.getByText(t('eventStatus.published'), { exact: true }),
+    ).toBeVisible();
   });
 });

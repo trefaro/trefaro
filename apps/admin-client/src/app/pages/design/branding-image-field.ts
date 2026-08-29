@@ -10,7 +10,9 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import type { ApiError } from '@trefaro/shared-http';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { problemOf, type Problem } from '@trefaro/shared-http';
+import { TranslationService } from '@trefaro/shared-i18n';
 import type { BrandingImageKind, BrandingImages } from '@trefaro/shared-models';
 import {
   BRANDING_MIME_TYPES,
@@ -50,6 +52,7 @@ interface PendingImage {
 @Component({
   selector: 'trefaro-branding-image-field',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [TranslocoPipe],
   template: `
     <section class="field">
       <h3>{{ heading() }}</h3>
@@ -60,7 +63,9 @@ interface PendingImage {
           @if (shownUrl(); as url) {
             <img [src]="url" [alt]="heading()" />
           } @else {
-            <span class="preview__empty">No image</span>
+            <span class="preview__empty">
+              {{ 'admin.design.noImage' | transloco }}
+            </span>
           }
         </div>
 
@@ -77,18 +82,21 @@ interface PendingImage {
               (change)="choose($event)"
             />
           </div>
-          <p class="meta" [id]="inputId() + '-hint'">{{ typeHint }}</p>
+          <p class="meta" [id]="inputId() + '-hint'">{{ typeHint() }}</p>
 
           @if (pending(); as chosen) {
             <p class="meta" role="status">
-              {{ chosen.file.name }} — not uploaded yet.
+              {{
+                'admin.design.notUploaded'
+                  | transloco: { name: chosen.file.name }
+              }}
             </p>
             <div class="field__actions">
               <button type="button" [disabled]="busy()" (click)="upload()">
-                Upload
+                {{ 'admin.design.upload' | transloco }}
               </button>
               <button type="button" [disabled]="busy()" (click)="discard()">
-                Keep the current image
+                {{ 'admin.design.keepCurrent' | transloco }}
               </button>
             </div>
           } @else if (currentUrl()) {
@@ -99,13 +107,18 @@ interface PendingImage {
                 [disabled]="busy()"
                 (click)="remove()"
               >
-                Remove
+                {{ 'admin.design.remove' | transloco }}
               </button>
             </div>
           }
 
-          @if (error()) {
-            <p class="error" role="alert">{{ error() }}</p>
+          @if (error(); as problem) {
+            <p class="error" role="alert">
+              {{ problem.key | transloco: problem.params }}
+              @if (problem.detail; as detail) {
+                <span class="error__detail">{{ detail }}</span>
+              }
+            </p>
           }
         </div>
       </div>
@@ -242,16 +255,28 @@ export class BrandingImageField {
   protected readonly inputId = computed(() => `branding-file-${this.kind()}`);
 
   protected readonly accept = BRANDING_MIME_TYPES.join(',');
-  protected readonly typeHint = `${brandingTypeSummary()}, at most ${Math.round(
-    MAX_BRANDING_BYTES / 1024,
-  )} KB.`;
 
   private readonly config = inject(ConfigAdminService);
+  private readonly i18n = inject(TranslationService);
+
+  /**
+   * What may be uploaded, in one sentence.
+   *
+   * The format names stay as they are — PNG is PNG in every language — and only
+   * the sentence around them is a key. A method rather than a field, so it is
+   * re-read when the language changes (F72).
+   */
+  protected typeHint(): string {
+    return this.i18n.translate('admin.design.typeHint', {
+      types: brandingTypeSummary(),
+      kilobytes: Math.round(MAX_BRANDING_BYTES / 1024),
+    });
+  }
   private readonly picker =
     viewChild.required<ElementRef<HTMLInputElement>>('picker');
 
   protected readonly pending = signal<PendingImage | null>(null);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
   protected readonly busy = signal(false);
 
   constructor() {
@@ -276,18 +301,28 @@ export class BrandingImageField {
     if (!BRANDING_MIME_TYPES.includes(file.type)) {
       // The type the operating system guessed, which is also what the server
       // will compare the first bytes against. Naming it makes a renamed file
-      // understandable rather than mysterious.
-      this.error.set(
-        `${file.type || 'That file'} cannot be used. Allowed: ${this.typeHint}`,
-      );
+      // understandable rather than mysterious — and a file whose type the
+      // browser could not guess gets a sentence that names no type at all.
+      this.error.set({
+        key: file.type
+          ? 'admin.design.typeRefused'
+          : 'admin.design.typeRefusedUnknown',
+        detail: null,
+        params: { type: file.type, hint: this.typeHint() },
+      });
       this.reset();
       return;
     }
 
     if (file.size > MAX_BRANDING_BYTES) {
-      this.error.set(
-        `That image is ${Math.round(file.size / 1024)} KB. ${this.typeHint}`,
-      );
+      this.error.set({
+        key: 'admin.design.tooLarge',
+        detail: null,
+        params: {
+          kilobytes: Math.round(file.size / 1024),
+          hint: this.typeHint(),
+        },
+      });
       this.reset();
       return;
     }
@@ -322,9 +357,7 @@ export class BrandingImageField {
       this.discard();
       this.changed.emit(images);
     } catch (error: unknown) {
-      this.error.set(
-        (error as ApiError)?.message ?? 'The image could not be saved.',
-      );
+      this.error.set(problemOf(error, 'admin.design.errorImage'));
     } finally {
       this.busy.set(false);
     }

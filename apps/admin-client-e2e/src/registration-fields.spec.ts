@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { ADMIN_STORAGE_STATE, fixtureLabel } from './support/admin-session';
+import { t } from './support/catalogue';
 
 /**
  * Building an event's registration form in the browser (F12, FR 3.5) — AP 6.
@@ -89,7 +90,9 @@ test.describe('the registration form of an event', () => {
     );
 
   const questions = (page: Page) =>
-    page.getByRole('region', { name: 'Your questions' }).getByRole('listitem');
+    page
+      .getByRole('region', { name: t('admin.fields.yourQuestions') })
+      .getByRole('listitem');
 
   /**
    * The card of one question, found by its key.
@@ -102,20 +105,18 @@ test.describe('the registration form of an event', () => {
     questions(page).filter({ hasText: key });
 
   const addForm = (page: Page) =>
-    page.getByRole('region', { name: 'Add a question' });
+    page.getByRole('region', { name: t('admin.fields.addHeading') });
 
   test('is reachable from the event and starts out empty', async ({ page }) => {
     await page.goto(`/series/${seeded.seriesId}/events/${seeded.eventId}`);
 
-    await page.getByRole('link', { name: 'Registration form' }).click();
+    await page.getByRole('link', { name: t('admin.fields.title') }).click();
 
     await expect(
-      page.getByRole('heading', { name: 'Registration form' }),
+      page.getByRole('heading', { name: t('admin.fields.title') }),
     ).toBeVisible();
     // The five standard fields are not managed here, and the page says so.
-    await expect(
-      page.getByText('No extra questions yet', { exact: false }),
-    ).toBeVisible();
+    await expect(page.getByText(t('admin.fields.empty'))).toBeVisible();
   });
 
   test('adds a question and shows the key its answers are stored under', async ({
@@ -124,18 +125,26 @@ test.describe('the registration form of an event', () => {
     await open(page);
 
     const form = addForm(page);
-    await form.getByLabel('Question').fill('Dietary requirements');
-    await form.getByLabel('Explanation').fill('So the caterer knows.');
-    await form.getByRole('button', { name: 'Add question' }).click();
+    await form
+      .getByLabel(t('admin.fields.question'))
+      .fill('Dietary requirements');
+    await form
+      .getByLabel(t('admin.fields.explanation'))
+      .fill('So the caterer knows.');
+    await form.getByRole('button', { name: t('admin.fields.add') }).click();
 
     const card = question(page, 'dietary-requirements');
     await expect(card).toBeVisible();
     // The key is derived from the wording, and shown because it is what turns up
     // in an export later.
-    await expect(card.getByLabel('Question')).toHaveValue(
+    await expect(card.getByLabel(t('admin.fields.question'))).toHaveValue(
       'Dietary requirements',
     );
-    await expect(card.getByText('text', { exact: true })).toBeVisible();
+    // The badge names the kind of answer from the catalogue, not the stored
+    // word: the row used to print `text` at an organizer.
+    await expect(
+      card.getByText(t('admin.fields.type.text'), { exact: true }),
+    ).toBeVisible();
   });
 
   test('offers the choices of a selection field as one line each', async ({
@@ -144,22 +153,24 @@ test.describe('the registration form of an event', () => {
     await open(page);
 
     const form = addForm(page);
-    await form.getByLabel('Question').fill('Meal');
-    await form.getByLabel('Kind of answer').selectOption('select');
+    await form.getByLabel(t('admin.fields.question')).fill('Meal');
+    await form.getByLabel(t('admin.fields.answerKind')).selectOption('select');
     // The choices box appears only for a selection field. Matched exactly: a
     // select element's accessible name carries its option text, and "one of
     // several choices" contains the word this box is called.
     await form
-      .getByLabel('Choices', { exact: true })
+      .getByLabel(t('admin.fields.choices'), { exact: true })
       .fill('Vegan\nVegetarian\nNo preference\n\n');
-    await form.getByRole('button', { name: 'Add question' }).click();
+    await form.getByRole('button', { name: t('admin.fields.add') }).click();
 
     const card = question(page, 'meal');
-    await expect(card.getByText('select', { exact: true })).toBeVisible();
+    await expect(
+      card.getByText(t('admin.fields.type.select'), { exact: true }),
+    ).toBeVisible();
     // The blank line is dropped rather than turned into an empty choice.
-    await expect(card.getByLabel('Choices', { exact: true })).toHaveValue(
-      'Vegan\nVegetarian\nNo preference',
-    );
+    await expect(
+      card.getByLabel(t('admin.fields.choices'), { exact: true }),
+    ).toHaveValue('Vegan\nVegetarian\nNo preference');
   });
 
   test('refuses a selection field with no choices, with the reason', async ({
@@ -168,9 +179,9 @@ test.describe('the registration form of an event', () => {
     await open(page);
 
     const form = addForm(page);
-    await form.getByLabel('Question').fill('Meal');
-    await form.getByLabel('Kind of answer').selectOption('select');
-    await form.getByRole('button', { name: 'Add question' }).click();
+    await form.getByLabel(t('admin.fields.question')).fill('Meal');
+    await form.getByLabel(t('admin.fields.answerKind')).selectOption('select');
+    await form.getByRole('button', { name: t('admin.fields.add') }).click();
 
     // The server's rule, surfaced where the organizer can act on it.
     await expect(page.getByRole('alert')).toContainText('at least one choice');
@@ -180,16 +191,20 @@ test.describe('the registration form of an event', () => {
     await open(page);
 
     const form = addForm(page);
-    await form.getByLabel('Question').fill('Where do you come form?');
-    await form.getByRole('button', { name: 'Add question' }).click();
+    await form
+      .getByLabel(t('admin.fields.question'))
+      .fill('Where do you come form?');
+    await form.getByRole('button', { name: t('admin.fields.add') }).click();
 
     const card = question(page, 'where-do-you-come-form');
     await expect(card).toBeVisible();
-    await card.getByLabel('Question').fill('Where do you come from?');
-    await card.getByRole('button', { name: 'Save' }).click();
+    await card
+      .getByLabel(t('admin.fields.question'))
+      .fill('Where do you come from?');
+    await card.getByRole('button', { name: t('admin.common.save') }).click();
 
     // Same card, same key: rephrasing must not orphan the answers already given.
-    await expect(card.getByLabel('Question')).toHaveValue(
+    await expect(card.getByLabel(t('admin.fields.question'))).toHaveValue(
       'Where do you come from?',
     );
     await expect(question(page, 'where-do-you-come-form')).toBeVisible();
@@ -201,18 +216,22 @@ test.describe('the registration form of an event', () => {
     await open(page);
 
     const form = addForm(page);
-    await form.getByLabel('Question').fill('Passport scan');
-    await form.getByLabel('Kind of answer').selectOption('file');
+    await form.getByLabel(t('admin.fields.question')).fill('Passport scan');
+    await form.getByLabel(t('admin.fields.answerKind')).selectOption('file');
     // The catalogue, not a text box for MIME types (F38): an organizer who could
     // type one could accept an executable.
-    await form.getByRole('checkbox', { name: 'PDF' }).check();
-    await form.getByLabel('Largest file (MB)').fill('2');
-    await form.getByRole('button', { name: 'Add question' }).click();
+    await form.getByRole('checkbox', { name: t('upload.type.pdf') }).check();
+    await form.getByLabel(t('admin.fields.maxSize')).fill('2');
+    await form.getByRole('button', { name: t('admin.fields.add') }).click();
 
     const card = question(page, 'passport-scan');
-    await expect(card.getByText('file', { exact: true })).toBeVisible();
-    await expect(card.getByRole('checkbox', { name: 'PDF' })).toBeChecked();
-    await expect(card.getByLabel('Largest file (MB)')).toHaveValue('2');
+    await expect(
+      card.getByText(t('admin.fields.type.file'), { exact: true }),
+    ).toBeVisible();
+    await expect(
+      card.getByRole('checkbox', { name: t('upload.type.pdf') }),
+    ).toBeChecked();
+    await expect(card.getByLabel(t('admin.fields.maxSize'))).toHaveValue('2');
   });
 
   test('refuses a file question that accepts nothing, with the reason', async ({
@@ -221,9 +240,9 @@ test.describe('the registration form of an event', () => {
     await open(page);
 
     const form = addForm(page);
-    await form.getByLabel('Question').fill('Passport scan');
-    await form.getByLabel('Kind of answer').selectOption('file');
-    await form.getByRole('button', { name: 'Add question' }).click();
+    await form.getByLabel(t('admin.fields.question')).fill('Passport scan');
+    await form.getByLabel(t('admin.fields.answerKind')).selectOption('file');
+    await form.getByRole('button', { name: t('admin.fields.add') }).click();
 
     await expect(page.getByRole('alert')).toContainText(
       'at least one accepted file type',
@@ -238,10 +257,10 @@ test.describe('the registration form of an event', () => {
     // The question is built through the interface, so this test covers the seam
     // between the form an organizer defines and the file it collects.
     const form = addForm(page);
-    await form.getByLabel('Question').fill('Passport scan');
-    await form.getByLabel('Kind of answer').selectOption('file');
-    await form.getByRole('checkbox', { name: 'PDF' }).check();
-    await form.getByRole('button', { name: 'Add question' }).click();
+    await form.getByLabel(t('admin.fields.question')).fill('Passport scan');
+    await form.getByLabel(t('admin.fields.answerKind')).selectOption('file');
+    await form.getByRole('checkbox', { name: t('upload.type.pdf') }).check();
+    await form.getByRole('button', { name: t('admin.fields.add') }).click();
     await expect(question(page, 'passport-scan')).toBeVisible();
 
     // The registration itself goes in through the public endpoint: filling in
@@ -288,8 +307,8 @@ test.describe('the registration form of an event', () => {
       ['First question', 'first-question'],
       ['Second question', 'second-question'],
     ]) {
-      await form.getByLabel('Question').fill(label);
-      await form.getByRole('button', { name: 'Add question' }).click();
+      await form.getByLabel(t('admin.fields.question')).fill(label);
+      await form.getByRole('button', { name: t('admin.fields.add') }).click();
       await expect(question(page, key)).toBeVisible();
     }
 
@@ -298,14 +317,16 @@ test.describe('the registration form of an event', () => {
     await expect(cards.first()).toContainText('first-question');
 
     await page
-      .getByRole('button', { name: 'Move First question down' })
+      .getByRole('button', {
+        name: t('admin.fields.moveDown', { label: 'First question' }),
+      })
       .click();
 
     await expect(cards.first()).toContainText('second-question');
 
     page.once('dialog', (dialog) => void dialog.accept());
     await question(page, 'second-question')
-      .getByRole('button', { name: 'Delete' })
+      .getByRole('button', { name: t('admin.common.delete') })
       .click();
 
     await expect(question(page, 'second-question')).toBeHidden();

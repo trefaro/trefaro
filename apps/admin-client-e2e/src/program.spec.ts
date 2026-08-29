@@ -4,6 +4,7 @@ import {
   SERIES_SLUG_PREFIX,
   fixtureLabel,
 } from './support/admin-session';
+import { t, tPattern } from './support/catalogue';
 
 /**
  * Planning an event's programme in the browser (FR 3.7, FR 3.10) — AP 8 and AP 9.
@@ -92,7 +93,9 @@ test.describe('the programme of an event', () => {
     page.goto(`/series/${seeded.seriesId}/events/${seeded.eventId}/program`);
 
   const sessions = (page: Page) =>
-    page.getByRole('region', { name: 'Sessions' }).getByRole('listitem');
+    page
+      .getByRole('region', { name: t('admin.program.sessions') })
+      .getByRole('listitem');
 
   /**
    * The card of one session, found by the clock it shows.
@@ -105,7 +108,7 @@ test.describe('the programme of an event', () => {
     sessions(page).filter({ hasText: clock });
 
   const addForm = (page: Page) =>
-    page.getByRole('region', { name: 'Add a session' });
+    page.getByRole('region', { name: t('admin.program.add') });
 
   /** Fills the add form with a wall-clock start and end in the event's zone. */
   const fill = async (
@@ -115,10 +118,12 @@ test.describe('the programme of an event', () => {
     endsAt: string,
   ): Promise<void> => {
     const form = addForm(page);
-    await form.getByLabel('Topic').fill(topic);
-    await form.getByLabel('Starts').fill(startsAt);
-    await form.getByLabel('Ends').fill(endsAt);
-    await form.getByRole('button', { name: 'Add session' }).click();
+    await form.getByLabel(t('admin.program.topic')).fill(topic);
+    await form.getByLabel(t('admin.events.startsAt')).fill(startsAt);
+    await form.getByLabel(t('admin.events.endsAt')).fill(endsAt);
+    await form
+      .getByRole('button', { name: t('admin.program.addSubmit') })
+      .click();
   };
 
   /**
@@ -136,23 +141,25 @@ test.describe('the programme of an event', () => {
     endsAt: string,
   ): Promise<void> => {
     await fill(page, topic, startsAt, endsAt);
-    await expect(addForm(page).getByLabel('Topic')).toHaveValue('');
+    await expect(
+      addForm(page).getByLabel(t('admin.program.topic')),
+    ).toHaveValue('');
   };
 
   test('is reachable from the event and starts out empty', async ({ page }) => {
     await page.goto(`/series/${seeded.seriesId}/events/${seeded.eventId}`);
 
-    await page.getByRole('link', { name: 'Programme' }).click();
+    await page.getByRole('link', { name: t('admin.program.title') }).click();
 
     await expect(
-      page.getByRole('heading', { name: 'Programme', level: 1 }),
+      page.getByRole('heading', { name: t('admin.program.title'), level: 1 }),
     ).toBeVisible();
-    await expect(
-      page.getByText('No sessions yet', { exact: false }),
-    ).toBeVisible();
+    await expect(page.getByText(t('admin.program.empty'))).toBeVisible();
     // The zone every time on the page is written in, said once and up front.
+    // The period is formatted from the event, so the sentence is matched with
+    // its placeholder open rather than with an English fragment.
     await expect(
-      page.getByText('every time below is in that zone'),
+      page.getByText(tPattern('admin.program.runsIn')),
     ).toBeVisible();
   });
 
@@ -167,9 +174,9 @@ test.describe('the programme of an event', () => {
     // 08:00 UTC and has to come back as 10:00 in Cologne (E8). A page that read
     // the instant in the browser's own zone would fail here on any CI runner.
     await expect(session(page, '10:00–11:30')).toBeVisible();
-    await expect(session(page, '10:00–11:30').getByLabel('Topic')).toHaveValue(
-      'Keynote',
-    );
+    await expect(
+      session(page, '10:00–11:30').getByLabel(t('admin.program.topic')),
+    ).toHaveValue('Keynote');
     // The day heading names the day and the zone.
     await expect(
       page.getByRole('heading', { name: /September 14, 2027/ }),
@@ -180,16 +187,22 @@ test.describe('the programme of an event', () => {
     await open(page);
 
     const form = addForm(page);
-    await form.getByLabel('Topic').fill('Opening words');
-    await form.getByLabel('Speaker').fill('Dr. Amara Nwosu');
-    await form.getByLabel('Description').fill('Where we stand, and why.');
-    await form.getByLabel('Starts').fill('2027-09-14T09:30');
-    await form.getByLabel('Ends').fill('2027-09-14T10:00');
-    await form.getByRole('button', { name: 'Add session' }).click();
+    await form.getByLabel(t('admin.program.topic')).fill('Opening words');
+    await form.getByLabel(t('admin.program.speaker')).fill('Dr. Amara Nwosu');
+    await form
+      .getByLabel(t('admin.program.description'))
+      .fill('Where we stand, and why.');
+    await form.getByLabel(t('admin.events.startsAt')).fill('2027-09-14T09:30');
+    await form.getByLabel(t('admin.events.endsAt')).fill('2027-09-14T10:00');
+    await form
+      .getByRole('button', { name: t('admin.program.addSubmit') })
+      .click();
 
     const card = session(page, '09:30–10:00');
-    await expect(card.getByLabel('Speaker')).toHaveValue('Dr. Amara Nwosu');
-    await expect(card.getByLabel('Description')).toHaveValue(
+    await expect(card.getByLabel(t('admin.program.speaker'))).toHaveValue(
+      'Dr. Amara Nwosu',
+    );
+    await expect(card.getByLabel(t('admin.program.description'))).toHaveValue(
       'Where we stand, and why.',
     );
   });
@@ -222,10 +235,10 @@ test.describe('the programme of an event', () => {
     // Parallel tracks are legitimate (F41) — both are kept, and both are marked.
     await expect(sessions(page)).toHaveCount(2);
     await expect(
-      page.getByText('runs alongside another session').first(),
+      page.getByText(t('admin.program.badgeClash')).first(),
     ).toBeVisible();
     await expect(page.getByRole('status')).toContainText(
-      'share their time with another',
+      t('admin.program.clashHint', { count: 2 }),
     );
   });
 
@@ -241,9 +254,11 @@ test.describe('the programme of an event', () => {
     await expect(sessions(page).first()).toContainText('12:00–13:00');
 
     const keynote = session(page, '16:00–17:00');
-    await keynote.getByLabel('Starts').fill('2027-09-14T10:00');
-    await keynote.getByLabel('Ends').fill('2027-09-14T11:00');
-    await keynote.getByRole('button', { name: 'Save' }).click();
+    await keynote
+      .getByLabel(t('admin.events.startsAt'))
+      .fill('2027-09-14T10:00');
+    await keynote.getByLabel(t('admin.events.endsAt')).fill('2027-09-14T11:00');
+    await keynote.getByRole('button', { name: t('admin.common.save') }).click();
 
     // Moving it is what reorders the programme — there is no "move up".
     await expect(sessions(page).first()).toContainText('10:00–11:00');
@@ -256,8 +271,8 @@ test.describe('the programme of an event', () => {
     await fill(page, 'Workshop', '2027-09-14T11:00', '2027-09-14T12:00');
 
     const card = session(page, '11:00–12:00');
-    await card.getByLabel('Ends').fill('2027-09-14T23:00');
-    await card.getByRole('button', { name: 'Save' }).click();
+    await card.getByLabel(t('admin.events.endsAt')).fill('2027-09-14T23:00');
+    await card.getByRole('button', { name: t('admin.common.save') }).click();
 
     await expect(page.getByRole('alert')).toContainText(
       'has to happen while the event does',
@@ -275,28 +290,34 @@ test.describe('the programme of an event', () => {
     const card = session(page, '13:00–14:00');
     // No seat field while the session is simply attended: a limit without
     // sign-up is refused by the server and would be a field with no meaning.
-    await expect(card.getByLabel('Seats')).toBeHidden();
+    await expect(card.getByLabel(t('admin.program.seats'))).toBeHidden();
 
-    await card.getByLabel('Ask who is coming').check();
-    await card.getByLabel('Seats').fill('12');
-    await card.getByRole('button', { name: 'Save' }).click();
+    await card.getByLabel(t('admin.program.askWhoIsComing')).check();
+    await card.getByLabel(t('admin.program.seats')).fill('12');
+    await card.getByRole('button', { name: t('admin.common.save') }).click();
 
     await expect(
-      session(page, '13:00–14:00').getByText('0 of 12 seats taken'),
+      session(page, '13:00–14:00').getByText(
+        t('admin.program.takeUpLimit', { count: 0, capacity: 12, left: 12 }),
+      ),
     ).toBeVisible();
 
     // Switching it off takes the limit with it, on the page as on the server.
     await session(page, '13:00–14:00')
-      .getByLabel('Ask who is coming')
+      .getByLabel(t('admin.program.askWhoIsComing'))
       .uncheck();
-    await expect(session(page, '13:00–14:00').getByLabel('Seats')).toBeHidden();
+    await expect(
+      session(page, '13:00–14:00').getByLabel(t('admin.program.seats')),
+    ).toBeHidden();
     await session(page, '13:00–14:00')
-      .getByRole('button', { name: 'Save' })
+      .getByRole('button', { name: t('admin.common.save') })
       .click();
 
     await expect(page.getByRole('alert')).toBeHidden();
     await expect(
-      session(page, '13:00–14:00').getByText('seats taken'),
+      session(page, '13:00–14:00').getByText(
+        tPattern('admin.program.takeUpLimit'),
+      ),
     ).toBeHidden();
   });
 
@@ -306,16 +327,20 @@ test.describe('the programme of an event', () => {
     await open(page);
 
     const form = addForm(page);
-    await form.getByLabel('Topic').fill('Guided tour');
-    await form.getByLabel('Starts').fill('2027-09-14T15:00');
-    await form.getByLabel('Ends').fill('2027-09-14T16:00');
-    await expect(form.getByLabel('Seats')).toBeHidden();
-    await form.getByLabel('Ask who is coming').check();
-    await form.getByLabel('Seats').fill('8');
-    await form.getByRole('button', { name: 'Add session' }).click();
+    await form.getByLabel(t('admin.program.topic')).fill('Guided tour');
+    await form.getByLabel(t('admin.events.startsAt')).fill('2027-09-14T15:00');
+    await form.getByLabel(t('admin.events.endsAt')).fill('2027-09-14T16:00');
+    await expect(form.getByLabel(t('admin.program.seats'))).toBeHidden();
+    await form.getByLabel(t('admin.program.askWhoIsComing')).check();
+    await form.getByLabel(t('admin.program.seats')).fill('8');
+    await form
+      .getByRole('button', { name: t('admin.program.addSubmit') })
+      .click();
 
     await expect(
-      session(page, '15:00–16:00').getByText('0 of 8 seats taken'),
+      session(page, '15:00–16:00').getByText(
+        t('admin.program.takeUpLimit', { count: 0, capacity: 8, left: 8 }),
+      ),
     ).toBeVisible();
   });
 
@@ -324,25 +349,31 @@ test.describe('the programme of an event', () => {
     await fillSaved(page, 'Workshop', '2027-09-14T13:00', '2027-09-14T14:00');
 
     const card = session(page, '13:00–14:00');
-    await card.getByLabel('Ask who is coming').check();
-    await card.getByRole('button', { name: 'Save' }).click();
+    await card.getByLabel(t('admin.program.askWhoIsComing')).check();
+    await card.getByRole('button', { name: t('admin.common.save') }).click();
     // The whole line, not just "signed up": the button beside it says the same
     // two words, and a locator that matches both is a strict-mode violation.
     await expect(
-      session(page, '13:00–14:00').getByText('0 signed up · no limit'),
+      session(page, '13:00–14:00').getByText(
+        t('admin.program.takeUpNoLimit', { count: 0 }),
+      ),
     ).toBeVisible();
 
     await session(page, '13:00–14:00')
-      .getByRole('button', { name: 'Who signed up' })
+      .getByRole('button', { name: t('admin.program.whoSignedUp') })
       .click();
 
     // Nobody yet, said as such rather than as an empty table.
-    await expect(page.getByText('Nobody has signed up yet')).toBeVisible();
+    await expect(
+      page.getByText(t('admin.program.nobodySignedUp')),
+    ).toBeVisible();
 
     await session(page, '13:00–14:00')
-      .getByRole('button', { name: 'Hide the list' })
+      .getByRole('button', { name: t('admin.program.hideList') })
       .click();
-    await expect(page.getByText('Nobody has signed up yet')).toBeHidden();
+    await expect(
+      page.getByText(t('admin.program.nobodySignedUp')),
+    ).toBeHidden();
   });
 
   test('asks before deleting, naming the session', async ({ page }) => {
@@ -355,7 +386,7 @@ test.describe('the programme of an event', () => {
       void dialog.dismiss();
     });
     await session(page, '13:00–14:00')
-      .getByRole('button', { name: 'Delete' })
+      .getByRole('button', { name: t('admin.common.delete') })
       .click();
 
     // Dismissed, so nothing is gone — and the question named the session. With
@@ -374,12 +405,10 @@ test.describe('the programme of an event', () => {
 
     page.once('dialog', (dialog) => void dialog.accept());
     await session(page, '15:30–16:00')
-      .getByRole('button', { name: 'Delete' })
+      .getByRole('button', { name: t('admin.common.delete') })
       .click();
 
     await expect(sessions(page)).toHaveCount(0);
-    await expect(
-      page.getByText('No sessions yet', { exact: false }),
-    ).toBeVisible();
+    await expect(page.getByText(t('admin.program.empty'))).toBeVisible();
   });
 });

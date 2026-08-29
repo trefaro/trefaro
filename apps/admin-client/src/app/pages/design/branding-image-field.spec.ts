@@ -1,4 +1,6 @@
 import { TestBed } from '@angular/core/testing';
+import type { Problem } from '@trefaro/shared-http';
+import { provideTranslationsForTest } from '@trefaro/shared-i18n';
 import type { BrandingImageKind, BrandingImages } from '@trefaro/shared-models';
 import { MAX_BRANDING_BYTES } from '@trefaro/shared-models';
 import { ConfigAdminService } from '../../features/config/config-admin.service';
@@ -16,7 +18,7 @@ interface FieldInternals {
   remove: () => Promise<void>;
   discard: () => void;
   pending: () => { file: File } | null;
-  error: () => string | null;
+  error: () => Problem | null;
 }
 
 class FakeConfigAdminService {
@@ -66,7 +68,16 @@ describe('BrandingImageField', () => {
   function render(kind: BrandingImageKind = 'logo') {
     admin = new FakeConfigAdminService();
     TestBed.configureTestingModule({
-      providers: [{ provide: ConfigAdminService, useValue: admin }],
+      providers: [
+        provideTranslationsForTest({
+          'admin.design.notUploaded': '{{name}} — not uploaded yet.',
+          'admin.design.typeHint': '{{types}}, at most {{kilobytes}} KB.',
+          'admin.design.typeRefused':
+            '{{type}} cannot be used. Allowed: {{hint}}',
+          'admin.design.tooLarge': 'That image is {{kilobytes}} KB. {{hint}}',
+        }),
+        { provide: ConfigAdminService, useValue: admin },
+      ],
     });
     const fixture = TestBed.createComponent(BrandingImageField);
     fixture.componentRef.setInput('kind', kind);
@@ -122,8 +133,10 @@ describe('BrandingImageField', () => {
     field.choose(chooseEvent(file({ type: 'image/svg+xml', name: 'l.svg' })));
     fixture.detectChanges();
 
-    // No SVG: it can carry script and would be served from this origin.
-    expect(field.error()).toContain('image/svg+xml');
+    // No SVG: it can carry script and would be served from this origin. The
+    // refused type travels as a parameter, so the key alone would not show it.
+    expect(field.error()?.key).toBe('admin.design.typeRefused');
+    expect(field.error()?.params?.['type']).toBe('image/svg+xml');
     expect(field.pending()).toBeNull();
     expect(admin.uploaded).toEqual([]);
   });
@@ -136,7 +149,7 @@ describe('BrandingImageField', () => {
     );
     fixture.detectChanges();
 
-    expect(field.error()).toContain('KB');
+    expect(field.error()?.key).toBe('admin.design.tooLarge');
     expect(field.pending()).toBeNull();
     expect(admin.uploaded).toEqual([]);
   });
@@ -175,14 +188,20 @@ describe('BrandingImageField', () => {
 
   it('keeps the chosen file when the upload is refused', async () => {
     const { fixture, field, emitted } = render();
-    admin.failWith = { status: 400, message: 'Those bytes are not a PNG.' };
+    admin.failWith = {
+      status: 400,
+      message: 'Those bytes are not a PNG.',
+      explained: true,
+    };
     field.choose(chooseEvent(file({ type: 'image/png' })));
     fixture.detectChanges();
 
     await field.upload();
     fixture.detectChanges();
 
-    expect(field.error()).toBe('Those bytes are not a PNG.');
+    // This client's sentence, and the server's reason beside it (F77).
+    expect(field.error()?.key).toBe('admin.design.errorImage');
+    expect(field.error()?.detail).toBe('Those bytes are not a PNG.');
     expect(emitted).toEqual([]);
   });
 });

@@ -9,7 +9,9 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import type { ApiError } from '@trefaro/shared-http';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { problemOf, type Problem } from '@trefaro/shared-http';
+import { TranslationService } from '@trefaro/shared-i18n';
 import type {
   OrganizerEvent,
   RegistrationField,
@@ -24,6 +26,7 @@ import {
   MIN_UPLOAD_MAX_BYTES,
   UPLOAD_TYPES,
   formatBytes,
+  uploadTypeLabelKey,
 } from '@trefaro/shared-models';
 import { EventsAdminService } from '../../features/events/events-admin.service';
 import { RegistrationFieldsAdminService } from '../../features/registrations/registration-fields-admin.service';
@@ -72,48 +75,54 @@ function toBytes(megabytes: number): number {
  * 2. **A field's key is shown but not editable.** It is what the answers are
  *    stored under, and the whole point of separating it from the label is that
  *    rephrasing a question leaves the answers where they are.
+ *
+ * The badge on a row and the "kind of answer" box draw from the same four keys.
+ * The badge used to print the stored word — `select` — and giving it a second,
+ * shorter vocabulary would mean two names for one thing in one screen.
  */
 @Component({
   selector: 'trefaro-registration-fields-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, TranslocoPipe],
   template: `
     <header class="head">
       <div>
-        <h1>Registration form</h1>
+        <h1>{{ 'admin.fields.title' | transloco }}</h1>
         <p class="meta">
           @if (event(); as item) {
             <a [routerLink]="['/series', seriesId(), 'events', item.id]">
               {{ item.name }}
             </a>
           }
-          <span>
-            Name, e-mail, phone and where somebody is coming from are always
-            asked. Everything below is yours.
-          </span>
+          <span>{{ 'admin.fields.intro' | transloco }}</span>
         </p>
       </div>
       <a
         class="back"
         [routerLink]="['/series', seriesId(), 'events', eventId()]"
       >
-        Back to the event
+        {{ 'admin.events.back' | transloco }}
       </a>
     </header>
 
-    @if (error()) {
-      <p class="error" role="alert">{{ error() }}</p>
+    @if (error(); as problem) {
+      <p class="error" role="alert">
+        {{ problem.key | transloco }}
+        @if (problem.detail; as detail) {
+          <span class="error__detail">{{ detail }}</span>
+        }
+      </p>
     }
 
     <section aria-labelledby="fields-heading">
-      <h2 id="fields-heading">Your questions</h2>
+      <h2 id="fields-heading">
+        {{ 'admin.fields.yourQuestions' | transloco }}
+      </h2>
 
       @if (fields().length === 0) {
         <p class="meta">
           {{
-            loading()
-              ? 'Loading…'
-              : 'No extra questions yet. The form asks the five standard fields.'
+            (loading() ? 'common.loading' : 'admin.fields.empty') | transloco
           }}
         </p>
       }
@@ -122,14 +131,18 @@ function toBytes(megabytes: number): number {
         @for (field of fields(); track field.id; let index = $index) {
           <li class="field">
             <div class="field__head">
-              <span class="badge">{{ field.type }}</span>
+              <span class="badge">
+                {{ typeKey(field.type) | transloco }}
+              </span>
               <span class="meta">
-                answers stored as <code>{{ field.key }}</code>
+                {{ 'admin.fields.storedAs' | transloco: { key: field.key } }}
               </span>
               <div class="field__order">
                 <button
                   type="button"
-                  [attr.aria-label]="'Move ' + field.label + ' up'"
+                  [attr.aria-label]="
+                    'admin.fields.moveUp' | transloco: { label: field.label }
+                  "
                   [disabled]="index === 0 || busy()"
                   (click)="move(index, -1)"
                 >
@@ -137,7 +150,9 @@ function toBytes(megabytes: number): number {
                 </button>
                 <button
                   type="button"
-                  [attr.aria-label]="'Move ' + field.label + ' down'"
+                  [attr.aria-label]="
+                    'admin.fields.moveDown' | transloco: { label: field.label }
+                  "
                   [disabled]="index === fields().length - 1 || busy()"
                   (click)="move(index, 1)"
                 >
@@ -147,7 +162,7 @@ function toBytes(megabytes: number): number {
             </div>
 
             <label>
-              <span>Question</span>
+              <span>{{ 'admin.fields.question' | transloco }}</span>
               <input
                 [attr.maxlength]="maxLabelLength"
                 [value]="draft(field.id).label"
@@ -156,10 +171,12 @@ function toBytes(megabytes: number): number {
             </label>
 
             <label>
-              <span>Explanation</span>
+              <span>{{ 'admin.fields.explanation' | transloco }}</span>
               <input
                 [attr.maxlength]="maxHelpLength"
-                placeholder="Optional — say why it is asked"
+                [placeholder]="
+                  'admin.fields.explanationPlaceholder' | transloco
+                "
                 [value]="draft(field.id).helpText"
                 (input)="edit(field.id, { helpText: value($event) })"
               />
@@ -167,19 +184,21 @@ function toBytes(megabytes: number): number {
 
             @if (field.type === 'select') {
               <label>
-                <span>Choices</span>
+                <span>{{ 'admin.fields.choices' | transloco }}</span>
                 <textarea
                   rows="4"
                   [value]="draft(field.id).optionsText"
                   (input)="edit(field.id, { optionsText: value($event) })"
                 ></textarea>
               </label>
-              <small class="meta">One choice per line.</small>
+              <small class="meta">
+                {{ 'admin.fields.choicesHint' | transloco }}
+              </small>
             }
 
             @if (field.type === 'file') {
               <fieldset class="types">
-                <legend>Accepted file types</legend>
+                <legend>{{ 'admin.fields.acceptedTypes' | transloco }}</legend>
                 @for (type of uploadTypes; track type.mimeType) {
                   <label class="check">
                     <input
@@ -187,12 +206,12 @@ function toBytes(megabytes: number): number {
                       [checked]="draft(field.id).accept.includes(type.mimeType)"
                       (change)="toggle(field.id, type.mimeType)"
                     />
-                    <span>{{ type.label }}</span>
+                    <span>{{ typeLabelKey(type.mimeType) | transloco }}</span>
                   </label>
                 }
               </fieldset>
               <label>
-                <span>Largest file (MB)</span>
+                <span>{{ 'admin.fields.maxSize' | transloco }}</span>
                 <input
                   type="number"
                   [attr.min]="minMegabytes"
@@ -203,8 +222,9 @@ function toBytes(megabytes: number): number {
                 />
               </label>
               <small class="meta">
-                At most {{ ceiling }} — a larger file is refused whatever this
-                says.
+                {{
+                  'admin.fields.maxSizeHint' | transloco: { limit: ceiling() }
+                }}
               </small>
             }
 
@@ -216,9 +236,10 @@ function toBytes(megabytes: number): number {
               />
               <span>
                 {{
-                  field.type === 'checkbox'
-                    ? 'Has to be ticked to register'
-                    : 'Has to be answered to register'
+                  (field.type === 'checkbox'
+                    ? 'admin.fields.requiredTicked'
+                    : 'admin.fields.required'
+                  ) | transloco
                 }}
               </span>
             </label>
@@ -229,7 +250,7 @@ function toBytes(megabytes: number): number {
                 [disabled]="busy() || !changed(field)"
                 (click)="save(field)"
               >
-                Save
+                {{ 'admin.common.save' | transloco }}
               </button>
               <button
                 type="button"
@@ -237,7 +258,7 @@ function toBytes(megabytes: number): number {
                 [disabled]="busy()"
                 (click)="remove(field)"
               >
-                Delete
+                {{ 'admin.common.delete' | transloco }}
               </button>
             </div>
           </li>
@@ -246,48 +267,48 @@ function toBytes(megabytes: number): number {
     </section>
 
     <section aria-labelledby="add-heading">
-      <h2 id="add-heading">Add a question</h2>
+      <h2 id="add-heading">{{ 'admin.fields.addHeading' | transloco }}</h2>
       @if (full()) {
         <p class="meta">
-          A form holds at most {{ maxFields }} extra questions. Delete one to
-          add another.
+          {{ 'admin.fields.full' | transloco: { count: maxFields } }}
         </p>
       } @else {
         <form [formGroup]="form" (ngSubmit)="add()" novalidate>
           <label>
-            <span>Question</span>
+            <span>{{ 'admin.fields.question' | transloco }}</span>
             <input
               formControlName="label"
               [attr.maxlength]="maxLabelLength"
-              placeholder="Dietary requirements"
+              [placeholder]="'admin.fields.questionPlaceholder' | transloco"
             />
           </label>
 
           <label>
-            <span>Kind of answer</span>
+            <span>{{ 'admin.fields.answerKind' | transloco }}</span>
             <select formControlName="type">
-              <option value="text">Text</option>
-              <option value="select">One of several choices</option>
-              <option value="checkbox">Yes or no</option>
-              <option value="file">A file</option>
+              @for (type of fieldTypes; track type) {
+                <option [value]="type">{{ typeKey(type) | transloco }}</option>
+              }
             </select>
           </label>
 
           @if (newType() === 'select') {
             <label>
-              <span>Choices</span>
+              <span>{{ 'admin.fields.choices' | transloco }}</span>
               <textarea
                 formControlName="optionsText"
                 rows="4"
-                placeholder="Vegan&#10;Vegetarian&#10;No preference"
+                [placeholder]="'admin.fields.choicesPlaceholder' | transloco"
               ></textarea>
             </label>
-            <small class="meta">One choice per line.</small>
+            <small class="meta">
+              {{ 'admin.fields.choicesHint' | transloco }}
+            </small>
           }
 
           @if (newType() === 'file') {
             <fieldset class="types">
-              <legend>Accepted file types</legend>
+              <legend>{{ 'admin.fields.acceptedTypes' | transloco }}</legend>
               @for (type of uploadTypes; track type.mimeType) {
                 <label class="check">
                   <input
@@ -295,12 +316,12 @@ function toBytes(megabytes: number): number {
                     [checked]="newAccept().includes(type.mimeType)"
                     (change)="toggleNew(type.mimeType)"
                   />
-                  <span>{{ type.label }}</span>
+                  <span>{{ typeLabelKey(type.mimeType) | transloco }}</span>
                 </label>
               }
             </fieldset>
             <label>
-              <span>Largest file (MB)</span>
+              <span>{{ 'admin.fields.maxSize' | transloco }}</span>
               <input
                 formControlName="maxSizeMb"
                 type="number"
@@ -310,26 +331,27 @@ function toBytes(megabytes: number): number {
               />
             </label>
             <small class="meta">
-              Participants only see the types you tick. Nothing larger than
-              {{ ceiling }} is accepted, whatever the limit says.
+              {{ 'admin.fields.fileHint' | transloco: { limit: ceiling() } }}
             </small>
           }
 
           <label>
-            <span>Explanation</span>
+            <span>{{ 'admin.fields.explanation' | transloco }}</span>
             <input
               formControlName="helpText"
               [attr.maxlength]="maxHelpLength"
-              placeholder="Optional — say why it is asked"
+              [placeholder]="'admin.fields.explanationPlaceholder' | transloco"
             />
           </label>
 
           <label class="check">
             <input formControlName="required" type="checkbox" />
-            <span>Has to be answered to register</span>
+            <span>{{ 'admin.fields.required' | transloco }}</span>
           </label>
 
-          <button type="submit" [disabled]="busy()">Add question</button>
+          <button type="submit" [disabled]="busy()">
+            {{ 'admin.fields.add' | transloco }}
+          </button>
         </form>
       }
     </section>
@@ -508,14 +530,32 @@ export class RegistrationFieldsPage {
   protected readonly uploadTypes = UPLOAD_TYPES;
   protected readonly minMegabytes = toMegabytes(MIN_UPLOAD_MAX_BYTES);
   protected readonly maxMegabytes = toMegabytes(MAX_UPLOAD_BYTES);
-  protected readonly ceiling = formatBytes(MAX_UPLOAD_BYTES);
+  protected readonly typeLabelKey = uploadTypeLabelKey;
+  /** The four kinds of answer, in the order the box offers them. */
+  protected readonly fieldTypes: readonly RegistrationFieldType[] = [
+    'text',
+    'select',
+    'checkbox',
+    'file',
+  ];
+
+  private readonly i18n = inject(TranslationService);
+
+  /** A size is a format, so it follows the reader rather than the event (F78). */
+  protected ceiling(): string {
+    return formatBytes(MAX_UPLOAD_BYTES, this.i18n.locale());
+  }
+
+  protected typeKey(type: RegistrationFieldType): string {
+    return `admin.fields.type.${type}`;
+  }
 
   private readonly fieldsService = inject(RegistrationFieldsAdminService);
   private readonly events = inject(EventsAdminService);
 
   protected readonly event = signal<OrganizerEvent | null>(null);
   protected readonly fields = signal<readonly RegistrationField[]>([]);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
 
@@ -673,13 +713,10 @@ export class RegistrationFieldsPage {
   }
 
   protected async remove(field: RegistrationField): Promise<void> {
-    if (
-      !confirm(
-        `Remove "${field.label}" from the form? Answers people have already ` +
-          'given are kept — the participant overview shows them as no longer ' +
-          'asked for.',
-      )
-    ) {
+    const question = this.i18n.translate('admin.fields.confirmRemove', {
+      label: field.label,
+    });
+    if (!confirm(question)) {
       return;
     }
     await this.change(() => this.fieldsService.remove(field.id));
@@ -708,7 +745,7 @@ export class RegistrationFieldsPage {
       this.event.set(await this.events.get(eventId));
     } catch (error: unknown) {
       this.event.set(null);
-      this.report(error, 'This event no longer exists.');
+      this.report(error, 'admin.events.errorMissing');
     }
   }
 
@@ -718,7 +755,7 @@ export class RegistrationFieldsPage {
       this.apply(await this.fieldsService.list(eventId));
       this.error.set(null);
     } catch (error: unknown) {
-      this.report(error, 'The registration form could not be loaded.');
+      this.report(error, 'admin.fields.errorLoad');
     } finally {
       this.loading.set(false);
     }
@@ -742,14 +779,14 @@ export class RegistrationFieldsPage {
       // the keys, and both can differ from what was sent.
       this.apply(await this.fieldsService.list(this.eventId()));
     } catch (error: unknown) {
-      this.report(error, 'The change could not be saved.');
+      this.report(error, 'admin.fields.errorSave');
     } finally {
       this.busy.set(false);
     }
   }
 
-  private report(error: unknown, fallback: string): void {
-    this.error.set((error as ApiError)?.message ?? fallback);
+  private report(error: unknown, key: string): void {
+    this.error.set(problemOf(error, key));
   }
 }
 

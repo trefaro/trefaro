@@ -8,7 +8,9 @@ import {
   signal,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import type { ApiError } from '@trefaro/shared-http';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { problemOf, type Problem } from '@trefaro/shared-http';
+import { TranslationService } from '@trefaro/shared-i18n';
 import type {
   AttachmentSummary,
   OrganizerEvent,
@@ -32,6 +34,7 @@ import {
   formatBytes,
   formatInstant,
   pageCount,
+  registrationStatusKey,
 } from '@trefaro/shared-models';
 import { EventsAdminService } from '../../features/events/events-admin.service';
 import { AttachmentsAdminService } from '../../features/registrations/attachments-admin.service';
@@ -46,14 +49,14 @@ const CHART = { width: 720, height: 120, gap: 2 } as const;
 
 interface Column {
   readonly key: ParticipantSort;
-  readonly label: string;
+  readonly labelKey: string;
 }
 
 const COLUMNS: readonly Column[] = [
-  { key: 'name', label: 'Name' },
-  { key: 'email', label: 'E-mail' },
-  { key: 'status', label: 'Status' },
-  { key: 'registeredAt', label: 'Registered' },
+  { key: 'name', labelKey: 'admin.participants.colName' },
+  { key: 'email', labelKey: 'admin.participants.colEmail' },
+  { key: 'status', labelKey: 'admin.participants.colStatus' },
+  { key: 'registeredAt', labelKey: 'admin.participants.colRegistered' },
 ];
 
 interface Bar extends RegistrationWeek {
@@ -86,34 +89,46 @@ interface Bar extends RegistrationWeek {
 @Component({
   selector: 'trefaro-participants-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, TranslocoPipe],
   template: `
-    @if (error()) {
-      <p class="error" role="alert">{{ error() }}</p>
+    @if (error(); as problem) {
+      <p class="error" role="alert">
+        {{ problem.key | transloco }}
+        @if (problem.detail; as detail) {
+          <span class="error__detail">{{ detail }}</span>
+        }
+      </p>
     }
 
     <header class="head">
       <div>
-        <h1>Participants</h1>
+        <h1>{{ 'admin.participants.title' | transloco }}</h1>
         <p class="meta">
           @if (event(); as item) {
             <a [routerLink]="['/series', seriesId(), 'events', item.id]">
               {{ item.name }}
             </a>
-            <span class="zone">times in {{ item.timezone }}</span>
+            <span class="zone">
+              {{
+                'admin.participants.timesIn'
+                  | transloco: { zone: item.timezone }
+              }}
+            </span>
           }
         </p>
       </div>
       <a class="back" [routerLink]="['/series', seriesId()]">
-        Back to the series
+        {{ 'admin.dashboard.backToSeries' | transloco }}
       </a>
     </header>
 
     @if (statistics(); as figures) {
       <section class="chart-section">
-        <h2>Registrations per week</h2>
+        <h2>{{ 'admin.participants.perWeek' | transloco }}</h2>
         @if (bars().length === 0) {
-          <p class="meta">Nobody has registered yet.</p>
+          <p class="meta">
+            {{ 'admin.dashboard.metaNobody' | transloco }}
+          </p>
         } @else {
           <svg
             class="chart"
@@ -125,8 +140,15 @@ interface Bar extends RegistrationWeek {
             @for (bar of bars(); track bar.weekStart) {
               <g>
                 <title>
-                  {{ bar.weekStart }}: {{ bar.total }} registered,
-                  {{ bar.confirmed }} confirmed
+                  {{
+                    'admin.participants.barTitle'
+                      | transloco
+                        : {
+                            week: bar.weekStart,
+                            total: bar.total,
+                            confirmed: bar.confirmed,
+                          }
+                  }}
                 </title>
                 <rect
                   class="bar bar--total"
@@ -146,8 +168,10 @@ interface Bar extends RegistrationWeek {
             }
           </svg>
           <p class="legend">
-            <span class="swatch swatch--confirmed"></span> confirmed
-            <span class="swatch swatch--total"></span> registered
+            <span class="swatch swatch--confirmed"></span>
+            {{ 'registration.status.confirmed' | transloco }}
+            <span class="swatch swatch--total"></span>
+            {{ 'admin.participants.legendRegistered' | transloco }}
             <span class="meta">
               {{ figures.weeks[0].weekStart }} –
               {{ figures.weeks[figures.weeks.length - 1].weekStart }}
@@ -160,18 +184,24 @@ interface Bar extends RegistrationWeek {
     <section>
       <div class="controls">
         <div class="field">
-          <label for="participant-search">Search</label>
+          <label for="participant-search">
+            {{ 'admin.participants.search' | transloco }}
+          </label>
           <input
             id="participant-search"
             type="search"
             autocomplete="off"
-            placeholder="Name or e-mail"
+            [placeholder]="'admin.participants.searchPlaceholder' | transloco"
             [value]="searchText()"
             (input)="onSearch($event)"
           />
         </div>
 
-        <div class="filters" role="group" aria-label="Filter by status">
+        <div
+          class="filters"
+          role="group"
+          [attr.aria-label]="'admin.participants.filterGroup' | transloco"
+        >
           @for (option of statusOptions(); track option.value) {
             <button
               type="button"
@@ -180,7 +210,7 @@ interface Bar extends RegistrationWeek {
               [attr.aria-pressed]="option.value === statusFilter()"
               (click)="filterBy(option.value)"
             >
-              {{ option.label }} ({{ option.count }})
+              {{ option.labelKey | transloco }} ({{ option.count }})
             </button>
           }
         </div>
@@ -192,11 +222,11 @@ interface Bar extends RegistrationWeek {
             @for (column of columns; track column.key) {
               <th [attr.aria-sort]="ariaSort(column.key)">
                 <button type="button" class="sort" (click)="sortBy(column.key)">
-                  {{ column.label }}{{ sortMarker(column.key) }}
+                  {{ column.labelKey | transloco }}{{ sortMarker(column.key) }}
                 </button>
               </th>
             }
-            <th>Newsletter</th>
+            <th>{{ 'admin.participants.colNewsletter' | transloco }}</th>
             <th></th>
           </tr>
         </thead>
@@ -218,44 +248,62 @@ interface Bar extends RegistrationWeek {
               </td>
               <td>
                 <span class="status" [class]="'status--' + row.status">
-                  {{ row.status }}
+                  {{ statusKey(row.status) | transloco }}
                 </span>
               </td>
               <td>{{ when(row.registeredAt) }}</td>
-              <td>{{ row.newsletterOptIn ? 'yes' : '—' }}</td>
+              <td>
+                @if (row.newsletterOptIn) {
+                  {{ 'admin.participants.yes' | transloco }}
+                } @else {
+                  —
+                }
+              </td>
               <td class="actions">
                 @if (row.status === 'cancelled') {
                   <button type="button" (click)="reinstate(row)">
-                    Reinstate
+                    {{ 'admin.participants.reinstate' | transloco }}
                   </button>
                 } @else {
-                  <button type="button" (click)="cancel(row)">Cancel</button>
+                  <button type="button" (click)="cancel(row)">
+                    {{ 'admin.participants.cancel' | transloco }}
+                  </button>
                 }
               </td>
             </tr>
           } @empty {
             <tr>
-              <td colspan="6" class="meta">{{ emptyMessage() }}</td>
+              <td colspan="6" class="meta">
+                {{ emptyMessageKey() | transloco }}
+              </td>
             </tr>
           }
         </tbody>
       </table>
 
-      <nav class="pager" aria-label="Pages">
+      <nav
+        class="pager"
+        [attr.aria-label]="'admin.participants.pages' | transloco"
+      >
         <button
           type="button"
           [disabled]="pageNumber() <= 1"
           (click)="goToPage(pageNumber() - 1)"
         >
-          Previous
+          {{ 'admin.common.previous' | transloco }}
         </button>
-        <span>Page {{ pageNumber() }} of {{ pages() }}</span>
+        <span>
+          {{
+            'admin.participants.pageOf'
+              | transloco: { page: pageNumber(), pages: pages() }
+          }}
+        </span>
         <button
           type="button"
           [disabled]="pageNumber() >= pages()"
           (click)="goToPage(pageNumber() + 1)"
         >
-          Next
+          {{ 'admin.common.next' | transloco }}
         </button>
         <span class="meta">{{ matchLabel() }}</span>
       </nav>
@@ -272,34 +320,52 @@ interface Bar extends RegistrationWeek {
             [queryParams]="{ selected: null }"
             queryParamsHandling="merge"
           >
-            Close
+            {{ 'admin.participants.close' | transloco }}
           </a>
         </header>
         <dl>
-          <dt>E-mail</dt>
+          <dt>{{ 'admin.participants.colEmail' | transloco }}</dt>
           <dd>
             <a [href]="'mailto:' + person.email">{{ person.email }}</a>
           </dd>
-          <dt>Phone</dt>
+          <dt>{{ 'admin.participants.phone' | transloco }}</dt>
           <dd>{{ person.phone ?? '—' }}</dd>
-          <dt>Coming from</dt>
+          <dt>{{ 'admin.participants.origin' | transloco }}</dt>
           <dd>{{ person.origin ?? '—' }}</dd>
-          <dt>Status</dt>
-          <dd>{{ person.status }}</dd>
-          <dt>Registered</dt>
+          <dt>{{ 'admin.participants.colStatus' | transloco }}</dt>
+          <dd>{{ statusKey(person.status) | transloco }}</dd>
+          <dt>{{ 'admin.participants.colRegistered' | transloco }}</dt>
           <dd>{{ when(person.registeredAt) }}</dd>
-          <dt>Confirmed</dt>
+          <dt>{{ 'admin.participants.confirmedAt' | transloco }}</dt>
           <dd>
-            {{ person.confirmedAt ? when(person.confirmedAt) : 'not yet' }}
+            @if (person.confirmedAt; as at) {
+              {{ when(at) }}
+            } @else {
+              {{ 'admin.participants.notYet' | transloco }}
+            }
           </dd>
-          <dt>Newsletter</dt>
-          <dd>{{ person.newsletterOptIn ? 'yes' : 'no' }}</dd>
-          <dt>Invitations</dt>
-          <dd>{{ person.contactOptOut ? 'objected' : 'allowed' }}</dd>
+          <dt>{{ 'admin.participants.colNewsletter' | transloco }}</dt>
+          <dd>
+            {{
+              (person.newsletterOptIn
+                ? 'admin.participants.yes'
+                : 'admin.participants.no'
+              ) | transloco
+            }}
+          </dd>
+          <dt>{{ 'admin.participants.invitations' | transloco }}</dt>
+          <dd>
+            {{
+              (person.contactOptOut
+                ? 'admin.participants.objected'
+                : 'admin.participants.allowed'
+              ) | transloco
+            }}
+          </dd>
         </dl>
 
         @if (answers().length > 0) {
-          <h3>Answers</h3>
+          <h3>{{ 'admin.participants.answers' | transloco }}</h3>
           <dl>
             @for (answer of answers(); track answer.label) {
               <dt>{{ answer.label }}</dt>
@@ -309,7 +375,7 @@ interface Bar extends RegistrationWeek {
         }
 
         @if (documents().length > 0) {
-          <h3>Files</h3>
+          <h3>{{ 'admin.participants.files' | transloco }}</h3>
           <ul class="files">
             @for (document of documents(); track document.key) {
               <li>
@@ -325,7 +391,9 @@ interface Bar extends RegistrationWeek {
                   </button>
                   <span class="meta">{{ size(file) }}</span>
                 } @else {
-                  <span class="meta">nothing uploaded</span>
+                  <span class="meta">
+                    {{ 'admin.participants.nothingUploaded' | transloco }}
+                  </span>
                 }
               </li>
             }
@@ -333,7 +401,7 @@ interface Bar extends RegistrationWeek {
         }
 
         @if (leftovers().length > 0) {
-          <h3>No longer asked for</h3>
+          <h3>{{ 'admin.participants.leftovers' | transloco }}</h3>
           <dl>
             @for (answer of leftovers(); track answer.key) {
               <dt>
@@ -343,20 +411,21 @@ interface Bar extends RegistrationWeek {
             }
           </dl>
           <p class="meta">
-            The question was removed from the form. What people answered is
-            kept.
+            {{ 'admin.participants.leftoversHint' | transloco }}
           </p>
         }
         <div class="detail__actions">
           @if (person.status === 'cancelled') {
-            <button type="button" (click)="reinstate(person)">Reinstate</button>
+            <button type="button" (click)="reinstate(person)">
+              {{ 'admin.participants.reinstate' | transloco }}
+            </button>
           } @else {
             <button type="button" (click)="cancel(person)">
-              Cancel registration
+              {{ 'admin.participants.cancelRegistration' | transloco }}
             </button>
           }
           <button type="button" class="danger" (click)="remove(person)">
-            Delete permanently
+            {{ 'admin.participants.deletePermanently' | transloco }}
           </button>
         </div>
       </aside>
@@ -658,6 +727,7 @@ export class ParticipantsPage {
   private readonly events = inject(EventsAdminService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly i18n = inject(TranslationService);
 
   protected readonly event = signal<OrganizerEvent | null>(null);
   protected readonly result = signal<ParticipantPage | null>(null);
@@ -665,7 +735,8 @@ export class ParticipantsPage {
   protected readonly detail = signal<ParticipantDetail | null>(null);
   /** The event's configurable questions (F12) — what the answers are labelled by. */
   protected readonly fields = signal<readonly RegistrationField[]>([]);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
+  protected readonly statusKey = registrationStatusKey;
   protected readonly loading = signal(true);
 
   /** What is in the box right now — the URL follows after the debounce. */
@@ -717,47 +788,63 @@ export class ParticipantsPage {
     return result ? pageCount(result.total, result.pageSize) : 1;
   });
 
+  /**
+   * The filter chips — keys, not words.
+   *
+   * A memoised value that held finished text would keep the language the page
+   * was opened in (F72); handing the template a key lets its pipe do both the
+   * lookup and the repaint.
+   */
   protected readonly statusOptions = computed(() => {
     const counts = this.result()?.counts;
     return [
-      { value: '' as const, label: 'All', count: counts?.total ?? 0 },
+      {
+        value: '' as const,
+        labelKey: 'admin.participants.filter.all',
+        count: counts?.total ?? 0,
+      },
       {
         value: 'pending' as const,
-        label: 'Pending',
+        labelKey: 'admin.participants.filter.pending',
         count: counts?.pending ?? 0,
       },
       {
         value: 'confirmed' as const,
-        label: 'Confirmed',
+        labelKey: 'admin.participants.filter.confirmed',
         count: counts?.confirmed ?? 0,
       },
       {
         value: 'cancelled' as const,
-        label: 'Cancelled',
+        labelKey: 'admin.participants.filter.cancelled',
         count: counts?.cancelled ?? 0,
       },
     ];
   });
 
+  /** Built here, so it reads the language itself (F72). */
   protected readonly matchLabel = computed(() => {
+    this.i18n.locale();
     const result = this.result();
     if (!result) return '';
     const filtered = this.statusFilter() || this.searchTerm();
     // The noun agrees with the number it follows — "1 of 3 registrations", but
     // "1 registration".
     const counted = filtered ? result.counts.total : result.total;
-    const noun = counted === 1 ? 'registration' : 'registrations';
-    return filtered
-      ? `${result.total} of ${result.counts.total} ${noun}`
-      : `${result.total} ${noun}`;
+    const plural = counted === 1 ? 'one' : 'many';
+    return this.i18n.translate(
+      filtered
+        ? `admin.participants.matchFiltered.${plural}`
+        : `admin.participants.matchAll.${plural}`,
+      { shown: result.total, total: result.counts.total },
+    );
   });
 
-  protected readonly emptyMessage = computed(() => {
-    if (this.loading()) return 'Loading…';
+  protected readonly emptyMessageKey = computed(() => {
+    if (this.loading()) return 'common.loading';
     if (this.statusFilter() || this.searchTerm()) {
-      return 'No registration matches this filter.';
+      return 'admin.participants.noMatch';
     }
-    return 'Nobody has registered for this event yet.';
+    return 'admin.dashboard.empty';
   });
 
   /** Bar geometry, scaled to the tallest week. */
@@ -857,7 +944,7 @@ export class ParticipantsPage {
   });
 
   protected size(file: AttachmentSummary): string {
-    return formatBytes(file.sizeBytes);
+    return formatBytes(file.sizeBytes, this.i18n.locale());
   }
 
   /**
@@ -872,9 +959,7 @@ export class ParticipantsPage {
     try {
       await this.attachments.save(file);
     } catch (error: unknown) {
-      this.error.set(
-        (error as ApiError)?.message ?? 'The file could not be downloaded.',
-      );
+      this.error.set(problemOf(error, 'admin.participants.errorDownload'));
     } finally {
       this.downloading.set(null);
     }
@@ -882,14 +967,19 @@ export class ParticipantsPage {
 
   /** What a screen reader is told instead of the bars. */
   protected readonly chartLabel = computed(() => {
+    this.i18n.locale();
     const weeks = this.statistics()?.weeks ?? [];
-    if (weeks.length === 0) return 'No registrations yet.';
+    if (weeks.length === 0) {
+      return this.i18n.translate('admin.participants.chartEmpty');
+    }
     const peak = weeks.reduce((highest, week) =>
       week.total > highest.total ? week : highest,
     );
-    return (
-      `Registrations per week over ${weeks.length} week${weeks.length === 1 ? '' : 's'}, ` +
-      `most in the week of ${peak.weekStart} with ${peak.total}.`
+    return this.i18n.translate(
+      weeks.length === 1
+        ? 'admin.participants.chartLabel.one'
+        : 'admin.participants.chartLabel.many',
+      { weeks: weeks.length, peak: peak.weekStart, count: peak.total },
     );
   });
 
@@ -930,7 +1020,7 @@ export class ParticipantsPage {
   /** In the event's zone, through the one formatter both clients share (E8). */
   protected when(iso: string): string {
     const zone = this.event()?.timezone;
-    return zone ? formatInstant(iso, zone) : iso;
+    return zone ? formatInstant(iso, zone, this.i18n.locale()) : iso;
   }
 
   protected ariaSort(
@@ -973,12 +1063,10 @@ export class ParticipantsPage {
   }
 
   protected cancel(row: ParticipantRow): void {
-    if (
-      !confirm(
-        `Cancel the registration of ${row.firstName} ${row.lastName}? ` +
-          'The entry stays, so the seat is free without losing the record.',
-      )
-    ) {
+    const question = this.i18n.translate('admin.participants.confirmCancel', {
+      name: `${row.firstName} ${row.lastName}`,
+    });
+    if (!confirm(question)) {
       return;
     }
     void this.change(() => this.participants.setStatus(row.id, 'cancelled'));
@@ -1002,12 +1090,10 @@ export class ParticipantsPage {
   }
 
   protected remove(row: ParticipantRow): void {
-    if (
-      !confirm(
-        `Delete the registration of ${row.firstName} ${row.lastName} for good? ` +
-          'This cannot be undone.',
-      )
-    ) {
+    const question = this.i18n.translate('admin.participants.confirmDelete', {
+      name: `${row.firstName} ${row.lastName}`,
+    });
+    if (!confirm(question)) {
       return;
     }
     void this.change(async () => {
@@ -1039,7 +1125,7 @@ export class ParticipantsPage {
       this.event.set(await this.events.get(eventId));
     } catch (error: unknown) {
       this.event.set(null);
-      this.report(error, 'This event no longer exists.');
+      this.report(error, 'admin.events.errorMissing');
     }
   }
 
@@ -1052,7 +1138,7 @@ export class ParticipantsPage {
       this.result.set(await this.participants.list(eventId, query));
       this.error.set(null);
     } catch (error: unknown) {
-      this.report(error, 'The participants could not be loaded.');
+      this.report(error, 'admin.participants.errorLoad');
     } finally {
       this.loading.set(false);
     }
@@ -1086,7 +1172,7 @@ export class ParticipantsPage {
       this.detail.set(await this.participants.get(id));
     } catch (error: unknown) {
       this.detail.set(null);
-      this.report(error, 'This registration no longer exists.');
+      this.report(error, 'admin.participants.errorMissing');
     }
   }
 
@@ -1097,12 +1183,12 @@ export class ParticipantsPage {
       this.revision.update((value) => value + 1);
       if (this.selectedId()) await this.loadDetail(this.selectedId());
     } catch (error: unknown) {
-      this.report(error, 'The change could not be saved.');
+      this.report(error, 'admin.fields.errorSave');
     }
   }
 
-  private report(error: unknown, fallback: string): void {
-    this.error.set((error as ApiError)?.message ?? fallback);
+  private report(error: unknown, key: string): void {
+    this.error.set(problemOf(error, key));
   }
 }
 

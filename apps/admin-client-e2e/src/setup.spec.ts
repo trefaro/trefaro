@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { t } from './support/catalogue';
 
 /**
  * The first-run wizard, on an instance that has been set up (FR 1.1, E28).
@@ -25,8 +26,10 @@ test.describe('first-run setup', () => {
     // Via `/`, where the session guard decides — one place that decision is
     // made, not two.
     await expect(page).toHaveURL(/\/login$/);
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
-    await expect(page.getByLabel('Setup token')).toBeHidden();
+    await expect(
+      page.getByRole('heading', { name: t('admin.login.title') }),
+    ).toBeVisible();
+    await expect(page.getByLabel(t('admin.setup.token'))).toBeHidden();
   });
 
   test('offers the login form rather than the wizard to somebody who is not signed in', async ({
@@ -38,7 +41,7 @@ test.describe('first-run setup', () => {
     // the login is the way in and the wizard must not be suggested anywhere.
     await expect(page).toHaveURL(/\/login$/);
     await expect(
-      page.getByRole('heading', { name: 'Set up this instance' }),
+      page.getByRole('heading', { name: t('admin.setup.title') }),
     ).toBeHidden();
   });
 });

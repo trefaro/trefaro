@@ -1,3 +1,4 @@
+import { provideTranslationsForTest } from '@trefaro/shared-i18n';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import type {
@@ -222,6 +223,15 @@ async function render(
 
   TestBed.configureTestingModule({
     providers: [
+      // The two labels this spec is about are assembled in the page, so it
+      // brings the sentences they are assembled from.
+      provideTranslationsForTest({
+        'admin.participants.chartLabel.many':
+          'Registrations per week over {{weeks}} weeks, most in the week of ' +
+          '{{peak}} with {{count}}.',
+        'admin.participants.matchFiltered.many':
+          '{{shown}} of {{total}} registrations',
+      }),
       provideRouter([]),
       { provide: ParticipantsAdminService, useValue: participants },
       {

@@ -1,5 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
 import { ADMIN_STORAGE_STATE } from './support/admin-session';
+import { t } from './support/catalogue';
+
+/**
+ * The legibility warning, with the threshold the page states.
+ *
+ * MIN_SURFACE_CONTRAST is 3, and it travels into the sentence as a parameter —
+ * so this test names the key rather than a fragment of English (AP 9).
+ */
+const tooPale = t('admin.design.tooPale', { ratio: 3 });
 
 /**
  * The design settings in the browser (FR 1.4, UC 1) — phase 2, AP 3.
@@ -48,9 +57,9 @@ const themeVariable = (name: string) =>
 
 async function openDesign(page: Page): Promise<void> {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Design' }).click();
+  await page.getByRole('link', { name: t('admin.design.title') }).click();
   await expect(
-    page.getByRole('heading', { level: 1, name: 'Design' }),
+    page.getByRole('heading', { level: 1, name: t('admin.design.title') }),
   ).toBeVisible();
   // The form is filled from `GET /api/admin/config`; an empty name means it has
   // not arrived yet, and every assertion below would race it.
@@ -120,7 +129,7 @@ test.describe('the design settings in the browser', () => {
       .poll(() => page.evaluate(themeVariable('--trefaro-color-primary')))
       .toBe('#123456');
 
-    await page.getByRole('button', { name: 'Discard changes' }).click();
+    await page.getByRole('button', { name: t('admin.design.discard') }).click();
 
     await expect
       .poll(() => page.evaluate(themeVariable('--trefaro-color-primary')))
@@ -142,9 +151,13 @@ test.describe('the design settings in the browser', () => {
 
     // No reload: the same document, another route. An unsaved colour must not
     // follow an organizer into the rest of the workspace.
-    await page.getByRole('link', { name: 'Modules' }).click();
+    await page.getByRole('link', { name: t('admin.modules.title') }).click();
     await expect(
-      page.getByRole('heading', { level: 1, name: 'Modules', exact: true }),
+      page.getByRole('heading', {
+        level: 1,
+        name: t('admin.modules.title'),
+        exact: true,
+      }),
     ).toBeVisible();
 
     await expect
@@ -159,12 +172,12 @@ test.describe('the design settings in the browser', () => {
 
     await page.locator('#primary-color').fill('#f4f4f4');
 
-    await expect(page.getByText('hard to make out')).toBeVisible();
+    await expect(page.getByText(tooPale)).toBeVisible();
 
     // And it goes away again — a hint that stays after the cause is gone is
     // worse than no hint.
     await page.locator('#primary-color').fill('#1f6f5c');
-    await expect(page.getByText('hard to make out')).toBeHidden();
+    await expect(page.getByText(tooPale)).toBeHidden();
   });
 
   test('refuses a file this instance would not serve, before it is sent', async ({
@@ -182,7 +195,9 @@ test.describe('the design settings in the browser', () => {
     // from the origin of the client that displays it.
     await expect(page.getByRole('alert')).toContainText('image/svg+xml');
     // Nothing to upload, so there is no button offering to.
-    await expect(page.getByRole('button', { name: 'Upload' })).toBeHidden();
+    await expect(
+      page.getByRole('button', { name: t('admin.design.upload') }),
+    ).toBeHidden();
   });
 
   test('saves the name and the font, and the menu follows at once', async ({
@@ -201,9 +216,11 @@ test.describe('the design settings in the browser', () => {
       await openDesign(page);
       await page.locator('#organization-name').fill(name);
       await page.locator('#font-family').selectOption('lora');
-      await page.getByRole('button', { name: 'Save' }).click();
+      await page.getByRole('button', { name: t('admin.common.save') }).click();
 
-      await expect(page.getByRole('status')).toContainText('Saved');
+      await expect(page.getByRole('status')).toContainText(
+        t('admin.design.saved'),
+      );
       // The client re-read its own configuration, so the menu shows the new
       // name without a reload. Every *other* client learns of it on its next
       // start (E20) — which is what the reload below stands in for.
@@ -247,12 +264,18 @@ test.describe('the design settings in the browser', () => {
         buffer: PNG_1X1,
       });
       // Chosen, not sent: the preview is local until Upload is pressed.
-      await expect(page.getByText('not uploaded yet')).toBeVisible();
-      await page.getByRole('button', { name: 'Upload' }).click();
+      await expect(
+        page.getByText(t('admin.design.notUploaded', { name: 'brand.png' })),
+      ).toBeVisible();
+      await page
+        .getByRole('button', { name: t('admin.design.upload') })
+        .click();
 
       // Served from the path-free public route (E19), and decodable — which a
       // request-level test cannot tell.
-      const preview = page.getByRole('img', { name: 'Logo' });
+      const preview = page.getByRole('img', {
+        name: t('admin.design.logoHeading'),
+      });
       await expect(preview).toHaveAttribute(
         'src',
         /^\/api\/media\/branding\/logo\?v=\d+$/,
@@ -270,9 +293,14 @@ test.describe('the design settings in the browser', () => {
         .toContain('/api/media/branding/logo');
       await expect(page.locator('.sidebar__logo')).toBeAttached();
 
-      await page.getByRole('button', { name: 'Remove' }).first().click();
+      await page
+        .getByRole('button', { name: t('admin.design.remove') })
+        .first()
+        .click();
 
-      await expect(page.getByText('No image').first()).toBeVisible();
+      await expect(
+        page.getByText(t('admin.design.noImage')).first(),
+      ).toBeVisible();
       await expect
         .poll(() => page.evaluate(themeVariable('--trefaro-logo-url')))
         .toBe('none');

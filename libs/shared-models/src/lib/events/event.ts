@@ -21,6 +21,11 @@ export const EVENT_TYPES: readonly EventType[] = ['onsite', 'online', 'hybrid'];
  */
 export type EventStatus = 'draft' | 'published' | 'archived';
 
+/** The catalogue key that names a status to a person — see the series' own. */
+export function eventStatusKey(status: EventStatus): string {
+  return `eventStatus.${status}`;
+}
+
 export const EVENT_STATUSES: readonly EventStatus[] = [
   'draft',
   'published',

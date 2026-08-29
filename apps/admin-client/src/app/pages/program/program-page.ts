@@ -9,8 +9,9 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { AppConfigService } from '@trefaro/shared-config';
-import type { ApiError } from '@trefaro/shared-http';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { problemOf, type Problem } from '@trefaro/shared-http';
+import { TranslationService } from '@trefaro/shared-i18n';
 import type {
   OrganizerEvent,
   ProgramDay,
@@ -80,17 +81,19 @@ interface ItemDraft {
 @Component({
   selector: 'trefaro-program-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, TranslocoPipe],
   template: `
     <header class="head">
       <div>
-        <h1>Programme</h1>
+        <h1>{{ 'admin.program.title' | transloco }}</h1>
         <p class="meta">
           @if (event(); as item) {
             <a [routerLink]="['/series', seriesId(), 'events', item.id]">
               {{ item.name }}
             </a>
-            <span>Runs {{ when() }} — every time below is in that zone.</span>
+            <span>
+              {{ 'admin.program.runsIn' | transloco: { period: when() } }}
+            </span>
           }
         </p>
       </div>
@@ -98,34 +101,43 @@ interface ItemDraft {
         class="back"
         [routerLink]="['/series', seriesId(), 'events', eventId()]"
       >
-        Back to the event
+        {{ 'admin.events.back' | transloco }}
       </a>
     </header>
 
-    @if (error()) {
-      <p class="error" role="alert">{{ error() }}</p>
+    @if (error(); as problem) {
+      <p class="error" role="alert">
+        {{ problem.key | transloco }}
+        @if (problem.detail; as detail) {
+          <span class="error__detail">{{ detail }}</span>
+        }
+      </p>
     }
 
     @if (clashing().size > 0) {
       <p class="hint" role="status">
-        {{ clashing().size }} sessions share their time with another. That is
-        how parallel tracks look — check that it is what you meant.
+        {{ 'admin.program.clashHint' | transloco: { count: clashing().size } }}
       </p>
     }
 
     @if (stranded().size > 0) {
       <p class="hint" role="status">
-        {{ stranded().size }} sessions fall outside the event's own period. They
-        are kept and stay editable; give them a time inside the event.
+        {{
+          'admin.program.strandedHint' | transloco: { count: stranded().size }
+        }}
       </p>
     }
 
     <section aria-labelledby="program-heading">
-      <h2 id="program-heading">Sessions</h2>
+      <h2 id="program-heading">
+        {{ 'admin.program.sessions' | transloco }}
+      </h2>
 
       @if (items().length === 0) {
         <p class="meta">
-          {{ loading() ? 'Loading…' : 'No sessions yet. Add the first one.' }}
+          {{
+            (loading() ? 'common.loading' : 'admin.program.empty') | transloco
+          }}
         </p>
       }
 
@@ -141,15 +153,19 @@ interface ItemDraft {
               <div class="item__head">
                 <span class="clock">{{ clock(item) }}</span>
                 @if (clashing().has(item.id)) {
-                  <span class="badge">runs alongside another session</span>
+                  <span class="badge">
+                    {{ 'admin.program.badgeClash' | transloco }}
+                  </span>
                 }
                 @if (stranded().has(item.id)) {
-                  <span class="badge badge--warn">outside the event</span>
+                  <span class="badge badge--warn">
+                    {{ 'admin.program.badgeStranded' | transloco }}
+                  </span>
                 }
               </div>
 
               <label>
-                <span>Topic</span>
+                <span>{{ 'admin.program.topic' | transloco }}</span>
                 <input
                   [attr.maxlength]="maxTitleLength"
                   [value]="draft(item.id).title"
@@ -158,21 +174,23 @@ interface ItemDraft {
               </label>
 
               <label>
-                <span>Speaker</span>
+                <span>{{ 'admin.program.speaker' | transloco }}</span>
                 <input
                   [attr.maxlength]="maxSpeakerLength"
-                  placeholder="Optional"
+                  [placeholder]="'admin.program.optional' | transloco"
                   [value]="draft(item.id).speaker"
                   (input)="edit(item.id, { speaker: value($event) })"
                 />
               </label>
 
               <label>
-                <span>Description</span>
+                <span>{{ 'admin.program.description' | transloco }}</span>
                 <textarea
                   rows="3"
                   [attr.maxlength]="maxDescriptionLength"
-                  placeholder="Optional — the abstract participants read"
+                  [placeholder]="
+                    'admin.program.descriptionPlaceholder' | transloco
+                  "
                   [value]="draft(item.id).description"
                   (input)="edit(item.id, { description: value($event) })"
                 ></textarea>
@@ -180,7 +198,7 @@ interface ItemDraft {
 
               <div class="period">
                 <label>
-                  <span>Starts</span>
+                  <span>{{ 'admin.events.startsAt' | transloco }}</span>
                   <input
                     type="datetime-local"
                     [value]="draft(item.id).startsAt"
@@ -188,7 +206,7 @@ interface ItemDraft {
                   />
                 </label>
                 <label>
-                  <span>Ends</span>
+                  <span>{{ 'admin.events.endsAt' | transloco }}</span>
                   <input
                     type="datetime-local"
                     [value]="draft(item.id).endsAt"
@@ -204,17 +222,17 @@ interface ItemDraft {
                     [checked]="draft(item.id).registrationEnabled"
                     (change)="toggleRegistration(item.id, $event)"
                   />
-                  <span>Ask who is coming</span>
+                  <span>{{ 'admin.program.askWhoIsComing' | transloco }}</span>
                 </label>
 
                 @if (draft(item.id).registrationEnabled) {
                   <label class="signup__seats">
-                    <span>Seats</span>
+                    <span>{{ 'admin.program.seats' | transloco }}</span>
                     <input
                       type="number"
                       min="1"
                       [attr.max]="maxCapacity"
-                      placeholder="No limit"
+                      [placeholder]="'admin.program.noLimit' | transloco"
                       [value]="draft(item.id).capacity"
                       (input)="edit(item.id, { capacity: value($event) })"
                     />
@@ -225,7 +243,9 @@ interface ItemDraft {
                   <p class="signup__load">
                     <span>{{ takeUp(item) }}</span>
                     @if (sessionFull(item)) {
-                      <span class="badge badge--warn">full</span>
+                      <span class="badge badge--warn">
+                        {{ 'admin.program.full' | transloco }}
+                      </span>
                     }
                   </p>
                   <button
@@ -234,23 +254,32 @@ interface ItemDraft {
                     (click)="toggleSignups(item)"
                   >
                     {{
-                      openSignups() === item.id
-                        ? 'Hide the list'
-                        : 'Who signed up'
+                      (openSignups() === item.id
+                        ? 'admin.program.hideList'
+                        : 'admin.program.whoSignedUp'
+                      ) | transloco
                     }}
                   </button>
 
                   @if (openSignups() === item.id) {
                     @if (signups(); as list) {
                       @if (list.participants.length === 0) {
-                        <p class="meta">Nobody has signed up yet.</p>
+                        <p class="meta">
+                          {{ 'admin.program.nobodySignedUp' | transloco }}
+                        </p>
                       } @else {
                         <table class="who">
                           <thead>
                             <tr>
-                              <th scope="col">Name</th>
-                              <th scope="col">E-mail</th>
-                              <th scope="col">Signed up</th>
+                              <th scope="col">
+                                {{ 'admin.program.colName' | transloco }}
+                              </th>
+                              <th scope="col">
+                                {{ 'admin.program.colEmail' | transloco }}
+                              </th>
+                              <th scope="col">
+                                {{ 'admin.program.colSignedUp' | transloco }}
+                              </th>
                             </tr>
                           </thead>
                           <tbody>
@@ -270,7 +299,7 @@ interface ItemDraft {
                         </table>
                       }
                     } @else {
-                      <p class="meta">Loading…</p>
+                      <p class="meta">{{ 'common.loading' | transloco }}</p>
                     }
                   }
                 }
@@ -282,7 +311,7 @@ interface ItemDraft {
                   [disabled]="busy() || !changed(item)"
                   (click)="save(item)"
                 >
-                  Save
+                  {{ 'admin.common.save' | transloco }}
                 </button>
                 <button
                   type="button"
@@ -290,7 +319,7 @@ interface ItemDraft {
                   [disabled]="busy()"
                   (click)="remove(item)"
                 >
-                  Delete
+                  {{ 'admin.common.delete' | transloco }}
                 </button>
               </div>
             </li>
@@ -300,11 +329,10 @@ interface ItemDraft {
     </section>
 
     <section aria-labelledby="add-heading">
-      <h2 id="add-heading">Add a session</h2>
+      <h2 id="add-heading">{{ 'admin.program.add' | transloco }}</h2>
       @if (full()) {
         <p class="meta">
-          A programme holds at most {{ maxItems }} sessions. Delete one to add
-          another.
+          {{ 'admin.program.atMost' | transloco: { count: maxItems } }}
         </p>
       } @else {
         <form [formGroup]="form" (ngSubmit)="add()" novalidate>
@@ -314,40 +342,42 @@ interface ItemDraft {
                be read in the event's zone, which is not known before it loads. -->
           <fieldset [disabled]="busy() || loading()">
             <label>
-              <span>Topic</span>
+              <span>{{ 'admin.program.topic' | transloco }}</span>
               <input
                 formControlName="title"
                 [attr.maxlength]="maxTitleLength"
-                placeholder="Keynote: Citizens’ initiatives in 2027"
+                [placeholder]="'admin.program.topicPlaceholder' | transloco"
               />
             </label>
 
             <label>
-              <span>Speaker</span>
+              <span>{{ 'admin.program.speaker' | transloco }}</span>
               <input
                 formControlName="speaker"
                 [attr.maxlength]="maxSpeakerLength"
-                placeholder="Optional"
+                [placeholder]="'admin.program.optional' | transloco"
               />
             </label>
 
             <label>
-              <span>Description</span>
+              <span>{{ 'admin.program.description' | transloco }}</span>
               <textarea
                 formControlName="description"
                 rows="3"
                 [attr.maxlength]="maxDescriptionLength"
-                placeholder="Optional — the abstract participants read"
+                [placeholder]="
+                  'admin.program.descriptionPlaceholder' | transloco
+                "
               ></textarea>
             </label>
 
             <div class="period">
               <label>
-                <span>Starts</span>
+                <span>{{ 'admin.events.startsAt' | transloco }}</span>
                 <input formControlName="startsAt" type="datetime-local" />
               </label>
               <label>
-                <span>Ends</span>
+                <span>{{ 'admin.events.endsAt' | transloco }}</span>
                 <input formControlName="endsAt" type="datetime-local" />
               </label>
             </div>
@@ -355,23 +385,25 @@ interface ItemDraft {
             <div class="signup">
               <label class="signup__switch">
                 <input type="checkbox" formControlName="registrationEnabled" />
-                <span>Ask who is coming</span>
+                <span>{{ 'admin.program.askWhoIsComing' | transloco }}</span>
               </label>
               @if (form.controls.registrationEnabled.value) {
                 <label class="signup__seats">
-                  <span>Seats</span>
+                  <span>{{ 'admin.program.seats' | transloco }}</span>
                   <input
                     formControlName="capacity"
                     type="number"
                     min="1"
                     [attr.max]="maxCapacity"
-                    placeholder="No limit"
+                    [placeholder]="'admin.program.noLimit' | transloco"
                   />
                 </label>
               }
             </div>
 
-            <button type="submit">Add session</button>
+            <button type="submit">
+              {{ 'admin.program.addSubmit' | transloco }}
+            </button>
           </fieldset>
         </form>
       }
@@ -616,11 +648,11 @@ export class ProgramPage {
 
   private readonly program = inject(ProgramAdminService);
   private readonly events = inject(EventsAdminService);
-  private readonly config = inject(AppConfigService);
+  private readonly i18n = inject(TranslationService);
 
   protected readonly event = signal<OrganizerEvent | null>(null);
   protected readonly items = signal<readonly ProgramItem[]>([]);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
 
@@ -714,9 +746,15 @@ export class ProgramPage {
   protected takeUp(item: ProgramItem): string {
     const left = seatsLeft(item);
     if (left === null) {
-      return `${item.signupCount} signed up · no limit`;
+      return this.i18n.translate('admin.program.takeUpNoLimit', {
+        count: item.signupCount,
+      });
     }
-    return `${item.signupCount} of ${item.capacity} seats taken · ${left} free`;
+    return this.i18n.translate('admin.program.takeUpLimit', {
+      count: item.signupCount,
+      capacity: item.capacity,
+      left,
+    });
   }
 
   /** Named for the session, not the programme: `full()` above is the item cap. */
@@ -752,7 +790,7 @@ export class ProgramPage {
       if (this.openSignups() === item.id) this.signups.set(load);
     } catch (error: unknown) {
       this.openSignups.set(null);
-      this.report(error, 'The sign-ups could not be loaded.');
+      this.report(error, 'admin.program.errorSignups');
     }
   }
 
@@ -824,14 +862,29 @@ export class ProgramPage {
     // people claimed in it, and an organizer should not learn that afterwards.
     const seats =
       item.signupCount > 0
-        ? ` ${item.signupCount} sign-up${item.signupCount === 1 ? '' : 's'} will be released.`
+        ? ` ${this.i18n.translate(
+            item.signupCount === 1
+              ? 'admin.program.confirmRemoveSeats.one'
+              : 'admin.program.confirmRemoveSeats.many',
+            { count: item.signupCount },
+          )}`
         : '';
-    if (!confirm(`Remove "${item.title}" from the programme?${seats}`)) return;
+    const question = this.i18n.translate('admin.program.confirmRemove', {
+      title: item.title,
+    });
+    if (!confirm(`${question}${seats}`)) return;
     await this.change(() => this.program.remove(item.id));
   }
 
+  /**
+   * The language every time on this page is written in.
+   *
+   * The reader's, not the instance's default (F78): the *zone* is the event's
+   * (E8), the words around it belong to whoever is looking. Read as a signal, so
+   * the memoised {@link days} recomputes when the language changes (F72).
+   */
   private locale(): string {
-    return this.config.config()?.defaultLocale ?? 'en';
+    return this.i18n.locale();
   }
 
   private async load(eventId: string): Promise<void> {
@@ -841,7 +894,7 @@ export class ProgramPage {
     } catch (error: unknown) {
       this.event.set(null);
       this.loading.set(false);
-      this.report(error, 'This event no longer exists.');
+      this.report(error, 'admin.events.errorMissing');
       return;
     }
 
@@ -849,7 +902,7 @@ export class ProgramPage {
       this.apply(await this.program.list(eventId));
       this.error.set(null);
     } catch (error: unknown) {
-      this.report(error, 'The programme could not be loaded.');
+      this.report(error, 'admin.program.errorLoad');
     } finally {
       this.loading.set(false);
     }
@@ -898,14 +951,14 @@ export class ProgramPage {
         this.openSignups.set(null);
       }
     } catch (error: unknown) {
-      this.report(error, 'The change could not be saved.');
+      this.report(error, 'admin.fields.errorSave');
     } finally {
       this.busy.set(false);
     }
   }
 
-  private report(error: unknown, fallback: string): void {
-    this.error.set((error as ApiError)?.message ?? fallback);
+  private report(error: unknown, key: string): void {
+    this.error.set(problemOf(error, key));
   }
 }
 

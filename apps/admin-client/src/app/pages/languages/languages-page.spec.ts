@@ -1,7 +1,10 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AppConfigService } from '@trefaro/shared-config';
-import { TranslationService } from '@trefaro/shared-i18n';
+import {
+  provideTranslationsForTest,
+  TranslationService,
+} from '@trefaro/shared-i18n';
 import type {
   LocaleCatalogueDetail,
   LocaleOverview,
@@ -30,7 +33,36 @@ class FakeTranslations {
   languageName(locale: string): string {
     return { en: 'English', de: 'German', fr: 'French' }[locale] ?? locale;
   }
+
+  /**
+   * As non-reactive as Transloco's own, and with the same interpolation.
+   *
+   * A fake that resolved more than the original hides exactly the defects it is
+   * here to catch — the lesson of the module page's fake in AP 6.
+   */
+  translate(key: string, params: Record<string, unknown> = {}): string {
+    const text = TEXTS[key] ?? key;
+    return Object.entries(params).reduce(
+      (filled, [name, value]) =>
+        filled.replaceAll(`{{${name}}}`, String(value)),
+      text,
+    );
+  }
 }
+
+/** What this spec asserts on; every other key renders as itself. */
+const TEXTS: Record<string, string> = {
+  'admin.languages.readyToTranslate':
+    '{{name}} is ready to translate. Tick Offered and save.',
+  'admin.languages.alreadyOnList': '{{name}} is already on the list.',
+  'admin.languages.savedSummary': 'Saved: {{parts}}.',
+  'admin.languages.nothingChanged': 'Nothing changed.',
+  'admin.languages.written': '{{count}} written',
+  'admin.languages.saveChanges': 'Save changes',
+  'admin.languages.saveCount.one': 'Save {{count}} change',
+  'admin.languages.saveCount.many': 'Save {{count}} changes',
+  'admin.languages.resetDone': '{{key}} is back to what the image ships.',
+};
 
 class FakeTranslationsAdmin {
   readonly writes: { locale: string; entries: Record<string, string> }[] = [];
@@ -127,6 +159,18 @@ describe('LanguagesPage', () => {
 
     TestBed.configureTestingModule({
       providers: [
+        provideTranslationsForTest({
+          'admin.languages.keysOf': '{{translated}} of {{total}} keys',
+          'admin.languages.translate': 'Translate',
+          'admin.languages.saveOffered': 'Save offered languages',
+          'admin.languages.add': 'Add',
+          'admin.languages.reset': 'Reset',
+          'admin.languages.errorTag':
+            'A language tag looks like fr, de-AT or pt-BR.',
+          'admin.languages.state.overridden': 'written here',
+          'admin.languages.state.shipped': 'from the image',
+          'admin.languages.state.missing': 'untranslated',
+        }),
         { provide: TranslationService, useValue: new FakeTranslations() },
         { provide: TranslationsAdminService, useValue: admin },
         {

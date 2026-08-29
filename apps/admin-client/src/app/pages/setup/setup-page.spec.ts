@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { provideTranslationsForTest } from '@trefaro/shared-i18n';
 import { AppConfigService } from '@trefaro/shared-config';
 import type {
   SetupResult,
@@ -66,6 +67,32 @@ describe('SetupPage', () => {
 
     TestBed.configureTestingModule({
       providers: [
+        // This spec is about what an operator reads, so it brings the English
+        // texts it asserts against rather than the keys. The shipped catalogue
+        // is deliberately not imported into a spec.
+        provideTranslationsForTest({
+          'admin.setup.tokenLead':
+            'This instance has no administrator yet. The server printed a ' +
+            'setup token when it started — paste it here.',
+          'admin.setup.tokenMeta':
+            '{{command}} shows it. It changes on every restart and stops ' +
+            'working as soon as an administrator exists.',
+          'admin.setup.findingsHeading': 'Worth knowing about this deployment',
+          'admin.setup.findingsMeta':
+            'None of these stops the setup. They are the values whose ' +
+            'absence only shows up later.',
+          'admin.setup.done':
+            '{{organization}} is set up. {{email}} can now sign in.',
+          'admin.setup.doneMeta':
+            'If signing in does not work from another machine, the session ' +
+            'cookie is marked {{attribute}}. See {{document}}.',
+          'admin.setup.errorToken':
+            'That is not the token this server printed. It changes on every ' +
+            'restart — check the most recent lines of the log.',
+          'admin.setup.errorClaimedMeanwhile':
+            'This instance already has an administrator — somebody set it up ' +
+            'in the meantime. Sign in instead.',
+        }),
         provideRouter([]),
         { provide: SetupService, useValue: setup },
         {

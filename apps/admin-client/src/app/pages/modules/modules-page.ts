@@ -5,8 +5,9 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { AppConfigService } from '@trefaro/shared-config';
-import type { ApiError } from '@trefaro/shared-http';
+import { problemOf, type Problem } from '@trefaro/shared-http';
 import { TranslationService } from '@trefaro/shared-i18n';
 import type { ModuleSummary } from '@trefaro/shared-models';
 import {
@@ -14,6 +15,12 @@ import {
   type PluginLoadResult,
 } from '@trefaro/shared-plugins';
 import { ModulesAdminService } from '../../features/modules/modules-admin.service';
+
+/** A confirmation that outlives the click that produced it. */
+interface Notice {
+  readonly key: string;
+  readonly params: Readonly<Record<string, unknown>>;
+}
 
 /**
  * Module and plug-in administration (FR 1.5, UC 1) — AP 4.
@@ -48,29 +55,32 @@ import { ModulesAdminService } from '../../features/modules/modules-admin.servic
 @Component({
   selector: 'trefaro-modules-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [TranslocoPipe],
   template: `
-    <h1>Modules</h1>
-    <p class="lead">
-      Everything this image ships. Switching a module off never deletes
-      anything: its data stays, and switching it on again brings it back. A
-      change reaches the participant client — and the plug-in components of this
-      one — the next time it loads.
-    </p>
+    <h1>{{ 'admin.modules.title' | transloco }}</h1>
+    <p class="lead">{{ 'admin.modules.lead' | transloco }}</p>
 
-    @if (error()) {
-      <p class="error" role="alert">{{ error() }}</p>
+    @if (error(); as problem) {
+      <p class="error" role="alert">
+        {{ problem.key | transloco }}
+        @if (problem.detail; as detail) {
+          <span class="error__detail">{{ detail }}</span>
+        }
+      </p>
     }
-    @if (notice()) {
-      <p class="notice" role="status">{{ notice() }}</p>
+    @if (notice(); as said) {
+      <p class="notice" role="status">
+        {{ said.key | transloco: said.params }}
+      </p>
     }
 
     <table>
       <thead>
         <tr>
-          <th>Module</th>
-          <th>Kind</th>
-          <th>State</th>
-          <th>Bundle</th>
+          <th>{{ 'admin.modules.colModule' | transloco }}</th>
+          <th>{{ 'admin.modules.colKind' | transloco }}</th>
+          <th>{{ 'admin.modules.colState' | transloco }}</th>
+          <th>{{ 'admin.modules.colBundle' | transloco }}</th>
           <th></th>
         </tr>
       </thead>
@@ -82,19 +92,32 @@ import { ModulesAdminService } from '../../features/modules/modules-admin.servic
               <br /><code>{{ module.key }}</code>
             </td>
             <td>
-              {{ module.family === 'plugin' ? 'Plug-in' : 'Core module' }}
-              @if (module.version) {
-                <br /><small>version {{ module.version }}</small>
+              {{
+                (module.family === 'plugin'
+                  ? 'admin.modules.plugin'
+                  : 'admin.modules.core'
+                ) | transloco
+              }}
+              @if (module.version; as version) {
+                <br /><small>
+                  {{ 'admin.modules.version' | transloco: { version } }}
+                </small>
               }
             </td>
             <td>
               <span [class.is-on]="module.enabled">
-                {{ module.enabled ? 'enabled' : 'disabled' }}
+                {{ stateKey(module.enabled) | transloco }}
               </span>
               @if (module.enabled !== module.enabledByDefault) {
                 <br /><small>
-                  default:
-                  {{ module.enabledByDefault ? 'enabled' : 'disabled' }}
+                  {{
+                    'admin.modules.default'
+                      | transloco
+                        : {
+                            state:
+                              stateKey(module.enabledByDefault) | transloco,
+                          }
+                  }}
                 </small>
               }
             </td>
@@ -103,7 +126,7 @@ import { ModulesAdminService } from '../../features/modules/modules-admin.servic
                 <code>{{ module.bundleUrl }}</code>
                 @if (loadStatus(module.key); as status) {
                   <br /><span [class.failed]="status.status === 'failed'">
-                    {{ status.status }}
+                    {{ 'admin.modules.bundle.' + status.status | transloco }}
                   </span>
                   @if (status.error) {
                     <br /><small>{{ status.error }}</small>
@@ -119,7 +142,12 @@ import { ModulesAdminService } from '../../features/modules/modules-admin.servic
                 [disabled]="busy() !== null"
                 (click)="toggle(module)"
               >
-                {{ module.enabled ? 'Disable' : 'Enable' }}
+                {{
+                  (module.enabled
+                    ? 'admin.modules.disable'
+                    : 'admin.modules.enable'
+                  ) | transloco
+                }}
               </button>
             </td>
           </tr>
@@ -127,7 +155,8 @@ import { ModulesAdminService } from '../../features/modules/modules-admin.servic
           <tr>
             <td colspan="5">
               {{
-                loading() ? 'Loading…' : 'This image ships no optional module.'
+                (loading() ? 'common.loading' : 'admin.modules.empty')
+                  | transloco
               }}
             </td>
           </tr>
@@ -194,10 +223,13 @@ export class ModulesPage {
 
   protected readonly modules = signal<readonly ModuleSummary[]>([]);
   protected readonly loading = signal(true);
-  protected readonly error = signal<string | null>(null);
-  protected readonly notice = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
+  protected readonly notice = signal<Notice | null>(null);
   /** The key currently being written, so one click disables every button. */
   protected readonly busy = signal<string | null>(null);
+
+  protected readonly stateKey = (enabled: boolean): string =>
+    enabled ? 'admin.modules.enabled' : 'admin.modules.disabled';
 
   /**
    * The table's rows, with each name already resolved.
@@ -260,15 +292,17 @@ export class ModulesPage {
       // And this client's own view of what exists: the navigation and every
       // page that asks `isModuleEnabled` read the cached configuration.
       await this.config.reload();
-      this.notice.set(
-        module.enabled
-          ? `${this.name(module)} is switched off. Its data is untouched.`
-          : `${this.name(module)} is switched on. Reload this page to load its parts.`,
-      );
+      // The key and its parameter, not the finished sentence: the notice
+      // stays on screen, and a language switch while it does has to reach it
+      // like everything else on the page (F72).
+      this.notice.set({
+        key: module.enabled
+          ? 'admin.modules.switchedOff'
+          : 'admin.modules.switchedOn',
+        params: { name: this.name(module) },
+      });
     } catch (error: unknown) {
-      this.error.set(
-        (error as ApiError)?.message ?? 'The module could not be switched.',
-      );
+      this.error.set(problemOf(error, 'admin.modules.errorSwitch'));
     } finally {
       this.busy.set(null);
     }
@@ -278,9 +312,7 @@ export class ModulesPage {
     try {
       this.modules.set(await this.admin.list());
     } catch (error: unknown) {
-      this.error.set(
-        (error as ApiError)?.message ?? 'The modules could not be loaded.',
-      );
+      this.error.set(problemOf(error, 'admin.modules.errorLoad'));
     } finally {
       this.loading.set(false);
     }

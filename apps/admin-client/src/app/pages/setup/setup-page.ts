@@ -7,8 +7,9 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { AppConfigService } from '@trefaro/shared-config';
-import type { ApiError } from '@trefaro/shared-http';
+import { problemOf, type ApiError, type Problem } from '@trefaro/shared-http';
 import type { SetupState } from '@trefaro/shared-models';
 import {
   HEX_COLOR_PATTERN,
@@ -44,60 +45,78 @@ const MIN_PASSWORD_LENGTH = 12;
  * The deployment findings from the server are shown on the second step, not
  * hidden behind a link: "no mail server" and "no TLS" are worth reading before
  * the first participant registers, and this is the one moment the operator is
- * certainly present.
+ * certainly present. They stay English: the server writes them (F77).
+ *
+ * No language switcher here, unlike the login form. This page already asks for
+ * a language — the instance's default, the one its mail goes out in — and a
+ * second control beside it would be two questions that look like one.
  */
 @Component({
   selector: 'trefaro-setup-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, TranslocoPipe],
   template: `
     <div class="setup">
       <div class="card">
-        <h1>Set up this instance</h1>
+        <h1>{{ 'admin.setup.title' | transloco }}</h1>
 
-        @if (done()) {
+        @if (done(); as result) {
+          <!-- One key for the whole sentence, so a translator can order the two
+               halves as their language wants (F79); the bold and the italics
+               are the price. -->
           <p class="lead" role="status">
-            <strong>{{ done()?.organizationName }}</strong> is set up.
-            <em>{{ done()?.adminEmail }}</em> can now sign in.
+            {{
+              'admin.setup.done'
+                | transloco
+                  : {
+                      organization: result.organizationName,
+                      email: result.adminEmail,
+                    }
+            }}
           </p>
           <p class="meta">
-            If signing in does not work from another machine, this instance is
-            being served over plain HTTP: the session cookie is marked
-            <code>Secure</code>, and a browser stores such a cookie only over
-            HTTPS. See <code>docs/INSTALL.md</code>.
+            {{
+              'admin.setup.doneMeta'
+                | transloco
+                  : { attribute: 'Secure', document: 'docs/INSTALL.md' }
+            }}
           </p>
-          <button type="button" (click)="goToLogin()">Go to sign in</button>
+          <button type="button" (click)="goToLogin()">
+            {{ 'admin.setup.goToLogin' | transloco }}
+          </button>
         } @else if (state()) {
-          <p class="lead">
-            One form: the first administrator, and what this instance calls
-            itself. Everything else — the font, the logo, the modules — has a
-            page of its own once you are signed in.
-          </p>
+          <p class="lead">{{ 'admin.setup.lead' | transloco }}</p>
 
           @if (state()!.warnings.length > 0) {
             <section class="findings" aria-labelledby="findings-heading">
-              <h2 id="findings-heading">Worth knowing about this deployment</h2>
+              <h2 id="findings-heading">
+                {{ 'admin.setup.findingsHeading' | transloco }}
+              </h2>
               <ul>
                 @for (warning of state()!.warnings; track warning) {
                   <li>{{ warning }}</li>
                 }
               </ul>
               <p class="meta">
-                None of these stops the setup. They are the values whose absence
-                only shows up later — the same list the server logs on startup.
+                {{ 'admin.setup.findingsMeta' | transloco }}
               </p>
             </section>
           }
 
-          @if (error()) {
-            <p class="error" role="alert">{{ error() }}</p>
+          @if (error(); as problem) {
+            <p class="error" role="alert">
+              {{ problem.key | transloco }}
+              @if (problem.detail; as detail) {
+                <span class="error__detail">{{ detail }}</span>
+              }
+            </p>
           }
 
           <form [formGroup]="form" (ngSubmit)="submit()">
             <fieldset [disabled]="busy()">
-              <legend>Your account</legend>
+              <legend>{{ 'admin.setup.accountLegend' | transloco }}</legend>
 
-              <label for="email">E-mail address</label>
+              <label for="email">{{ 'admin.setup.email' | transloco }}</label>
               <input
                 id="email"
                 type="email"
@@ -110,8 +129,9 @@ const MIN_PASSWORD_LENGTH = 12;
 
               <!-- "Your name", not "Name": the organization has a name too, and
                    two fields with the same accessible name on one form are two
-                   fields a screen reader cannot tell apart (NFR 4). -->
-              <label for="name">Your name</label>
+                   fields a screen reader cannot tell apart (NFR 4). The two
+                   catalogue keys keep that apart in every language. -->
+              <label for="name">{{ 'admin.setup.name' | transloco }}</label>
               <input
                 id="name"
                 formControlName="name"
@@ -119,7 +139,9 @@ const MIN_PASSWORD_LENGTH = 12;
                 required
               />
 
-              <label for="password">Password</label>
+              <label for="password">
+                {{ 'admin.setup.password' | transloco }}
+              </label>
               <input
                 id="password"
                 type="password"
@@ -129,15 +151,21 @@ const MIN_PASSWORD_LENGTH = 12;
                 required
               />
               <small id="password-hint" class="meta">
-                At least {{ minPasswordLength }} characters. Length only — a
-                long passphrase beats a short password with a symbol in it.
+                {{
+                  'admin.setup.passwordHint'
+                    | transloco: { count: minPasswordLength }
+                }}
               </small>
             </fieldset>
 
             <fieldset [disabled]="busy()">
-              <legend>Your organization</legend>
+              <legend>
+                {{ 'admin.setup.organizationLegend' | transloco }}
+              </legend>
 
-              <label for="organization-name">Organization name</label>
+              <label for="organization-name">
+                {{ 'admin.setup.organizationName' | transloco }}
+              </label>
               <input
                 id="organization-name"
                 formControlName="organizationName"
@@ -147,10 +175,12 @@ const MIN_PASSWORD_LENGTH = 12;
                 required
               />
               <small id="organization-name-hint" class="meta">
-                Shown in both clients, in page titles and in every mail.
+                {{ 'admin.setup.organizationNameHint' | transloco }}
               </small>
 
-              <label for="default-locale">Language</label>
+              <label for="default-locale">
+                {{ 'admin.setup.language' | transloco }}
+              </label>
               <select
                 id="default-locale"
                 formControlName="defaultLocale"
@@ -161,13 +191,14 @@ const MIN_PASSWORD_LENGTH = 12;
                 }
               </select>
               <small id="default-locale-hint" class="meta">
-                The language of outgoing mail and of dates. English is always
-                available beside it.
+                {{ 'admin.setup.languageHint' | transloco }}
               </small>
 
               <div class="colours">
                 <div class="field">
-                  <label for="primary-color">Primary colour</label>
+                  <label for="primary-color">
+                    {{ 'admin.setup.primaryColor' | transloco }}
+                  </label>
                   <input
                     id="primary-color"
                     type="color"
@@ -175,7 +206,9 @@ const MIN_PASSWORD_LENGTH = 12;
                   />
                 </div>
                 <div class="field">
-                  <label for="accent-color">Accent colour</label>
+                  <label for="accent-color">
+                    {{ 'admin.setup.accentColor' | transloco }}
+                  </label>
                   <input
                     id="accent-color"
                     type="color"
@@ -184,32 +217,38 @@ const MIN_PASSWORD_LENGTH = 12;
                 </div>
               </div>
               <small class="meta">
-                Both can be changed later under Design, with a live preview and
-                a legibility check.
+                {{ 'admin.setup.coloursHint' | transloco }}
               </small>
             </fieldset>
 
             <button type="submit" [disabled]="busy()">
-              {{ busy() ? 'Setting up…' : 'Create administrator' }}
+              {{
+                (busy() ? 'admin.setup.submitting' : 'admin.setup.submit')
+                  | transloco
+              }}
             </button>
           </form>
         } @else {
-          <p class="lead">
-            This instance has no administrator yet. The server printed a setup
-            token when it started — paste it here.
-          </p>
+          <p class="lead">{{ 'admin.setup.tokenLead' | transloco }}</p>
           <p class="meta">
-            <code>docker compose logs server</code> shows it. It changes on
-            every restart and stops working as soon as an administrator exists.
+            {{
+              'admin.setup.tokenMeta'
+                | transloco: { command: 'docker compose logs server' }
+            }}
           </p>
 
-          @if (error()) {
-            <p class="error" role="alert">{{ error() }}</p>
+          @if (error(); as problem) {
+            <p class="error" role="alert">
+              {{ problem.key | transloco }}
+              @if (problem.detail; as detail) {
+                <span class="error__detail">{{ detail }}</span>
+              }
+            </p>
           }
 
           <form [formGroup]="tokenForm" (ngSubmit)="unlock()">
             <fieldset [disabled]="busy()">
-              <label for="token">Setup token</label>
+              <label for="token">{{ 'admin.setup.token' | transloco }}</label>
               <input
                 id="token"
                 formControlName="token"
@@ -220,7 +259,12 @@ const MIN_PASSWORD_LENGTH = 12;
               />
             </fieldset>
             <button type="submit" [disabled]="busy()">
-              {{ busy() ? 'Checking…' : 'Continue' }}
+              {{
+                (busy()
+                  ? 'admin.setup.tokenChecking'
+                  : 'admin.setup.tokenSubmit'
+                ) | transloco
+              }}
             </button>
           </form>
         }
@@ -361,7 +405,7 @@ export class SetupPage {
   private readonly formBuilder = inject(FormBuilder);
 
   protected readonly busy = signal(false);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
   protected readonly done = signal<{
     adminEmail: string;
     organizationName: string;
@@ -414,7 +458,7 @@ export class SetupPage {
         accentColor: state.accentColor,
       });
     } catch (error: unknown) {
-      this.error.set(tokenMessage(error as ApiError));
+      this.error.set(tokenProblem(error as ApiError));
     } finally {
       this.busy.set(false);
     }
@@ -455,7 +499,7 @@ export class SetupPage {
       // load.
       this.theme.apply(applied.theme);
     } catch (error: unknown) {
-      this.error.set(submitMessage(error as ApiError));
+      this.error.set(submitProblem(error as ApiError));
     } finally {
       this.busy.set(false);
     }
@@ -481,22 +525,29 @@ export class SetupPage {
   }
 }
 
-function tokenMessage(error: ApiError): string {
+/**
+ * The two statuses are the contract of this route (F64), so this client says
+ * what they mean itself and shows no server text beside it: 401 is "the token
+ * is wrong", 404 is "there is an administrator already".
+ */
+function tokenProblem(error: ApiError): Problem {
   if (error?.status === 401) {
-    return 'That is not the token this server printed. It changes on every restart — check the most recent lines of the log.';
+    return { key: 'admin.setup.errorToken', detail: null };
   }
   if (error?.status === 404) {
-    return 'This instance already has an administrator. Sign in instead.';
+    return { key: 'admin.setup.errorClaimed', detail: null };
   }
-  return error?.message ?? 'The token could not be checked.';
+  return problemOf(error, 'admin.setup.errorTokenGeneric');
 }
 
-function submitMessage(error: ApiError): string {
+/**
+ * A 409 is a value the server refused — a short password, a name it will not
+ * store — and its reason is the only thing that says which. It arrives beside
+ * this client's sentence rather than instead of it (F77).
+ */
+function submitProblem(error: ApiError): Problem {
   if (error?.status === 404) {
-    return 'This instance already has an administrator — somebody set it up in the meantime. Sign in instead.';
+    return { key: 'admin.setup.errorClaimedMeanwhile', detail: null };
   }
-  if (error?.status === 409) {
-    return error.message;
-  }
-  return error?.message ?? 'The instance could not be set up.';
+  return problemOf(error, 'admin.setup.error');
 }

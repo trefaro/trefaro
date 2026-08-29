@@ -6,8 +6,10 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { AppConfigService } from '@trefaro/shared-config';
-import type { ApiError } from '@trefaro/shared-http';
+import { problemOf, type ApiError, type Problem } from '@trefaro/shared-http';
+import { LanguageSwitcher } from '@trefaro/shared-i18n';
 import { AuthService } from '../../features/auth/auth.service';
 
 /**
@@ -16,21 +18,31 @@ import { AuthService } from '../../features/auth/auth.service';
  * One message for every kind of rejection, because the server deliberately does
  * not distinguish an unknown address from a wrong password — telling them apart
  * would turn this form into a way of finding out who works for the organization.
+ *
+ * The only page of this client that carries a language switcher of its own: the
+ * shell draws its sidebar — and with it the switcher — once somebody is signed
+ * in, and the first sign-in on a machine whose browser asks for the wrong
+ * language would otherwise have nowhere to say so.
  */
 @Component({
   selector: 'trefaro-login-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, TranslocoPipe, LanguageSwitcher],
   template: `
     <div class="login">
       <form class="card" [formGroup]="form" (ngSubmit)="submit()">
-        <h1>Sign in</h1>
+        <h1>{{ 'admin.login.title' | transloco }}</h1>
         <!-- The organization, not the product: the configuration endpoint is
              public, so the name is known before anybody signs in. (No backticks
              in a template comment — they end the template literal.) -->
-        <p class="hint">Administration — {{ config.organizationName() }}</p>
+        <p class="hint">
+          {{
+            'admin.login.subtitle'
+              | transloco: { organization: config.organizationName() }
+          }}
+        </p>
 
-        <label for="email">E-mail address</label>
+        <label for="email">{{ 'admin.login.email' | transloco }}</label>
         <input
           id="email"
           type="email"
@@ -41,7 +53,7 @@ import { AuthService } from '../../features/auth/auth.service';
           required
         />
 
-        <label for="password">Password</label>
+        <label for="password">{{ 'admin.login.password' | transloco }}</label>
         <input
           id="password"
           type="password"
@@ -50,20 +62,35 @@ import { AuthService } from '../../features/auth/auth.service';
           required
         />
 
-        @if (error()) {
-          <p class="error" role="alert">{{ error() }}</p>
+        @if (error(); as problem) {
+          <p class="error" role="alert">
+            {{ problem.key | transloco }}
+            @if (problem.detail; as detail) {
+              <span class="error__detail">{{ detail }}</span>
+            }
+          </p>
         }
 
         <button type="submit" [disabled]="busy()">
-          {{ busy() ? 'Signing in…' : 'Sign in' }}
+          {{
+            (busy() ? 'admin.login.submitting' : 'admin.login.title')
+              | transloco
+          }}
         </button>
       </form>
+
+      <!-- Below the card, not in it: choosing a language is not a step of
+           signing in. -->
+      <trefaro-language-switcher />
     </div>
   `,
   styles: `
     .login {
       display: grid;
       place-items: center;
+      align-content: center;
+      justify-items: center;
+      gap: 1rem;
       min-block-size: 100vh;
       padding: 1.5rem;
     }
@@ -129,7 +156,7 @@ export class LoginPage {
   private readonly router = inject(Router);
 
   protected readonly busy = signal(false);
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal<Problem | null>(null);
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
@@ -160,19 +187,24 @@ export class LoginPage {
           : '/',
       );
     } catch (error: unknown) {
-      this.error.set(messageFor(error as ApiError));
+      this.error.set(problemFor(error as ApiError));
     } finally {
       this.busy.set(false);
     }
   }
 }
 
-function messageFor(error: ApiError): string {
+/**
+ * Both refusals this form can explain itself carry no server text (F77): the
+ * server's `Unauthorized` is a status word, and its throttling message would
+ * arrive in English on a German form for no gain.
+ */
+function problemFor(error: ApiError): Problem {
   if (error?.status === 429) {
-    return 'Too many attempts. Please wait a few minutes before trying again.';
+    return { key: 'admin.login.errorThrottled', detail: null };
   }
   if (error?.status === 401) {
-    return 'Wrong e-mail address or password.';
+    return { key: 'admin.login.errorCredentials', detail: null };
   }
-  return error?.message ?? 'Signing in failed.';
+  return problemOf(error, 'admin.login.error');
 }
