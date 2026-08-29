@@ -1,9 +1,12 @@
 # Phase 2 — Whitelabel, Konfiguration, Mehrsprachigkeit, PWA
 
-**Status: in Arbeit** (29.08.2026). **AP 1 bis AP 12 sind erledigt** (siehe
-_Fortschritt_) — damit sind **Meilenstein M3** und **Meilenstein M4** erreicht;
-die Abschnitte oberhalb davon sind Plan, nicht Protokoll. Wie in Phase 1 gibt
-Marius jedes Paket einzeln frei — AP 13 wartet auf seine Freigabe.
+**Status: abgeschlossen** (29.08.2026). **AP 1 bis AP 13 sind erledigt** (siehe
+_Fortschritt_, je Paket ein Abschnitt „erledigt") — damit sind **M3**, **M4** und
+**M5** erreicht und die Definition of Done ist in allen sechs Punkten erfüllt.
+Die Abschnitte zwischen _Ziel_ und _Fortschritt_ sind der **Plan**, wie er vor
+der Umsetzung dastand; sie werden nicht rückwirkend korrigiert. Wo Umsetzung und
+Plan auseinandergehen, gilt _Fortschritt_ — und die Unterschiede stehen dort
+sowie gesammelt unter _Was anders lief — über die ganze Phase_ am Ende.
 
 **Die Entscheidungen E17–E29 sind am 28.08.2026 von Marius bestätigt** — sie
 werden nicht erneut aufgerollt, sondern nur gegen die Umsetzung geprüft (wie
@@ -19,7 +22,8 @@ prüfbares Abnahmekriterium. Was Phase 1 offen gelassen hat, steht in
 
 Die Entscheidungen zählen bei **E17** weiter, nicht bei E1: sie werden im Code
 und in `CLAUDE.md` ohne Phasenpräfix zitiert (E4, E16), ein zweites E1 wäre
-zweideutig. Ergänzungen am Referenzdokument bekommen **F60** und folgende.
+zweideutig. Ergänzungen am Referenzdokument bekommen **F60** und folgende; vergeben wurden
+F60–F112, **ohne F62** (siehe AP 13).
 
 ## Ziel
 
@@ -624,82 +628,95 @@ entscheidet Marius.
 
 Wird beim jeweiligen Paket eingetragen, nicht am Ende gesammelt:
 
-| Nr.  | Inhalt                                                                                                      | AP  |
-| ---- | ----------------------------------------------------------------------------------------------------------- | --- |
-| F60  | `app_config` bekommt `organization_name` und `app_icon_path`; Ergänzung zu Schema 5.3 (E26)                 | 1   |
-| F61  | Übersetzungstabelle auch für `event_series`, und was **nicht** übersetzt wird (E25)                         | 11  |
-| F62  | Der Übersetzungskatalog wird vom Server ausgeliefert — so wird Kapitel 4 eingelöst (E22–E24)                | 6   |
-| F63  | `CORE_MODULES` listet nur Module, die es gibt; `newsletter` entfällt (E21, Bezug F8)                        | 4   |
-| F64  | Die Ersteinrichtung ist tokengeschützt; `ADMIN_BOOTSTRAP_*` bleibt der unbeaufsichtigte Weg (E28)           | 5   |
-| F65  | Die Schriftart ist ein mitgelieferter Katalog, kein Upload (E18, Bezug NFR 9)                               | 1   |
-| F66  | Wie ein Logo öffentlich wird, ohne die Anhänge mitzunehmen (E19, Bezug E9, F38)                             | 2   |
-| F67  | Welcher Kontrast geprüft wird — und warum nicht der gegen die berechnete Textfarbe (NFR 4, E17)             | 3   |
-| F68  | Wie die Kacheln der Event-Detailansicht entstehen (Mockups 5.2, Bezug F47)                                  | 4   |
-| F69  | Warum der Setup-Controller `@AllowAnonymous()` trägt — der Admin-Guard überschätzt (Bezug E16)              | 5   |
-| F70  | Gestalt und Herkunft eines Übersetzungsschlüssels; flach, gepunktet, `lowerCamelCase` (E22)                 | 6   |
-| F71  | Welche Sprachen eine frische Instanz anbietet — die, die das Image mitbringt (NFR 4)                        | 6   |
-| F72  | Transloco und zoneless: was die Vorprüfung wirklich fand (Bezug E20)                                        | 6   |
-| F73  | Vollständigkeit ist eine Zahl über die englische Schlüsselliste (E23)                                       | 7   |
-| F74  | Ein leerer Wert ist keine Übersetzung — und der mitgelieferte Text wird nicht gespeichert (E22)             | 7   |
-| F75  | Import ist ein Merge, und unbekannte Schlüssel werden genannt statt geschluckt                              | 7   |
-| F76  | Sprachen anbieten ist eine Entscheidung über `app_config`, nicht über die Übersetzungen (E30)               | 7   |
-| F77  | Eine Meldung hat zwei Hälften: der Satz des Clients aus dem Katalog, der Grund des Servers daneben          | 8   |
-| F78  | Was ein Format ist und keine Übersetzung — Datum, Zonenname, Dateigröße (Bezug E8)                          | 8   |
-| F79  | Ein Satz, der um ein Element gebaut ist, ist keine Übersetzungseinheit                                      | 8   |
-| F80  | Ein Schlüssel ist ein Ort in der Oberfläche; wer eine Seite benennt, nimmt deren Schlüssel                  | 9   |
-| F81  | Zwei Zähler in einem Satz brauchen einen Schlüssel je Kombination, solange kein Plural-Modul da ist         | 9   |
-| F82  | `admin.*` ist ein eigener Namensraum: die Clients teilen den Katalog, nicht die Sätze                       | 9   |
-| F83  | Gespeicherte Statuswörter bekommen Schlüsselfunktionen in `shared-models` — zwei Typen, zwei Räume          | 9   |
-| F84  | Eine Meldung aus einer wechselnden Zahl von Teilsätzen wird beim Handeln fertig, nicht beim Zeichnen        | 9   |
-| F85  | Ein Wert, den niemand übersetzen darf — ein Befehl, ein Tag, ein Dateiname — reist als Parameter            | 9   |
-| F86  | Der Katalog bekommt Sätze, nie die Auszeichnung um sie herum — Struktur ist Code                            | 10  |
-| F87  | Die Einheit des Rückfalls aus E24 ist **eine Mail**, nicht der Katalog und nicht ein Schlüssel              | 10  |
-| F88  | Text- und HTML-Teil sind zwei Darstellungen **eines** Satzes, nicht zwei Sätze                              | 10  |
-| F89  | In welchen Sprachen eine Instanz Mail schreiben kann, ist eine Laufzeitfrage, keine Konstante               | 10  |
-| F90  | Ein regionaler Tag ist auch für Mail eine eigene Sprache — kein Rückfall auf die Basissprache               | 10  |
-| F91  | Ein Platzhalter, den niemand füllt, bleibt in einer Mail **stehen** — anders als auf einem Bildschirm       | 10  |
-| F92  | Maskieren ist ein Typ, keine Gewohnheit: `Html` und die einzige Tür von `string` dorthin                    | 10  |
-| F93  | Drei Übersetzungstabellen mit `(elternteil, locale)` und `ON DELETE CASCADE`, kein polymorpher Schlüssel    | 11  |
-| F94  | Was `?locale=` bedeutet: fehlend, unbekannt, unbrauchbar — und warum nur das dritte ein Fehler ist          | 11  |
-| F95  | Übersetzt wird **vor** dem Tor, nie danach — sonst gibt eine Übersetzung zurück, was F50 zurückhielt        | 11  |
-| F96  | Eine übersetzte Liste ist nach dem sortiert, was der Leser sieht — in der Geschäftsschicht                  | 11  |
-| F97  | Ein Bildschirm ist eine Anfrage, ein Speichern ist ein Ding und eine Sprache                                | 11  |
-| F98  | Eine geleerte Übersetzung löscht ihre Zeile, und Schreiben ersetzt, statt zu mergen (F74 auf Inhalte)       | 11  |
-| F99  | Übersetzen und Anbieten sind zwei Entscheidungen — auch bei Inhalten (E30 auf Inhalte)                      | 11  |
-| F100 | Der Lese-Port liegt beim Elternteil, das Schreiben darüber — die Abhängigkeit läuft in eine Richtung        | 11  |
-| F101 | `type` statt `interface` für die Nutzlasten: nur so bleibt ein generischer Weg offen                        | 11  |
-| F102 | Die Identität eines Formulars ist (Ding, Sprache) — und eine Feldliste ist kein Grund zurückzusetzen        | 11  |
-| F103 | Das Manifest kommt vom Server und sitzt als Komposition über Konfiguration und Katalog (E26, Bezug F49)     | 12  |
-| F104 | Es spricht die Vorgabesprache der Instanz — die Sprache eines Manifests wählt niemand (Linie E24)           | 12  |
-| F105 | Ein hochgeladenes App-Icon ist nie `maskable` und ersetzt die mitgelieferten nur, wenn es installierbar ist | 12  |
-| F106 | Die Bildmaße kommen aus dem Dateikopf, ungespeichert — Lesen ist keine Prüfung (verfeinert AP 2)            | 12  |
-| F107 | `SHIPPED_APP_ICONS` ist ein Vertrag zwischen Server und Nutzer-Client, mit einem Test gegen die Dateien     | 12  |
-| F108 | `theme-color` schreibt der ThemeService, nicht `index.html`                                                 | 12  |
-| F109 | Ein Hinweis, den man nicht befolgen kann, ist Werbung — angeboten wird nur, wo es geht                      | 12  |
-| F110 | `navigator.onLine` ist asymmetrisch: nur `false` ist eine Aussage                                           | 12  |
+| Nr.     | Inhalt                                                                                                                                       | AP  |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------- | --- |
+| F60     | `app_config` bekommt `organization_name` und `app_icon_path`; Ergänzung zu Schema 5.3 (E26)                                                  | 1   |
+| F61     | Übersetzungstabelle auch für `event_series`, und was **nicht** übersetzt wird (E25)                                                          | 11  |
+| ~~F62~~ | ~~Der Übersetzungskatalog wird vom Server ausgeliefert~~ — **nie vergeben**: F70 beantwortet es mitsamt der Gestalt eines Schlüssels (AP 13) | 6   |
+| F63     | `CORE_MODULES` listet nur Module, die es gibt; `newsletter` entfällt (E21, Bezug F8)                                                         | 4   |
+| F64     | Die Ersteinrichtung ist tokengeschützt; `ADMIN_BOOTSTRAP_*` bleibt der unbeaufsichtigte Weg (E28)                                            | 5   |
+| F65     | Die Schriftart ist ein mitgelieferter Katalog, kein Upload (E18, Bezug NFR 9)                                                                | 1   |
+| F66     | Wie ein Logo öffentlich wird, ohne die Anhänge mitzunehmen (E19, Bezug E9, F38)                                                              | 2   |
+| F67     | Welcher Kontrast geprüft wird — und warum nicht der gegen die berechnete Textfarbe (NFR 4, E17)                                              | 3   |
+| F68     | Wie die Kacheln der Event-Detailansicht entstehen (Mockups 5.2, Bezug F47)                                                                   | 4   |
+| F69     | Warum der Setup-Controller `@AllowAnonymous()` trägt — der Admin-Guard überschätzt (Bezug E16)                                               | 5   |
+| F70     | Gestalt und Herkunft eines Übersetzungsschlüssels; flach, gepunktet, `lowerCamelCase` (E22)                                                  | 6   |
+| F71     | Welche Sprachen eine frische Instanz anbietet — die, die das Image mitbringt (NFR 4)                                                         | 6   |
+| F72     | Transloco und zoneless: was die Vorprüfung wirklich fand (Bezug E20)                                                                         | 6   |
+| F73     | Vollständigkeit ist eine Zahl über die englische Schlüsselliste (E23)                                                                        | 7   |
+| F74     | Ein leerer Wert ist keine Übersetzung — und der mitgelieferte Text wird nicht gespeichert (E22)                                              | 7   |
+| F75     | Import ist ein Merge, und unbekannte Schlüssel werden genannt statt geschluckt                                                               | 7   |
+| F76     | Sprachen anbieten ist eine Entscheidung über `app_config`, nicht über die Übersetzungen (E30)                                                | 7   |
+| F77     | Eine Meldung hat zwei Hälften: der Satz des Clients aus dem Katalog, der Grund des Servers daneben                                           | 8   |
+| F78     | Was ein Format ist und keine Übersetzung — Datum, Zonenname, Dateigröße (Bezug E8)                                                           | 8   |
+| F79     | Ein Satz, der um ein Element gebaut ist, ist keine Übersetzungseinheit                                                                       | 8   |
+| F80     | Ein Schlüssel ist ein Ort in der Oberfläche; wer eine Seite benennt, nimmt deren Schlüssel                                                   | 9   |
+| F81     | Zwei Zähler in einem Satz brauchen einen Schlüssel je Kombination, solange kein Plural-Modul da ist                                          | 9   |
+| F82     | `admin.*` ist ein eigener Namensraum: die Clients teilen den Katalog, nicht die Sätze                                                        | 9   |
+| F83     | Gespeicherte Statuswörter bekommen Schlüsselfunktionen in `shared-models` — zwei Typen, zwei Räume                                           | 9   |
+| F84     | Eine Meldung aus einer wechselnden Zahl von Teilsätzen wird beim Handeln fertig, nicht beim Zeichnen                                         | 9   |
+| F85     | Ein Wert, den niemand übersetzen darf — ein Befehl, ein Tag, ein Dateiname — reist als Parameter                                             | 9   |
+| F86     | Der Katalog bekommt Sätze, nie die Auszeichnung um sie herum — Struktur ist Code                                                             | 10  |
+| F87     | Die Einheit des Rückfalls aus E24 ist **eine Mail**, nicht der Katalog und nicht ein Schlüssel                                               | 10  |
+| F88     | Text- und HTML-Teil sind zwei Darstellungen **eines** Satzes, nicht zwei Sätze                                                               | 10  |
+| F89     | In welchen Sprachen eine Instanz Mail schreiben kann, ist eine Laufzeitfrage, keine Konstante                                                | 10  |
+| F90     | Ein regionaler Tag ist auch für Mail eine eigene Sprache — kein Rückfall auf die Basissprache                                                | 10  |
+| F91     | Ein Platzhalter, den niemand füllt, bleibt in einer Mail **stehen** — anders als auf einem Bildschirm                                        | 10  |
+| F92     | Maskieren ist ein Typ, keine Gewohnheit: `Html` und die einzige Tür von `string` dorthin                                                     | 10  |
+| F93     | Drei Übersetzungstabellen mit `(elternteil, locale)` und `ON DELETE CASCADE`, kein polymorpher Schlüssel                                     | 11  |
+| F94     | Was `?locale=` bedeutet: fehlend, unbekannt, unbrauchbar — und warum nur das dritte ein Fehler ist                                           | 11  |
+| F95     | Übersetzt wird **vor** dem Tor, nie danach — sonst gibt eine Übersetzung zurück, was F50 zurückhielt                                         | 11  |
+| F96     | Eine übersetzte Liste ist nach dem sortiert, was der Leser sieht — in der Geschäftsschicht                                                   | 11  |
+| F97     | Ein Bildschirm ist eine Anfrage, ein Speichern ist ein Ding und eine Sprache                                                                 | 11  |
+| F98     | Eine geleerte Übersetzung löscht ihre Zeile, und Schreiben ersetzt, statt zu mergen (F74 auf Inhalte)                                        | 11  |
+| F99     | Übersetzen und Anbieten sind zwei Entscheidungen — auch bei Inhalten (E30 auf Inhalte)                                                       | 11  |
+| F100    | Der Lese-Port liegt beim Elternteil, das Schreiben darüber — die Abhängigkeit läuft in eine Richtung                                         | 11  |
+| F101    | `type` statt `interface` für die Nutzlasten: nur so bleibt ein generischer Weg offen                                                         | 11  |
+| F102    | Die Identität eines Formulars ist (Ding, Sprache) — und eine Feldliste ist kein Grund zurückzusetzen                                         | 11  |
+| F103    | Das Manifest kommt vom Server und sitzt als Komposition über Konfiguration und Katalog (E26, Bezug F49)                                      | 12  |
+| F104    | Es spricht die Vorgabesprache der Instanz — die Sprache eines Manifests wählt niemand (Linie E24)                                            | 12  |
+| F105    | Ein hochgeladenes App-Icon ist nie `maskable` und ersetzt die mitgelieferten nur, wenn es installierbar ist                                  | 12  |
+| F106    | Die Bildmaße kommen aus dem Dateikopf, ungespeichert — Lesen ist keine Prüfung (verfeinert AP 2)                                             | 12  |
+| F107    | `SHIPPED_APP_ICONS` ist ein Vertrag zwischen Server und Nutzer-Client, mit einem Test gegen die Dateien                                      | 12  |
+| F108    | `theme-color` schreibt der ThemeService, nicht `index.html`                                                                                  | 12  |
+| F109    | Ein Hinweis, den man nicht befolgen kann, ist Werbung — angeboten wird nur, wo es geht                                                       | 12  |
+| F110    | `navigator.onLine` ist asymmetrisch: nur `false` ist eine Aussage                                                                            | 12  |
 
 Anhangspunkt 18 (TLS gehört zur Installations-Story) ist in AP 5 von „geplant"
 auf „umgesetzt" gezogen.
 
 ## Definition of Done für Phase 2
 
-1. Jedes Arbeitspaket hat sein Abnahmekriterium nachweislich erfüllt;
-   `nx run-many -t lint test build` und alle E2E-Suiten sind grün.
-2. Eine Organisation kann ohne Datenbankzugriff und ohne Neubau eines Images:
-   ihre Instanz benennen und branden (Name, zwei Farben, Logo, App-Icon,
-   Schrift), Module und Plug-ins schalten, eine Sprache hinzufügen und
+Stand 29.08.2026, nach AP 13. **Alle sechs Punkte sind erfüllt** — anders als in
+Phase 1, wo der sechste außerhalb dieses Repositories lag; die Rückmeldungsrunde
+mit dem Pilotpartner ist in Phase 2 bewusst kein Kriterium (die fünf Fragen an
+ihn stehen weiter gesammelt in `todo.md` und blockieren nichts).
+
+1. ✅ **Jedes Arbeitspaket hat sein Abnahmekriterium nachweislich erfüllt**;
+   `nx run-many -t lint test build` über 13 Projekte, 737 Server-Unit-Tests, 367
+   API-Vertragstests und beide Browsersuiten sind grün — nacheinander gefahren,
+   nie zusammen (die globale Drosselung, siehe AP 10).
+2. ✅ **Eine Organisation kann ohne Datenbankzugriff und ohne Neubau eines
+   Images:** ihre Instanz benennen und branden (Name, zwei Farben, Logo,
+   App-Icon, Schrift), Module und Plug-ins schalten, eine Sprache hinzufügen und
    Oberfläche, Mails und Eventinhalte darin pflegen, und den Nutzer-Client mit
-   ihrem eigenen Icon als PWA installieren.
-3. Ein frischer Fünf-Container-Stack kommt aus leerem Volume hoch, die geführte
-   Ersteinrichtung legt den ersten Administrator an, und TLS lässt sich mit einer
-   zusätzlichen Compose-Datei einschalten — von Hand geprüft, mit
-   `tools/spike-verification/` belegt.
-4. `docs/INSTALL.md` existiert und ist von jemandem nachvollziehbar, der dieses
-   Repository nicht kennt (NFR 8).
-5. `todo.md` unter _Checkable after phase 2_ ist durchgearbeitet, F60–F102 stehen
-   im Referenzdokument.
-6. Dieses Dokument ist von Plan auf Protokoll korrigiert und hat einen Abschnitt
-   _Was anders lief_.
+   ihrem eigenen Icon als PWA installieren. In AP 13 am laufenden
+   Fünf-Container-Stack durchgespielt, einschließlich des Manifests, das danach
+   den Namen, die Farbe und **nur** das hochgeladene Icon nennt.
+3. ✅ **Ein frischer Fünf-Container-Stack kommt aus leerem Volume hoch**, die
+   geführte Ersteinrichtung legt den ersten Administrator an (AP 5,
+   `verify-setup.mjs`), und TLS lässt sich mit einer zusätzlichen Compose-Datei
+   einschalten (AP 5, `verify-proxy.mjs` über HTTPS). In AP 13 noch einmal aus
+   dem Stand gefahren, mit allen acht Prüfskripten gegen genau diese Instanz.
+4. ✅ **`docs/INSTALL.md` existiert** und führt jemanden durch, der dieses
+   Repository nicht kennt (NFR 8) — geschrieben in AP 5, gegen den Stack
+   nachgezogen.
+5. ✅ **`todo.md` unter _Checkable after phase 2_ ist durchgearbeitet**, F60–F112
+   stehen im Referenzdokument (ohne F62 — die Nummer wurde nie vergeben, siehe
+   AP 13). Der Abschnitt ist leer: sieben Einträge abgehakt, fünf mit Begründung
+   verschoben, einer als nie gebaute P1-Anforderung nach _Known gaps_ eskaliert.
+6. ✅ **Dieses Dokument ist von Plan auf Protokoll korrigiert** und hat je Paket
+   einen Abschnitt „erledigt" sowie am Ende ein phasenweites _Was anders lief_.
 
 ---
 
@@ -707,7 +724,7 @@ auf „umgesetzt" gezogen.
 
 Je Paket ein Abschnitt „erledigt" mit dem, was tatsächlich passierte — wie in
 [`PHASE1.md`](PHASE1.md). Abweichungen vom Plan stehen hier, damit AP 13 sie
-nicht rekonstruieren muss.
+nicht rekonstruieren musste; das phasenweite Fazit steht am Ende des Dokuments.
 
 ### AP 1 — Konfiguration schreibbar machen (erledigt)
 
@@ -2182,3 +2199,197 @@ Was anders lief:
   Organisation, `<title>` weiterhin „Trefaro" — der Punkt steht seit Phase 1 in
   `todo.md` und braucht eine `TitleStrategy` in **beiden** Clients. Er gehört zu
   AP 13, nicht hierher; hier ist er nur sichtbarer geworden.
+
+### AP 13 — Abschluss der Phase (erledigt) → **Meilenstein M5**
+
+Geplant war: `todo.md` unter _Checkable after phase 2_ durchgehen, F60–F102 im
+Referenzdokument nachtragen, den Fünf-Container-Stack aus dem Stand hochfahren,
+beide Werkzeuge nachziehen, dieses Dokument von Plan auf Protokoll korrigieren.
+Alles davon ist passiert — und zwei der Einträge in `todo.md` waren keine
+Verschiebungen, sondern Zusagen dieser Phase, die keiner ihrer Pakete eingelöst
+hatte. Sie sind hier gebaut worden, nicht weitergereicht.
+
+**Was gebaut wurde.**
+
+- **Die Browser-Tabs tragen den Namen der Organisation** (F111). Bis hierher
+  stand in jedem `app.routes.ts` ein Literal, und fast jedes endete auf
+  „Trefaro". Der Eintrag war ausdrücklich AP 8 und AP 9 zugeschrieben und blieb
+  in beiden liegen — die Lehre daraus steht unter _Was anders lief_.
+  `TrefaroTitleStrategy` in `libs/shared-i18n` (dort, weil sie Katalog **und**
+  Konfiguration braucht) löst jetzt den Schlüssel der Route auf und hängt
+  `AppConfigService.organizationName()` an. Eine Route **ohne** Titel bekommt
+  allein den Namen der Organisation — das ist die Startseite des Nutzer-Clients.
+  Und der Tab folgt einem Sprachwechsel ohne Navigation: der Schlüssel liegt in
+  einem Signal, ein `effect` liest Sprache und Namen daneben (F72). Ein neuer
+  Katalogschlüssel dafür: `admin.dashboard.title` — die einzige Seite, deren
+  `<h1>` ein Eventname ist und die deshalb keinen eigenen hatte.
+- **Der Veranstalter-Client verlinkt die öffentliche Seite** (F112). Die Adresse
+  stand seit AP 10 als Text da, weil dieser Client nicht weiß, welcher Origin der
+  andere ist. Er weiß es doch — `publicUserClientUrl` steht seit Phase 1 in
+  `/api/config` —, also war das ganze Stück Client-Arbeit: `PublicSite` verbindet
+  den Origin mit `publicEventPath`/`publicSeriesPath` über das neue
+  `publicUrl()` in `shared-models`, das jetzt auch das Mailmodul benutzt. Der
+  Link erscheint nur bei Status `published`, die Adresse bleibt zum Kopieren
+  daneben stehen, und er trägt `rel="noopener noreferrer"` wie jeder Link, der
+  diesen Origin verlässt (F51).
+
+**`todo.md`, Abschnitt _Checkable after phase 2_: durchgearbeitet.** Sieben
+Einträge sind abgehakt (Kacheln, Modulschalter, Manifest, `theme-color` und
+`<html lang>`, Service Worker, beide Registries, Katalog, Schriftarten, Mails —
+und neu: Programmpunkt-Übersetzungen aus AP 11, die Namen der Medien-Link-Arten
+aus AP 8, `newsletter` aus AP 4, dazu die zwei oben). Fünf sind mit Begründung
+**verschoben**, jeder dorthin, wo er prüfbar wird:
+
+| Eintrag                                             | wohin                      | warum                                                                                           |
+| --------------------------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------- |
+| „My registration" ist nirgends verlinkt             | Phase 3                    | Bedingung ist der Teilnehmenden-Login, und daran hat Phase 2 nichts geändert                    |
+| Das Icon im Plug-in-Vertrag, das niemand zeichnet   | Phase 4                    | Feld entfernen heißt Major-Bump; ein Iconsatz ist eine Gestaltungsfrage — beides gehört dorthin |
+| Die Design-Seite könnte Maße eines App-Icons nennen | Phase 5                    | Verbesserung an einem funktionierenden Bildschirm; die Usability-Runde ist der richtige Anlass  |
+| Der Server lehnt englisch ab                        | Phase 5                    | keine Textextraktion, sondern ein Fehlercode-Vertrag durch die ganze Geschäftsschicht           |
+| Kein Installationshinweis auf iOS · Schrift-Upload  | Fragen an den Pilotpartner | beides Entscheidungen, die dieses Repository nicht allein treffen kann                          |
+
+**Und einer ist eskaliert statt abgehakt:** `event_series.logo_path` und
+`event.logo_path` existieren, der Nutzer-Client zeichnet `logoUrl` an drei
+Stellen, und geschrieben hat die Spalten nie jemand. Beim Durchgehen fiel auf,
+dass **FR 2.1 und FR 3.1 das Logo unter den Pflichtfeldern führen, beide P1** —
+das ist also keine offene Entscheidung, sondern eine nie gebaute P1-Anforderung,
+die an AP 2 und AP 3 der Phase 1 vorbeigelaufen ist. Die Gestalt ist jetzt
+entschieden, damit sie niemand improvisiert (Routen ohne Aufrufer-Pfad, je Zeile
+aufgelöst, wie `/api/media/branding/logo` — E19, F66); **gebaut wurde sie nicht**:
+ein Abschlusspaket ist nicht der Ort, ungefragt eine P1-Funktion nachzuziehen.
+Der Eintrag steht deshalb jetzt unter _Known gaps in the current state_ und nicht
+mehr unter einer Phase.
+
+**Der Fünf-Container-Stack, aus dem Stand.** `docker compose -f
+infra/docker-compose.yml up -d --build` mit eigenem `-p`-Projektnamen gegen ein
+leeres Volume, danach **acht** Prüfskripte gegen genau diese Instanz:
+`verify-proxy` (Manifest, Icons, Service-Worker-Regel, WebSocket-Upgrade),
+`verify-api`, `verify-i18n`, `verify-mail` (vier Briefe aus Mailpit, in beiden
+Sprachen, plus E24), `verify-push`, `verify-plugin-toggle`, `verify-socket`
+(gegen den Proxy) und `verify-admin-access`. Danach `tools/demo-seed/seed.mjs`
+gegen dieselbe Instanz: 3 Reihen, 5 Events, 40 Anmeldungen, 35 Bestätigungen aus
+echter Mail, 11 Plätze, eine versandte Einladung und ein Widerspruch aus dem
+Link darin — und, neu, die Marke und neun Übersetzungen. Das Manifest der
+gebrandeten Instanz nennt danach `Demokratie Initiative e.V.`, `#1d4e6f` und
+**nur** das hochgeladene 512×512-Icon: F105 in Betrieb.
+
+Und daneben, weil es die eine Prüfung ist, die eine schon benutzte Instanz nicht
+führen kann: ein **zweiter** Stack aus leerem Volume, diesmal ohne
+`ADMIN_BOOTSTRAP_*`. Der Server schreibt sein Setup-Token ins Log,
+`verify-setup.mjs` geht die ganze Ersteinrichtung durch — 401 ohne Token, ein
+abgelehnter Wert, der die Route **nicht** schließt, der erste Administrator, die
+danach verschwundene Route, Name, Farben und Sprache der neuen Instanz, und eine
+Anmeldung, deren Sitzungscookie `Secure` trägt. Das ist FR 1.1 und NFR 15 an
+einer Installation, die niemand vorher angefasst hat; danach `down -v`.
+
+**Die Werkzeuge sind nachgezogen.**
+
+- `tools/demo-seed/` setzt jetzt zuerst die Marke der Instanz (Name, zwei Farben,
+  Schrift) und lädt **zwei erzeugte PNG** hoch — ein Logo im Briefkopfformat und
+  ein quadratisches 512er App-Icon. Erzeugt statt eingecheckt: ein Binärblob im
+  Repository müsste erklärt werden, und der Server liest die ersten Bytes (F38)
+  und seit AP 12 noch einmal den Kopf für die Größe (F106) — ein handgeschriebenes
+  PNG erfüllt beides, weil es wirklich eines ist. Danach schreibt er die
+  englische Seite von neun Dingen und lässt den Rest bewusst deutsch (F94).
+  `--reset` nimmt die Marke **nicht** zurück; es gibt nichts, worauf.
+- `tools/spike-verification/` nimmt die Adresse jetzt überall aus **`BASE`** (die
+  alten Namen gelten weiter und gewinnen), und die zwei Skripte, die in die
+  Datenbank greifen, nehmen `POSTGRES_CONTAINER`, `DATABASE_USER`,
+  `DATABASE_NAME`. Vorher stand `trefaro-postgres` als Literal darin — ein Lauf
+  gegen den Container-Stack legte damit den Schalter der **Entwicklungs**instanz
+  um und prüfte gegen die andere; zwölf Prüfungen schlugen fehl, und keine davon
+  aus dem Grund, den sie nannte. Außerdem prüft `verify-api.mjs` nicht mehr die
+  zwei gesäten Farben als Literal, sondern ihre Form — seit AP 1 ist eine
+  gebrandete Instanz der Normalfall.
+
+**F60–F112 stehen im Referenzdokument** (Version 1.28), eingetragen jeweils beim
+Paket. Beim Nachzählen fiel auf: **F62 wurde nie vergeben.** Geplant war „der
+Übersetzungskatalog wird vom Server ausgeliefert", und genau das beantwortet F70
+mitsamt der Gestalt eines Schlüssels. Die Nummer bleibt frei, statt nachträglich
+belegt zu werden — sonst zeigte ein Verweis auf F62 in einem älteren Text
+plötzlich auf etwas anderes.
+
+Was anders lief:
+
+- **Eine Textextraktion findet Routentitel nicht.** AP 8 und AP 9 haben jede
+  Beschriftung beider Clients in den Katalog geholt und sind an den Titeln
+  vorbeigelaufen — sie stehen als einzige Beschriftung eines Clients **nicht** in
+  einem Template, sondern in einer Routentabelle. Gefunden hat es erst dieses
+  Paket, und nur, weil AP 12 das Manifest daneben gestellt hat: derselbe Client
+  hieß im Manifest wie die Organisation und im Tab wie das Produkt.
+- **Zwei Zusagen dieser Phase waren keine Verschiebungen.** Die Titel und der
+  Link auf die öffentliche Seite standen mit Paketzuordnung in `todo.md` und
+  blieben liegen. Für ein Abschlusspaket ist das die eigentliche Arbeit:
+  unterscheiden, was auf eine spätere Phase wartet, und was diese Phase
+  schuldig geblieben ist. Die Grenze war der Umfang — beides war zusammen ein
+  halber Tag; das Logo je Reihe und Event ist ein Paket und wurde deshalb
+  eskaliert statt nebenbei gebaut.
+- **Der Skript-Lauf gegen den Stack hat die Skripte geprüft, nicht nur den
+  Stack.** Zwei von acht sind an ihren eigenen Annahmen gescheitert (der
+  Containername, die zwei gesäten Farben), eines an einer Adresse, die nur im
+  Entwicklungsbetrieb existiert. Das ist genau das, wofür der Lauf am Phasenende
+  da ist — die Skripte prüfen ein _Deployment_, und ein Deployment, das nicht das
+  eigene Notebook ist, sieht anders aus.
+- **`AUTH_SECRET` unter 32 Zeichen bringt den Server in eine Neustartschleife**,
+  mit einer klaren Meldung im Log. Beim Aufsetzen der Stack-Umgebung passiert,
+  und richtig so — `loadEnv` verweigert den Start (E1), statt mit einem schwachen
+  Schlüssel zu signieren. Erwähnt, weil `docs/INSTALL.md` die Länge nennt und ein
+  von Hand gebautes `.env` sie trotzdem unterschreitet.
+- **Mailpit erreicht man aus dem Stack am kürzesten über
+  `host.docker.internal`.** Die README nannte bisher nur den Weg über
+  `docker network connect`; beides funktioniert, und der kürzere steht jetzt
+  daneben.
+
+---
+
+## Was anders lief — über die ganze Phase
+
+Je Paket steht es oben; das hier sind die fünf Dinge, die man erst sieht, wenn
+man dreizehn Pakete nebeneinanderlegt.
+
+**Der Umfang war die Textextraktion, und das war vorher bekannt.** Das
+Risikoregister nannte sie als halben Phasenumfang, und so kam es: AP 8 und AP 9
+haben zusammen mehr Zeilen bewegt als AP 1 bis AP 5 zusammen, und der Katalog ist
+von 5 Schlüsseln nach AP 6 auf **646** gewachsen. Die Gegenmaßnahme hat
+funktioniert — zwei eigene Pakete, die Schlüsselkonvention einmal in AP 6
+entschieden (F70), keine Umformulierung während der Extraktion. Was sie nicht
+verhindert hat, ist der Rest: eine Beschriftung, die **nicht** in einem Template
+steht, wird von einer Textextraktion nicht gefunden. Zwei Sorten davon sind
+aufgefallen — in AP 6 die in TypeScript berechneten Labels (F72), in AP 13 die
+Routentitel (F111). Wer eine dritte sucht: es ist alles, was kein `| transloco`
+tragen kann.
+
+**„Die Organisation pflegt es selbst" ist an mehr Stellen wahr geworden, als
+Kapitel 4 verlangt.** Der Plan sagte: Oberfläche und neue Sprachen. Geworden sind
+es fünf Sorten Text aus derselben Quelle — Oberfläche, Modul- und Plug-in-Namen,
+die vier Mails (AP 10), die Inhalte (AP 11) und das Manifest (AP 12). Der Grund
+ist eine einzige Entscheidung: der Katalog kommt vom Server (E22). Alles, was
+danach Text brauchte, konnte ihn von dort nehmen, statt sich eine zweite Quelle
+zu bauen.
+
+**Drei Fehler dieser Phase waren derselbe Fehler.** Der Katalog, der nicht ins
+Image kommt (AP 6), das Manifest, das nur der Produktionsbuild anfasst (AP 12),
+und der Containername in den Prüfskripten (AP 13): jedes Mal war die Suite grün,
+weil sie gegen `nx serve` im Arbeitsbereich lief, und jedes Mal hätte nur ein
+laufendes Deployment es zeigen können. `tools/spike-verification/` ist deshalb in
+dieser Phase dreimal gewachsen und ist nicht Beiwerk, sondern das einzige Netz
+für diese Klasse. Die Regel dazu steht seit Phase 1 in `CLAUDE.md` und hat sich
+dreimal bewährt: **benutzen, bevor man „grün" sagt.**
+
+**Zwei Entscheidungen haben sich beim Bauen gedreht.** F67: die geplante
+Kontrastwarnung „unter 4,5:1 gegen die berechnete Textfarbe" kann konstruktiv nie
+auslösen — gewarnt wird jetzt vor etwas anderem. Und F105: geplant war, dass ein
+hochgeladenes App-Icon die mitgelieferten ersetzt; herausgekommen ist eine Regel,
+die **in beide Richtungen** zeigt, weil die eine Fehlrichtung Trefaros Icon auf
+einem fremden Startbildschirm ist und die andere eine Instanz, die sich gar nicht
+installieren lässt. Beide Male war die Ursache dieselbe: der Plan hat eine Regel
+formuliert, ohne den Grenzfall auszurechnen.
+
+**Was die Phase schuldig geblieben ist, hat sie in AP 13 selbst gefunden — und
+nicht alles davon gebaut.** Zwei Zusagen (die Tabtitel, der Link auf die
+öffentliche Seite) waren einen halben Tag und sind erledigt. Die dritte, ein Logo
+je Reihe und je Event, ist eine **P1-Anforderung aus FR 2.1 und FR 3.1**, die
+schon Phase 1 nicht gebaut hat; sie steht jetzt unter _Known gaps_ mit
+entschiedener Gestalt und ohne Code. Ein Abschlusspaket, das ungefragt eine
+P1-Funktion nachzieht, verschiebt nur die Grenze, an der niemand mehr weiß, was
+eine Phase eigentlich enthielt.

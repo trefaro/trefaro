@@ -48,6 +48,32 @@ an instance were exposed today.
       in the test suite can see that — the e2e suites run `nx serve`, and CI
       builds the images without ever starting them together.
 
+- [ ] **A series and an event have no logo, and FR 2.1 and FR 3.1 name one.**
+      `event_series.logo_path` and `event.logo_path` exist, the participant
+      client already renders `logoUrl` on the start page, the series page and the
+      event landing page — and nothing has ever written those columns. AP 2 of
+      phase 2 removed the placeholder that turned a stored path into a URL
+      (`/api/media/<path>`), because that shape is exactly what E19 forbids, so
+      both services answer `logoUrl: null` on purpose.
+      **Checked in AP 13 and escalated rather than closed:** the two functional
+      requirements list the logo among the _mandatory_ fields of a series
+      (FR 2.1) and of an event (FR 3.1), both **P1**. So the honest reading is
+      not "decide whether", it is "this P1 requirement was never built" — it
+      slipped past AP 2 and AP 3 of phase 1, and phase 2 then built exactly the
+      machinery it needs.
+      **The shape is decided, so nobody has to improvise it** (AP 13): per-row
+      routes without a caller-supplied path — `GET /api/media/series/:id/logo`
+      and `GET /api/media/events/:id/logo`, resolved through the row the way
+      `/api/media/branding/logo` is resolved through `app_config` (E19, F66) —
+      with `PUT`/`DELETE` under `/api/admin/series/:id/logo` and
+      `/api/admin/events/:id/logo`, an own subtree in the upload volume, a
+      `CHECK` on both path columns and the type read from the first bytes (F38).
+      What must **not** happen is a third shape: a route that takes a stored path
+      would put registration attachments one guess away (E9).
+      **Not built in AP 13**, which is a closing package and not the place to add
+      a P1 feature unasked — it is a work package of its own, of about the size
+      of AP 2. Verify: upload a logo on a series, see it on the start page.
+
 ---
 
 ## Checkable after phase 1 — core event management
@@ -145,6 +171,36 @@ answer, not an opinion.
       scanned forms as TIFF, a spreadsheet — the catalogue in
       `libs/shared-models/src/lib/registrations/upload.ts` is where it goes, and
       it needs a signature in `file-signature.ts` to go with it.
+- [ ] **There is no installation hint on iOS, on purpose — and maybe that is
+      wrong for this pilot partner.** The hint hangs on `beforeinstallprompt`
+      (F109), which Safari does not fire: on an iPhone the only way in is Share
+      → "Add to Home Screen", and a page that says so cannot make it happen. A
+      short explanatory hint would be honest as long as it is shown only on iOS
+      and never claims a button. Whether it is worth it depends on what the
+      people around Democracy International actually carry — one of the things
+      to look at with them rather than to guess (see _Questions for the pilot
+      partner_).
+      **Moved into this section in AP 13 of phase 2**, where it always belonged:
+      the decision on the table is the current behaviour, and what changes it is
+      an answer about the devices these people carry, not an opinion.
+
+- [ ] **Decide whether an organization may upload its own font.** E18 ships a
+      catalogue of four self-hosted OFL families plus `system-ui`, and Marius
+      confirmed it on 28.08.2026 as a starting point — "erstmal ein
+      mitgelieferter Katalog, das kann im Zweifelsfall noch ausgebaut werden".
+      So this is deferred, not refused. What it would cost: a `woff2` upload is
+      four bytes of signature check and a `@font-face` served per instance —
+      cheap. What it would cost the operator is the licence question, which the
+      product cannot answer for them, and that is the reason it is not in
+      phase 2. Where it goes: `FONT_FAMILIES` in `shared-models` keeps the
+      choice, `font_family` keeps its meaning, and a `font_source` column names
+      the served file. Revisit when an organization actually misses its house
+      typeface — an NGO whose brand font is commercial cannot match its own
+      branding today, and that is worth knowing before the pilot round.
+      **Moved into this section in AP 13 of phase 2.** It is not deferred work
+      waiting on a phase — the code side is small and settled — it is a question
+      only the organization can answer, and it belongs beside the other four.
+
 - [ ] **The participant search does not look into the answers.** It covers first
       name, last name and e-mail (F32). Searching `custom_fields_json` means a
       JSONB predicate that no index of ours covers, so it is not a small
@@ -195,34 +251,22 @@ answer, not an opinion.
       WebSocket upgrade and a login whose cookie is `Secure` — and a browser
       login over HTTPS whose session survives a reload.
 
-- [ ] **A series and an event can have a logo in the schema, and no way to
-      upload one.** `event_series.logo_path` and `event.logo_path` exist, the
-      participant client already renders `logoUrl` on the start page, the series
-      page and the event landing page — and nothing has ever written those
-      columns. AP 2 removed the placeholder that turned a stored path into a URL
-      (`/api/media/<path>`), because that shape is exactly what E19 forbids, so
-      both services now answer `logoUrl: null` on purpose. Deciding this is
-      cheap now that the mechanism exists: either a per-series and per-event
-      upload with a path-free route of its own
-      (`GET /api/media/series/:id/logo`, resolved through the row like the
-      instance logo), or the columns and the two payload fields go. What must
-      **not** happen is a third shape — a route that takes a stored path would
-      put registration attachments one guess away (E9). Verify: upload a logo on
-      a series, see it on the start page; or, if it goes, no payload field
-      promises something no screen can set.
-
-- [ ] **The page titles still say "Trefaro".** Both `app.routes.ts` files carry
-      their titles as literal strings, and every one of them ends in the product
+- [x] **The page titles said "Trefaro".** Both `app.routes.ts` files carried
+      their titles as literal strings, and every one of them ended in the product
       name rather than the organization's. AP 3 changed the headers of both
-      clients and the sign-in page; these it left alone. AP 6 has since brought
-      the catalogue, so the first of the two reasons to wait is gone: what is
-      left is that doing it properly means a `TitleStrategy` which resolves a
-      key and appends `AppConfigService.organizationName()`, instead of every
-      route repeating both — a small piece of work with a single owner, and it
-      belongs with the rest of each client's text (AP 8 for the participant
-      client, AP 9 for the organizer's).
-      Verify: a browser tab of a branded instance names the organization, in both
-      clients, in every language.
+      clients and the sign-in page; these it left alone, and AP 8 and AP 9 left
+      them alone too — a route title is the one label of a client that is not in
+      a template, so a text extraction walks straight past it.
+      **Done in AP 13** (29.08.2026): `TrefaroTitleStrategy` in
+      `libs/shared-i18n` resolves the route's catalogue key and appends
+      `AppConfigService.organizationName()`; every route now names a key, and the
+      participant client's start page names none at all, so its tab is the
+      organization's name on its own. It re-titles outside navigation as well —
+      the key sits in a signal and an `effect` reads the locale and the name
+      beside it, which is F72 applied to the one label that lives outside the
+      document. Verified in both browser suites: the tab of a branded instance
+      names the organization, and follows a language switch with no navigation
+      in between.
 
 - [x] **A programme tile in the participant's event detail view** — done in
       AP 4 of phase 2, as jump links rather than routes (F68): everything a tile
@@ -230,16 +274,17 @@ answer, not an opinion.
       points at the timeline instead of a second rendering of it. Not one tile
       per enabled module either — one per section that actually has something in
       it, plus one per loaded plug-in at the `event-detail` hook point.
-- [ ] **"My registration" is not linked from anywhere.** The page exists (E11)
-      and is only reachable through the personal link in the receipt, which is
-      correct as long as there is no participant login: a link in the navigation
-      would lead to a page that asks for a token. Once phase 3 has the login, the
-      navigation gets the entry and the link keeps working.
-- [ ] **No content translations for programme items.** `program_item_translation`
-      is in the schema draft and not built: FR 3.12 is phase 2, and AP 8 would
-      have had to invent the translation mechanism for one table. Whatever
-      phase 2 decides for `event_translation` applies here unchanged — the shape
-      of the two tables is the same.
+- [x] **No content translations for programme items.**
+      `program_item_translation` was in the schema draft and not built: FR 3.12
+      is phase 2, and AP 8 of phase 1 would have had to invent the translation
+      mechanism for one table.
+      **Done in AP 11 of phase 2**, as the third of three tables with the same
+      shape (F93) — `(program_item_id, locale)`, every text column nullable, a
+      real foreign key with `ON DELETE CASCADE`. The organizer writes them in the
+      event's translation screen, which brings the event and its whole programme
+      in one request (F97), and a participant reads them through `?locale=` on
+      every public endpoint including the self-service page.
+
 - [x] **Module toggling from the admin UI must be instant** — done in AP 4 of
       phase 2: `PATCH /api/admin/modules/:key` writes the flag and refreshes
       **both** registries before answering, so the next request already sees it.
@@ -247,16 +292,6 @@ answer, not an opinion.
       against a running stack in `verify-plugin-toggle.mjs`.
       → [`02-server-plugin.md`](docs/spikes/02-server-plugin.md)
 
-- [ ] **The plug-in contract names an icon nobody draws.**
-      `PluginClientContribution.icon` carries a Material Symbols glyph name
-      (`meeting_room` for the room plan), and neither client loads an icon font —
-      fetching one from Google is out (NFR 9), so it would have to be
-      self-hosted like the fonts of AP 1. The tiles of AP 4 are text-only
-      because of it. Either an instance ships an icon set and the tiles and the
-      navigation use it, or the field goes: a value nothing reads looks like a
-      feature (E21's rule, applied to the contract). Verify: a tile shows the
-      glyph its plug-in names, from this instance's own files — or no descriptor
-      promises one.
 - [x] **The PWA manifest is still static.** `apps/user-client/public/manifest.webmanifest`
       hard-codes name, icons and `theme_color`. A whitelabel instance has to
       serve them per organization.
@@ -277,45 +312,25 @@ answer, not an opinion.
       writes the `<meta>` tag and creates it when it is missing (F108). Both
       literals stay in the document as the value _before_ the configuration has
       arrived.
-- [ ] **Re-check the service worker configuration.** `ngsw-config.json` now
+- [x] **Re-check the service worker configuration.** `ngsw-config.json` now
       excludes `/admin`, `/admin/**`, `/api/**` and `/socket.io/**` from
       navigation handling — `/admin` was **missing until 28.08.2026**, and the
       consequence was as bad as it gets: the worker is served from the root, so
-      its scope is the whole origin, and it answered navigations to `/admin/` from
-      the participant client's cache. That client has no route for `/admin/`, so
-      its wildcard route redirected to `/` — **an organizer could not reach the
-      organizer client at all**, in the container stack, in any browser that had
-      once loaded the participant client. `verify-proxy.mjs` now replays ngsw's
-      own selection rule against the built `ngsw.json` and would have caught it.
-      Re-checked in AP 12 of phase 2 (29.08.2026): the four exclusions are still
-      there, `/api/config/manifest.webmanifest` was added to the addresses
-      `verify-proxy.mjs` replays the rule against, and the manifest left the
-      prefetch list with the file — checked against the built `ngsw.json`, which
-      now caches the eight icons and no manifest. No `dataGroups` (E27).
-      What is still open here: that a new deployment is actually picked up by an
-      **installed** client, which needs a device and an installed PWA.
+      its scope is the whole origin, and it answered navigations to `/admin/`
+      from the participant client's cache. That client has no route for
+      `/admin/`, so its wildcard route redirected to `/` — **an organizer could
+      not reach the organizer client at all**, in the container stack, in any
+      browser that had once loaded the participant client.
+      **Re-checked in AP 12 and again in AP 13 of phase 2** against the built
+      `ngsw.json`, with ngsw's own selection rule replayed by
+      `verify-proxy.mjs`: the four exclusions are there, the manifest address is
+      among the ones the rule is replayed against, and the static manifest left
+      the prefetch list together with the file. No `dataGroups` (E27).
+      What is left needs a device and an installed PWA — that a _new deployment_
+      is picked up by an already installed client — and it is the same missing
+      net as the entry about a CI job that starts the stack, under phase 5.
       → [`03-web-push.md`](docs/spikes/03-web-push.md#open-items)
-      → see also the entry about a CI job that starts the stack, phase 5
-- [ ] **The design page could now say when an app icon is unusable.** Since
-      AP 12 the server can read an image's dimensions out of its own header
-      (F106) — which is exactly what the manifest uses to decide whether an
-      uploaded icon may replace the shipped set (F105). The design page still
-      says "square" in words and shows a preview, so an organizer who uploads a
-      wide logo or a 64-pixel favicon gets a manifest that quietly keeps the
-      Trefaro icons beside theirs and no sentence saying why. The upload answer
-      would only have to carry the two numbers. Deliberately not done in AP 12:
-      it is a screen decision, and AP 3 is the package that owns that screen.
-      Verify: upload a 500×120 logo as an app icon and be told that it will not
-      be used on a home screen.
-- [ ] **There is no installation hint on iOS, on purpose — and maybe that is
-      wrong for this pilot partner.** The hint hangs on `beforeinstallprompt`
-      (F109), which Safari does not fire: on an iPhone the only way in is Share
-      → "Add to Home Screen", and a page that says so cannot make it happen. A
-      short explanatory hint would be honest as long as it is shown only on iOS
-      and never claims a button. Whether it is worth it depends on what the
-      people around Democracy International actually carry — one of the things
-      to look at with them rather than to guess (see _Questions for the pilot
-      partner_).
+
 - [x] **The module administration has to refresh both registries** — done in
       AP 4: `ModuleAdminService.setEnabled` writes the flag and awaits
       `CoreModuleRegistryService.refresh()` **and**
@@ -323,12 +338,16 @@ answer, not an opinion.
       follows already sees the change. Both, not only the family the key belongs
       to: they read the same table, and picking one is a question that can be got
       wrong.
-- [ ] **The names of the media link kinds are English strings in the clients.**
-      `MEDIA_LINK_KIND_LABELS` in `shared-models` holds "Live stream",
-      "Recording" and "Material" in one place so the switch to Transloco is one
-      change; the same holds for the section heading "Watch and read" and the
-      organizer's "After the event". The catalogue exists since AP 6; these
-      strings move into it with the rest of each client's text, in AP 8.
+- [x] **The names of the media link kinds were English strings in the clients.**
+      `MEDIA_LINK_KIND_LABELS` in `shared-models` held "Live stream",
+      "Recording" and "Material" in one place so the switch to Transloco would be
+      one change; the same held for the section heading "Watch and read" and the
+      organizer's "After the event".
+      **Done in AP 8 and AP 9 of phase 2.** The constant answers _keys_ now
+      (`mediaLinkKindKey()`, beside `uploadTypeLabelKey()` and
+      `registrationStatusKey()`): `shared-models` is imported by the server too,
+      and a server that owns interface words owns them in one language.
+
 - [x] **Translation keys need a catalogue.** Done in AP 6 of phase 2 (F70):
       `GET /api/i18n/:locale` answers the catalogue this image ships, overlaid
       with the instance's own rows from `translation_override` (E22), and both
@@ -346,39 +365,35 @@ answer, not an opinion.
       `fonts.css` and are emitted as hashed build assets by both client builds.
       Nothing is fetched from a foreign origin, which is what NFR 9 asked for.
       A test in `shared-models` keeps the catalogue and the stylesheet in step.
-- [ ] **Decide whether an organization may upload its own font.** E18 ships a
-      catalogue of four self-hosted OFL families plus `system-ui`, and Marius
-      confirmed it on 28.08.2026 as a starting point — "erstmal ein
-      mitgelieferter Katalog, das kann im Zweifelsfall noch ausgebaut werden".
-      So this is deferred, not refused. What it would cost: a `woff2` upload is
-      four bytes of signature check and a `@font-face` served per instance —
-      cheap. What it would cost the operator is the licence question, which the
-      product cannot answer for them, and that is the reason it is not in
-      phase 2. Where it goes: `FONT_FAMILIES` in `shared-models` keeps the
-      choice, `font_family` keeps its meaning, and a `font_source` column names
-      the served file. Revisit when an organization actually misses its house
-      typeface — an NGO whose brand font is commercial cannot match its own
-      branding today, and that is worth knowing before the pilot round.
-- [ ] **The organizer client cannot link to the public page.** AP 10 shows an
-      event's public address as text (`/series/…/events/…`) rather than as a
-      link, because the participant client is a different origin and nothing
-      tells this client which one: in production NGINX serves both, in
-      development they are two ports. The server knows it
-      (`PUBLIC_USER_CLIENT_URL`, used for the mail links); phase 2 is where the
-      configuration surface is worked on anyway, so that is where it belongs.
-      Verify: the dashboard offers a "view the public page" link that works in
-      development and in the container stack, and the address stays visible for
-      copying.
-- [ ] **`CORE_MODULES` still lists `newsletter`, and nothing reads it.** The
-      descriptor is from phase 0 and appears in `/api/config` as a module that is
-      switched off. Nothing checks the flag, because there is no newsletter
+- [x] **The organizer client could not link to the public page.** AP 10 showed
+      an event's public address as text (`/series/…/events/…`) rather than as a
+      link, because the participant client is a different origin and nothing told
+      this client which one: in production NGINX serves both, in development they
+      are two ports.
+      **Done in AP 13** (29.08.2026). The server already answered
+      `publicUserClientUrl` in `/api/config` — it is the configuration surface
+      phase 2 built — so the whole of it was client-side: `PublicSite` in the
+      organizer client joins that origin to `publicEventPath`/`publicSeriesPath`
+      (`publicUrl` in `shared-models`, which the mail module now shares), and the
+      event dashboard and the series list offer the link beside the address,
+      which stays visible for copying. Only for a **published** series or event:
+      a draft has no public page, and a link answering "not found" would read as
+      a wrong address rather than as an unpublished thing. `target="_blank"` with
+      `rel="noopener noreferrer"`, like every link that leaves this origin (F51).
+
+- [x] **`CORE_MODULES` listed `newsletter`, and nothing read it.** The
+      descriptor was from phase 0 and appeared in `/api/config` as a module that
+      is switched off. Nothing checked the flag, because there is no newsletter
       module in v1 and there will not be one (F8) — and inviting former
-      participants is deliberately _not_ it (F55), so AP 12 did not give the flag
-      a meaning either. Same smell as the fields AP 6 and AP 9 refused to add: a
-      flag nothing reads looks like a feature that exists. Decide in phase 2,
-      when the module administration makes the list visible to an organizer:
-      either the key goes, or it is renamed to what the opt-in management it
-      would actually gate is called.
+      participants is deliberately _not_ it (F55).
+      **Done in AP 4 of phase 2** (E21, F63): `CORE_MODULES` lists the two
+      modules that exist, `media-links` and `push`. `newsletter` is gone for
+      good; `chat`, `profiles` and `profile-search` come back with phase 3, each
+      with a guard, because a switch that gates nothing is a decoy. Rows of
+      dropped keys are **not** deleted — `ModuleFlagCache` ignores what no
+      descriptor claims, so an organization that switched something off keeps
+      that answer if the key ever returns.
+
 - [x] **A new mail language is a code change.** ~~The templates are TypeScript,
       one file per locale behind an interface every locale must satisfy in
       full.~~ Closed in phase 2, AP 10. The four mails read 21 keys under `mail.`
@@ -393,24 +408,6 @@ answer, not an opinion.
       subject through the API and reads the changed subject out of Mailpit on the
       next registration, with no rebuild and no restart.
 
-- [ ] **The server refuses in English, whatever language the page is in.** Since
-      AP 8 and AP 9 of phase 2 both clients say their own half from the catalogue
-      and put the server's reason beside it (F77) — "Die Anmeldung konnte nicht
-      gesendet werden." followed by `"Passport scan" takes files up to 5 MB`. It
-      is the more visible arrangement in the organizer client, which refuses more
-      often: a programme item outside its event, a selection field with no
-      choices, a colour that is not hexadecimal.
-      That is the honest arrangement and not the right one: the reason is the
-      half a person actually reads. Making it translatable is a different piece
-      of work, and a large one — every `BadRequestException` in the business
-      layer would carry a **code** and its placeholder values instead of a
-      sentence, the catalogue would hold the sentences, and each client would
-      resolve them. Worth doing when there is a second language nobody on the
-      team speaks; not worth doing inside a text extraction. Verify: a German
-      browser gets a German reason for a refused registration, and the API
-      contract suite still asserts something stable — which is the second
-      argument for codes.
-
 ## Checkable after phase 3 — profiles, messaging, chat, push
 
 - [ ] **Put the participant login in front of "my registration"** (E11's second
@@ -419,6 +416,14 @@ answer, not an opinion.
       `SelfServiceService.require` is the one place that has to learn it, and
       nothing below it changes. Verify: an old link from an inbox still works
       after the login exists, and a logged-in participant needs no link.
+- [ ] **"My registration" is not linked from anywhere.** The page exists (E11)
+      and is only reachable through the personal link in the receipt, which is
+      correct as long as there is no participant login: a link in the navigation
+      would lead to a page that asks for a token. Once phase 3 has the login, the
+      navigation gets the entry and the link keeps working.
+      Moved here in AP 13 of phase 2: nothing about phase 2 changed the
+      condition, which is the participant login.
+
 - [ ] **A sign-up belongs to a registration, not to a person** (`program_item_signup.registration_id`).
       Once `user_profile` exists, decide whether a participant sees their seats
       across events — that needs a join over `registration`, not a second column
@@ -491,6 +496,25 @@ answer, not an opinion.
       `PLUGIN_API_VERSION`, not a second port. Decide it when the first
       participant-facing plug-in exists, not before.
 
+- [ ] **The plug-in contract names an icon nobody draws.**
+      `PluginClientContribution.icon` carries a Material Symbols glyph name
+      (`meeting_room` for the room plan), and neither client loads an icon font —
+      fetching one from Google is out (NFR 9), so it would have to be
+      self-hosted like the fonts of AP 1. The tiles of AP 4 are text-only
+      because of it. Either an instance ships an icon set and the tiles and the
+      navigation use it, or the field goes: a value nothing reads looks like a
+      feature (E21's rule, applied to the contract). Verify: a tile shows the
+      glyph its plug-in names, from this instance's own files — or no descriptor
+      promises one.
+      **Decided in AP 13 of phase 2: not now, and here is why.** Removing the
+      field is a _breaking_ change to the plug-in contract and would cost a major
+      bump of `PLUGIN_API_VERSION`; shipping an icon set is a design decision
+      about both clients. Phase 4 is where plug-ins are the subject and where the
+      room planning plug-in gets a real interface, so both halves of the question
+      get answered there, in one contract change instead of two. Until then the
+      field is invisible to an organizer — no client reads it — so it is a decoy
+      in a contract whose only implementer is this repository.
+
 - [ ] **Build the three remaining curated plug-ins.**
       `apps/server/src/plugins/{forum,program-proposals,qr-checkin}` hold only a
       README; they are deliberately not registered as no-op plug-ins. Order from
@@ -538,6 +562,45 @@ answer, not an opinion.
       stored under a field key (F35), so a translated label must not become a
       second key. Verify with the pilot partner first: a form with three
       questions in two languages may or may not be something anybody asks for.
+
+- [ ] **The design page could now say when an app icon is unusable.** Since
+      AP 12 the server can read an image's dimensions out of its own header
+      (F106) — which is exactly what the manifest uses to decide whether an
+      uploaded icon may replace the shipped set (F105). The design page still
+      says "square" in words and shows a preview, so an organizer who uploads a
+      wide logo or a 64-pixel favicon gets a manifest that quietly keeps the
+      Trefaro icons beside theirs and no sentence saying why. The upload answer
+      would only have to carry the two numbers. Deliberately not done in AP 12:
+      it is a screen decision, and AP 3 is the package that owns that screen.
+      Verify: upload a 500×120 logo as an app icon and be told that it will not
+      be used on a home screen.
+      **Moved to phase 5 in AP 13**: it is a usability improvement on a screen
+      that works, and phase 5 is the usability round with the pilot partner —
+      whose first upload is also the best evidence for what the sentence should
+      say. Nothing about it got harder to do in the meantime: `imageDimensions`
+      is there, and the upload answer is the only thing that has to grow.
+
+- [ ] **The server refuses in English, whatever language the page is in.** Since
+      AP 8 and AP 9 of phase 2 both clients say their own half from the catalogue
+      and put the server's reason beside it (F77) — "Die Anmeldung konnte nicht
+      gesendet werden." followed by `"Passport scan" takes files up to 5 MB`. It
+      is the more visible arrangement in the organizer client, which refuses more
+      often: a programme item outside its event, a selection field with no
+      choices, a colour that is not hexadecimal.
+      That is the honest arrangement and not the right one: the reason is the
+      half a person actually reads. Making it translatable is a different piece
+      of work, and a large one — every `BadRequestException` in the business
+      layer would carry a **code** and its placeholder values instead of a
+      sentence, the catalogue would hold the sentences, and each client would
+      resolve them. Worth doing when there is a second language nobody on the
+      team speaks; not worth doing inside a text extraction. Verify: a German
+      browser gets a German reason for a refused registration, and the API
+      contract suite still asserts something stable — which is the second
+      argument for codes.
+      **Moved to phase 5 in AP 13 of phase 2.** It is the last piece of chapter 4
+      that phase 2 did not deliver, and it is deliberately not a text extraction:
+      it is an error-code contract through the whole business layer, which is
+      hardening work and wants the API contract suite settled around it.
 
 - [ ] **A shared link into the participant client does not carry its language.**
       The reader's language lives in `localStorage` (AP 6), so a link somebody

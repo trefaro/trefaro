@@ -28,7 +28,8 @@
  * organization and writes both colours. Do not point it at anything you want to
  * keep.
  */
-const BASE = process.env.TREFARO_BASE_URL ?? 'http://127.0.0.1:3000';
+const BASE =
+  process.env.TREFARO_BASE_URL ?? process.env.BASE ?? 'http://127.0.0.1:3000';
 const TOKEN = process.env.TREFARO_SETUP_TOKEN;
 const SETUP_TOKEN_HEADER = 'x-trefaro-setup-token';
 const SESSION_COOKIE = 'trefaro_admin_session';

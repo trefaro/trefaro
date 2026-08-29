@@ -18,14 +18,14 @@ export const appRoutes: Route[] = [
     canActivate: [setupPendingGuard],
     loadComponent: () =>
       import('./pages/setup/setup-page').then((m) => m.SetupPage),
-    title: 'Set up — Trefaro',
+    title: 'admin.setup.title',
   },
   {
     path: 'login',
     canActivate: [notLoggedInGuard],
     loadComponent: () =>
       import('./pages/login/login-page').then((m) => m.LoginPage),
-    title: 'Sign in — Trefaro',
+    title: 'admin.login.title',
   },
   {
     path: '',
@@ -38,7 +38,7 @@ export const appRoutes: Route[] = [
           import('./pages/series/series-list-page').then(
             (m) => m.SeriesListPage,
           ),
-        title: 'Event series — Trefaro',
+        title: 'admin.series.title',
       },
       {
         // Before `series/:id`, or "new" would be read as an id.
@@ -47,7 +47,7 @@ export const appRoutes: Route[] = [
           import('./pages/series/series-form-page').then(
             (m) => m.SeriesFormPage,
           ),
-        title: 'New event series — Trefaro',
+        title: 'admin.series.new',
       },
       {
         path: 'series/:id/edit',
@@ -55,14 +55,14 @@ export const appRoutes: Route[] = [
           import('./pages/series/series-form-page').then(
             (m) => m.SeriesFormPage,
           ),
-        title: 'Edit event series — Trefaro',
+        title: 'admin.series.edit',
       },
       {
         // Before `series/:seriesId/events/:eventId`, or "new" would be an id.
         path: 'series/:seriesId/events/new',
         loadComponent: () =>
           import('./pages/events/event-form-page').then((m) => m.EventFormPage),
-        title: 'New event — Trefaro',
+        title: 'admin.events.new',
       },
       {
         // Before `series/:seriesId/events/:eventId`, so "edit" is not read as
@@ -70,7 +70,7 @@ export const appRoutes: Route[] = [
         path: 'series/:seriesId/events/:eventId/edit',
         loadComponent: () =>
           import('./pages/events/event-form-page').then((m) => m.EventFormPage),
-        title: 'Edit event — Trefaro',
+        title: 'admin.events.edit',
       },
       {
         // Before `series/:seriesId/events/:eventId`, so "participants" is not
@@ -80,7 +80,7 @@ export const appRoutes: Route[] = [
           import('./pages/participants/participants-page').then(
             (m) => m.ParticipantsPage,
           ),
-        title: 'Participants — Trefaro',
+        title: 'admin.participants.title',
       },
       {
         // Before `series/:seriesId/events/:eventId`, same reason again.
@@ -89,7 +89,7 @@ export const appRoutes: Route[] = [
           import('./pages/translations/event-translations-page').then(
             (m) => m.EventTranslationsPage,
           ),
-        title: 'Translations — Trefaro',
+        title: 'admin.translations.title',
       },
       {
         // Before `series/:seriesId/events/:eventId` for the same reason as the
@@ -97,7 +97,7 @@ export const appRoutes: Route[] = [
         path: 'series/:seriesId/events/:eventId/program',
         loadComponent: () =>
           import('./pages/program/program-page').then((m) => m.ProgramPage),
-        title: 'Programme — Trefaro',
+        title: 'admin.program.title',
       },
       {
         // Same reason again. The page says so itself when the module is switched
@@ -108,7 +108,7 @@ export const appRoutes: Route[] = [
           import('./pages/media-links/media-links-page').then(
             (m) => m.MediaLinksPage,
           ),
-        title: 'Media links — Trefaro',
+        title: 'modules.mediaLinks.title',
       },
       {
         // Same reason again.
@@ -117,7 +117,7 @@ export const appRoutes: Route[] = [
           import('./pages/registration-fields/registration-fields-page').then(
             (m) => m.RegistrationFieldsPage,
           ),
-        title: 'Registration form — Trefaro',
+        title: 'admin.fields.title',
       },
       {
         // The event's home: its numbers, and the way to everything below it
@@ -128,7 +128,7 @@ export const appRoutes: Route[] = [
           import('./pages/event-dashboard/event-dashboard-page').then(
             (m) => m.EventDashboardPage,
           ),
-        title: 'Event — Trefaro',
+        title: 'admin.dashboard.title',
       },
       {
         // Before `series/:id`, so "invitations" is not read as an id — the same
@@ -140,7 +140,7 @@ export const appRoutes: Route[] = [
           import('./pages/invitations/invitations-page').then(
             (m) => m.InvitationsPage,
           ),
-        title: 'Invite former participants — Trefaro',
+        title: 'admin.invitations.title',
       },
       {
         // Before `series/:id`, so "translations" is not read as an id — the same
@@ -151,7 +151,7 @@ export const appRoutes: Route[] = [
           import('./pages/translations/series-translations-page').then(
             (m) => m.SeriesTranslationsPage,
           ),
-        title: 'Translations — Trefaro',
+        title: 'admin.translations.title',
       },
       {
         path: 'series/:id',
@@ -159,25 +159,25 @@ export const appRoutes: Route[] = [
           import('./pages/series/series-detail-page').then(
             (m) => m.SeriesDetailPage,
           ),
-        title: 'Event series — Trefaro',
+        title: 'admin.series.title',
       },
       {
         path: 'administrators',
         loadComponent: () =>
           import('./pages/admins/admins-page').then((m) => m.AdminsPage),
-        title: 'Administrators',
+        title: 'admin.admins.title',
       },
       {
         path: 'design',
         loadComponent: () =>
           import('./pages/design/design-page').then((m) => m.DesignPage),
-        title: 'Design',
+        title: 'admin.design.title',
       },
       {
         path: 'modules',
         loadComponent: () =>
           import('./pages/modules/modules-page').then((m) => m.ModulesPage),
-        title: 'Modules',
+        title: 'admin.modules.title',
       },
       {
         path: 'languages',
@@ -185,7 +185,7 @@ export const appRoutes: Route[] = [
           import('./pages/languages/languages-page').then(
             (m) => m.LanguagesPage,
           ),
-        title: 'Languages',
+        title: 'admin.languages.title',
       },
     ],
   },

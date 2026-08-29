@@ -9,7 +9,10 @@ import {
 } from '@angular/common/http';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideTrefaroConfig } from '@trefaro/shared-config';
-import { provideTrefaroTranslations } from '@trefaro/shared-i18n';
+import {
+  provideTrefaroTitles,
+  provideTrefaroTranslations,
+} from '@trefaro/shared-i18n';
 import { provideTrefaroPlugins } from '@trefaro/shared-plugins';
 import { appRoutes } from './app.routes';
 import { provideAdminSession } from './features/auth/provide-admin-session';
@@ -33,6 +36,9 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([unauthorizedInterceptor]),
     ),
     provideRouter(appRoutes, withComponentInputBinding()),
+    // Route titles are catalogue keys, and the tab ends in the organization's
+    // name rather than in the product's (F60).
+    provideTrefaroTitles(),
     provideTrefaroConfig(),
     // The interface's own text, from the server rather than from this image
     // (E22). Behind the configuration, which is what says which languages

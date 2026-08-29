@@ -15,6 +15,8 @@ export {
   MAX_FOLLOW_UP_LENGTH,
   MAX_VENUE_NAME_LENGTH,
   publicEventPath,
+  publicSeriesPath,
+  publicUrl,
   type EventInput,
   type EventStatus,
   type EventType,

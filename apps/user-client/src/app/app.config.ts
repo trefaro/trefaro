@@ -11,7 +11,10 @@ import {
 } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 import { provideTrefaroConfig } from '@trefaro/shared-config';
-import { provideTrefaroTranslations } from '@trefaro/shared-i18n';
+import {
+  provideTrefaroTitles,
+  provideTrefaroTranslations,
+} from '@trefaro/shared-i18n';
 import { provideTrefaroPlugins } from '@trefaro/shared-plugins';
 import { appRoutes } from './app.routes';
 
@@ -39,6 +42,9 @@ export const appConfig: ApplicationConfig = {
       withComponentInputBinding(),
       withInMemoryScrolling({ anchorScrolling: 'enabled' }),
     ),
+    // Route titles are catalogue keys, and the tab ends in the organization's
+    // name rather than in the product's (F60).
+    provideTrefaroTitles(),
     provideTrefaroConfig(),
     // The interface's own text, from the server rather than from this image
     // (E22). Behind the configuration, which is what says which languages

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { publicEventPath } from '@trefaro/shared-models';
+import { publicEventPath, publicUrl } from '@trefaro/shared-models';
 import type { TrefaroEnv } from '../../core/config/env';
 import { ENV } from '../../core/config/env.module';
 
@@ -21,11 +21,11 @@ export class PublicLinks {
   private readonly origin: string;
 
   constructor(@Inject(ENV) env: TrefaroEnv) {
-    this.origin = env.publicUserClientUrl.replace(/\/+$/, '');
+    this.origin = env.publicUserClientUrl;
   }
 
   url(path: string): string {
-    return `${this.origin}${path}`;
+    return publicUrl(this.origin, path);
   }
 
   /** The public landing page of an event (E7, F28). */

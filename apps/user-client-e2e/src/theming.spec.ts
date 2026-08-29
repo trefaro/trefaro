@@ -153,6 +153,11 @@ test.describe('the whitelabel theme in the browser', () => {
     const logo = page.locator('.app-header__logo');
     await expect(logo).toBeAttached();
     await expect(logo).toHaveAttribute('aria-hidden', 'true');
+
+    // And the browser tab, which is the other place the product name used to
+    // stand (AP 13). The start page carries no route title of its own, so the
+    // organization's name is the whole title.
+    await expect(page).toHaveTitle('Mehr Demokratie e.V.');
   });
 
   test('shows the name this instance is configured with after a reload', async ({

@@ -30,6 +30,8 @@ export {
   isTimeZone,
   localTimeZone,
   publicEventPath,
+  publicSeriesPath,
+  publicUrl,
   wallClockToInstant,
   zoneLabel,
   type EventInput,

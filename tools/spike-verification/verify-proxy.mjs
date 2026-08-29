@@ -10,7 +10,8 @@
  */
 import { io } from 'socket.io-client';
 
-const BASE = process.env.PROXY_BASE ?? 'http://localhost:8080';
+const BASE =
+  process.env.PROXY_BASE ?? process.env.BASE ?? 'http://localhost:8080';
 let failures = 0;
 
 function check(name, condition, detail = '') {

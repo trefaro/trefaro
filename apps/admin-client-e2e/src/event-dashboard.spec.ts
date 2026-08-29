@@ -119,9 +119,23 @@ test.describe('event dashboard', () => {
       page.getByRole('heading', { name: seeded.eventName, level: 1 }),
     ).toBeVisible();
     // The address participants are given, nested inside its series (E7, F28).
-    await expect(
-      page.getByText(`/series/${seeded.seriesSlug}/events/${seeded.eventSlug}`),
-    ).toBeVisible();
+    const path = `/series/${seeded.seriesSlug}/events/${seeded.eventSlug}`;
+    await expect(page.getByText(path)).toBeVisible();
+
+    // And, since AP 13, as something an organizer can follow. The origin is the
+    // deployment's answer rather than this client's own — in development the two
+    // clients are two ports, behind the proxy they are two paths — so the test
+    // reads it from the same configuration the page does.
+    const origin = (
+      (await (await page.request.get('/api/config')).json()) as {
+        publicUserClientUrl: string;
+      }
+    ).publicUserClientUrl.replace(/\/+$/, '');
+    const publicPage = page.getByRole('link', {
+      name: t('admin.events.openPublic'),
+    });
+    await expect(publicPage).toHaveAttribute('href', `${origin}${path}`);
+    await expect(publicPage).toHaveAttribute('target', '_blank');
 
     // Confirmed is the headline: it is who is actually coming.
     const participants = tile(page, t('admin.participants.title'));

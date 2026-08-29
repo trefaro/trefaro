@@ -138,3 +138,29 @@ export const MAX_VENUE_NAME_LENGTH = 200;
 export function publicEventPath(seriesSlug: string, eventSlug: string): string {
   return `/series/${seriesSlug}/events/${eventSlug}`;
 }
+
+/**
+ * The public address of a series, relative to the participant client.
+ *
+ * Beside {@link publicEventPath} and for the same reason: since AP 13 the
+ * organizer client links both of them, so the spelling that used to sit in one
+ * table cell would have become a second one.
+ */
+export function publicSeriesPath(seriesSlug: string): string {
+  return `/series/${seriesSlug}`;
+}
+
+/**
+ * The same address, absolute, for a reader outside the participant client.
+ *
+ * Two of them exist: a mail, which is read in a mail client, and the organizer
+ * client, which is a different origin from the participant client and cannot
+ * derive the other one (`publicUserClientUrl` in the configuration says which it
+ * is). The trailing slash is trimmed here rather than at each call site — a
+ * configured `https://events.example.org/` would otherwise produce
+ * `//registrations/confirm`, which some proxies read as a protocol-relative URL
+ * to the host `registrations`.
+ */
+export function publicUrl(origin: string, path: string): string {
+  return `${origin.replace(/\/+$/, '')}${path}`;
+}

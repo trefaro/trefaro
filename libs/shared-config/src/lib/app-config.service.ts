@@ -41,6 +41,18 @@ export class AppConfigService {
     () => this.state()?.organizationName ?? DEFAULT_ORGANIZATION_NAME,
   );
 
+  /**
+   * Where the participant client answers, or `''` before the configuration has
+   * arrived.
+   *
+   * Only the deployment knows it: behind the proxy both clients share an origin,
+   * in development they are two ports, and the organizer client — the one that
+   * needs it, to link an event's public page — cannot derive it from its own.
+   */
+  readonly publicUserClientUrl = computed(
+    () => this.state()?.publicUserClientUrl ?? '',
+  );
+
   readonly enabledModules = computed<readonly string[]>(
     () => this.state()?.enabledModules ?? [],
   );

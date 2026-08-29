@@ -15,12 +15,15 @@
  * needs a delivery to fail, and faking a failure would mean writing a row the
  * application would never write.
  */
-import { Api, Mailbox, demoPdf } from './api.mjs';
+import { Api, Mailbox, demoPdf, demoPng } from './api.mjs';
 import {
   addressFor,
+  APP_ICON,
+  BRANDING,
   events,
   FORM_FIELDS,
   INVITATION,
+  LOGO,
   MEDIA_LINKS,
   ORGANIZATIONS,
   ORIGINS,
@@ -29,6 +32,7 @@ import {
   programme,
   SERIES,
   timeline,
+  TRANSLATIONS,
 } from './demo-data.mjs';
 
 const args = process.argv.slice(2);
@@ -89,6 +93,22 @@ async function main() {
   if (existing.length > 0) {
     await removeDemoSeries(existing);
   }
+
+  // --- the brand of the instance itself -----------------------------------
+  //
+  // Not demo *data* but the demo instance's own configuration, and it is set for
+  // the same reason the data exists: a whitelabel application whose demo says
+  // "Trefaro" in the header, in the tab, in every mail and on a home screen
+  // demonstrates the opposite of what it is for (F60). Unlike everything below,
+  // `--reset` does not take it back — there is nothing to restore it to, and an
+  // instance being demonstrated is one that has a brand.
+  await api.admin('PATCH', '/api/admin/config', BRANDING);
+  await putImage('logo', LOGO, 'logo.png');
+  await putImage('app-icon', APP_ICON, 'app-icon.png');
+  say(
+    `✓ branding: ${BRANDING.organizationName}, ${BRANDING.primaryColor}, ` +
+      `a logo and a ${APP_ICON.width}×${APP_ICON.height} app icon`,
+  );
 
   // --- series and events ---------------------------------------------------
   const series = {};
@@ -171,6 +191,46 @@ async function main() {
   say(
     `✓ ${MEDIA_LINKS.kickoff.length + MEDIA_LINKS.main.length} media links, ` +
       'two of them on a session',
+  );
+
+  // --- the English side of it (FR 3.12) ------------------------------------
+  //
+  // Written per thing and per language, which is how the API takes them (F97):
+  // the two published series, the two events that have content worth reading,
+  // and five of the main event's sessions. What is left untranslated is left
+  // untranslated on purpose — a visitor reading English then sees the German
+  // original, which is what `?locale=` does when nobody has translated something
+  // (F94) and the state every real organization is in for a while.
+  let translated = 0;
+  for (const [key, texts] of Object.entries(TRANSLATIONS.series)) {
+    await api.admin(
+      'PUT',
+      `/api/admin/series/${series[key].id}/translations/${TRANSLATIONS.locale}`,
+      texts,
+    );
+    translated += 1;
+  }
+  for (const [key, texts] of Object.entries(TRANSLATIONS.events)) {
+    await api.admin(
+      'PUT',
+      `/api/admin/events/${created[key].id}/translations/${TRANSLATIONS.locale}`,
+      texts,
+    );
+    translated += 1;
+  }
+  for (const item of mainProgramme) {
+    const texts = TRANSLATIONS.programItems[item.title];
+    if (!texts) continue;
+    await api.admin(
+      'PUT',
+      `/api/admin/program-items/${item.id}/translations/${TRANSLATIONS.locale}`,
+      texts,
+    );
+    translated += 1;
+  }
+  say(
+    `✓ ${translated} things translated into ${TRANSLATIONS.locale}, ` +
+      'and deliberately not all of them',
   );
 
   // --- registrations, through the public form ------------------------------
@@ -316,6 +376,24 @@ async function main() {
   say(`✓ ${objector} objected — from the link in their invitation`);
 
   return summary(created, series, sent);
+}
+
+/**
+ * Uploads one of the two branding images, the way the design page does.
+ *
+ * `PUT` with a single file part named `file`, and the bytes are drawn here
+ * rather than committed: the server decides what a file is from its first bytes
+ * (F38) and reads the app icon's size out of the same header (F106), so a
+ * generated PNG has to be a real one — which it is.
+ */
+async function putImage(kind, image, filename) {
+  const bytes = demoPng(image.width, image.height, image.paint);
+  const form = new FormData();
+  form.append(
+    'file',
+    new File([new Uint8Array(bytes)], filename, { type: 'image/png' }),
+  );
+  await api.adminForm('PUT', `/api/admin/config/${kind}`, form);
 }
 
 /** Waits for the sender to work through the recipient rows (F56). */

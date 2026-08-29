@@ -49,15 +49,40 @@ check(
   'GET /api/config is 200 without any authentication',
   config.status === 200,
 );
+/**
+ * The theme comes out of the database, and it is a *configured* value.
+ *
+ * Until AP 13 this asserted the two seeded colours literally. That was right
+ * while nothing could change them; since AP 1 of phase 2 the design page writes
+ * them, so the literal turned a branded instance — the normal state of a real
+ * deployment, and the state this repository's own demo seed leaves behind — into
+ * a failing check that named the wrong cause. What the script can still say
+ * without knowing the organization is that both colours are hexadecimal (E17,
+ * the form `readableTextColor` can work with) and that a font stack arrived.
+ */
+const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
 check(
-  'config carries the seeded theme',
-  config.body?.theme?.primaryColor === '#1f6f5c' &&
-    config.body?.theme?.accentColor === '#e8a33d',
+  'config carries a theme, in the form the clients can derive from (E17)',
+  hex.test(config.body?.theme?.primaryColor ?? '') &&
+    hex.test(config.body?.theme?.accentColor ?? '') &&
+    typeof config.body?.theme?.fontFamily === 'string' &&
+    config.body.theme.fontFamily.length > 0,
   json(config.body?.theme),
 );
+/**
+ * And if there is a logo, its URL carries no stored path (E19, F66).
+ *
+ * `null` is the answer on a fresh instance; anything else has to be the
+ * path-free route, because the whole point of E19 is that the two kinds of
+ * uploaded file are not confusable in a URL.
+ */
 check(
-  'config reports no logo while none is uploaded',
-  config.body?.theme?.logoUrl === null,
+  'the logo URL is either absent or the path-free route (E19)',
+  config.body?.theme?.logoUrl === null ||
+    /^\/api\/media\/branding\/logo\?v=\d+$/.test(
+      config.body?.theme?.logoUrl ?? '',
+    ),
+  json(config.body?.theme?.logoUrl),
 );
 check(
   'only media-links is enabled by default',

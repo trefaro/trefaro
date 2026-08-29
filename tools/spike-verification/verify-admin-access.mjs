@@ -13,7 +13,8 @@
  * Reads ADMIN_BOOTSTRAP_EMAIL and ADMIN_BOOTSTRAP_PASSWORD from the
  * environment — the same pair the server booted with.
  */
-const BASE = process.env.TREFARO_BASE_URL ?? 'http://127.0.0.1:3000';
+const BASE =
+  process.env.TREFARO_BASE_URL ?? process.env.BASE ?? 'http://127.0.0.1:3000';
 const SESSION_COOKIE = 'trefaro_admin_session';
 const EMAIL = process.env.ADMIN_BOOTSTRAP_EMAIL;
 const PASSWORD = process.env.ADMIN_BOOTSTRAP_PASSWORD;

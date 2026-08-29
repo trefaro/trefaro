@@ -42,15 +42,29 @@ async function call(path, init) {
   return { status: response.status, body };
 }
 
+/**
+ * Which database container to reach into, and as whom.
+ *
+ * The development stack calls it `trefaro-postgres`; the production stack names
+ * it after its Compose project, so a run against `-p trefaro` finds
+ * `trefaro-postgres-1` and a run against a second project finds neither. Until
+ * AP 13 the name was a literal, and a run against the container stack quietly
+ * flipped the *development* instance's flag while asserting against the stack's
+ * — every check failed, and none of them for the reason it named.
+ */
+const POSTGRES_CONTAINER = process.env.POSTGRES_CONTAINER ?? 'trefaro-postgres';
+const DATABASE_USER = process.env.DATABASE_USER ?? 'trefaro';
+const DATABASE_NAME = process.env.DATABASE_NAME ?? 'trefaro';
+
 function psql(sql) {
   return execFileSync('docker', [
     'exec',
-    'trefaro-postgres',
+    POSTGRES_CONTAINER,
     'psql',
     '-U',
-    'trefaro',
+    DATABASE_USER,
     '-d',
-    'trefaro',
+    DATABASE_NAME,
     '-At',
     '-c',
     sql,

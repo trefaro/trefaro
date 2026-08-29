@@ -8,8 +8,9 @@ import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { problemOf, type Problem } from '@trefaro/shared-http';
 import type { EventSeries } from '@trefaro/shared-models';
-import { eventSeriesStatusKey } from '@trefaro/shared-models';
+import { eventSeriesStatusKey, publicSeriesPath } from '@trefaro/shared-models';
 import { EventSeriesAdminService } from '../../features/event-series/event-series-admin.service';
+import { PublicSite } from '../../features/public-site/public-site.service';
 
 /**
  * Organizer start page — every event series (FR 2.2), as the mockups have it.
@@ -59,7 +60,23 @@ import { EventSeriesAdminService } from '../../features/event-series/event-serie
               <a [routerLink]="['/series', item.id]">{{ item.name }}</a>
             </td>
             <td>
-              <code>/series/{{ item.slug }}</code>
+              <code>{{ path(item.slug) }}</code>
+              @if (item.status === 'published' && publicSite.known()) {
+                <!--
+                  Only for a published series, because a draft has no public page
+                  to open — and a link that answers "not found" would say that
+                  the address is wrong rather than that the series is unpublished.
+                  A different origin, so the same rule as any external link (F51).
+                -->
+                <a
+                  class="public"
+                  [href]="publicSite.series(item.slug)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {{ 'admin.series.openPublic' | transloco }}
+                </a>
+              }
             </td>
             <td>
               <span class="status" [class]="'status--' + item.status">
@@ -151,6 +168,12 @@ import { EventSeriesAdminService } from '../../features/event-series/event-serie
       cursor: pointer;
     }
 
+    .public {
+      display: block;
+      margin-block-start: 0.15rem;
+      font-size: 0.85rem;
+    }
+
     .error {
       color: #a3341f;
     }
@@ -158,6 +181,8 @@ import { EventSeriesAdminService } from '../../features/event-series/event-serie
 })
 export class SeriesListPage {
   protected readonly admin = inject(EventSeriesAdminService);
+  protected readonly publicSite = inject(PublicSite);
+  protected readonly path = publicSeriesPath;
   protected readonly error = signal<Problem | null>(null);
   protected readonly statusKey = eventSeriesStatusKey;
 

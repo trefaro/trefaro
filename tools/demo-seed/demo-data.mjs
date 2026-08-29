@@ -437,3 +437,177 @@ export function addressFor(firstName, lastName) {
     .replace(/[^a-z.]/g, '');
   return `${local}@example.org`;
 }
+
+/**
+ * What the demo organization calls itself and looks like (FR 1.4, phase 2).
+ *
+ * The seed sets this because a whitelabel application whose demo says "Trefaro"
+ * in the header, in the tab, in every mail and on a home screen demonstrates the
+ * opposite of what it is for (F60). Fictional like everything else here.
+ *
+ * The two colours are the pair the design page's own contrast rule is happiest
+ * with (F67): a primary dark enough to carry white text and to stand out against
+ * the white page, an accent that is only ever used inside something.
+ */
+export const BRANDING = {
+  organizationName: 'Demokratie Initiative e.V.',
+  primaryColor: '#1d4e6f',
+  accentColor: '#e8a33d',
+  fontFamily: 'source-sans-3',
+};
+
+/**
+ * The instance logo: letterhead format, transparent, so it sits in a header.
+ *
+ * Drawn rather than committed (see `demoPng`). A ring and three bars — enough to
+ * be recognizably a mark and obviously not a real organization's.
+ */
+export const LOGO = {
+  width: 480,
+  height: 120,
+  paint: (x, y) => {
+    const primary = hexToRgb(BRANDING.primaryColor);
+    const accent = hexToRgb(BRANDING.accentColor);
+
+    const ring = distance(x, y, 60, 60);
+    if (ring <= 46 && ring >= 30) return [...primary, 255];
+    if (ring <= 22) return [...accent, 255];
+
+    // Three bars of decreasing width, in the place a wordmark would be.
+    const bars = [
+      [130, 34, 300],
+      [130, 56, 232],
+      [130, 78, 168],
+    ];
+    for (const [left, top, width] of bars) {
+      if (x >= left && x < left + width && y >= top && y < top + 12) {
+        return [...primary, 255];
+      }
+    }
+    return [0, 0, 0, 0];
+  },
+};
+
+/**
+ * The app icon: square and 512 pixels, so a browser really installs from it.
+ *
+ * Both properties are the point. F105 keeps the shipped Trefaro icons beside an
+ * uploaded one unless the upload is square and at least 144 pixels — so an icon
+ * that misses either would leave the demo instance installing under somebody
+ * else's mark, which is exactly the thing the demo is meant to show working.
+ */
+export const APP_ICON = {
+  width: 512,
+  height: 512,
+  paint: (x, y) => {
+    const primary = hexToRgb(BRANDING.primaryColor);
+    const accent = hexToRgb(BRANDING.accentColor);
+
+    // A rounded square, because that is what a home screen expects; the corner
+    // is generous, so a launcher that crops it further still shows the ring.
+    if (!insideRoundedSquare(x, y, 512, 96)) return [0, 0, 0, 0];
+
+    const centre = distance(x, y, 256, 256);
+    if (centre <= 168 && centre >= 118) return [255, 255, 255, 255];
+    if (centre <= 60) return [...accent, 255];
+    return [...primary, 255];
+  },
+};
+
+/**
+ * The English side of the demo content (FR 3.12, AP 11).
+ *
+ * The demo data is German, so the translations are what a visitor switching to
+ * English gets — the case the feature exists for. Deliberately incomplete: the
+ * draft series and two of the events have none, because "some of it is
+ * translated" is the state an organization is actually in, and the fallback to
+ * the original is the behaviour worth seeing (F94).
+ *
+ * Programme items are keyed by their German title: the seed knows the ids only
+ * after it created them, and a position in a list is the one key that silently
+ * moves when somebody edits the content above.
+ */
+export const TRANSLATIONS = {
+  locale: 'en',
+  series: {
+    citizens: {
+      name: "Citizens' assemblies for Europe",
+      description:
+        "A series of citizens' assemblies on European democracy: an opening " +
+        'conference, three sessions and a closing event. The recommendations go ' +
+        'to the European Parliament.',
+    },
+    workshop: {
+      name: 'Democracy workshop',
+      description:
+        'Two-day workshops for people active in associations and initiatives: ' +
+        'participation formats, facilitation, public relations.',
+    },
+  },
+  events: {
+    kickoff: {
+      name: "Opening conference of the citizens' assemblies",
+      description:
+        'The start of the series: 120 randomly selected people from twelve ' +
+        'countries, two days in Brussels, with simultaneous interpretation into ' +
+        'four languages.',
+      venueName: 'House of Democracy',
+      followUpBody:
+        'Thank you to everyone who took part. The recordings of the plenary ' +
+        'sessions and the minutes of the working groups are below. The next ' +
+        'session has been announced — the invitation goes to everybody who ' +
+        'registered here.',
+    },
+    main: {
+      name: 'Climate assembly — third session',
+      description:
+        'The third session of the climate assembly. Expert talks in the ' +
+        'morning, parallel working groups in the afternoon, and the vote on the ' +
+        'recommendations on the third day. On site or online.',
+      venueName: 'House of Democracy',
+    },
+  },
+  /** Only the sessions of the main event, and not all of them. */
+  programItems: {
+    'Ankommen und Registrierung': { title: 'Arrival and registration' },
+    'Was bisher geschah': {
+      title: 'The story so far',
+      description:
+        'A look back at the first two sessions and where the recommendations ' +
+        'stand.',
+    },
+    'Fachvortrag: Kosten des Nichthandelns': {
+      title: 'Expert talk: the cost of doing nothing',
+      description:
+        'What climate protection costs and what it saves, calculated over the ' +
+        'next twenty years.',
+    },
+    'Arbeitsgruppe A: Verkehr': {
+      title: 'Working group A: transport',
+      description:
+        'Runs in parallel with working group B. Limited seats, sign-up needed.',
+    },
+    'Arbeitsgruppe B: Gebäude und Wärme': {
+      title: 'Working group B: buildings and heating',
+      description:
+        'Runs in parallel with working group A. Limited seats, sign-up needed.',
+    },
+  },
+};
+
+/** `#1d4e6f` → `[29, 78, 111]`. */
+function hexToRgb(hex) {
+  const value = hex.replace('#', '');
+  return [0, 2, 4].map((at) => parseInt(value.slice(at, at + 2), 16));
+}
+
+function distance(x, y, centreX, centreY) {
+  return Math.hypot(x - centreX, y - centreY);
+}
+
+/** A square with quarter-circle corners, tested without drawing anything. */
+function insideRoundedSquare(x, y, size, radius) {
+  const nearX = Math.min(Math.max(x, radius), size - radius);
+  const nearY = Math.min(Math.max(y, radius), size - radius);
+  return distance(x, y, nearX, nearY) <= radius;
+}

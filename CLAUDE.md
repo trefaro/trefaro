@@ -65,7 +65,7 @@ Wichtigste Funktionen laut Empirie: Teilnehmerübersicht (3,86/4) > Nachhaltigke
 
 0. Setup + Spikes (Plug-in Client/Server, Web-Push, WebSocket-durch-NGINX) → `docs/BOOTSTRAP.md`
 1. Kern-MVP Eventmanagement (alle P1) → `docs/PHASE1.md`
-2. Whitelabel-Theming, Modul-Verwaltung, i18n, PWA, Installations-Story
+2. Whitelabel-Theming, Modul-Verwaltung, i18n, PWA, Installations-Story → `docs/PHASE2.md`
 3. Profile, Nachrichten, Echtzeit-/Gruppenchat, Push, Profilsuche
 4. Plug-ins: Programmvorschläge, Forum, Raumplanung, QR-Check-In
 5. Härtung, Usability-Test mit Democracy International (Pilotpartner), Doku, Release v1.0
@@ -406,15 +406,17 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
   Installations-Story, nicht zur Härtung; `Secure` fallen zu lassen ist keine
   Alternative.
 
-## Stand Phase 2 (in Arbeit; AP 1–12 erledigt, Meilensteine M3 und M4 erreicht)
+## Stand nach Phase 2 (abgeschlossen 29.08.2026, Meilenstein M5)
 
 Plan **und Protokoll**: `docs/PHASE2.md` — dreizehn Arbeitspakete, Entscheidungen
 **E17–E30** (die Zählung läuft über die Phasen weiter), Meilensteine M3
 (Whitelabel), M4 (alle P1: brandbar, konfigurierbar, selbst installierbar) und M5
-(Abschluss), Nachträge F60–F110. Was schon umgesetzt ist, steht dort unter
-_Fortschritt_, je Paket ein Abschnitt „erledigt" mit den Abweichungen — dort
-zuerst nachsehen. **Jedes Paket einzeln von Marius freigeben** — nicht ohne
-Aufforderung mit dem nächsten anfangen.
+(Abschluss), Nachträge **F60–F112 ohne F62** (die Nummer wurde nie vergeben —
+F70 beantwortet, was für sie geplant war). Was tatsächlich passierte, steht dort
+unter _Fortschritt_, je Paket ein Abschnitt „erledigt" mit den Abweichungen, und
+am Ende ein phasenweites _Was anders lief_ — dort zuerst nachsehen. **Jedes Paket
+einzeln von Marius freigeben** — nicht ohne Aufforderung mit dem nächsten
+anfangen; das gilt für Phase 3 genauso.
 
 Erledigt: **AP 1** Konfiguration schreibbar (Name, zwei Hex-Farben, Schriftart
 aus einem mitgelieferten, selbst gehosteten Katalog) · **AP 2** Logo und
@@ -476,7 +478,26 @@ aus der Konfiguration (`business/manifest/` über Konfiguration **und** Katalog)
 der `ThemeService`, `features/pwa/` im Nutzer-Client (Offline-Banner,
 Installationshinweis, `apple-touch-icon` folgt der Konfiguration), das statische
 `manifest.webmanifest` ist entfallen, und `verify-proxy.mjs` prüft Manifest,
-Farbe, Name und jedes Icon einzeln (Katalog 636 → **643**).
+Farbe, Name und jedes Icon einzeln (Katalog 636 → **643**) · **AP 13**
+Phasenabschluss: `todo.md` unter _Checkable after phase 2_ leer (sieben Einträge
+zu, fünf mit Begründung verschoben, **einer eskaliert**), F60–F112 im
+Referenzdokument geprüft, der Fünf-Container-Stack aus dem Stand hochgefahren und
+acht Prüfskripte plus der Demo-Seed dagegen gefahren (dazu ein **zweiter**,
+bootstrap-freier Stack aus leerem Volume für `verify-setup.mjs`), beide Werkzeuge
+nachgezogen — und die zwei Zusagen dieser Phase eingelöst, die keines ihrer
+Pakete eingelöst hatte: die Browser-Tabs tragen jetzt den Namen der Organisation
+(F111) und der Veranstalter-Client verlinkt die öffentliche Seite (F112);
+Katalog 643 → **646**.
+
+**Eskaliert statt abgehakt:** `event_series.logo_path` und `event.logo_path`
+existieren, drei Ansichten des Nutzer-Clients zeichnen `logoUrl`, und geschrieben
+hat die Spalten nie jemand — **FR 2.1 und FR 3.1 führen das Logo aber unter den
+Pflichtfeldern, beide P1**. Also keine offene Entscheidung, sondern eine nie
+gebaute P1-Anforderung, die schon an AP 2/AP 3 der Phase 1 vorbeigelaufen ist.
+Die Gestalt ist in AP 13 entschieden (Routen ohne Aufrufer-Pfad, je Zeile
+aufgelöst, wie `/api/media/branding/logo` — E19, F66), **gebaut ist sie nicht**;
+sie steht in `todo.md` unter _Known gaps in the current state_ und ist ein
+eigenes Paket. Nicht nebenbei nachziehen.
 
 Reihenfolge: AP 1–3 Whitelabel (FR 1.4) · AP 4 Modulverwaltung (FR 1.5) · AP 5
 Installations-Story mit geführter Ersteinrichtung und TLS-Overlay (FR 1.1,
@@ -1004,14 +1025,58 @@ Regeln aus AP 12, die nicht erneut aufgerollt werden sollten:
   typisieren kann und die falsch geschrieben nur dazu führt, dass sich nichts
   mehr installieren lässt.
 
+Regeln aus AP 13, die nicht erneut aufgerollt werden sollten:
+
+- **Ein Routentitel ist eine Beschriftung ohne Template** (F111), und deshalb hat
+  ihn keine Textextraktion gefunden. Er ist ein **Katalogschlüssel**;
+  `TrefaroTitleStrategy` (in `shared-i18n`, weil sie Katalog **und**
+  Konfiguration braucht) hängt `organizationName()` an, und eine Route **ohne**
+  Titel bekommt allein den Namen der Organisation — das ist die Startseite des
+  Nutzer-Clients. Der Tab folgt einem Sprachwechsel ohne Navigation, weil der
+  Schlüssel in einem Signal liegt und ein `effect` Sprache und Namen daneben
+  liest (F72). Wer eine neue Route anlegt, gibt ihr einen Schlüssel, keinen Satz.
+- **Die öffentliche Adresse wird an einer Stelle gebaut, jetzt auch absolut**
+  (F112): `publicEventPath`, `publicSeriesPath` und `publicUrl(origin, pfad)` in
+  `shared-models`, benutzt vom Mailmodul **und** vom Veranstalter-Client. Den
+  Origin kennt nur das Deployment (`publicUserClientUrl` aus `/api/config`);
+  dieser Client kann ihn nicht ableiten. Verlinkt wird **nur Veröffentlichtes** —
+  ein Link, der „nicht gefunden" antwortet, liest sich wie eine falsche Adresse
+  statt wie ein Entwurf — und die Adresse bleibt zum Kopieren daneben stehen.
+- **Ein Prüfskript darf keinen Containernamen als Literal tragen.** `verify-push`
+  und `verify-plugin-toggle` nehmen `POSTGRES_CONTAINER`, `DATABASE_USER` und
+  `DATABASE_NAME`; mit dem alten Literal legte ein Lauf gegen den Container-Stack
+  den Schalter der **Entwicklungs**instanz um und prüfte gegen die andere. Alle
+  Skripte nehmen die Adresse jetzt aus **`BASE`** (die alten Namen gelten weiter
+  und gewinnen), also treibt ein exportiertes `BASE` einen ganzen Lauf.
+- **Eine gebrandete Instanz ist der Normalfall.** `verify-api.mjs` prüft deshalb
+  nicht mehr die zwei gesäten Farben, sondern ihre Form (Hex, E17) und dass eine
+  Logo-URL entweder fehlt oder die pfadfreie Route ist (E19). Ein Prüfskript, das
+  einen konfigurierbaren Wert festnagelt, meldet beim nächsten echten Deployment
+  einen Fehler, den es nicht gibt.
+- **Der Demo-Seed brandet die Instanz und übersetzt einen Teil davon.** Name,
+  zwei Farben, Schrift, ein Logo und ein quadratisches 512er-App-Icon —
+  **erzeugt**, nicht eingecheckt (`demoPng` in `api.mjs`), weil der Server die
+  ersten Bytes liest (F38) und seit AP 12 den Kopf noch einmal für die Größe
+  (F106). `--reset` nimmt die Marke **nicht** zurück; es gibt nichts, worauf.
+  Übersetzt wird bewusst nur ein Teil — „teilweise übersetzt" ist der Zustand,
+  in dem eine echte Organisation lange ist (F94).
+- **Ein Abschlusspaket baut keine P1-Funktion nach.** Was diese Phase schuldig
+  geblieben ist und einen halben Tag kostet, wird dort erledigt (die Tabtitel,
+  der öffentliche Link). Was ein Paket groß ist, wird **entschieden und
+  eskaliert**, nicht nebenbei gebaut — sonst weiß hinterher niemand mehr, was
+  eine Phase enthielt.
+
 ## Betriebskontext
 
 Entwicklung: lokal in WSL2 (dieser Ordner), Docker via Docker Desktop (WSL2-Backend) oder docker-ce. Zielbetrieb: eigener Linux-Server der Organisation, identische Container. Compose-Dateien und Dockerfiles unter `infra/`, CI unter `.github/workflows/ci.yml` (Qualität, E2E gegen echte DB und Browser, Image-Builds).
 
 Zwei Werkzeuge unter `tools/`, beide gegen eine _laufende_ Instanz:
 `spike-verification/` prüft ein Deployment (Proxy, API, Plug-in-Schalter,
-Admin-Zugang), `demo-seed/` füllt es mit Demo-Daten — **ausschließlich über die
-API**, damit kein Zustand entsteht, den die Anwendung selbst ablehnen würde.
-`node tools/demo-seed/seed.mjs --reset` ersetzt einen früheren Lauf. Der Seed
-braucht Mailpit: Bestätigung, Selbstbedienungslink und Widerspruch sind Tokens,
-die nur in versandter Mail existieren.
+Admin-Zugang, Mail, Katalog, Push), `demo-seed/` füllt es mit Demo-Daten —
+**ausschließlich über die API**, damit kein Zustand entsteht, den die Anwendung
+selbst ablehnen würde. `node tools/demo-seed/seed.mjs --reset` ersetzt einen
+früheren Lauf. Der Seed braucht Mailpit: Bestätigung, Selbstbedienungslink und
+Widerspruch sind Tokens, die nur in versandter Mail existieren; seit AP 13 der
+Phase 2 setzt er außerdem die Marke der Instanz und übersetzt einen Teil des
+Inhalts ins Englische. Alle Skripte nehmen die Adresse aus `BASE`, die zwei mit
+Datenbankzugriff zusätzlich `POSTGRES_CONTAINER`.

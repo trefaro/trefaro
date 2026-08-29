@@ -22,16 +22,25 @@ colour is the configured one, that every icon it declares is reachable through
 the proxy, and that at least one of them is square and big enough for a browser
 to install from.
 
-| Script                     | Needs                                                                       |
-| -------------------------- | --------------------------------------------------------------------------- |
-| `verify-api.mjs`           | server + PostgreSQL                                                         |
-| `verify-plugin-toggle.mjs` | server + PostgreSQL + `docker exec` into the database container             |
-| `verify-socket.mjs`        | server                                                                      |
-| `verify-push.mjs`          | server + PostgreSQL + a VAPID key pair in `.env`                            |
-| `verify-i18n.mjs`          | server + PostgreSQL + `ADMIN_BOOTSTRAP_*` from `.env` (it signs in)         |
-| `verify-mail.mjs`          | server + PostgreSQL + **Mailpit** + `ADMIN_BOOTSTRAP_*` (it signs in)       |
-| `verify-proxy.mjs`         | the full five-container stack; over HTTPS when `PROXY_BASE` is an https URL |
-| `verify-setup.mjs`         | a **fresh** stack with no administrator, and the token from its startup log |
+Every script takes the instance's address from **`BASE`** since AP 13; the older
+names (`TREFARO_BASE_URL`, `SOCKET_BASE`, `PROXY_BASE`) still work and win where
+both are set, so one exported `BASE` now drives a whole run. The two that reach
+into the database take `POSTGRES_CONTAINER`, `DATABASE_USER` and `DATABASE_NAME`
+— the development stack calls its container `trefaro-postgres`, a production
+stack names it after its Compose project, and until AP 13 the literal in the
+script quietly flipped the _development_ instance's flag while asserting against
+the other one.
+
+| Script                     | Needs                                                                                  |
+| -------------------------- | -------------------------------------------------------------------------------------- |
+| `verify-api.mjs`           | server + PostgreSQL                                                                    |
+| `verify-plugin-toggle.mjs` | server + PostgreSQL + `docker exec` into the database container (`POSTGRES_CONTAINER`) |
+| `verify-socket.mjs`        | server                                                                                 |
+| `verify-push.mjs`          | server + PostgreSQL + a VAPID key pair in `.env` (`POSTGRES_CONTAINER`)                |
+| `verify-i18n.mjs`          | server + PostgreSQL + `ADMIN_BOOTSTRAP_*` from `.env` (it signs in)                    |
+| `verify-mail.mjs`          | server + PostgreSQL + **Mailpit** + `ADMIN_BOOTSTRAP_*` (it signs in)                  |
+| `verify-proxy.mjs`         | the full five-container stack; over HTTPS when `PROXY_BASE` is an https URL            |
+| `verify-setup.mjs`         | a **fresh** stack with no administrator, and the token from its startup log            |
 
 ## Against a local server
 
@@ -62,6 +71,11 @@ node tools/spike-verification/verify-push.mjs
 
 ```bash
 docker compose --env-file .env -f infra/docker-compose.yml up -d --build
+
+# One address for the whole run; the two database scripts also need the
+# container's name, which a production stack derives from its project name.
+export BASE=http://localhost:8080
+export POSTGRES_CONTAINER=trefaro-postgres-1
 
 # Routing, the WebSocket upgrade, the service worker's navigation rules — and
 # since AP 12 the PWA manifest: that the participant client links the one the
@@ -163,6 +177,14 @@ default port — because they are the WebSocket origin allow-list.
   deployment — and it is what shows the second half of E22, that a changed word
   is live on the next request with no rebuild and no restart. It restores what it
   found; without `ADMIN_BOOTSTRAP_*` it skips that half and still runs the rest.
+- `verify-api.mjs` stopped asserting the _two seeded colours_ in AP 13. It was
+  right while nothing could change them; since AP 1 of phase 2 the design page
+  writes them, so the literal turned a branded instance — the normal state of a
+  real deployment, and what this repository's own demo seed leaves behind — into
+  a failing check that named the wrong cause. What it asserts instead is what
+  holds without knowing the organization: both colours hexadecimal (E17), a font
+  stack present, and a logo URL that is either absent or the path-free route
+  (E19).
 - `verify-proxy.mjs` also checks what the service worker claims: it replays
   ngsw's own selection rule — one positive pattern matches, no negative one does —
   against the built `ngsw.json`, for `/admin/`, `/api/config` and `/socket.io/`.

@@ -15,6 +15,8 @@
  * as a person would.
  */
 
+import { deflateSync } from 'node:zlib';
+
 /** Thin HTTP client that keeps the administrative session cookie. */
 export class Api {
   #base;
@@ -76,6 +78,11 @@ export class Api {
   /** A form submission with files, the way a browser with a file field sends it. */
   form(path, formData) {
     return this.#request('POST', path, formData, false);
+  }
+
+  /** An administrative upload — the logo and the app icon are `PUT` (E19). */
+  adminForm(method, path, formData) {
+    return this.#request(method, path, formData, true);
   }
 
   async #request(method, path, body, authenticated) {
@@ -190,6 +197,79 @@ export class Mailbox {
       /invitations\/unsubscribe\?token=([A-Za-z0-9_.%-]+)/,
     );
   }
+}
+
+/**
+ * A PNG, drawn pixel by pixel, so the demo instance has a brand of its own.
+ *
+ * Generated for the same reason as the PDF below: a binary in the repository is
+ * a thing that has to be explained, and the server reads the first bytes to
+ * decide what a file is (F38) — and, since AP 12, reads the header again to
+ * learn the app icon's size (F106). A hand-written PNG satisfies both because it
+ * really is one.
+ *
+ * Uncompressed-in-spirit: one `IDAT` over the whole image with the "none" filter
+ * on every row, which zlib then deflates. That is the simplest encoder that
+ * produces a file every decoder accepts, and the images are small enough that
+ * nothing better is worth the lines.
+ *
+ * `paint(x, y)` answers `[r, g, b, a]`, so the drawing stays in `demo-data.mjs`
+ * where the rest of the content is.
+ */
+export function demoPng(width, height, paint) {
+  const stride = 1 + width * 4;
+  const raw = Buffer.alloc(height * stride);
+  for (let y = 0; y < height; y += 1) {
+    const row = y * stride;
+    // Filter byte 0: this row is stored as it is.
+    raw[row] = 0;
+    for (let x = 0; x < width; x += 1) {
+      const [r, g, b, a] = paint(x, y);
+      const at = row + 1 + x * 4;
+      raw[at] = r;
+      raw[at + 1] = g;
+      raw[at + 2] = b;
+      raw[at + 3] = a;
+    }
+  }
+
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8; // bit depth
+  header[9] = 6; // colour type: truecolour with alpha
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    pngChunk('IHDR', header),
+    pngChunk('IDAT', deflateSync(raw)),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+function pngChunk(type, data) {
+  const out = Buffer.alloc(12 + data.length);
+  out.writeUInt32BE(data.length, 0);
+  out.write(type, 4, 'latin1');
+  data.copy(out, 8);
+  // The checksum covers the type and the data, not the length.
+  out.writeUInt32BE(crc32(out.subarray(4, 8 + data.length)), 8 + data.length);
+  return out;
+}
+
+const CRC_TABLE = Array.from({ length: 256 }, (_, index) => {
+  let value = index;
+  for (let bit = 0; bit < 8; bit += 1) {
+    value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+  }
+  return value >>> 0;
+});
+
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  for (const byte of bytes) {
+    crc = CRC_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
 }
 
 /**

@@ -6,6 +6,13 @@ registrations in all three states, a programme with parallel sessions of which
 one is full, media links, a real file attachment, and one invitation that was
 genuinely sent.
 
+Since AP 13 of phase 2 it also gives the instance a **brand and a second
+language**: a name, two colours, a font, a logo and a square app icon, and the
+English translation of part of the German content. Both were added for the same
+reason the rest of the data exists — a whitelabel application demonstrated under
+the product's own name and in one language demonstrates the opposite of what it
+is for.
+
 For demonstrating and for looking at a feature by hand. **Not** test data — the
 suites in `apps/*-e2e` seed their own fixtures and tear them down; this is for a
 human.
@@ -27,6 +34,30 @@ node tools/demo-seed/seed.mjs --reset
 | `--mailpit` / `SEED_MAILPIT`               | mailbox, default `http://localhost:8025`      |
 | `--reset`                                  | delete the demo series first, then seed       |
 | `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | credentials; fall back to `ADMIN_BOOTSTRAP_*` |
+
+## It brands the instance, and `--reset` does not undo that
+
+`--reset` deletes the demo series with everything below them. It does **not**
+put the configuration back: there is nothing to put it back to — the values it
+replaced were the defaults of a fresh instance, and an instance being
+demonstrated is one that has a brand. Change it on `/admin/design`, or start
+from an empty database volume.
+
+The two images are drawn in `demo-data.mjs` pixel by pixel rather than committed
+as files. A binary in the repository is a thing that has to be explained, the
+server decides what a file is from its first bytes (F38), and since AP 12 it
+reads the app icon's size out of the same header (F106) — so a generated PNG has
+to be a real one, which it is. The icon is 512×512 on purpose: square and at
+least 144 pixels is what makes a browser install from it, and anything less would
+leave the demo instance installing under Trefaro's icons (F105).
+
+## Some of it is translated, and some is not
+
+The content is German; the seed writes English for the two published series, two
+of the events and five of the main event's sessions — and leaves the rest alone.
+That is not laziness: "part of it is translated" is the state a real organization
+is in for a long while, and what a visitor then sees is the original showing
+through (F94), which is the behaviour worth looking at.
 
 ## It goes through the API, never through the database
 
@@ -67,6 +98,11 @@ docker network connect trefaro_default trefaro-mailpit
 # then in the stack's env file: SMTP_HOST=trefaro-mailpit, SMTP_PORT=1025, SMTP_SECURE=false
 ```
 
+On Docker Desktop the shorter way is `SMTP_HOST=host.docker.internal` with
+`SMTP_PORT=1025` — the mailbox is then reached through its published port on the
+host, and nothing has to join a second network. That is how the AP 13 run of the
+whole stack was done.
+
 ## What it deliberately does not create
 
 - **An invitation in the `partial` state.** That needs a delivery to fail, and
@@ -83,11 +119,11 @@ docker network connect trefaro_default trefaro-mailpit
 
 ## Files
 
-| File            | Contains                                                     |
-| --------------- | ------------------------------------------------------------ |
-| `seed.mjs`      | the run: order, reset, summary                               |
-| `demo-data.mjs` | the content — series, events, form, programme, people, dates |
-| `api.mjs`       | the API client, the mailbox reader, and a generated demo PDF |
+| File            | Contains                                                                                  |
+| --------------- | ----------------------------------------------------------------------------------------- |
+| `seed.mjs`      | the run: order, reset, summary                                                            |
+| `demo-data.mjs` | the content — brand, images, series, events, form, programme, people, dates, translations |
+| `api.mjs`       | the API client, the mailbox reader, a PNG encoder and a PDF                               |
 
 Two runs a day apart produce the same shape with shifted dates: `demo-data.mjs`
 derives every date from the day it runs, so the past event stays past and the

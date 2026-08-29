@@ -1,6 +1,7 @@
 import { io } from 'socket.io-client';
 
-const BASE = process.env.SOCKET_BASE ?? 'http://127.0.0.1:3000';
+const BASE =
+  process.env.SOCKET_BASE ?? process.env.BASE ?? 'http://127.0.0.1:3000';
 const LABEL = process.env.SOCKET_LABEL ?? 'direct to the server';
 let failures = 0;
 

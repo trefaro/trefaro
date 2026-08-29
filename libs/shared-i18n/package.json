@@ -3,6 +3,8 @@
   "version": "0.0.1",
   "peerDependencies": {
     "@angular/core": "^22.0.0",
+    "@angular/platform-browser": "^22.0.0",
+    "@angular/router": "^22.0.0",
     "@jsverse/transloco": "^8.4.0",
     "@trefaro/shared-config": "0.0.1",
     "@trefaro/shared-http": "0.0.1",

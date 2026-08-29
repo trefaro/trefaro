@@ -79,6 +79,34 @@ test.describe('organizer client language', () => {
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   });
 
+  test('names the page and the organization in the tab, in both languages', async ({
+    page,
+  }) => {
+    // Until AP 13 every route carried its title as a literal ending in
+    // "Trefaro": the product's name where the organization's belongs (F60), in
+    // a language chosen when the route was written. A `TitleStrategy` resolves
+    // both, and the second half is what only a browser can show — the tab has
+    // to follow a language switch with no navigation in between.
+    await page.goto('/');
+    const organization = (
+      (await (await page.request.get('/api/config')).json()) as {
+        organizationName: string;
+      }
+    ).organizationName;
+
+    await expect(page).toHaveTitle(
+      `${t('admin.series.title')} — ${organization}`,
+    );
+
+    await page
+      .getByRole('combobox', { name: t('language.switcher.label') })
+      .selectOption('de');
+
+    await expect(page).toHaveTitle(
+      `${t('admin.series.title', {}, 'de')} — ${organization}`,
+    );
+  });
+
   test('remembers the choice across a reload', async ({ page }) => {
     await page.goto('/modules');
     await page

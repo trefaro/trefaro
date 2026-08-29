@@ -12,6 +12,8 @@
  */
 export { TrefaroCatalogueLoader } from './lib/catalogue-loader';
 export { LanguageSwitcher } from './lib/language-switcher';
+export { provideTrefaroTitles } from './lib/provide-trefaro-titles';
 export { provideTrefaroTranslations } from './lib/provide-trefaro-translations';
 export { provideTranslationsForTest } from './lib/testing';
 export { TranslationService } from './lib/translation.service';
+export { TrefaroTitleStrategy } from './lib/title.strategy';

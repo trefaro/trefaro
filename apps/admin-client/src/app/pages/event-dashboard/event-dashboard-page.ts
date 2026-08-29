@@ -25,6 +25,7 @@ import {
   registrationStatusKey,
 } from '@trefaro/shared-models';
 import { EventsAdminService } from '../../features/events/events-admin.service';
+import { PublicSite } from '../../features/public-site/public-site.service';
 
 /**
  * The dashboard of one event (FR 3.8, UC 05) — an event's home.
@@ -81,6 +82,21 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
             </span>
             <span>{{ when() }}</span>
             <code>{{ address() }}</code>
+            @if (view.event.status === 'published' && publicSite.known()) {
+              <!--
+                Only for a published event: a draft has no public page, and a
+                link that answers "not found" would look like a broken address
+                rather than an unpublished event. The participant client is a
+                different origin, so the same rule as any external link (F51).
+              -->
+              <a
+                [href]="publicSite.event(view.seriesSlug, view.event.slug)"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {{ 'admin.events.openPublic' | transloco }}
+              </a>
+            }
           </p>
         </div>
         <div class="head__actions">
@@ -429,6 +445,8 @@ export class EventDashboardPage {
 
   private readonly events = inject(EventsAdminService);
   private readonly i18n = inject(TranslationService);
+
+  protected readonly publicSite = inject(PublicSite);
 
   protected readonly dashboard = signal<EventDashboard | null>(null);
   protected readonly loading = signal(true);
