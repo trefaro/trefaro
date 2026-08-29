@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigurationModule } from '../config';
 import { CatalogueService } from './catalogue.service';
+import { I18nAdminController } from './i18n-admin.controller';
 import { I18nController } from './i18n.controller';
+import { TranslationAdminService } from './translation-admin.service';
 
 /**
  * Multilingual user interface text (chapter 4, E22-E24).
@@ -20,8 +22,8 @@ import { I18nController } from './i18n.controller';
  */
 @Module({
   imports: [ConfigurationModule],
-  controllers: [I18nController],
-  providers: [CatalogueService],
+  controllers: [I18nController, I18nAdminController],
+  providers: [CatalogueService, TranslationAdminService],
   exports: [CatalogueService],
 })
 export class I18nModule {}

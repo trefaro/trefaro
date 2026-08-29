@@ -159,6 +159,14 @@ export const appRoutes: Route[] = [
           import('./pages/modules/modules-page').then((m) => m.ModulesPage),
         title: 'Modules',
       },
+      {
+        path: 'languages',
+        loadComponent: () =>
+          import('./pages/languages/languages-page').then(
+            (m) => m.LanguagesPage,
+          ),
+        title: 'Languages',
+      },
     ],
   },
   { path: '**', redirectTo: '' },

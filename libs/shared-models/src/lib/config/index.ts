@@ -1,10 +1,13 @@
 export {
   DEFAULT_ORGANIZATION_NAME,
+  MAX_ACTIVE_LOCALES,
   MAX_LOCALE_TAG_LENGTH,
   MAX_ORGANIZATION_NAME_LENGTH,
+  isLocaleTag,
   type AppConfig,
   type AppConfigChange,
   type AppConfigSettings,
+  type LocaleSettings,
 } from './app-config';
 export {
   BRANDING_IMAGE_KINDS,

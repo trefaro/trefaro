@@ -1,6 +1,6 @@
 /**
- * Verifies the translation catalogue against a *running* deployment (chapter 4,
- * E22, E23).
+ * Verifies the translation catalogue and the language administration against a
+ * *running* deployment (chapter 4, E22, E23, E30).
  *
  * There is one class of defect here that no suite in this repository can see, and
  * it has bitten this project twice already in other shapes: a value that exists
@@ -16,32 +16,40 @@
  * (they run `nx serve` from the workspace, where the default path is the library
  * itself), and the CI builds the image without ever starting it.
  *
- *   BASE=http://localhost:8080 node tools/spike-verification/verify-i18n.mjs
+ *   BASE=http://localhost:8080 \
+ *   ADMIN_BOOTSTRAP_EMAIL=… ADMIN_BOOTSTRAP_PASSWORD=… \
+ *   node tools/spike-verification/verify-i18n.mjs
  *
- * Also writes and removes one `translation_override` row through `psql` in the
- * database container, which is the only way to prove the second half of E22
- * before AP 7 has built the screen for it: that a changed word takes effect on
- * the next request, with no rebuild and no restart.
+ * The second half signs in and walks the whole of AP 7 through the API: it
+ * creates a language nothing ships, translates one key, offers it to visitors,
+ * checks that the public catalogue follows, takes the offer back, checks that the
+ * translation survives, and resets it. That is the acceptance criterion of the
+ * work package, run against a real deployment rather than against `nx serve` —
+ * and it is also what proves the second half of E22, that a changed word takes
+ * effect on the next request with no rebuild and no restart.
  *
- *   POSTGRES_CONTAINER=trefaro-postgres  (default)
- *   POSTGRES_USER=trefaro  POSTGRES_DB=trefaro
- *
- * Skip that half with SKIP_OVERRIDE=1 if the database is not reachable by
- * `docker exec`; everything else still runs.
+ * It restores what it found: the language it uses (`ia`, Interlingua) is one no
+ * image ships, and both the offer and the row are removed at the end.
  */
-import { execFileSync } from 'node:child_process';
-
 const BASE = process.env.BASE ?? 'http://127.0.0.1:3000';
-const CONTAINER = process.env.POSTGRES_CONTAINER ?? 'trefaro-postgres';
-const DB_USER = process.env.POSTGRES_USER ?? 'trefaro';
-const DB_NAME = process.env.POSTGRES_DB ?? 'trefaro';
-const SKIP_OVERRIDE = process.env.SKIP_OVERRIDE === '1';
+const EMAIL = process.env.ADMIN_BOOTSTRAP_EMAIL ?? '';
+const PASSWORD = process.env.ADMIN_BOOTSTRAP_PASSWORD ?? '';
+const SESSION_COOKIE = 'trefaro_admin_session';
 
 /** A key every shipped catalogue has, and its two shipped translations. */
 const PROBE_KEY = 'modules.push.title';
 const PROBE_EN = 'Push notifications';
 const PROBE_DE = 'Push-Benachrichtigungen';
 const PROBE_OVERRIDE = 'Push-Mitteilungen (verification)';
+
+/**
+ * The language this script brings into being and takes away again.
+ *
+ * Interlingua: a real tag, so nothing has to pretend, and one no image ships and
+ * no suite in this repository touches.
+ */
+const NEW_LOCALE = 'ia';
+const NEW_TEXT = 'Notificationes push';
 
 let failures = 0;
 
@@ -65,12 +73,18 @@ async function call(path, init) {
   return { status: response.status, body, headers: response.headers };
 }
 
-function sql(statement) {
-  return execFileSync(
-    'docker',
-    ['exec', CONTAINER, 'psql', '-U', DB_USER, '-d', DB_NAME, '-c', statement],
-    { encoding: 'utf8' },
-  );
+let cookie = '';
+
+/** A JSON request as the administrator, once there is a session. */
+function send(method, path, payload) {
+  return call(path, {
+    method,
+    headers: {
+      'content-type': 'application/json',
+      ...(cookie ? { cookie } : {}),
+    },
+    ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
+  });
 }
 
 // --- the catalogue is inside this deployment -------------------------------
@@ -144,41 +158,142 @@ check(
   String(german.headers.get('cache-control')),
 );
 
-// --- the instance can change a word ----------------------------------------
+// --- the language administration (AP 7) -------------------------------------
 
-if (SKIP_OVERRIDE) {
-  console.log('SKIP  an instance can change a word — SKIP_OVERRIDE=1');
+if (!EMAIL || !PASSWORD) {
+  console.log(
+    'SKIP  the language administration — set ADMIN_BOOTSTRAP_EMAIL and ' +
+      'ADMIN_BOOTSTRAP_PASSWORD to run it',
+  );
 } else {
+  const login = await send('POST', '/api/admin/auth/login', {
+    email: EMAIL,
+    password: PASSWORD,
+  });
+  for (const header of login.headers.getSetCookie()) {
+    const [pair] = header.split(';');
+    const [key, ...rest] = pair.split('=');
+    if (key.trim() === SESSION_COOKIE)
+      cookie = `${SESSION_COOKIE}=${rest.join('=')}`;
+  }
+  check(
+    'an administrative session is established',
+    Boolean(cookie),
+    `status ${login.status}`,
+  );
+}
+
+if (cookie) {
+  const before = await send('GET', '/api/admin/i18n');
+  const keyCount = Object.keys(english.body ?? {}).length;
+  const englishRow = (before.body?.locales ?? []).find(
+    (row) => row.locale === 'en',
+  );
+  check(
+    'English counts as complete, and is the denominator',
+    englishRow?.total === keyCount && englishRow?.translated === keyCount,
+    JSON.stringify(englishRow),
+  );
+
+  const storedLocales = {
+    defaultLocale: before.body?.defaultLocale ?? 'en',
+    activeLocales: (before.body?.locales ?? [])
+      .filter((row) => row.active)
+      .map((row) => row.locale),
+  };
+
   try {
-    sql(
-      `INSERT INTO translation_override (locale, key, value)
-         VALUES ('de', '${PROBE_KEY}', '${PROBE_OVERRIDE}')
-         ON CONFLICT (locale, key) DO UPDATE SET value = EXCLUDED.value`,
+    const empty = await send('GET', `/api/admin/i18n/${NEW_LOCALE}`);
+    check(
+      'a language nothing knows yet can still be opened (E30)',
+      empty.status === 200 && empty.body?.translated === 0,
+      `status ${empty.status}`,
     );
 
-    const overridden = await call('/api/i18n/de');
+    const written = await send('PUT', `/api/admin/i18n/${NEW_LOCALE}`, {
+      entries: { [PROBE_KEY]: NEW_TEXT },
+    });
     check(
-      'a stored translation takes effect on the next request',
-      overridden.body?.[PROBE_KEY] === PROBE_OVERRIDE,
-      String(overridden.body?.[PROBE_KEY]),
+      'a third language comes into being by being translated',
+      written.body?.written === 1 && written.body?.summary?.translated === 1,
+      JSON.stringify(written.body?.summary),
+    );
+
+    check(
+      'and is not public until the organization offers it',
+      (await call(`/api/i18n/${NEW_LOCALE}`)).status === 404,
+    );
+
+    const offered = await send('PUT', '/api/admin/config/locales', {
+      defaultLocale: storedLocales.defaultLocale,
+      activeLocales: [...storedLocales.activeLocales, NEW_LOCALE],
+    });
+    check(
+      'offering it puts it in what both clients read on start',
+      (await call('/api/config')).body?.availableLocales?.includes(NEW_LOCALE),
+      JSON.stringify(offered.body?.activeLocales),
+    );
+
+    const served = await call(`/api/i18n/${NEW_LOCALE}`);
+    check(
+      'its catalogue is the translated key and English for the rest (E23)',
+      served.body?.[PROBE_KEY] === NEW_TEXT &&
+        Object.keys(served.body ?? {}).length === keyCount,
+      String(served.body?.[PROBE_KEY]),
+    );
+
+    const overridden = await send('PUT', '/api/admin/i18n/de', {
+      entries: { [PROBE_KEY]: PROBE_OVERRIDE },
+    });
+    const afterOverride = await call('/api/i18n/de');
+    check(
+      'a changed word takes effect on the next request, with no rebuild',
+      overridden.body?.written === 1 &&
+        afterOverride.body?.[PROBE_KEY] === PROBE_OVERRIDE,
+      String(afterOverride.body?.[PROBE_KEY]),
     );
     check(
       'and changes the ETag, so every client refetches',
-      overridden.headers.get('etag') !== etag,
+      afterOverride.headers.get('etag') !== etag,
     );
     check(
       'without touching the other languages',
       (await call('/api/i18n/en')).body?.[PROBE_KEY] === PROBE_EN,
     );
-  } finally {
-    sql(
-      `DELETE FROM translation_override WHERE locale = 'de' AND key = '${PROBE_KEY}'`,
+
+    const reset = await send(
+      'DELETE',
+      `/api/admin/i18n/de/${encodeURIComponent(PROBE_KEY)}`,
     );
+    check(
+      'resetting a key brings the shipped text back',
+      reset.body?.reset === 1 &&
+        (await call('/api/i18n/de')).body?.[PROBE_KEY] === PROBE_DE,
+    );
+  } finally {
+    await send('PUT', '/api/admin/config/locales', storedLocales);
+    await send('DELETE', `/api/admin/i18n/de/${encodeURIComponent(PROBE_KEY)}`);
   }
 
+  const stillThere = await send('GET', `/api/admin/i18n/${NEW_LOCALE}`);
   check(
-    'removing it brings the shipped text back',
-    (await call('/api/i18n/de')).body?.[PROBE_KEY] === PROBE_DE,
+    'taking the offer back deletes no translation (E30)',
+    stillThere.body?.active === false && stillThere.body?.translated === 1,
+    JSON.stringify({
+      active: stillThere.body?.active,
+      translated: stillThere.body?.translated,
+    }),
+  );
+
+  await send(
+    'DELETE',
+    `/api/admin/i18n/${NEW_LOCALE}/${encodeURIComponent(PROBE_KEY)}`,
+  );
+  const removed = await send('GET', `/api/admin/i18n/${NEW_LOCALE}`);
+  check(
+    'and this script leaves the instance as it found it',
+    removed.body?.translated === 0 &&
+      !(await call('/api/config')).body?.availableLocales?.includes(NEW_LOCALE),
   );
 }
 

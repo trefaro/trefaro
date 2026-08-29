@@ -19,7 +19,7 @@ client's cache, so the organizer client was unreachable.
 | `verify-plugin-toggle.mjs` | server + PostgreSQL + `docker exec` into the database container             |
 | `verify-socket.mjs`        | server                                                                      |
 | `verify-push.mjs`          | server + PostgreSQL + a VAPID key pair in `.env`                            |
-| `verify-i18n.mjs`          | server + PostgreSQL + `docker exec` into the database container             |
+| `verify-i18n.mjs`          | server + PostgreSQL + `ADMIN_BOOTSTRAP_*` from `.env` (it signs in)         |
 | `verify-proxy.mjs`         | the full five-container stack; over HTTPS when `PROXY_BASE` is an https URL |
 | `verify-setup.mjs`         | a **fresh** stack with no administrator, and the token from its startup log |
 
@@ -49,8 +49,10 @@ docker compose --env-file .env -f infra/docker-compose.yml up -d --build
 node tools/spike-verification/verify-proxy.mjs
 
 # The catalogues have to be *inside* the image, which is where the source tree
-# stops being evidence:
-BASE=http://localhost:8080 POSTGRES_CONTAINER=trefaro-postgres \
+# stops being evidence — and the second half walks the whole language
+# administration through the API:
+BASE=http://localhost:8080 \
+ADMIN_BOOTSTRAP_EMAIL=… ADMIN_BOOTSTRAP_PASSWORD=… \
   node tools/spike-verification/verify-i18n.mjs
 ```
 
@@ -130,10 +132,14 @@ default port — because they are the WebSocket origin allow-list.
   the server Dockerfile — and a missing one of the three produces an instance
   that answers `200 {}`, after which both clients render their keys. Every suite
   stays green, because they all run `nx serve` from the workspace, where the
-  default path is the library itself. The script also writes and removes one
-  `translation_override` row through `psql`, which is the only way to show the
-  second half of E22 before AP 7 has built the screen for it: a changed word is
-  live on the next request, with no rebuild and no restart.
+  default path is the library itself. Its second half signs in and walks the
+  whole of AP 7 through the API: it creates a language nothing ships, translates
+  one key, offers it to visitors, checks that the public catalogue follows, takes
+  the offer back, checks that the translation survives, and resets it. That is
+  the acceptance criterion of the language administration against a real
+  deployment — and it is what shows the second half of E22, that a changed word
+  is live on the next request with no rebuild and no restart. It restores what it
+  found; without `ADMIN_BOOTSTRAP_*` it skips that half and still runs the rest.
 - `verify-proxy.mjs` also checks what the service worker claims: it replays
   ngsw's own selection rule — one positive pattern matches, no negative one does —
   against the built `ngsw.json`, for `/admin/`, `/api/config` and `/socket.io/`.

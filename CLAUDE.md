@@ -406,12 +406,12 @@ Regeln aus Phase 1, die nicht erneut aufgerollt werden sollten:
   Installations-Story, nicht zur Härtung; `Secure` fallen zu lassen ist keine
   Alternative.
 
-## Stand Phase 2 (in Arbeit; AP 1–6 erledigt, Meilensteine M3 und M4 erreicht)
+## Stand Phase 2 (in Arbeit; AP 1–7 erledigt, Meilensteine M3 und M4 erreicht)
 
 Plan **und Protokoll**: `docs/PHASE2.md` — dreizehn Arbeitspakete, Entscheidungen
-**E17–E29** (die Zählung läuft über die Phasen weiter), Meilensteine M3
+**E17–E30** (die Zählung läuft über die Phasen weiter), Meilensteine M3
 (Whitelabel), M4 (alle P1: brandbar, konfigurierbar, selbst installierbar) und M5
-(Abschluss), Nachträge F60–F66. Was schon umgesetzt ist, steht dort unter
+(Abschluss), Nachträge F60–F76. Was schon umgesetzt ist, steht dort unter
 _Fortschritt_, je Paket ein Abschnitt „erledigt" mit den Abweichungen — dort
 zuerst nachsehen. **Jedes Paket einzeln von Marius freigeben** — nicht ohne
 Aufforderung mit dem nächsten anfangen.
@@ -440,7 +440,13 @@ sechste geteilte Bibliothek (mitgelieferte Kataloge **und** die Angular-Seite),
 `business/i18n/` mit `GET /api/i18n/:locale` (mitgelieferter Katalog überlagert
 von `translation_override`, ETag, 304), Sprachumschalter in beiden Shells,
 `<html lang>` folgt, und `titleKey`/`labelKey` lösen jetzt auf —
-`moduleDisplayName` ist entfallen.
+`moduleDisplayName` ist entfallen · **AP 7** Sprachverwaltung: `TranslationAdminService`
+und `/api/admin/i18n` (Übersicht mit Vollständigkeitszahl, eine Locale je
+Schlüssel, Merge-Write, Zurücksetzen je Schlüssel), `PUT /api/admin/config/locales`
+für `active_locales`/`default_locale`, die Seite `/languages` im
+Veranstalter-Client mit Editor, Filter „nur fehlende“, Export und Import als
+JSON — und `verify-i18n.mjs` geht das Abnahmekriterium jetzt über die API durch
+statt über `psql`.
 
 Reihenfolge: AP 1–3 Whitelabel (FR 1.4) · AP 4 Modulverwaltung (FR 1.5) · AP 5
 Installations-Story mit geführter Ersteinrichtung und TLS-Overlay (FR 1.1,
@@ -468,6 +474,9 @@ in einer frischen Sitzung improvisiert:
   seinen Guard.
 - **Die Ersteinrichtung ist tokengeschützt** (E28); `ADMIN_BOOTSTRAP_*` bleibt
   der unbeaufsichtigte Weg.
+- **Eine Sprache entsteht, indem man sie übersetzt** (E30, seit AP 7); ob
+  Besucher sie wählen können, ist die zweite, getrennte Entscheidung
+  (`active_locales`). Zurücknehmen löscht nie eine Übersetzung.
 
 Regeln aus AP 3, die nicht erneut aufgerollt werden sollten:
 
@@ -655,6 +664,45 @@ Regeln aus AP 6, die nicht erneut aufgerollt werden sollten:
   `provideTranslationsForTest({...})` aus `@trefaro/shared-i18n`. Ohne Argument
   ein leerer Katalog, dann rendert ein Schlüssel als Schlüssel — was ein Test
   über einen Knopf sehen will. Wer eine Beschriftung prüft, nennt die Wörter.
+
+Regeln aus AP 7, die nicht erneut aufgerollt werden sollten:
+
+- **Übersetzen und Anbieten sind zwei Entscheidungen** (E30, F76). Die
+  Sprachverwaltung schreibt Zeilen für **jeden** wohlgeformten Tag — auch für
+  einen, den nichts kennt; `GET /api/admin/i18n/:locale` antwortet deshalb auch
+  dann, sonst müsste man eine Sprache erst den Besuchern zeigen, um das erste
+  Wort übersetzen zu können. Was angeboten wird, steht in `active_locales` und
+  wird über `PUT /api/admin/config/locales` **als Ganzes** geschrieben (die
+  Vorgabesprache muss eine der angebotenen sein, Englisch bleibt immer dabei).
+  Das Zurücknehmen des Angebots löscht nichts.
+- **Vollständigkeit ist übersetzte Schlüssel geteilt durch die englische
+  Schlüsselliste** (F73). Ein Schlüssel zählt, wenn die Sprache einen **eigenen**
+  Text hat (Zeile der Organisation oder mitgelieferte Zeile dieser Sprache) —
+  was nur über die Rückfallkette englisch erscheint, ist genau die Lücke, die die
+  Zahl zeigen soll. Gerechnet wird in `translationCompleteness`
+  (`shared-models`), damit Liste, Editor und Test dieselbe Zahl meinen.
+- **In `translation_override` steht nur, was die Organisation _anders_ haben
+  will** (F74). Ein leerer Wert löscht die Zeile; ein Wert, der dem
+  mitgelieferten Text gleicht, wird nicht gespeichert — sonst überstimmte der
+  erste Import einer exportierten Datei jede künftige Formulierung des Images.
+  Ein Wert **mit** Leerzeichen am Ende wird gespeichert wie er ist.
+- **Ein unbekannter Schlüssel ist hier kein 400** (F75), anders als beim
+  Feld-Baukasten: er kommt aus einer Datei, die vor Monaten exportiert wurde.
+  Importiert wird, was verstanden wurde, und das Ergebnis **nennt** die
+  ignorierten Schlüssel. Ein Klick im Editor und ein Import gehen durch denselben
+  Codepfad — `reset()` ist `write()` mit leerem Wert.
+- **Eine Sprache, an der gerade gearbeitet wird, bleibt in der Liste.** Der
+  Server listet erst, was übersetzt **oder** angeboten ist; die Seite mischt die
+  auf diesem Besuch angefassten Tags dazu, sonst verschwände die gerade angelegte
+  Sprache in dem Moment, in dem ihr letzter Schlüssel zurückgesetzt wird.
+- **Instanzweite Sprachschalter gehören nach `apps/server-e2e`.** Eine dritte
+  Sprache im Umschalter ließe die parallel laufenden Browsersuiten fehlschlagen;
+  der Browsertest der Sprachverwaltung schreibt deshalb nur Übersetzungen, in
+  einer Sprache, die sonst niemand benutzt.
+- **`getByText('0%')` trifft auch die Null in „20 %“.** Playwright vergleicht
+  Teilstrings; ohne `exact: true` beweist so ein Test das Gegenteil dessen, was
+  er behauptet. Und zwei Tabellen auf einer Seite brauchen `aria-label`, sonst
+  trifft ein Zeilen-Locator auch die Kopfzeile der anderen.
 
 ## Betriebskontext
 

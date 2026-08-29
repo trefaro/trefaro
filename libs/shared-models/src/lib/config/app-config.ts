@@ -83,3 +83,55 @@ export interface AppConfigSettings {
 
 /** A `PATCH` on the settings: only what is sent gets written. */
 export type AppConfigChange = Partial<AppConfigSettings>;
+
+/**
+ * A storable language tag: two or three letters, then up to two subtags.
+ *
+ * Not a full BCP 47 parser — the point is that what passes here can be stored in
+ * a `varchar(16)`, put in a URL path, and used as a file name, and that the same
+ * answer is given everywhere. Three places on the server ask the question (the
+ * catalogue endpoint, the configuration, the language administration) and the
+ * organizer client asks it before sending a new language, so the pattern lives
+ * here rather than in four copies that could drift apart on the next regional
+ * tag somebody tries.
+ */
+const LOCALE_TAG_PATTERN = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/;
+
+/**
+ * Whether a string can be stored and served as a language tag.
+ *
+ * Case is not normalised here — `isLocaleTag('de-AT')` is true. Whoever stores
+ * the value lower-cases it, because `de-AT` and `de-at` are one language and a
+ * catalogue served under two spellings is two caches of one answer.
+ */
+export function isLocaleTag(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length <= MAX_LOCALE_TAG_LENGTH &&
+    LOCALE_TAG_PATTERN.test(value)
+  );
+}
+
+/**
+ * How many languages one instance may offer at once.
+ *
+ * A bound rather than a product rule: `active_locales` is read on every
+ * configuration fetch and rendered as a `<select>` in both clients, and an
+ * organization that maintains twenty languages has a bigger problem than this
+ * limit. It exists so a request body cannot make the column unbounded.
+ */
+export const MAX_ACTIVE_LOCALES = 20;
+
+/**
+ * The two locale columns of `app_config`, as the language administration writes
+ * them (AP 7 of phase 2).
+ *
+ * Written as a set rather than one at a time, because the two constrain each
+ * other: the default has to be one of the active ones, and English is always
+ * among them (NFR 4). Two endpoints would need a rule for the moment between
+ * them where the default is not offered any more.
+ */
+export interface LocaleSettings {
+  readonly defaultLocale: string;
+  readonly activeLocales: readonly string[];
+}

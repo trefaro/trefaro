@@ -3,14 +3,16 @@ import type {
   AppConfig,
   AppConfigChange,
   AppConfigSettings,
+  LocaleSettings,
 } from '@trefaro/shared-models';
 import {
-  MAX_LOCALE_TAG_LENGTH,
+  MAX_ACTIVE_LOCALES,
   MAX_ORGANIZATION_NAME_LENGTH,
   PUSH_MODULE_KEY,
   fontFamilyStack,
   isFontFamilyKey,
   isHexColor,
+  isLocaleTag,
 } from '@trefaro/shared-models';
 import { ENV } from '../../core/config/env.module';
 import { brandingImageUrls } from './branding-url';
@@ -165,8 +167,8 @@ export class ConfigurationService {
   /**
    * Sets the language a fresh instance runs in (FR 1.1, AP 5).
    *
-   * The only writer of the locale columns until the language administration
-   * arrives, and not part of {@link updateSettings}: the design page must not be
+   * The first-run setup's own writer, beside {@link setLocales} — and not part of
+   * {@link updateSettings}: the design page must not be
    * able to change the language of every outgoing mail by sending one more field
    * (E20 makes that invisible until the next reload), and the set of legal
    * values is decided elsewhere — by which mail templates this image ships,
@@ -182,14 +184,7 @@ export class ConfigurationService {
    * is never empty.
    */
   async setDefaultLocale(locale: string): Promise<void> {
-    const tag = locale.trim();
-    if (tag.length > MAX_LOCALE_TAG_LENGTH || !LOCALE_TAG_PATTERN.test(tag)) {
-      throw new BadRequestException(
-        'defaultLocale must be a BCP 47 language tag such as de or de-AT',
-      );
-    }
-
-    const canonical = tag.toLowerCase();
+    const canonical = canonicalLocale(locale, 'defaultLocale');
     await this.appConfig.setLocales({
       defaultLocale: canonical,
       activeLocales:
@@ -198,6 +193,94 @@ export class ConfigurationService {
           : [FALLBACK_UI_LOCALE, canonical],
     });
   }
+
+  /**
+   * Which languages this instance offers, and which one it defaults to.
+   *
+   * A reader of its own rather than a slice of {@link getAppConfig}: the language
+   * administration and the mail module both want these two values and nothing
+   * else, and the public payload also carries the theme, the enabled modules and
+   * the plug-in descriptors.
+   */
+  async getLocaleSettings(): Promise<LocaleSettings> {
+    const config = await this.appConfig.load();
+    return {
+      defaultLocale: config.defaultLocale,
+      activeLocales: config.availableLocales,
+    };
+  }
+
+  /**
+   * Sets the languages the organization offers (FR 1.4, AP 7).
+   *
+   * Written as a set, because the two values constrain each other: the default
+   * has to be one of the offered ones, and a pair of endpoints would have a
+   * moment between them in which it is not. The rules enforced here:
+   *
+   * - **English stays** (NFR 4). It is added if it was left out rather than
+   *   refused: the column has a `CHECK` that it is never empty, English is the
+   *   last link of the resolution chain (E23), and an organization that removed
+   *   it would leave every untranslated key with nothing to fall back to.
+   * - **The default is one of them.** Refused rather than corrected — which
+   *   language a first-time visitor sees and every mail goes out in is too
+   *   consequential to be inferred from a mistake.
+   * - **Nothing about translations.** Offering a language that is barely
+   *   translated is allowed on purpose (E23): a client falls back per key, and
+   *   the language administration shows the figure beside the switch. And
+   *   removing one deletes no row (E30) — the work stays for the next attempt.
+   */
+  async setLocales(change: LocaleSettings): Promise<LocaleSettings> {
+    const requested = change.activeLocales.map((locale) =>
+      canonicalLocale(locale, 'activeLocales'),
+    );
+    // Deduplicated in the order it was sent, so the `<select>` in both clients
+    // keeps the order an organizer chose.
+    const active = [...new Set([FALLBACK_UI_LOCALE, ...requested])];
+
+    if (active.length > MAX_ACTIVE_LOCALES) {
+      throw new BadRequestException(
+        `activeLocales must not contain more than ${MAX_ACTIVE_LOCALES} languages`,
+      );
+    }
+
+    const defaultLocale = canonicalLocale(
+      change.defaultLocale,
+      'defaultLocale',
+    );
+    if (!active.includes(defaultLocale)) {
+      throw new BadRequestException(
+        'defaultLocale must be one of the active locales',
+      );
+    }
+
+    const record = await this.appConfig.setLocales({
+      defaultLocale,
+      activeLocales: active,
+    });
+
+    return {
+      defaultLocale: record.defaultLocale,
+      activeLocales: record.availableLocales,
+    };
+  }
+}
+
+/**
+ * One well-formed, storable, lower-cased tag — or a 400 naming the field.
+ *
+ * The shape check lives in `shared-models` (`isLocaleTag`), because the catalogue
+ * endpoint and the language administration ask the same question and a second
+ * pattern here would be a second answer. What stays here is the message: a
+ * request that is refused should say which value was wrong.
+ */
+function canonicalLocale(locale: string, field: string): string {
+  const tag = locale.trim();
+  if (!isLocaleTag(tag)) {
+    throw new BadRequestException(
+      `${field} must be a BCP 47 language tag such as de or de-AT`,
+    );
+  }
+  return tag.toLowerCase();
 }
 
 /**
@@ -208,14 +291,6 @@ export class ConfigurationService {
  * this module depend on one that depends on it.
  */
 const FALLBACK_UI_LOCALE = 'en';
-
-/**
- * A storable language tag: two or three letters, then up to two subtags.
- *
- * Checked together with {@link MAX_LOCALE_TAG_LENGTH}, so a value that passes
- * cannot fail in the database.
- */
-const LOCALE_TAG_PATTERN = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/;
 
 type WritableChange = {
   -readonly [K in keyof AppConfigChange]: AppConfigChange[K];

@@ -2,7 +2,7 @@ import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import {
   FALLBACK_LOCALE,
-  MAX_LOCALE_TAG_LENGTH,
+  isLocaleTag,
   type TranslationCatalogue,
 } from '@trefaro/shared-models';
 import { ConfigurationService } from '../config';
@@ -21,15 +21,6 @@ export interface ResolvedCatalogue {
   readonly catalogue: TranslationCatalogue;
   readonly etag: string;
 }
-
-/**
- * A storable, servable language tag — the same shape the configuration accepts.
- *
- * Repeated here rather than shared with `ConfigurationService`, because this one
- * also guards a file name: the tag arrives in a URL, and what it must not be
- * able to do is describe a path.
- */
-const LOCALE_TAG_PATTERN = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/;
 
 /**
  * The catalogue both clients fetch, and the mails will (E22, E23).
@@ -128,7 +119,10 @@ export class CatalogueService {
    */
   private canonical(locale: string): string {
     const tag = locale.trim();
-    if (tag.length > MAX_LOCALE_TAG_LENGTH || !LOCALE_TAG_PATTERN.test(tag)) {
+    // `isLocaleTag` is also what makes this safe to hand to the shipped
+    // catalogue reader: the tag arrives in a URL, and what it must not be able to
+    // do is describe a path.
+    if (!isLocaleTag(tag)) {
       throw new BadRequestException(
         'locale must be a BCP 47 language tag such as de or de-AT',
       );

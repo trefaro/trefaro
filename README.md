@@ -29,10 +29,13 @@ off, walks an operator through its own first-run setup (with TLS as a compose
 overlay), and speaks English and German with a switch that takes effect without a
 reload. The interface text is **data the instance serves**, not strings baked into
 a client — so an organization can correct a word, or add a language, without
-rebuilding anything.
+rebuilding anything: the administration lists every language with how far it is
+translated, edits it key by key beside the English original, takes a translation
+file out and back in again, and decides separately which languages visitors may
+choose.
 
-**Not built yet:** the language administration, the rest of the text extraction,
-translated mails, content translations and the PWA polish (phase 2 — planned and
+**Not built yet:** the rest of the text extraction, translated mails, content
+translations and the PWA polish (phase 2 — planned and
 recorded in [`docs/PHASE2.md`](docs/PHASE2.md)); participant login, profiles, messaging,
 real-time chat and push (phase 3); the four curated plug-ins — programme
 proposals, forum, room planning, QR check-in (phase 4). What is deferred and why

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Put } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiOkResponse,
@@ -11,6 +11,7 @@ import {
   AppConfigSettingsDto,
   UpdateAppConfigDto,
 } from './dto/app-config-settings.dto';
+import { LocaleSettingsDto } from './dto/locale-settings.dto';
 
 /**
  * The instance's whitelabel settings, for the organizer client (FR 1.4).
@@ -56,5 +57,28 @@ export class AdminConfigController {
     return this.configuration.updateSettings(
       body,
     ) as Promise<AppConfigSettingsDto>;
+  }
+
+  @Put('locales')
+  @ApiOperation({
+    summary:
+      'Which languages the instance offers, and which one it defaults to',
+    description:
+      'Not part of the `PATCH` above: the design page must not be able to ' +
+      'change the language of every outgoing mail by sending one more field. ' +
+      'Written as a set, because the two values constrain each other — the ' +
+      'default has to be one of the offered ones. English is added if it is ' +
+      'left out (NFR 4, E23). Offering a barely translated language is ' +
+      'allowed; removing one deletes no translation (E30).',
+  })
+  @ApiOkResponse({ type: LocaleSettingsDto })
+  @ApiBadRequestResponse({
+    description:
+      'A tag that is not BCP 47, a default that is not among the active ' +
+      'locales, an empty list, or more languages than one instance may offer.',
+  })
+  @ApiUnauthorizedResponse({ description: 'No administrative session.' })
+  setLocales(@Body() body: LocaleSettingsDto): Promise<LocaleSettingsDto> {
+    return this.configuration.setLocales(body) as Promise<LocaleSettingsDto>;
   }
 }

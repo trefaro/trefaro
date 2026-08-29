@@ -296,8 +296,32 @@ someone who has never chosen gets whatever their browser asks for.
 The text itself is **served by your instance**, not compiled into the clients:
 `GET /api/i18n/en` answers the catalogue that shipped with the image, overlaid
 with whatever your organization has changed. So a wording you disagree with is a
-row in the database, not a rebuild — the screen that edits those rows arrives in
-the next work package, and the mechanism is already in place under it.
+row in the database, not a rebuild.
+
+**Languages** in the administration is where that happens:
+
+- Every language is listed with how far it is translated, counted against the
+  English catalogue — English is the list of keys and the last resort, so a key
+  nobody has translated shows its English text rather than a blank.
+- **Editing** is per key, with the English original beside the field and a
+  filter for the ones still missing. _Reset_ puts a key back to the text the
+  image ships; it only ever removes your own row.
+- **Adding a language** is typing its tag (`fr`, `pt-BR`, …) and translating it.
+  Nothing has to be rebuilt and nothing has to be installed.
+- **Offered** and **Default** are a separate decision from the translation:
+  ticking _Offered_ puts a language in the switch both clients show, and _Save
+  offered languages_ writes it. Taking the tick away hides the language again
+  and **keeps every translation** — English cannot be removed, and the default
+  has to be one of the offered ones.
+- **Export JSON** and **Import JSON** are for translation work outside the
+  application: the export has every key with your text (empty where there is
+  none), and importing the file back writes what it recognises and tells you
+  which keys it did not know — a file from an older version of Trefaro is
+  imported, not refused.
+
+A change is live on the next load of either client; nothing pushes it to a
+browser that is already open. Outgoing mail still uses the templates the image
+ships and follows the default language.
 
 Nothing here needs configuring. `I18N_CATALOGUE_DIR` belongs to the image and
 points at the catalogues inside it.

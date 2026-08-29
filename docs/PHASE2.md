@@ -1,9 +1,9 @@
 # Phase 2 — Whitelabel, Konfiguration, Mehrsprachigkeit, PWA
 
-**Status: in Arbeit** (28.08.2026). **AP 1 bis AP 6 sind erledigt** (siehe
+**Status: in Arbeit** (29.08.2026). **AP 1 bis AP 7 sind erledigt** (siehe
 _Fortschritt_) — damit sind **Meilenstein M3** und **Meilenstein M4** erreicht;
 die Abschnitte oberhalb davon sind Plan, nicht Protokoll. Wie in Phase 1 gibt
-Marius jedes Paket einzeln frei — AP 7 wartet auf seine Freigabe.
+Marius jedes Paket einzeln frei — AP 8 wartet auf seine Freigabe.
 
 **Die Entscheidungen E17–E29 sind am 28.08.2026 von Marius bestätigt** — sie
 werden nicht erneut aufgerollt, sondern nur gegen die Umsetzung geprüft (wie
@@ -279,6 +279,24 @@ Certbot im Stack: ein sechster Container, ein Erneuerungszeitplan und ein Anspru
 auf Port 80 — und viele Organisationen terminieren TLS ohnehin zentral. `Secure`
 fallen zu lassen ist keine Alternative (E2).
 
+**E30 — Eine Sprache entsteht, indem man sie übersetzt; angeboten wird sie
+getrennt davon.** `translation_override` hat bewusst keinen Fremdschlüssel auf
+`active_locales` (Schema 5.3 sagt es schon), und AP 7 macht daraus eine
+Bedienregel: die Sprachverwaltung schreibt Zeilen für **jeden** wohlgeformten
+BCP-47-Tag, ob das Image ihn mitbringt oder nicht und ob die Organisation ihn
+anbietet oder nicht. Ob Besucher ihn wählen können, ist die zweite, getrennte
+Entscheidung — `app_config.active_locales`, geschrieben über
+`PUT /api/admin/config/locales`. Drei Folgen: `GET /api/admin/i18n/:locale`
+antwortet auch für eine Sprache, von der noch nichts existiert (sonst müsste man
+sie erst den Besuchern zeigen, um das erste Wort übersetzen zu können); die Liste
+der Sprachen ist die **Vereinigung** aus mitgeliefert, angeboten und übersetzt,
+damit halbfertige Arbeit nicht von dem Bildschirm verschwindet, der sie fertig
+machen soll; und das Zurücknehmen des Angebots löscht **nichts** — es ist der
+Unterschied zwischen „wir zeigen das gerade nicht“ und „wir werfen die Arbeit
+weg“. Englisch bleibt immer angeboten (NFR 4, E23), und die Vorgabesprache muss
+eine der angebotenen sein — beides wird beim Schreiben erzwungen, nicht
+angenommen.
+
 ---
 
 ## Datenbankschema der Phase
@@ -326,23 +344,25 @@ Kein Schema für das Setup-Token (E28: Speicher) und keins für die Schriftarten
 
 ## API-Oberfläche
 
-| Methode + Pfad                                              | Zweck                                                      | AP  |
-| ----------------------------------------------------------- | ---------------------------------------------------------- | --- |
-| `GET/PATCH /api/admin/config`                               | FR 1.4: Name, Farben, Schrift, Locales                     | 1   |
-| `PUT/DELETE /api/admin/config/logo`                         | Logo hoch- und wegnehmen                                   | 2   |
-| `PUT/DELETE /api/admin/config/app-icon`                     | App-Icon (E26)                                             | 2   |
-| `GET /api/media/branding/logo` · `app-icon`                 | öffentlich, ohne Pfad vom Aufrufer (E19)                   | 2   |
-| `GET /api/admin/modules`                                    | FR 1.5: Kernmodule und Plug-ins mit Zustand                | 4   |
-| `PATCH /api/admin/modules/:key`                             | an/aus, mit `refresh()` auf beiden Registries              | 4   |
-| `GET /api/setup/state` · `POST /api/setup/admin`            | FR 1.1: geführte Ersteinrichtung, 404 danach (E28)         | 5   |
-| `GET /api/i18n/:locale`                                     | Katalog, öffentlich (E22)                                  | 6   |
-| `GET /api/admin/i18n`                                       | Locales mit Vollständigkeit und fehlenden Schlüsseln (E23) | 7   |
-| `PUT/DELETE /api/admin/i18n/:locale`                        | Änderungen der Instanz schreiben, zurücksetzen             | 7   |
-| `GET /api/config/manifest.webmanifest`                      | F20, aus der Konfiguration gebaut (E26)                    | 12  |
-| `GET/PUT/DELETE /api/admin/series/:id/translations/:locale` | FR 3.12                                                    | 11  |
-| `GET/PUT/DELETE /api/admin/events/:id/translations/:locale` | FR 3.12                                                    | 11  |
-| `… /api/admin/program-items/:id/translations/:locale`       | FR 3.12                                                    | 11  |
-| `GET /api/user/**?locale=…`                                 | die öffentlichen Leseendpunkte nehmen eine Locale (E25)    | 11  |
+| Methode + Pfad                                              | Zweck                                                              | AP  |
+| ----------------------------------------------------------- | ------------------------------------------------------------------ | --- |
+| `GET/PATCH /api/admin/config`                               | FR 1.4: Name, Farben, Schrift, Locales                             | 1   |
+| `PUT/DELETE /api/admin/config/logo`                         | Logo hoch- und wegnehmen                                           | 2   |
+| `PUT/DELETE /api/admin/config/app-icon`                     | App-Icon (E26)                                                     | 2   |
+| `GET /api/media/branding/logo` · `app-icon`                 | öffentlich, ohne Pfad vom Aufrufer (E19)                           | 2   |
+| `GET /api/admin/modules`                                    | FR 1.5: Kernmodule und Plug-ins mit Zustand                        | 4   |
+| `PATCH /api/admin/modules/:key`                             | an/aus, mit `refresh()` auf beiden Registries                      | 4   |
+| `GET /api/setup/state` · `POST /api/setup/admin`            | FR 1.1: geführte Ersteinrichtung, 404 danach (E28)                 | 5   |
+| `GET /api/i18n/:locale`                                     | Katalog, öffentlich (E22)                                          | 6   |
+| `GET /api/admin/i18n` · `GET /api/admin/i18n/:locale`       | Locales mit Vollständigkeit, dann eine Locale je Schlüssel (E23)   | 7   |
+| `PUT /api/admin/i18n/:locale`                               | Änderungen der Instanz schreiben — ein Schlüssel oder ein Import   | 7   |
+| `DELETE /api/admin/i18n/:locale/:key`                       | einen Schlüssel auf den mitgelieferten Text zurücksetzen           | 7   |
+| `PUT /api/admin/config/locales`                             | welche Sprachen angeboten werden, und welche die Vorgabe ist (E30) | 7   |
+| `GET /api/config/manifest.webmanifest`                      | F20, aus der Konfiguration gebaut (E26)                            | 12  |
+| `GET/PUT/DELETE /api/admin/series/:id/translations/:locale` | FR 3.12                                                            | 11  |
+| `GET/PUT/DELETE /api/admin/events/:id/translations/:locale` | FR 3.12                                                            | 11  |
+| `… /api/admin/program-items/:id/translations/:locale`       | FR 3.12                                                            | 11  |
+| `GET /api/user/**?locale=…`                                 | die öffentlichen Leseendpunkte nehmen eine Locale (E25)            | 11  |
 
 `GET /api/config` wächst um `organizationName`, `publicUserClientUrl` (damit der
 Veranstalter-Client auf die öffentliche Seite verlinken kann — steht seit AP 10
@@ -617,6 +637,10 @@ Wird beim jeweiligen Paket eingetragen, nicht am Ende gesammelt:
 | F70 | Gestalt und Herkunft eines Übersetzungsschlüssels; flach, gepunktet, `lowerCamelCase` (E22)       | 6   |
 | F71 | Welche Sprachen eine frische Instanz anbietet — die, die das Image mitbringt (NFR 4)              | 6   |
 | F72 | Transloco und zoneless: was die Vorprüfung wirklich fand (Bezug E20)                              | 6   |
+| F73 | Vollständigkeit ist eine Zahl über die englische Schlüsselliste (E23)                             | 7   |
+| F74 | Ein leerer Wert ist keine Übersetzung — und der mitgelieferte Text wird nicht gespeichert (E22)   | 7   |
+| F75 | Import ist ein Merge, und unbekannte Schlüssel werden genannt statt geschluckt                    | 7   |
+| F76 | Sprachen anbieten ist eine Entscheidung über `app_config`, nicht über die Übersetzungen (E30)     | 7   |
 
 Anhangspunkt 18 (TLS gehört zur Installations-Story) ist in AP 5 von „geplant"
 auf „umgesetzt" gezogen.
@@ -1275,3 +1299,116 @@ noch, der Port ist deshalb lesend); **keine** Textextraktion aus den Templates
 auflöst); keine übersetzten Mails (AP 10, E24 — die Vorlagen liegen weiter in
 TypeScript); keine übersetzten Seitentitel und keine `TitleStrategy`; und keine
 Inhaltsübersetzungen (AP 11).
+
+### AP 7 — Sprachen pflegbar machen (erledigt)
+
+Das Paket, das aus „neue Sprachen müssen durch die Organisation pflegbar sein“
+eine Handlung macht: eine Sprache anlegen, sie Schlüssel für Schlüssel neben dem
+englischen Original übersetzen, sehen wie weit sie ist, einen Schlüssel
+zurücksetzen, die Datei für Übersetzungsarbeit außerhalb der Anwendung heraus-
+und wieder hereingeben — und getrennt davon entscheiden, ob Besucher sie
+überhaupt wählen können (E30).
+
+Umgesetzt:
+
+- **`shared-models`** — `lib/i18n/administration.ts` (`LocaleOverview`,
+  `LocaleSummary`, `LocaleCatalogueDetail`, `TranslationEntry` mit den vier
+  Texten nebeneinander, `TranslationWriteResult`, `translationCompleteness`) und
+  in `lib/config/app-config.ts` **`isLocaleTag`**, `MAX_ACTIVE_LOCALES`,
+  `LocaleSettings`. `isLocaleTag` ersetzt die drei Kopien desselben Musters, die
+  sonst entstanden wären.
+- **Server, `business/i18n/`** — `TranslationAdminService` (Vollständigkeit,
+  Detail je Schlüssel, Merge-Write, Zurücksetzen), `I18nAdminController`
+  (`GET /api/admin/i18n`, `GET`/`PUT /api/admin/i18n/:locale`,
+  `DELETE /api/admin/i18n/:locale/:key`), DTOs. Der Port
+  `TranslationOverrideRepository` bekommt **eine** Schreibmethode: `apply()`
+  schreibt und löscht eine Sprache in einer Transaktion.
+- **Server, `business/config/`** — `ConfigurationService.getLocaleSettings()` und
+  `setLocales()`, `PUT /api/admin/config/locales`. Englisch wird ergänzt, wenn es
+  fehlt; eine Vorgabesprache außerhalb der angebotenen ist ein 400.
+- **Veranstalter-Client** — Seite `/languages`: Liste mit Zahl, Häkchen
+  „Offered“, Radio „Default“, Anlegen über einen Tag, Editor mit dem englischen
+  Text neben jedem Feld, Filter „nur fehlende“, Suche, Zurücksetzen je Schlüssel,
+  Export und Import als JSON. Dazu `TranslationsAdminService` und
+  `ConfigAdminService.setLocales()`.
+- **`verify-i18n.mjs`** — läuft jetzt über die API statt über `psql`: es meldet
+  sich an und geht das ganze Abnahmekriterium durch (Sprache anlegen, übersetzen,
+  anbieten, öffentliche Antwort prüfen, Angebot zurücknehmen, Übersetzung
+  überlebt, zurücksetzen), 25 Prüfungen.
+
+Nachweise: `nx run-many -t lint test build` grün für alle Projekte,
+`nx format:check` sauber. Neu: 29 Unit-Tests zum `TranslationAdminService`,
+11 im Veranstalter-Client zur Seite, 15 API-Vertragstests
+(`apps/server-e2e/src/api/admin-i18n.spec.ts`), 4 Browser-Tests. Suiten:
+`server-e2e` 19 Suiten / 337 Tests, `admin-client-e2e` 239, `user-client-e2e` 165. `verify-i18n.mjs` 25/25 gegen eine laufende Instanz. F73–F76 und E30 stehen
+im Referenzdokument bzw. oben.
+
+Abweichungen und ihre Gründe:
+
+- **Zwei Endpunkte statt der geplanten zwei — aber andere.** Der Plan sah
+  `PUT/DELETE /api/admin/i18n/:locale` vor. Ein `DELETE` auf die ganze Sprache
+  wäre ein Knopf, den niemand drückt; gebraucht wird „diesen einen Schlüssel
+  zurücksetzen“, also `DELETE /api/admin/i18n/:locale/:key`. Und das Setzen von
+  `active_locales`/`default_locale` liegt **nicht** unter `/api/admin/i18n`,
+  sondern auf `PUT /api/admin/config/locales`: es sind zwei Spalten von
+  `app_config`, ein zweiter Schreiber derselben Zeile wäre einer zu viel — und
+  `…/i18n/locales` hätte mit `…/i18n/:locale` um dieselbe Route gestritten.
+- **Zurücksetzen und Schreiben sind ein Codepfad.** `reset(locale, key)` ruft
+  `write(locale, {key: ''})`. Zwei Pfade wären zwei Antworten auf die Frage, was
+  ein leerer Wert bedeutet — und genau diese Frage muss der Import beantworten
+  können (F74).
+- **Ein Wert, der dem mitgelieferten Text gleicht, wird nicht gespeichert.**
+  Sonst entstünde beim ersten Import einer exportierten Datei für jede Zeile
+  eine Zeile in `translation_override` — und jede davon würde die Formulierung
+  des nächsten Images überstimmen. Wer heute „Sprache“ schreibt, weil dort
+  „Sprache“ steht, will nicht, dass es „Sprache“ bleibt, wenn das Image es
+  ändert (F74).
+- **Ein unbekannter Schlüssel ist kein 400.** Das widerspricht der Regel aus
+  Phase 1 („ein unbekannter Feldschlüssel ist ein 400, kein stilles Verwerfen“),
+  und zwar mit Absicht: dort ist der Schlüssel eine Frage, die dieses Event
+  gestellt hat, hier ist er eine Zeile in einer Datei, die eine Übersetzerin vor
+  einem halben Jahr bekommen hat. Ein 400 machte die ganze Datei unbenutzbar. Der
+  Ausweg ist die dritte Möglichkeit: importieren, **und die ignorierten
+  Schlüssel im Ergebnis benennen** (F75). Still verworfen wird nichts.
+- **Der Whitespace-Fall ist entschieden, der Trailing-Space-Fall auch.** Ein Wert
+  aus lauter Leerzeichen ist „keine eigene Übersetzung“ und löscht die Zeile;
+  ein Wert **mit** Leerzeichen am Ende wird gespeichert wie er ist. Eine
+  Übersetzung darf auf ein Leerzeichen enden, und es stillschweigend zu
+  entfernen wäre eine Formatierungsentscheidung hinter dem Rücken der
+  Übersetzerin.
+- **Die Vorgabesprache wird nicht auf Sprachen mit Mailvorlagen eingeschränkt.**
+  Die Ersteinrichtung tut das (AP 5), weil dort niemand nachsehen kann; hier
+  nicht, weil `mailTemplates()` ohnehin am Tag entlang auf Englisch zurückfällt
+  und AP 10 diese Einschränkung ganz auflöst. Eine Organisation, die ihre
+  Instanz auf Französisch stellt, bekommt bis AP 10 englische Mails — das ist
+  E24 in klein und kein Datenverlust.
+- **Die Liste zeigt, woran gerade gearbeitet wird.** Der Server listet eine
+  Sprache erst, wenn sie übersetzt **oder** angeboten ist — richtig für eine
+  Antwort, falsch für einen Bildschirm: der gerade angelegte Tag, und die
+  Sprache, deren letzter Schlüssel eben zurückgesetzt wurde, verschwänden aus
+  der Zeile, während ihr Editor darunter offen steht. Die Seite hält deshalb
+  eine kleine Menge „auf diesem Besuch angefasst“ und mischt sie in die Antwort.
+  Gefunden hat es der Browserdurchlauf, nicht der Unit-Test.
+- **Das Angebot wird als Ganzes geschrieben, die Übersetzungen auch.** Ein
+  Häkchen schreibt nicht sofort: die Vorgabesprache muss eine der angebotenen
+  sein, also gäbe es zwischen zwei Anfragen einen Moment, in dem sie es nicht
+  ist. Und alle geänderten Felder gehen in **einer** Anfrage raus, die der Server
+  in **einer** Transaktion anwendet — dieselbe Linie wie beim Umsortieren des
+  Formulars in Phase 1.
+- **Der Browsertest fasst `active_locales` nicht an.** Eine dritte Sprache im
+  Umschalter würde zwei andere Suiten zum Fehlschlagen bringen, die parallel
+  laufen. Diese Hälfte des Abnahmekriteriums steht deshalb in
+  `apps/server-e2e` (dort läuft eine Suite allein) und in `verify-i18n.mjs`; der
+  Browsertest schreibt nur Übersetzungen, und zwar in einer Sprache, die sonst
+  niemand benutzt.
+- **`getByText('0%')` findet auch die Null in „20 %“.** Playwrights
+  Textvergleich ist ein Teilstring — der Test bewies das Gegenteil dessen, was er
+  behauptete, bis `exact: true` daran stand. Und zwei Tabellen auf einer Seite
+  brauchen `aria-label`, sonst trifft ein Zeilen-Locator auch die Kopfzeile der
+  anderen; das ist zugleich die Barrierefreiheits-Korrektur (NFR 4).
+
+Was AP 7 **nicht** enthält: keine Übersetzung der Sprachverwaltung selbst — die
+Seite ist englisch wie jede andere Seite dieses Clients bis AP 9; keine
+Textextraktion (AP 8, AP 9); keine übersetzten Mails (AP 10); keine
+Inhaltsübersetzungen (AP 11); und **keinen** Upload eigener Schriftarten (E18,
+steht weiter in `todo.md`).

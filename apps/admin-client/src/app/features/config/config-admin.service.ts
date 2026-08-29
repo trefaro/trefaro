@@ -5,6 +5,7 @@ import type {
   AppConfigSettings,
   BrandingImageKind,
   BrandingImages,
+  LocaleSettings,
 } from '@trefaro/shared-models';
 import { BRANDING_IMAGE_PART } from '@trefaro/shared-models';
 import { firstValueFrom } from 'rxjs';
@@ -63,6 +64,21 @@ export class ConfigAdminService {
   removeImage(kind: BrandingImageKind): Promise<BrandingImages> {
     return firstValueFrom(
       this.api.delete<BrandingImages>(`admin/config/${kind}`),
+    );
+  }
+
+  /**
+   * Which languages the instance offers, and which one it defaults to (AP 7).
+   *
+   * A `PUT` of both values, not a `PATCH` of one: the default has to be one of
+   * the offered ones, so sending them separately would have a moment in between
+   * where it is not. Here rather than in the language administration's own
+   * service because these are two columns of `app_config` — the translations and
+   * the decision to offer them are different things (E30).
+   */
+  setLocales(settings: LocaleSettings): Promise<LocaleSettings> {
+    return firstValueFrom(
+      this.api.put<LocaleSettings>('admin/config/locales', settings),
     );
   }
 }
