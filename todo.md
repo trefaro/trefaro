@@ -72,7 +72,12 @@ an instance were exposed today.
       would put registration attachments one guess away (E9).
       **Not built in AP 13**, which is a closing package and not the place to add
       a P1 feature unasked — it is a work package of its own, of about the size
-      of AP 2. Verify: upload a logo on a series, see it on the start page.
+      of AP 2.
+      **Scheduled by Marius on 31.08.2026: it is built before phase 3 starts**,
+      as a package of its own rather than folded into either phase. So it is no
+      longer an open gap waiting for a decision — it is the next piece of work,
+      and phase 3 does not begin until it is done. Verify: upload a logo on a
+      series, see it on the start page.
 
 ---
 

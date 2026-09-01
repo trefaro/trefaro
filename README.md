@@ -46,6 +46,9 @@ is in [`todo.md`](todo.md).
 `docs/BOOTSTRAP.md` sets up a development environment.
 `docs/Anforderungsanalyse_und_Umsetzungsplan.md` (German) holds the full
 requirements analysis and implementation plan.
+[`docs/rules/`](docs/rules/README.md) (German) collects the conventions and traps
+of each area — read the file for an area before changing it; what is written
+there has gone wrong at least once.
 
 ## Getting started
 
