@@ -1,6 +1,11 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { ApiClient } from '@trefaro/shared-http';
-import type { EventSeries, EventSeriesInput } from '@trefaro/shared-models';
+import type {
+  EventSeries,
+  EventSeriesInput,
+  LogoImage,
+} from '@trefaro/shared-models';
+import { BRANDING_IMAGE_PART } from '@trefaro/shared-models';
 import { firstValueFrom } from 'rxjs';
 
 /** Event series as the organizer manages them (FR 2.1, FR 2.2). */
@@ -45,6 +50,32 @@ export class EventSeriesAdminService {
     );
     await this.reload();
     return updated;
+  }
+
+  /**
+   * Replaces the logo of one series (FR 2.1).
+   *
+   * `FormData` with a single part, whose name is part of the contract
+   * (`BRANDING_IMAGE_PART`) — the same part the branding uploads use, because
+   * the rules for what may be uploaded are the same. The content type is
+   * deliberately not set: the browser writes it including the multipart
+   * boundary, and a hand-set header loses the boundary.
+   *
+   * Written immediately, not on the next save of the form: the answer is the new
+   * URL, and the form redraws from it.
+   */
+  uploadLogo(id: string, file: File): Promise<LogoImage> {
+    const body = new FormData();
+    body.append(BRANDING_IMAGE_PART, file, file.name);
+    return firstValueFrom(
+      this.api.put<LogoImage>(`admin/series/${id}/logo`, body),
+    );
+  }
+
+  removeLogo(id: string): Promise<LogoImage> {
+    return firstValueFrom(
+      this.api.delete<LogoImage>(`admin/series/${id}/logo`),
+    );
   }
 
   async remove(id: string): Promise<void> {

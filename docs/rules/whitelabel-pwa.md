@@ -23,8 +23,18 @@ Kontrast auf ihrem Startbildschirm landet.
   öffentlich, Anhänge nicht (E9) — die zwei Dateiarten dürfen nicht in einer URL
   verwechselbar sein. Eigener `branding/`-Teilbaum im Upload-Volume, `CHECK` auf
   beide Pfadspalten, Typ aus den ersten Bytes, **kein SVG**.
+- **Ein Zeilen-Logo folgt denselben Uploadregeln wie das Branding** (F117):
+  derselbe Katalog (PNG/JPEG/WebP, kein SVG), derselbe Deckel
+  (`MAX_BRANDING_BYTES`), derselbe Teilname (`file`). Ein zweiter, laxerer Satz
+  wäre der, den ein Angreifer wählt; ein strengerer wäre nicht erklärbar. Die
+  Namen klingen dadurch zu eng — das ist der Preis und kein Versehen. Gemeinsam
+  ist auch das Bauteil: `ImageUploadField` im Veranstalter-Client kennt seinen
+  Endpunkt nicht, er wird ihm übergeben.
 - **Ein Bild wird beim Hochladen geschrieben, nicht beim Speichern** — zwei
-  Schritte je Bild, und „Discard changes" erfasst es ausdrücklich nicht.
+  Schritte je Bild, und „Discard changes" erfasst es ausdrücklich nicht. Folge für
+  Zeilen-Logos (F116): eine Reihe oder ein Event, die es noch nicht gibt, haben
+  nichts, woran eine Datei hängen könnte — also trägt `/series/new` **kein**
+  Logofeld. Benannt wird auf dem ersten Bildschirm, bebildert auf dem nächsten.
 - **Das Manifest kommt vom Server**, gebaut aus der Konfiguration (E26, F103):
   `GET /api/config/manifest.webmanifest` in `business/manifest/`, einem Modul über
   `ConfigurationModule` und `I18nModule`. Ein statisches Manifest im Client-Image

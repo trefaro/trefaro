@@ -462,6 +462,54 @@ export const BRANDING = {
  * Drawn rather than committed (see `demoPng`). A ring and three bars — enough to
  * be recognizably a mark and obviously not a real organization's.
  */
+/**
+ * A logo for one series and one event (FR 2.1, FR 3.1).
+ *
+ * Only one of each on purpose. A row logo is the exception — most series and
+ * events carry the organization's mark from the header — and a demo instance in
+ * which *every* row has its own picture would show a feature working while
+ * hiding what it is for. Deliberately unlike the organization logo, so the two
+ * are distinguishable on the start page at a glance.
+ */
+export const SERIES_LOGO = {
+  width: 320,
+  height: 120,
+  paint: (x, y) => {
+    const accent = hexToRgb(BRANDING.accentColor);
+    const primary = hexToRgb(BRANDING.primaryColor);
+
+    // A ring of twelve dots — a nod to the European stars, since the series is
+    // about European democracy.
+    for (let index = 0; index < 12; index += 1) {
+      const angle = (index / 12) * Math.PI * 2;
+      const cx = 60 + Math.cos(angle) * 38;
+      const cy = 60 + Math.sin(angle) * 38;
+      if (distance(x, y, cx, cy) <= 7) return [...accent, 255];
+    }
+
+    // Two bars where a wordmark would sit.
+    if (x >= 130 && x < 300 && y >= 44 && y < 58) return [...primary, 255];
+    if (x >= 130 && x < 250 && y >= 66 && y < 76) return [...accent, 255];
+    return [0, 0, 0, 0];
+  },
+};
+
+/** A mark for one event, square-ish, so it reads differently from the series'. */
+export const EVENT_LOGO = {
+  width: 160,
+  height: 160,
+  paint: (x, y) => {
+    const primary = hexToRgb(BRANDING.primaryColor);
+    const accent = hexToRgb(BRANDING.accentColor);
+
+    if (!insideRoundedSquare(x, y, 160, 28)) return [0, 0, 0, 0];
+    // A thick chevron, pointing forward.
+    const stroke = Math.abs(x - 60 - Math.abs(y - 80));
+    if (stroke <= 14) return [...accent, 255];
+    return [...primary, 255];
+  },
+};
+
 export const LOGO = {
   width: 480,
   height: 120,

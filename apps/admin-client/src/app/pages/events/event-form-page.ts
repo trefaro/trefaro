@@ -25,6 +25,10 @@ import {
   wallClockToInstant,
 } from '@trefaro/shared-models';
 import { EventsAdminService } from '../../features/events/events-admin.service';
+import {
+  ImageUploadField,
+  type ImageEndpoint,
+} from '../../features/images/image-upload-field';
 import { eventTypeKey } from '../../features/i18n/labels';
 
 /**
@@ -49,7 +53,7 @@ import { eventTypeKey } from '../../features/i18n/labels';
 @Component({
   selector: 'trefaro-event-form-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, TranslocoPipe],
+  imports: [ImageUploadField, ReactiveFormsModule, RouterLink, TranslocoPipe],
   template: `
     <header class="head">
       <h1>
@@ -204,8 +208,33 @@ import { eventTypeKey } from '../../features/i18n/labels';
         </a>
       </div>
     </form>
+
+    @if (logoEndpoint(); as endpoint) {
+      <section aria-labelledby="logo-heading">
+        <h2 id="logo-heading">{{ 'admin.events.logo' | transloco }}</h2>
+        <trefaro-image-upload-field
+          fieldId="event-logo"
+          [endpoint]="endpoint"
+          [heading]="'admin.events.logo' | transloco"
+          [fileLabel]="'admin.events.logoFileLabel' | transloco"
+          [hint]="'admin.events.logoHint' | transloco"
+          [currentUrl]="logoUrl()"
+          errorKey="admin.events.logoFailed"
+        />
+      </section>
+    }
   `,
   styles: `
+    section[aria-labelledby='logo-heading'] {
+      margin-block-start: 2rem;
+      inline-size: min(34rem, 100%);
+    }
+
+    section[aria-labelledby='logo-heading'] h2 {
+      font-size: 1.1rem;
+      margin-block-end: 0.6rem;
+    }
+
     .head {
       display: flex;
       align-items: baseline;
@@ -318,8 +347,32 @@ export class EventFormPage {
   protected readonly busy = signal(false);
   protected readonly error = signal<Problem | null>(null);
   protected readonly languages = signal<readonly string[]>([]);
+  /**
+   * The stored logo, as the event reports it.
+   *
+   * Not a form control: it is written on its own the moment it is uploaded, and
+   * Cancel does not take it back.
+   */
+  protected readonly logoUrl = signal<string | null>(null);
   protected readonly typeKey = eventTypeKey;
   protected readonly statusKey = eventStatusKey;
+
+  /**
+   * Where this event's logo goes — `null` on a new event, which has nothing to
+   * attach bytes to yet. Named first, given its picture on the next screen.
+   */
+  protected readonly logoEndpoint = computed<ImageEndpoint | null>(() => {
+    const id = this.eventId();
+    if (!id) return null;
+    return {
+      upload: async (file) => {
+        this.logoUrl.set((await this.events.uploadLogo(id, file)).logoUrl);
+      },
+      remove: async () => {
+        this.logoUrl.set((await this.events.removeLogo(id)).logoUrl);
+      },
+    };
+  });
 
   private readonly events = inject(EventsAdminService);
   private readonly config = inject(AppConfigService);
@@ -456,6 +509,8 @@ export class EventFormPage {
     this.error.set(null);
     try {
       const event = await this.events.get(id);
+      // The picture is not part of the form, so a slow answer may always set it.
+      this.logoUrl.set(event.logoUrl);
       // A slow answer must not overwrite what the organizer has already typed.
       if (this.form.dirty) return;
       this.form.setValue({

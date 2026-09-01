@@ -23,8 +23,17 @@
  * URL, not in a column (`CHK_app_config_branding_paths`), and not in a
  * directory listing. Separate subtrees are the version of that promise an
  * operator can verify with `ls`.
+ *
+ * `logos` is the third, added for the per-series and per-event logos of FR 2.1
+ * and FR 3.1. Its own subtree rather than a corner of `branding`, for the reason
+ * that makes the distinction useful at all: `branding/` holds at most two files
+ * and every one of them is referenced by `app_config`, so anything else in there
+ * is a leak. Row logos are many and come and go with rows — mixing the two would
+ * make both directories unreadable to an operator, and the check constraints
+ * (`CHK_event_series_logo_path`, `CHK_event_logo_path`) would have to allow a
+ * prefix that says nothing.
  */
-export type FileArea = 'attachments' | 'branding';
+export type FileArea = 'attachments' | 'branding' | 'logos';
 
 export interface FileStore {
   /**

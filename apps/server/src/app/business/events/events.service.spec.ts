@@ -10,6 +10,7 @@ import type {
 } from '@trefaro/shared-models';
 import type { AttachmentsService } from '../attachments';
 import type { EventSeriesService } from '../event-series/event-series.service';
+import type { LogoImageService, LogoUpload } from '../logo-files';
 import type { RegistrationTally } from '../registration/ports/registration-tally';
 import { EventsService, type CreateEventInput } from './events.service';
 import type { EventTranslationReader } from './ports/event-translation.repository';
@@ -100,11 +101,54 @@ class FakeEventRepository implements EventRepository {
     return this.rows[index];
   }
 
+  async setLogoPath(
+    id: string,
+    storedPath: string | null,
+  ): Promise<EventRecord | null> {
+    const index = this.rows.findIndex((row) => row.id === id);
+    if (index < 0) return null;
+    this.rows[index] = {
+      ...this.rows[index],
+      logoPath: storedPath,
+      // The real write moves `updated_at`, and the `?v=` of the public URL is
+      // read from it — a fake that left it alone would prove a URL that never
+      // changes.
+      updatedAt: new Date('2026-09-01T12:00:00Z'),
+    };
+    return this.rows[index];
+  }
+
   async delete(id: string): Promise<boolean> {
     const index = this.rows.findIndex((row) => row.id === id);
     if (index < 0) return false;
     this.rows.splice(index, 1);
     return true;
+  }
+}
+
+/** The bytes half of an event logo (FR 3.1) — see the series spec for why. */
+class FakeLogoImages {
+  readonly stored: LogoUpload[] = [];
+  readonly discarded: string[] = [];
+  private next = 1;
+
+  async store(upload: LogoUpload): Promise<string> {
+    this.stored.push(upload);
+    return `logos/stored-${this.next++}`;
+  }
+
+  async discard(paths: readonly (string | null)[]): Promise<void> {
+    for (const path of paths) if (path) this.discarded.push(path);
+  }
+
+  async purgeUnderSeries(): Promise<void> {
+    // Only the series service calls it; here to satisfy the shape.
+  }
+
+  async read(storedPath: string | null) {
+    return storedPath
+      ? { mimeType: 'image/png', bytes: Buffer.from([0x89, 0x50]) }
+      : null;
   }
 }
 
@@ -186,18 +230,22 @@ describe('EventsService', () => {
     languages: ['de', 'en'],
   };
 
+  let logos: FakeLogoImages;
+
   beforeEach(() => {
     repository = new FakeEventRepository();
     series = new FakeEventSeriesService();
     tally = new FakeRegistrationTally();
     attachments = new FakeAttachmentsService();
     translations = new FakeEventTranslations();
+    logos = new FakeLogoImages();
     service = new EventsService(
       repository,
       series as unknown as EventSeriesService,
       tally,
       attachments as unknown as AttachmentsService,
       translations,
+      logos as unknown as LogoImageService,
     );
   });
 
@@ -730,6 +778,104 @@ describe('EventsService', () => {
       // A confirmation link in somebody's inbox must not stop working because
       // the organizer pulled the event back to a draft.
       await expect(service.locate(created.id)).resolves.toBeTruthy();
+    });
+  });
+
+  describe('logo (FR 3.1)', () => {
+    const png: LogoUpload = {
+      mimeType: 'image/png',
+      bytes: Buffer.from([0x89, 0x50, 0x4e, 0x47]),
+    };
+
+    it('answers a URL that names the event, never a stored path (E19)', async () => {
+      const created = await service.create('series-1', onsite);
+
+      const url = await service.setLogo(created.id, png);
+
+      expect(url).toBe(
+        `/api/media/events/${created.id}/logo?v=${new Date('2026-09-01T12:00:00Z').getTime()}`,
+      );
+      expect(url).not.toContain('stored-1');
+    });
+
+    it('shows the logo on the public landing page', async () => {
+      const created = await service.create('series-1', {
+        ...onsite,
+        status: 'published',
+      });
+      await service.setLogo(created.id, png);
+
+      const page = await service.getPublic('climate-2027', created.slug);
+
+      expect(page.logoUrl).toContain(`/api/media/events/${created.id}/logo`);
+    });
+
+    it('has no logo URL before anything is uploaded', async () => {
+      const created = await service.create('series-1', {
+        ...onsite,
+        status: 'published',
+      });
+
+      expect(
+        (await service.getPublic('climate-2027', created.slug)).logoUrl,
+      ).toBeNull();
+    });
+
+    it('removes the file it replaced', async () => {
+      const created = await service.create('series-1', onsite);
+      await service.setLogo(created.id, png);
+
+      await service.setLogo(created.id, png);
+
+      expect(logos.discarded).toEqual(['logos/stored-1']);
+    });
+
+    it('costs no bytes for an event that does not exist', async () => {
+      await expect(service.setLogo('event-99', png)).rejects.toThrow(
+        NotFoundException,
+      );
+
+      expect(logos.stored).toEqual([]);
+    });
+
+    it('clears the column and unlinks the file when the logo is removed', async () => {
+      const created = await service.create('series-1', {
+        ...onsite,
+        status: 'published',
+      });
+      await service.setLogo(created.id, png);
+
+      expect(await service.removeLogo(created.id)).toBeNull();
+
+      expect(
+        (await service.getPublic('climate-2027', created.slug)).logoUrl,
+      ).toBeNull();
+      expect(logos.discarded).toEqual(['logos/stored-1']);
+    });
+
+    it('serves the logo of an event that is still a draft', async () => {
+      const created = await service.create('series-1', {
+        ...onsite,
+        status: 'draft',
+      });
+      await service.setLogo(created.id, png);
+
+      // Same decision as for a series: the uuid is not derivable, and a draft
+      // whose logo 404s would break the organizer's own form.
+      expect(await service.readLogo(created.id)).not.toBeNull();
+    });
+
+    it('answers nothing for an id that is not an event', async () => {
+      expect(await service.readLogo('event-99')).toBeNull();
+    });
+
+    it('unlinks the logo before deleting the event', async () => {
+      const created = await service.create('series-1', onsite);
+      await service.setLogo(created.id, png);
+
+      await service.delete(created.id);
+
+      expect(logos.discarded).toEqual(['logos/stored-1']);
     });
   });
 });

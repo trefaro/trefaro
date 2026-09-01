@@ -1,4 +1,5 @@
 import { request } from '@playwright/test';
+import { png } from './png';
 import { existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -334,6 +335,8 @@ export async function seedSeries(clientUrl: string): Promise<void> {
       if (fixture.slug === PUBLISHED_SERIES.slug) publishedSeriesId = saved.id;
     }
 
+    await seedSeriesLogo(context, publishedSeriesId);
+
     const eventIds = await seedEvents(context, publishedSeriesId);
     const upcomingEventId = eventIds.get(UPCOMING_EVENT.slug) ?? '';
     await seedRegistrationFields(context, upcomingEventId);
@@ -341,6 +344,40 @@ export async function seedSeries(clientUrl: string): Promise<void> {
     await seedMediaLinks(context, eventIds);
   } finally {
     await context.dispose();
+  }
+}
+
+/**
+ * A logo for the published series (FR 2.1).
+ *
+ * Uploaded rather than assumed, because the acceptance criterion of the logo
+ * package is exactly this: upload one on a series and see it on the start page.
+ * Idempotent like every other fixture here — a `PUT` replaces, so a leftover
+ * from an interrupted run is overwritten rather than accumulated, and the file
+ * it replaced is unlinked by the server.
+ *
+ * No teardown: it goes with the series in the global teardown, which is the
+ * behaviour `apps/server-e2e` asserts.
+ */
+async function seedSeriesLogo(
+  context: Awaited<ReturnType<typeof asAdmin>>,
+  seriesId: string,
+): Promise<void> {
+  const response = await context.put(`/api/admin/series/${seriesId}/logo`, {
+    multipart: {
+      file: {
+        name: 'e2e-series-logo.png',
+        mimeType: 'image/png',
+        buffer: png(),
+      },
+    },
+  });
+
+  if (!response.ok()) {
+    throw new Error(
+      `Seeding the series logo failed with status ${response.status()}: ` +
+        `${await response.text()}`,
+    );
   }
 }
 

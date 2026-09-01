@@ -13,6 +13,12 @@ import type {
 import { AttachmentsService } from '../attachments';
 import { isSlug, slugify } from '../common/slug';
 import {
+  LogoImageService,
+  seriesLogoUrl,
+  type LogoBytes,
+  type LogoUpload,
+} from '../logo-files';
+import {
   REGISTRATION_TALLY,
   type RegistrationTally,
 } from '../registration/ports/registration-tally';
@@ -73,6 +79,11 @@ export class EventSeriesService {
     // above this one — a service that renders a page cannot translate one.
     @Inject(EVENT_SERIES_TRANSLATION_REPOSITORY)
     private readonly translations: EventSeriesTranslationReader,
+    // The bytes of this series' logo (FR 2.1). Below this service, not beside
+    // it: what may be uploaded and where it is kept has nothing to do with
+    // series, and this service keeps the half that does — which row it belongs
+    // to and what a missing one answers.
+    private readonly logos: LogoImageService,
   ) {}
 
   async listForOrganizer(): Promise<readonly EventSeries[]> {
@@ -220,11 +231,93 @@ export class EventSeriesService {
     // Resolves the series, so a mistyped id changes nothing.
     await this.getForOrganizer(id);
     // The cascade reaches events and registrations; the files it would leave
-    // behind are removed here first (E9).
+    // behind are removed here first (E9). Both kinds: the attachments of every
+    // registration, and the logo of the series and of each of its events.
     await this.attachments.purgeForSeries(id);
+    await this.logos.purgeUnderSeries(id);
     if (!(await this.series.delete(id))) {
       throw new NotFoundException(`No event series with id "${id}"`);
     }
+  }
+
+  /**
+   * Replaces this series' logo (FR 2.1).
+   *
+   * Written the moment it arrives, not on the next save of the form: an image is
+   * bytes in a volume, and holding them in a draft would mean holding them
+   * somewhere. The organizer client makes that visible by asking twice — choose,
+   * then upload.
+   *
+   * The order is the branding order, and the reason is the same: the file
+   * exists before any column points at it, so a failed row write leaves an
+   * unreferenced file (removed right here) rather than a row pointing at
+   * nothing. A failure after the row write would leave the *old* file behind,
+   * which is a wasted byte range rather than a broken logo — compensation in the
+   * direction that keeps the pages rendering.
+   */
+  async setLogo(id: string, upload: LogoUpload): Promise<string | null> {
+    // Resolves the series first, so a mistyped id costs no bytes.
+    const existing = await this.series.findById(id);
+    if (!existing)
+      throw new NotFoundException(`No event series with id "${id}"`);
+
+    const stored = await this.logos.store(upload);
+
+    let updated: EventSeriesRecord | null;
+    try {
+      updated = await this.series.setLogoPath(id, stored);
+    } catch (error: unknown) {
+      await this.logos.discard([stored]);
+      throw error;
+    }
+
+    if (!updated) {
+      // Deleted between the two reads. The file is the only trace left, so it
+      // goes — and the answer is the same 404 the first read would have given.
+      await this.logos.discard([stored]);
+      throw new NotFoundException(`No event series with id "${id}"`);
+    }
+
+    await this.logos.discard([existing.logoPath]);
+    return seriesLogoUrl(updated.id, updated.logoPath, updated.updatedAt);
+  }
+
+  /**
+   * Takes the logo away again.
+   *
+   * Clearing the column first: a series that shows no logo is the state that was
+   * asked for, whereas a column pointing at a file that is already gone would
+   * render a broken image on a public page.
+   */
+  async removeLogo(id: string): Promise<null> {
+    // Which file to unlink has to be read *before* the write: `setLogoPath`
+    // answers with the row as it now stands, and by then the path is `null`.
+    const existing = await this.series.findById(id);
+    if (!existing)
+      throw new NotFoundException(`No event series with id "${id}"`);
+
+    if (!(await this.series.setLogoPath(id, null))) {
+      throw new NotFoundException(`No event series with id "${id}"`);
+    }
+
+    await this.logos.discard([existing.logoPath]);
+    return null;
+  }
+
+  /**
+   * The bytes behind `GET /api/media/series/:id/logo`.
+   *
+   * No status check, deliberately, and it is worth being explicit about: the
+   * logo of an unpublished series is served. Reaching it needs the row's uuid,
+   * which is not derivable from anything public, and the bytes are a brand
+   * rather than participant data (the argument E9 makes about attachments does
+   * not apply). The alternative — 404 while a series is a draft — would break
+   * the organizer's own form in exactly the state they are working in.
+   */
+  async readLogo(id: string): Promise<LogoBytes | null> {
+    const found = await this.series.findById(id);
+    if (!found) return null;
+    return this.logos.read(found.logoPath);
   }
 
   /** An explicit address is honoured as given; otherwise the name decides. */
@@ -304,10 +397,9 @@ function toPublicEventSeries(
     slug: record.slug,
     name: translation?.name ?? record.name,
     description: translation?.description ?? record.description,
-    // A series has no logo upload, so this column is never written. AP 2 of
-    // phase 2 removed the path-based media URL (E19): a per-series logo will
-    // need a path-free route of its own — noted in `todo.md`.
-    logoUrl: null,
+    // Resolved through the row, never as a stored path (E19) — and `null` while
+    // no logo is uploaded, which is the normal state.
+    logoUrl: seriesLogoUrl(record.id, record.logoPath, record.updatedAt),
     websiteUrl: record.websiteUrl,
     contactEmail: record.contactEmail,
   };

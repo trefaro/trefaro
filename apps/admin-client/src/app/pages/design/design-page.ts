@@ -28,7 +28,10 @@ import {
   readableTextColor,
 } from '@trefaro/shared-theming';
 import { ConfigAdminService } from '../../features/config/config-admin.service';
-import { BrandingImageField } from './branding-image-field';
+import {
+  ImageUploadField,
+  type ImageEndpoint,
+} from '../../features/images/image-upload-field';
 
 /** What the contrast panel says about one of the two brand colours. */
 interface ContrastReading {
@@ -78,7 +81,7 @@ interface ContrastReading {
 @Component({
   selector: 'trefaro-design-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, BrandingImageField, TranslocoPipe],
+  imports: [ReactiveFormsModule, ImageUploadField, TranslocoPipe],
   template: `
     <header class="head">
       <h1>{{ 'admin.design.title' | transloco }}</h1>
@@ -250,8 +253,9 @@ interface ContrastReading {
       <h2 id="images-heading">{{ 'admin.design.images' | transloco }}</h2>
       <p class="meta">{{ 'admin.design.imagesHint' | transloco }}</p>
 
-      <trefaro-branding-image-field
-        kind="logo"
+      <trefaro-image-upload-field
+        fieldId="logo"
+        [endpoint]="logoEndpoint"
         [heading]="'admin.design.logoHeading' | transloco"
         [fileLabel]="'admin.design.logoFileLabel' | transloco"
         [hint]="'admin.design.logoHint' | transloco"
@@ -259,8 +263,9 @@ interface ContrastReading {
         (changed)="reread()"
       />
 
-      <trefaro-branding-image-field
-        kind="app-icon"
+      <trefaro-image-upload-field
+        fieldId="app-icon"
+        [endpoint]="appIconEndpoint"
         [heading]="'admin.design.iconHeading' | transloco"
         [fileLabel]="'admin.design.iconFileLabel' | transloco"
         [hint]="'admin.design.iconHint' | transloco"
@@ -456,7 +461,7 @@ interface ContrastReading {
       color: var(--trefaro-color-on-accent);
     }
 
-    trefaro-branding-image-field {
+    trefaro-image-upload-field {
       display: block;
       margin-block-start: 1.2rem;
     }
@@ -472,6 +477,25 @@ export class DesignPage {
   private readonly settings = inject(ConfigAdminService);
   private readonly config = inject(AppConfigService);
   private readonly theme = inject(ThemeService);
+
+  /**
+   * Where the two branding images go.
+   *
+   * Plain objects rather than signals: they close over a service, not over
+   * anything that changes. The field they are handed to knows nothing about
+   * configuration, which is what lets the series and event forms reuse it.
+   */
+  protected readonly logoEndpoint: ImageEndpoint = {
+    upload: async (file) =>
+      void (await this.settings.uploadImage('logo', file)),
+    remove: async () => void (await this.settings.removeImage('logo')),
+  };
+
+  protected readonly appIconEndpoint: ImageEndpoint = {
+    upload: async (file) =>
+      void (await this.settings.uploadImage('app-icon', file)),
+    remove: async () => void (await this.settings.removeImage('app-icon')),
+  };
 
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);

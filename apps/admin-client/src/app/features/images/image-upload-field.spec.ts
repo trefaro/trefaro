@@ -1,15 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import type { Problem } from '@trefaro/shared-http';
 import { provideTranslationsForTest } from '@trefaro/shared-i18n';
-import type { BrandingImageKind, BrandingImages } from '@trefaro/shared-models';
 import { MAX_BRANDING_BYTES } from '@trefaro/shared-models';
-import { ConfigAdminService } from '../../features/config/config-admin.service';
-import { BrandingImageField } from './branding-image-field';
-
-const IMAGES: BrandingImages = {
-  logoUrl: '/api/media/branding/logo?v=42',
-  appIconUrl: null,
-};
+import { ImageUploadField, type ImageEndpoint } from './image-upload-field';
 
 /** The template drives protected members; the tests reach them the same way. */
 interface FieldInternals {
@@ -21,20 +14,25 @@ interface FieldInternals {
   error: () => Problem | null;
 }
 
-class FakeConfigAdminService {
-  readonly uploaded: { kind: BrandingImageKind; file: File }[] = [];
-  readonly removed: BrandingImageKind[] = [];
+/**
+ * Whatever endpoint the caller wired up, as this component sees it.
+ *
+ * The component is deliberately ignorant of which one it is — the design page
+ * hands it the configuration, the series form hands it a series — so the fake is
+ * a recorder rather than a stand-in for a particular service.
+ */
+class FakeEndpoint implements ImageEndpoint {
+  readonly uploaded: File[] = [];
+  removals = 0;
   failWith: unknown = null;
 
-  uploadImage(kind: BrandingImageKind, file: File): Promise<BrandingImages> {
-    if (this.failWith) return Promise.reject(this.failWith);
-    this.uploaded.push({ kind, file });
-    return Promise.resolve(IMAGES);
+  async upload(file: File): Promise<void> {
+    if (this.failWith) throw this.failWith;
+    this.uploaded.push(file);
   }
 
-  removeImage(kind: BrandingImageKind): Promise<BrandingImages> {
-    this.removed.push(kind);
-    return Promise.resolve({ logoUrl: null, appIconUrl: null });
+  async remove(): Promise<void> {
+    this.removals += 1;
   }
 }
 
@@ -62,11 +60,11 @@ function file(options: { name?: string; type: string; size?: number }): File {
   return new File([bytes], options.name ?? 'logo.png', { type: options.type });
 }
 
-describe('BrandingImageField', () => {
-  let admin: FakeConfigAdminService;
+describe('ImageUploadField', () => {
+  let admin: FakeEndpoint;
 
-  function render(kind: BrandingImageKind = 'logo') {
-    admin = new FakeConfigAdminService();
+  function render(fieldId = 'logo') {
+    admin = new FakeEndpoint();
     TestBed.configureTestingModule({
       providers: [
         provideTranslationsForTest({
@@ -76,25 +74,23 @@ describe('BrandingImageField', () => {
             '{{type}} cannot be used. Allowed: {{hint}}',
           'admin.design.tooLarge': 'That image is {{kilobytes}} KB. {{hint}}',
         }),
-        { provide: ConfigAdminService, useValue: admin },
       ],
     });
-    const fixture = TestBed.createComponent(BrandingImageField);
-    fixture.componentRef.setInput('kind', kind);
+    const fixture = TestBed.createComponent(ImageUploadField);
+    fixture.componentRef.setInput('fieldId', fieldId);
+    fixture.componentRef.setInput('endpoint', admin);
     fixture.componentRef.setInput('heading', 'Logo');
     fixture.componentRef.setInput('fileLabel', 'Choose a logo file');
     fixture.componentRef.setInput('hint', 'Shown in the header.');
     fixture.componentRef.setInput('currentUrl', '/api/media/branding/logo?v=1');
     fixture.detectChanges();
 
-    const emitted: BrandingImages[] = [];
-    fixture.componentInstance.changed.subscribe((images) =>
-      emitted.push(images),
-    );
+    let changes = 0;
+    fixture.componentInstance.changed.subscribe(() => (changes += 1));
 
     return {
       fixture,
-      emitted,
+      changed: () => changes,
       field: fixture.componentInstance as unknown as FieldInternals,
       text: () => (fixture.nativeElement as HTMLElement).textContent ?? '',
     };
@@ -112,8 +108,8 @@ describe('BrandingImageField', () => {
     expect(admin.uploaded).toEqual([]);
   });
 
-  it('sends the file when Upload is pressed and reports the new URLs', async () => {
-    const { fixture, field, emitted } = render();
+  it('sends the file when Upload is pressed and says something changed', async () => {
+    const { fixture, field, changed } = render();
     field.choose(chooseEvent(file({ type: 'image/webp' })));
     fixture.detectChanges();
 
@@ -121,8 +117,7 @@ describe('BrandingImageField', () => {
     fixture.detectChanges();
 
     expect(admin.uploaded).toHaveLength(1);
-    expect(admin.uploaded[0].kind).toBe('logo');
-    expect(emitted).toEqual([IMAGES]);
+    expect(changed()).toBe(1);
     // The choice is spent; the stored image is what is shown again.
     expect(field.pending()).toBeNull();
   });
@@ -176,18 +171,18 @@ describe('BrandingImageField', () => {
     expect(admin.uploaded).toEqual([]);
   });
 
-  it('removes the stored image and reports that nothing is left', async () => {
-    const { fixture, field, emitted } = render('app-icon');
+  it('removes the stored image and says something changed', async () => {
+    const { fixture, field, changed } = render('app-icon');
 
     await field.remove();
     fixture.detectChanges();
 
-    expect(admin.removed).toEqual(['app-icon']);
-    expect(emitted).toEqual([{ logoUrl: null, appIconUrl: null }]);
+    expect(admin.removals).toBe(1);
+    expect(changed()).toBe(1);
   });
 
   it('keeps the chosen file when the upload is refused', async () => {
-    const { fixture, field, emitted } = render();
+    const { fixture, field, changed } = render();
     admin.failWith = {
       status: 400,
       message: 'Those bytes are not a PNG.',
@@ -202,6 +197,6 @@ describe('BrandingImageField', () => {
     // This client's sentence, and the server's reason beside it (F77).
     expect(field.error()?.key).toBe('admin.design.errorImage');
     expect(field.error()?.detail).toBe('Those bytes are not a PNG.');
-    expect(emitted).toEqual([]);
+    expect(changed()).toBe(0);
   });
 });

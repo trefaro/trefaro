@@ -2393,3 +2393,86 @@ schon Phase 1 nicht gebaut hat; sie steht jetzt unter _Known gaps_ mit
 entschiedener Gestalt und ohne Code. Ein Abschlusspaket, das ungefragt eine
 P1-Funktion nachzieht, verschiebt nur die Grenze, an der niemand mehr weiß, was
 eine Phase eigentlich enthielt.
+
+---
+
+## Nachtrag: das Logo je Reihe und Event (01.09.2026)
+
+Kein Arbeitspaket der Phase 2 und keines der Phase 3, sondern das Stück Arbeit
+zwischen beiden — **Marius hat es am 31.08.2026 so terminiert**: Phase 3 beginnt
+erst danach. Es steht hier und nicht im Plan der Phase 3, weil Phase 2 es in
+AP 13 gefunden und eskaliert hat.
+
+**Der Befund.** FR 2.1 und FR 3.1 führen das Logo unter den **Pflichtfeldern**
+einer Veranstaltungsreihe und eines Events, beide **P1**. Die Spalten
+`event_series.logo_path` und `event.logo_path` lagen seit Phase 1 im Schema, drei
+Ansichten des Nutzer-Clients zeichneten ein `logoUrl` — und geschrieben hat die
+Spalten nie jemand. AP 2 und AP 3 der Phase 1 gingen daran vorbei; AP 2 der
+Phase 2 nahm dann sogar den Platzhalter heraus, der einen gespeicherten Pfad in
+eine URL verwandelte, weil genau diese Gestalt E19 verbietet. Beide Services
+antworteten seither `logoUrl: null` — richtig, und eben deshalb unauffällig.
+
+**Was gebaut wurde.** Entscheidungen **F113–F117**, Anhangspunkt 27 im
+Referenzdokument.
+
+- **Server.** `business/logo-files/` als Modul **unter** `EventSeriesModule` und
+  `EventsModule`: `LogoImageService` besitzt die Bytes (Katalog, Deckel,
+  Signaturprüfung, Teilbaum `logos/`, Lesen mit Typ aus den Bytes), der schmale
+  Port `LogoPathsRepository` beantwortet die eine Frage, die eine Kaskade
+  aufwirft („welche Logodateien hängen unter dieser Reihe?"). Die beiden
+  Entity-Services behalten ihre 404-Regel und bekommen `setLogo`, `removeLogo`,
+  `readLogo`; `EventSeriesRepository`/`EventRepository` je ein `setLogoPath`, das
+  `updated_at` mitbewegt — daher stimmt das `?v=`. Vier Controller: je Zeile eine
+  pfadfreie Medienroute und ein Admin-Controller für `PUT`/`DELETE`. Migration
+  `EntityLogos1787790400000` bringt die zwei `CHECK`s (keine Spalten — die gab es
+  schon).
+- **Veranstalter-Client.** `BrandingImageField` ist zu
+  `features/images/ImageUploadField` geworden und kennt seinen Endpunkt nicht
+  mehr; die Design-Seite, das Reihenformular und das Eventformular übergeben ihn.
+  Das Feld erscheint **nur beim Bearbeiten** (F116). Acht Katalogschlüssel in
+  beiden Sprachen, 646 → **654**.
+- **Nutzer-Client.** Kein Code: die drei Ansichten zeichneten `logoUrl` schon,
+  seit Phase 1 — sie bekamen nur nie eines.
+- **Werkzeuge.** Der Demo-Seed setzt ein Logo auf **eine** Reihe und **ein**
+  Event (nicht auf alle — ein Zeilen-Logo ist die Ausnahme, F114);
+  `verify-api.mjs` prüft die Form jeder Logo-URL der öffentlichen Reihenliste.
+
+**Zwei Dinge sind bewusst nicht gebaut.** Eine Vererbung Event → Reihe →
+Organisation (F114): der Rückfall ist die Kopfzeile, die das Organisationslogo
+ohnehin auf jeder Seite trägt, und „ich habe das Event-Logo entfernt, jetzt
+erscheint das der Reihe" ist ein Ergebnis, das niemand angefordert hat. Und ein
+Statusfilter auf der Medienroute (F115): die Adresse braucht die uuid der Zeile,
+die Bytes sind eine Marke, und die Gegenrichtung hätte die Vorschau des
+Veranstalters genau im Entwurfszustand kaputt gemacht.
+
+**Was anders lief.** Vier Dinge, alle klein und alle lehrreich:
+
+1. **Der erste Entwurf von `removeLogo` hätte die Datei liegen gelassen.**
+   `setLogoPath` antwortet mit der Zeile **nach** dem Schreiben, also war der
+   Pfad dort schon `null` — der Code las „welche Datei löschen?" aus der Antwort
+   und löschte nichts. Gefunden beim Durchlesen, nicht von einem Test; der Test
+   dazu steht jetzt und nennt den Grund.
+2. **Die Hinweistexte versprachen eine Rückfallkette, die es nicht gibt.** Erst
+   geschrieben, dann gemerkt, dass der Nutzer-Client keine baut. Entweder die
+   Kette bauen oder den Text korrigieren — korrigiert, und aus der Frage wurde
+   F114. Ein Hilfetext ist eine Zusage.
+3. **Die Datenzugriffsschicht durfte den Barrel nicht importieren.** Die
+   ESLint-Regel lässt sie nur an `ports/` — also importiert
+   `typeorm-logo-paths.repository.ts` die Portdatei direkt. Dieselbe Lehre wie
+   F100 in AP 11: nicht die Regel lockern, den Port richtig legen.
+4. **Ein umbenanntes Eingabefeld hat einen fremden Test gebrochen.**
+   `design.spec.ts` griff auf `#branding-file-logo` zu; aus dem Feld wurde
+   `#image-file-logo`. Ein Browsertest, der eine id festnagelt, ist an ein
+   Implementierungsdetail gebunden — hier hingenommen, weil `<input type="file">`
+   sich nicht anders zuverlässig ansprechen lässt, aber es ist der Grund, warum
+   der Rest der Suiten über Rollen und Katalogschlüssel geht.
+
+**Nachweise.** 770 Unit-Tests im Server (+21 für die Logos, +13 für
+`LogoImageService`), **381** in `server-e2e` (+14 in
+`api/entity-logos.spec.ts` — anonymes Lesen, kein Pfad in der URL, `?v=` wandert,
+ein Archiv als PNG wird abgelehnt, ein gespeicherter Pfad ist unerreichbar, und
+die Kaskade nimmt beide Dateien mit), **197** im Nutzer-Client (+6: das Logo auf
+der Startseite und auf der Reihenseite — das Abnahmekriterium aus `todo.md`) und
+**266** im Veranstalter-Client (+3: hochladen, Vorschau, entfernen). Dazu ein
+echtes PNG, das die Suiten selbst erzeugen (`support/png.ts`, in beiden), weil
+der Server die ersten Bytes liest.

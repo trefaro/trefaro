@@ -3,8 +3,10 @@ import { ApiClient } from '@trefaro/shared-http';
 import type {
   EventDashboard,
   EventInput,
+  LogoImage,
   OrganizerEvent,
 } from '@trefaro/shared-models';
+import { BRANDING_IMAGE_PART } from '@trefaro/shared-models';
 import { firstValueFrom } from 'rxjs';
 
 /**
@@ -49,6 +51,27 @@ export class EventsAdminService {
   update(id: string, input: Partial<EventInput>): Promise<OrganizerEvent> {
     return firstValueFrom(
       this.api.patch<OrganizerEvent>(`admin/events/${id}`, input),
+    );
+  }
+
+  /**
+   * Replaces the logo of one event (FR 3.1).
+   *
+   * The same shape as `EventSeriesAdminService.uploadLogo` — see there for why
+   * the multipart part name is part of the contract and why the content type is
+   * left to the browser.
+   */
+  uploadLogo(id: string, file: File): Promise<LogoImage> {
+    const body = new FormData();
+    body.append(BRANDING_IMAGE_PART, file, file.name);
+    return firstValueFrom(
+      this.api.put<LogoImage>(`admin/events/${id}/logo`, body),
+    );
+  }
+
+  removeLogo(id: string): Promise<LogoImage> {
+    return firstValueFrom(
+      this.api.delete<LogoImage>(`admin/events/${id}/logo`),
     );
   }
 

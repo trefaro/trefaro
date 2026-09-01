@@ -152,14 +152,19 @@ P1/P2/P3-Tabellen im Plan-Dokument.
 5. Härtung, Usability-Test mit Democracy International (Pilotpartner), Doku,
    Release v1.0 — hier auch: konfigurierbare Drosselung, `CONTRIBUTING.md`
 
-**Nächstes Arbeitspaket, vor Phase 3** (entschieden von Marius am 31.08.2026):
-**das Logo je Veranstaltungsreihe und Event.** `event_series.logo_path` und
-`event.logo_path` existieren, drei Ansichten des Nutzer-Clients zeichnen
-`logoUrl` — geschrieben hat die Spalten nie jemand, obwohl FR 2.1 und FR 3.1 das
-Logo unter den **Pflichtfeldern** führen (beide **P1**). Die Gestalt ist in AP 13
-der Phase 2 entschieden (pfadfreie Routen je Zeile, wie
-`/api/media/branding/logo` — E19, F66), gebaut ist sie nicht. Details in `todo.md`
-unter _Known gaps in the current state_. Phase 3 fängt erst danach an.
+**Das Logo je Reihe und Event ist gebaut** (01.09.2026, eigenes Arbeitspaket
+zwischen den Phasen, so von Marius am 31.08.2026 terminiert) — die P1-Lücke aus
+FR 2.1 und FR 3.1, die Phase 2 in AP 13 gefunden und eskaliert hatte. Protokoll
+in `docs/PHASE2.md` unter _Nachtrag_, Entscheidungen **F113–F117**. Kurz:
+`business/logo-files/` besitzt die Bytes, die beiden Entity-Services behalten
+ihre 404-Regel, je Zeile eine pfadfreie Medienroute (`/api/media/series/:id/logo`,
+`…/events/:id/logo`), eigener Teilbaum `logos/` mit `CHECK` auf beiden Spalten,
+dieselben Uploadregeln wie das Branding. **Kein** Erben des Reihenlogos durch ein
+Event (F114) und **kein** Statusfilter auf der Medienroute (F115) — beides
+bewusst; die Begründungen stehen in `docs/rules/`. Katalog 646 → **654**.
+
+**Damit ist der Weg zu Phase 3 frei** (Profile, Nachrichten, Chat, Push,
+Profilsuche). Sie hat noch keinen Plan — `docs/PHASE3.md` gibt es nicht.
 
 ## Betriebskontext
 

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { ADMIN_STORAGE_STATE, fixtureLabel } from './support/admin-session';
 import { t } from './support/catalogue';
+import { png } from './support/png';
 
 /**
  * Managing event series in the browser (UC 02, UC 03, FR 2.1, FR 2.2).
@@ -72,6 +73,63 @@ test.describe('event series administration', () => {
     await expect(
       page.getByRole('row', { name: new RegExp(`${name} renamed`) }),
     ).toBeHidden();
+  });
+
+  test('uploads a logo on a series and takes it away again (FR 2.1)', async ({
+    page,
+  }, testInfo) => {
+    const name = `E2E Logo Series ${fixtureLabel(testInfo.project.name)}`;
+
+    await page.goto('/series/new');
+    await page.getByLabel(t('admin.series.name')).fill(name);
+    await page
+      .getByLabel(t('admin.series.description'))
+      .fill('Created by the logo test.');
+    await page.getByRole('button', { name: t('admin.common.save') }).click();
+    await expect(page.getByRole('heading', { name })).toBeVisible();
+
+    await page
+      .getByRole('link', { name: t('admin.series.editSeries') })
+      .click();
+    await expect(page.getByLabel(t('admin.series.name'))).toHaveValue(name);
+
+    // A new series has no logo field at all: an image is written the moment it
+    // is uploaded, and a series that does not exist yet has nothing to attach
+    // bytes to. So the field is here, on the edit form, and only here.
+    const field = page.getByLabel(t('admin.series.logoFileLabel'));
+    await expect(field).toBeVisible();
+
+    await field.setInputFiles({
+      name: 'logo.png',
+      mimeType: 'image/png',
+      buffer: png(),
+    });
+
+    // Choosing is not uploading: the preview is local until the second click.
+    const preview = page.locator('trefaro-image-upload-field img');
+    await expect(preview).toHaveAttribute('src', /^blob:/);
+
+    await page.getByRole('button', { name: t('admin.design.upload') }).click();
+
+    // Now it is stored, and the address names the row rather than the file (E19).
+    await expect(preview).toHaveAttribute(
+      'src',
+      /^\/api\/media\/series\/[0-9a-f-]{36}\/logo\?v=\d+$/,
+    );
+
+    await page.getByRole('button', { name: t('admin.design.remove') }).click();
+    await expect(preview).toBeHidden();
+    await expect(page.getByText(t('admin.design.noImage'))).toBeVisible();
+
+    // Cleaning up, because three browsers share one instance.
+    await page.goto('/');
+    const row = page.getByRole('row', { name: new RegExp(name) });
+    await row.getByRole('link', { name }).click();
+    page.once('dialog', (dialog) => void dialog.accept());
+    await page
+      .getByRole('button', { name: t('admin.series.deleteSeries') })
+      .click();
+    await expect(page).toHaveURL(/\/$/);
   });
 
   test('refuses to save a series without a description', async ({ page }) => {

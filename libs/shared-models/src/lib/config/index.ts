@@ -21,6 +21,7 @@ export {
   type BrandingImageKind,
   type BrandingImages,
 } from './branding';
+export { type LogoImage } from './logo';
 export {
   DEFAULT_FONT_FAMILY_KEY,
   DEFAULT_FONT_FAMILY_STACK,

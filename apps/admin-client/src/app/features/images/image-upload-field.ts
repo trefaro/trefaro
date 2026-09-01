@@ -13,13 +13,22 @@ import {
 import { TranslocoPipe } from '@jsverse/transloco';
 import { problemOf, type Problem } from '@trefaro/shared-http';
 import { TranslationService } from '@trefaro/shared-i18n';
-import type { BrandingImageKind, BrandingImages } from '@trefaro/shared-models';
 import {
   BRANDING_MIME_TYPES,
   MAX_BRANDING_BYTES,
   brandingTypeSummary,
 } from '@trefaro/shared-models';
-import { ConfigAdminService } from '../../features/config/config-admin.service';
+
+/**
+ * The two writes an image field can make.
+ *
+ * An object rather than two function inputs, so a caller cannot wire up one and
+ * forget the other. Neither answer is used: see {@link ImageUploadField.changed}.
+ */
+export interface ImageEndpoint {
+  upload(file: File): Promise<void>;
+  remove(): Promise<void>;
+}
 
 /** A chosen file and the local address its preview is drawn from. */
 interface PendingImage {
@@ -28,12 +37,18 @@ interface PendingImage {
 }
 
 /**
- * One of the two branding images: what is stored, what is about to replace it,
- * and the two buttons (FR 1.4, E19, E26).
+ * One uploaded image: what is stored, what is about to replace it, and the two
+ * buttons (FR 1.4, FR 2.1, FR 3.1 — E19, E26).
  *
- * A component of its own rather than the same markup twice, because the two
- * images differ in exactly one interesting way — an app icon should be square
- * and a logo should not — and everything else about them is identical.
+ * A component of its own rather than the same markup four times. It is used by
+ * the design page for the organization logo and app icon, and by the series and
+ * event forms for their own logos — four places that differ only in what the
+ * picture is for, which endpoint takes it, and whether the frame is square.
+ *
+ * It knows nothing about which endpoint it talks to: {@link endpoint} is handed
+ * in. That is what keeps it out of `features/config` — an image field that
+ * imported `ConfigAdminService` could not be used for a series, and the two
+ * would drift into two components with one behaviour.
  *
  * Two decisions worth naming:
  *
@@ -50,7 +65,7 @@ interface PendingImage {
  *    of a 413 after the bytes have travelled.
  */
 @Component({
-  selector: 'trefaro-branding-image-field',
+  selector: 'trefaro-image-upload-field',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslocoPipe],
   template: `
@@ -231,8 +246,19 @@ interface PendingImage {
     }
   `,
 })
-export class BrandingImageField {
-  readonly kind = input.required<BrandingImageKind>();
+export class ImageUploadField {
+  /**
+   * Ties the label, the file input and its hint together.
+   *
+   * Given rather than derived, because two fields can share a page (the design
+   * page has both branding images) and two controls with the same id are one
+   * control to a screen reader.
+   */
+  readonly fieldId = input.required<string>();
+  /** Where the bytes go. The component never knows which endpoint that is. */
+  readonly endpoint = input.required<ImageEndpoint>();
+  /** Catalogue key for "the upload failed", in this caller's own words. */
+  readonly errorKey = input('admin.design.errorImage');
   readonly heading = input.required<string>();
   /**
    * The label of the file input.
@@ -248,15 +274,19 @@ export class BrandingImageField {
   /** Draws the preview frame square, for the image that lands on a home screen. */
   readonly square = input(false);
 
-  /** What the server now stores, so the page can re-read its configuration. */
-  readonly changed = output<BrandingImages>();
+  /**
+   * Something was written — the page should re-read whatever it shows.
+   *
+   * No payload: the endpoints answer with the new URL, but every caller needs to
+   * re-read more than that (the configuration row, or the series), and a value
+   * nobody uses is a value that will drift from what the page then draws.
+   */
+  readonly changed = output<void>();
 
-  /** Ties the label, the input and its hint together; unique per kind. */
-  protected readonly inputId = computed(() => `branding-file-${this.kind()}`);
+  protected readonly inputId = computed(() => `image-file-${this.fieldId()}`);
 
   protected readonly accept = BRANDING_MIME_TYPES.join(',');
 
-  private readonly config = inject(ConfigAdminService);
   private readonly i18n = inject(TranslationService);
 
   /**
@@ -333,11 +363,11 @@ export class BrandingImageField {
   protected async upload(): Promise<void> {
     const chosen = this.pending();
     if (!chosen) return;
-    await this.write(() => this.config.uploadImage(this.kind(), chosen.file));
+    await this.write(() => this.endpoint().upload(chosen.file));
   }
 
   protected async remove(): Promise<void> {
-    await this.write(() => this.config.removeImage(this.kind()));
+    await this.write(() => this.endpoint().remove());
   }
 
   /** Drops the chosen file and shows the stored image again. */
@@ -348,16 +378,16 @@ export class BrandingImageField {
     this.reset();
   }
 
-  private async write(action: () => Promise<BrandingImages>): Promise<void> {
+  private async write(action: () => Promise<void>): Promise<void> {
     if (this.busy()) return;
     this.busy.set(true);
     this.error.set(null);
     try {
-      const images = await action();
+      await action();
       this.discard();
-      this.changed.emit(images);
+      this.changed.emit();
     } catch (error: unknown) {
-      this.error.set(problemOf(error, 'admin.design.errorImage'));
+      this.error.set(problemOf(error, this.errorKey()));
     } finally {
       this.busy.set(false);
     }

@@ -87,6 +87,24 @@ export interface EventRepository {
   create(event: NewEvent): Promise<EventRecord>;
   /** `null` when no event has that id. @throws EventSlugTakenError */
   update(id: string, changes: EventChanges): Promise<EventRecord | null>;
+  /**
+   * Points the row at a stored logo file, or at none (FR 3.1).
+   *
+   * A method of its own rather than a field of `EventChanges`, and that is the
+   * decision `setBrandingImage` made for `app_config`: a storage path is not
+   * something an organizer types, while `EventChanges` is the body of the edit
+   * form. One column that both a form and an upload can write is a column a form
+   * can blank by accident — and the blanking would leave a file nothing points
+   * at.
+   *
+   * @returns the row as it now stands, so the caller can build the public URL
+   * from the `updated_at` this write moved (see `logo-url.ts`). `null` when no
+   * row has that id, which is how the 404 gets made.
+   */
+  setLogoPath(
+    id: string,
+    storedPath: string | null,
+  ): Promise<EventRecord | null>;
   /** False when the event was already gone. */
   delete(id: string): Promise<boolean>;
 }

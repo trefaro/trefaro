@@ -14,8 +14,9 @@ import { ENV } from '../../core/config/env.module';
  *
  * Only for the attachments: a single directory with a hundred thousand entries
  * is slow to list on every filesystem an organization is likely to run this on.
- * The branding area holds at most two files, where a fan-out would only make
- * `ls branding/` less useful than it should be.
+ * The other two areas are bounded by rows an organizer creates by hand —
+ * `branding/` holds at most two files, `logos/` at most one per series and
+ * event — so a fan-out would only make `ls` less useful than it should be.
  */
 const FAN_OUT = 2;
 

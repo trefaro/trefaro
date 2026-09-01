@@ -1,9 +1,12 @@
 import { Module } from '@nestjs/common';
 import { AttachmentsModule } from '../attachments';
 import { EventSeriesModule } from '../event-series';
+import { LogoFilesModule } from '../logo-files';
+import { AdminEventLogoController } from './admin-event-logo.controller';
 import { AdminEventsController } from './admin-events.controller';
 import { AdminSeriesEventsController } from './admin-series-events.controller';
 import { EventsService } from './events.service';
+import { EventLogoMediaController } from './event-logo-media.controller';
 import { PublicEventsController } from './public-events.controller';
 
 /**
@@ -20,14 +23,17 @@ import { PublicEventsController } from './public-events.controller';
  * the rule needs both, and duplicating the series' visibility check here is how
  * the two would drift apart. And `AttachmentsModule`, because deleting an event
  * has to take the uploaded files with it — the database cascade removes the
- * rows and leaves the bytes (E9).
+ * rows and leaves the bytes (E9). `LogoFilesModule` is the same promise for this
+ * event's own logo (FR 3.1).
  */
 @Module({
-  imports: [EventSeriesModule, AttachmentsModule],
+  imports: [EventSeriesModule, AttachmentsModule, LogoFilesModule],
   controllers: [
     AdminSeriesEventsController,
     AdminEventsController,
+    AdminEventLogoController,
     PublicEventsController,
+    EventLogoMediaController,
   ],
   providers: [EventsService],
   exports: [EventsService],

@@ -84,6 +84,29 @@ check(
     ),
   json(config.body?.theme?.logoUrl),
 );
+/**
+ * And the same promise one level down: a row logo names its row (E19, F113).
+ *
+ * The second pair of public routes to stored bytes, added in the logo package
+ * before phase 3. Shape rather than presence: most series have no logo of their
+ * own, and a demo instance has one — so what is asserted is that whatever URL
+ * arrives contains the row's id and no stored path. An empty list is a pass, as
+ * it is for a fresh instance with nothing published.
+ */
+const publicSeries = await call('/api/user/series');
+const seriesLogos = Array.isArray(publicSeries.body)
+  ? publicSeries.body.map((entry) => entry.logoUrl)
+  : [];
+check(
+  'every series logo URL is absent or the path-free per-row route (E19)',
+  publicSeries.status === 200 &&
+    seriesLogos.every(
+      (url) =>
+        url === null ||
+        /^\/api\/media\/series\/[0-9a-f-]{36}\/logo\?v=\d+$/.test(url ?? ''),
+    ),
+  json(seriesLogos),
+);
 check(
   'only media-links is enabled by default',
   json(config.body?.enabledModules) === json(['media-links']),

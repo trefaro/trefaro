@@ -21,6 +21,7 @@ import {
   APP_ICON,
   BRANDING,
   events,
+  EVENT_LOGO,
   FORM_FIELDS,
   INVITATION,
   LOGO,
@@ -31,6 +32,7 @@ import {
   PEOPLE,
   programme,
   SERIES,
+  SERIES_LOGO,
   timeline,
   TRANSLATIONS,
 } from './demo-data.mjs';
@@ -41,7 +43,18 @@ const flag = (name, fallback) => {
   return index >= 0 && args[index + 1] ? args[index + 1] : fallback;
 };
 
-const BASE = flag('base', process.env.SEED_BASE ?? 'http://localhost:8080');
+/**
+ * Where to seed.
+ *
+ * `SEED_BASE` wins over `BASE` — the specific name keeps working — but `BASE` is
+ * read too, so one exported variable drives a whole run against one instance,
+ * the way it does for every script in `tools/spike-verification/` (AP 13 of
+ * phase 2).
+ */
+const BASE = flag(
+  'base',
+  process.env.SEED_BASE ?? process.env.BASE ?? 'http://localhost:8080',
+);
 const MAILPIT = flag(
   'mailpit',
   process.env.SEED_MAILPIT ?? 'http://localhost:8025',
@@ -131,6 +144,21 @@ async function main() {
   say(
     `✓ ${Object.keys(created).length} events (one over, one draft, three types)`,
   );
+
+  // A logo on one series and one event (FR 2.1, FR 3.1), not on all of them:
+  // most rows carry the organization's mark from the header, and a row logo is
+  // the exception the requirement is for — a partner, a campaign (F114).
+  await uploadImage(
+    `/api/admin/series/${series.citizens.id}/logo`,
+    SERIES_LOGO,
+    'series-logo.png',
+  );
+  await uploadImage(
+    `/api/admin/events/${created.main.id}/logo`,
+    EVENT_LOGO,
+    'event-logo.png',
+  );
+  say('✓ a logo on one series and on one event');
 
   // --- the form of the main event -----------------------------------------
   const fields = [];
@@ -387,13 +415,25 @@ async function main() {
  * generated PNG has to be a real one — which it is.
  */
 async function putImage(kind, image, filename) {
+  await uploadImage(`/api/admin/config/${kind}`, image, filename);
+}
+
+/**
+ * The same upload, to any of the four endpoints that take an image.
+ *
+ * One function because the rules are one set (F117): the branding routes and the
+ * two row-logo routes accept the same types, the same ceiling and the same part
+ * name, so a second helper would only be a second place to get the part name
+ * wrong.
+ */
+async function uploadImage(path, image, filename) {
   const bytes = demoPng(image.width, image.height, image.paint);
   const form = new FormData();
   form.append(
     'file',
     new File([new Uint8Array(bytes)], filename, { type: 'image/png' }),
   );
-  await api.adminForm('PUT', `/api/admin/config/${kind}`, form);
+  await api.adminForm('PUT', path, form);
 }
 
 /** Waits for the sender to work through the recipient rows (F56). */

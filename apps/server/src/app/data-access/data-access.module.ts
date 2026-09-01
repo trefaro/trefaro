@@ -43,6 +43,8 @@ import { TypeormEventSeriesRepository } from './repositories/typeorm-event-serie
 import { TypeormEventTranslationRepository } from './repositories/typeorm-event-translation.repository';
 import { TypeormEventRepository } from './repositories/typeorm-event.repository';
 import { TypeormInvitationRepository } from './repositories/typeorm-invitation.repository';
+import { LOGO_PATHS_REPOSITORY } from '../business/logo-files/ports/logo-paths.repository';
+import { TypeormLogoPathsRepository } from './repositories/typeorm-logo-paths.repository';
 import { TypeormMediaLinkRepository } from './repositories/typeorm-media-link.repository';
 import { TypeormModuleConfigRepository } from './repositories/typeorm-module-config.repository';
 import { TypeormProgramItemSignupRepository } from './repositories/typeorm-program-item-signup.repository';
@@ -93,6 +95,7 @@ export class DataAccessModule {
         TypeormEventRepository,
         TypeormEventTranslationRepository,
         TypeormInvitationRepository,
+        TypeormLogoPathsRepository,
         TypeormMediaLinkRepository,
         TypeormModuleConfigRepository,
         TypeormProgramItemRepository,
@@ -147,6 +150,13 @@ export class DataAccessModule {
         {
           provide: INVITATION_REPOSITORY,
           useExisting: TypeormInvitationRepository,
+        },
+        // Two columns of two tables behind one narrow port (FR 2.1, FR 3.1): its
+        // only caller is the delete that has to unlink logo files before the
+        // cascade takes the rows that name them (E9).
+        {
+          provide: LOGO_PATHS_REPOSITORY,
+          useExisting: TypeormLogoPathsRepository,
         },
         {
           provide: MEDIA_LINK_REPOSITORY,
@@ -221,6 +231,7 @@ export class DataAccessModule {
         EVENT_REPOSITORY,
         EVENT_TRANSLATION_REPOSITORY,
         INVITATION_REPOSITORY,
+        LOGO_PATHS_REPOSITORY,
         MEDIA_LINK_REPOSITORY,
         MEDIA_LINK_TALLY,
         MODULE_CONFIG_REPOSITORY,

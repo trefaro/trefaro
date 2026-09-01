@@ -89,6 +89,26 @@ export class TypeormEventRepository implements EventRepository {
     return this.findById(id);
   }
 
+  /**
+   * The path is written on its own, and the caller reads the row back.
+   *
+   * `update` rather than `save`, for the same reason `update` above does: a loaded entity
+   * written back would carry every column it happens to hold, and this operation
+   * is about exactly one of them. It also moves `updated_at`, which is what
+   * makes the `?v=` in the public URL change when the picture does.
+   */
+  async setLogoPath(
+    id: string,
+    storedPath: string | null,
+  ): Promise<EventRecord | null> {
+    const result = await this.repository.update(
+      { id },
+      { logoPath: storedPath },
+    );
+    if ((result.affected ?? 0) === 0) return null;
+    return this.findById(id);
+  }
+
   async delete(id: string): Promise<boolean> {
     const result = await this.repository.delete({ id });
     return (result.affected ?? 0) > 0;

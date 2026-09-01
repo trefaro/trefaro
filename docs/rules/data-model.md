@@ -83,9 +83,17 @@ Entscheidungsprotokoll (`docs/Anforderungsanalyse_und_Umsetzungsplan.md`).
 - **Nicht übersetzt werden Adresse, Personenname, Zeit und `languages`** (F61,
   E25): eine übersetzte Straße schickt Menschen an den falschen Ort, und in
   welchen Sprachen eine Veranstaltung _stattfindet_, ist eine Tatsache über sie.
-- **Offene Lücke:** `event_series.logo_path` und `event.logo_path` existieren, drei
-  Ansichten zeichnen `logoUrl` — geschrieben hat die Spalten nie jemand. FR 2.1 /
-  FR 3.1 führen das Logo unter den Pflichtfeldern (P1). Gestalt entschieden
-  (E19/F66-Linie), Umsetzung offen; steht in `todo.md` unter _Known gaps_.
+- **Ein Zeilen-Logo liegt in `logos/`, und die Datenbank hält das fest** (F113):
+  `CHK_event_series_logo_path` und `CHK_event_logo_path` lassen `NULL` oder
+  `logos/%` zu — dieselbe Konstruktion wie bei den Branding-Spalten, und aus
+  demselben Grund: die Nachbarn eines gespeicherten Pfades sind Anmeldungsanhänge
+  (E9). Geschrieben wird die Spalte **nur** über `setLogoPath`, nie über
+  `EventSeriesChanges`/`EventChanges` — ein Formular, das eine Pfadspalte leeren
+  kann, leert sie irgendwann versehentlich (F116).
+- **Ein Event erbt das Logo seiner Reihe nicht** (F114). Jede Zeile zeigt ihr
+  eigenes oder keines; der Rückfall ist die Kopfzeile, die das Organisationslogo
+  ohnehin auf jeder Seite trägt. Eine Kette hätte dasselbe Bild zweimal auf eine
+  Seite gebracht, und „ich habe das Event-Logo entfernt, jetzt erscheint das der
+  Reihe" hat niemand angefordert.
 
 Siehe auch: [Schichten und Ports im Server](server-layers.md), [Ausgehende Mail](mail.md).

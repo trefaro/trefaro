@@ -48,36 +48,27 @@ an instance were exposed today.
       in the test suite can see that — the e2e suites run `nx serve`, and CI
       builds the images without ever starting them together.
 
-- [ ] **A series and an event have no logo, and FR 2.1 and FR 3.1 name one.**
-      `event_series.logo_path` and `event.logo_path` exist, the participant
+- [x] **A series and an event have no logo, and FR 2.1 and FR 3.1 name one.**
+      ~~`event_series.logo_path` and `event.logo_path` exist, the participant
       client already renders `logoUrl` on the start page, the series page and the
-      event landing page — and nothing has ever written those columns. AP 2 of
-      phase 2 removed the placeholder that turned a stored path into a URL
-      (`/api/media/<path>`), because that shape is exactly what E19 forbids, so
-      both services answer `logoUrl: null` on purpose.
-      **Checked in AP 13 and escalated rather than closed:** the two functional
-      requirements list the logo among the _mandatory_ fields of a series
-      (FR 2.1) and of an event (FR 3.1), both **P1**. So the honest reading is
-      not "decide whether", it is "this P1 requirement was never built" — it
-      slipped past AP 2 and AP 3 of phase 1, and phase 2 then built exactly the
-      machinery it needs.
-      **The shape is decided, so nobody has to improvise it** (AP 13): per-row
-      routes without a caller-supplied path — `GET /api/media/series/:id/logo`
-      and `GET /api/media/events/:id/logo`, resolved through the row the way
-      `/api/media/branding/logo` is resolved through `app_config` (E19, F66) —
-      with `PUT`/`DELETE` under `/api/admin/series/:id/logo` and
-      `/api/admin/events/:id/logo`, an own subtree in the upload volume, a
+      event landing page — and nothing has ever written those columns.~~ Built on
+      01.09.2026 as a work package of its own, before phase 3, the way Marius
+      scheduled it on 31.08.2026. The shape is the one AP 13 decided and nobody
+      had to improvise: per-row routes without a caller-supplied path
+      (`GET /api/media/series/:id/logo`, `…/events/:id/logo`), `PUT`/`DELETE`
+      under `/api/admin/…`, an own `logos/` subtree in the upload volume, a
       `CHECK` on both path columns and the type read from the first bytes (F38).
-      What must **not** happen is a third shape: a route that takes a stored path
-      would put registration attachments one guess away (E9).
-      **Not built in AP 13**, which is a closing package and not the place to add
-      a P1 feature unasked — it is a work package of its own, of about the size
-      of AP 2.
-      **Scheduled by Marius on 31.08.2026: it is built before phase 3 starts**,
-      as a package of its own rather than folded into either phase. So it is no
-      longer an open gap waiting for a decision — it is the next piece of work,
-      and phase 3 does not begin until it is done. Verify: upload a logo on a
-      series, see it on the start page.
+      Two things were decided against while building it: an event does **not**
+      inherit the logo of its series (F114 — the fallback is the header, which
+      carries the organization logo on every page anyway), and the media route
+      checks **no** status (F115 — the address needs the row's uuid, the bytes
+      are a brand, and the other direction would break the organizer's own
+      preview while a row is a draft). The logo is not part of either form: it is
+      written the moment it is uploaded, so the field appears only when editing
+      (F116). Decisions F113–F117, protocol in
+      [`docs/PHASE2.md`](docs/PHASE2.md) under _Nachtrag_. **Verified as asked:**
+      a logo uploaded on a series shows up on the start page —
+      `apps/user-client-e2e/src/event-series.spec.ts`.
 
 ---
 

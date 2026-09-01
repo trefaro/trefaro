@@ -50,6 +50,15 @@ Link.
   öffentliche Adresse — sonst wäre jeder Link tot, sobald das Event auf Entwurf
   zurückgeht. `ProgramService.listForEvent` und `EventsService.locate` sind genau
   dafür da.
+- **Eine Medienroute nimmt nie einen Pfad, aber auch keinen Status** (F113, F115).
+  `/api/media/branding/{logo,app-icon}` löst über `app_config` auf,
+  `/api/media/series/:id/logo` und `…/events/:id/logo` über die Zeile — mehr
+  Routen zu gespeicherten Bytes gibt es nicht, und keine davon nimmt einen
+  Dateinamen. Der **Status** wird dabei bewusst **nicht** geprüft: das Logo einer
+  unveröffentlichten Reihe wird ausgeliefert, weil die Adresse die uuid braucht,
+  die Bytes eine Marke sind und die Gegenrichtung die Vorschau des Veranstalters
+  genau im Entwurfszustand kaputt machen würde. Das 404 sagt nur „hier ist kein
+  Bild" und nie, ob die Zeile existiert.
 - **`?locale=` hat drei Antworten, und nur eine ist ein Fehler** (F94): fehlt der
   Parameter, stehen die Originale (kostenlos); eine wohlgeformte Sprache, in die
   niemand übersetzt hat, ist **kein** Fehler; was kein Sprachtag ist, ist ein 400.

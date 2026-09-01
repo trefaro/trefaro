@@ -16,6 +16,10 @@ import {
   EVENT_SERIES_STATUSES,
 } from '@trefaro/shared-models';
 import { EventSeriesAdminService } from '../../features/event-series/event-series-admin.service';
+import {
+  ImageUploadField,
+  type ImageEndpoint,
+} from '../../features/images/image-upload-field';
 
 /**
  * Create and edit an event series (UC 02, UC 03, FR 2.1, FR 2.2).
@@ -25,13 +29,16 @@ import { EventSeriesAdminService } from '../../features/event-series/event-serie
  * creating: the server derives it from the name, and an organizer should not
  * have to think about URLs to get started.
  *
- * The logo FR 2.1 asks for is missing here until uploads exist (AP 7); the
- * column is already in the schema.
+ * The logo FR 2.1 lists among the mandatory fields is here too — but only when
+ * editing. It is written the moment it is uploaded rather than with the rest of
+ * the form (an image is bytes in a volume, and a draft would mean holding them
+ * somewhere), and a series that does not exist yet has nothing to attach them
+ * to. So a new series is named first and given its picture on the next screen.
  */
 @Component({
   selector: 'trefaro-series-form-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, TranslocoPipe],
+  imports: [ImageUploadField, ReactiveFormsModule, RouterLink, TranslocoPipe],
   template: `
     <h1>
       {{ (isNew() ? 'admin.series.new' : 'admin.series.edit') | transloco }}
@@ -96,6 +103,22 @@ import { EventSeriesAdminService } from '../../features/event-series/event-serie
         </a>
       </div>
     </form>
+
+    @if (logoEndpoint(); as endpoint) {
+      <section aria-labelledby="logo-heading">
+        <h2 id="logo-heading">{{ 'admin.series.logo' | transloco }}</h2>
+        <trefaro-image-upload-field
+          fieldId="series-logo"
+          [endpoint]="endpoint"
+          [heading]="'admin.series.logo' | transloco"
+          [fileLabel]="'admin.series.logoFileLabel' | transloco"
+          [hint]="'admin.series.logoHint' | transloco"
+          [currentUrl]="logoUrl()"
+          errorKey="admin.series.logoFailed"
+          (changed)="rereadLogo()"
+        />
+      </section>
+    }
   `,
   styles: `
     form {
@@ -144,6 +167,16 @@ import { EventSeriesAdminService } from '../../features/event-series/event-serie
     .error {
       color: #a3341f;
     }
+
+    section {
+      margin-block-start: 2rem;
+      inline-size: min(34rem, 100%);
+    }
+
+    h2 {
+      font-size: 1.1rem;
+      margin-block-end: 0.6rem;
+    }
   `,
 })
 export class SeriesFormPage {
@@ -156,8 +189,36 @@ export class SeriesFormPage {
   protected readonly busy = signal(false);
   protected readonly error = signal<Problem | null>(null);
 
+  /**
+   * The stored logo, as the series reports it.
+   *
+   * Its own signal rather than a form control: it is not part of the form body,
+   * it is written on its own, and Cancel does not take it back.
+   */
+  protected readonly logoUrl = signal<string | null>(null);
+
   private readonly admin = inject(EventSeriesAdminService);
   private readonly router = inject(Router);
+
+  /**
+   * Where this series' logo goes — `null` while there is no series to attach it
+   * to.
+   *
+   * A `computed`, so it is a new object only when the id changes; the template
+   * hands it to the upload field, which knows nothing about series.
+   */
+  protected readonly logoEndpoint = computed<ImageEndpoint | null>(() => {
+    const id = this.id();
+    if (!id) return null;
+    return {
+      upload: async (file) => {
+        this.logoUrl.set((await this.admin.uploadLogo(id, file)).logoUrl);
+      },
+      remove: async () => {
+        this.logoUrl.set((await this.admin.removeLogo(id)).logoUrl);
+      },
+    };
+  });
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     name: ['', Validators.required],
@@ -211,10 +272,24 @@ export class SeriesFormPage {
     }
   }
 
+  /**
+   * After an upload or a removal.
+   *
+   * The endpoint has already put the new URL in {@link logoUrl}, so this only
+   * refreshes the cached list — the series overview shows nothing of the logo
+   * today, but the list is this service's state and a stale copy is a bug
+   * waiting for the next screen that reads it.
+   */
+  protected async rereadLogo(): Promise<void> {
+    await this.admin.reload();
+  }
+
   private async load(id: string): Promise<void> {
     this.error.set(null);
     try {
       const series = await this.admin.get(id);
+      // The picture is not part of the form, so a slow answer may always set it.
+      this.logoUrl.set(series.logoUrl);
       // A slow answer must not overwrite what the organizer has already typed.
       // Found by a Firefox e2e run that filled the form before it had loaded.
       if (this.form.dirty) return;

@@ -2,6 +2,7 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import type { EventSeriesTranslation } from '@trefaro/shared-models';
 import type { RegistrationTally } from '../registration/ports/registration-tally';
 import type { AttachmentsService } from '../attachments';
+import type { LogoImageService, LogoUpload } from '../logo-files';
 import { EventSeriesService } from './event-series.service';
 import type { EventSeriesTranslationReader } from './ports/event-series-translation.repository';
 import {
@@ -82,11 +83,65 @@ class FakeEventSeriesRepository implements EventSeriesRepository {
     return this.rows[index];
   }
 
+  async setLogoPath(
+    id: string,
+    storedPath: string | null,
+  ): Promise<EventSeriesRecord | null> {
+    const index = this.rows.findIndex((row) => row.id === id);
+    if (index < 0) return null;
+    this.rows[index] = {
+      ...this.rows[index],
+      logoPath: storedPath,
+      // The real implementation moves `updated_at`, and the public URL's `?v=`
+      // is read from it — a fake that left it alone would make the test pass for
+      // a URL that never changes.
+      updatedAt: new Date('2026-09-01T12:00:00Z'),
+    };
+    return this.rows[index];
+  }
+
   async delete(id: string): Promise<boolean> {
     const index = this.rows.findIndex((row) => row.id === id);
     if (index < 0) return false;
     this.rows.splice(index, 1);
     return true;
+  }
+}
+
+/**
+ * The bytes half of a logo (FR 2.1), as this service sees it.
+ *
+ * Records rather than stores: what the service owes the volume is a sequence of
+ * calls — write the new file, then unlink the old one, and unlink the new one if
+ * the row write failed — and that sequence is the thing worth asserting. Whether
+ * PNG bytes survive a round trip is `LogoImageService`'s own test.
+ */
+class FakeLogoImages {
+  readonly stored: LogoUpload[] = [];
+  readonly discarded: string[] = [];
+  readonly purgedSeries: string[] = [];
+  /** Set to make the next `store` behave like a refused upload. */
+  refuse: Error | null = null;
+  private next = 1;
+
+  async store(upload: LogoUpload): Promise<string> {
+    if (this.refuse) throw this.refuse;
+    this.stored.push(upload);
+    return `logos/stored-${this.next++}`;
+  }
+
+  async discard(paths: readonly (string | null)[]): Promise<void> {
+    for (const path of paths) if (path) this.discarded.push(path);
+  }
+
+  async purgeUnderSeries(seriesId: string): Promise<void> {
+    this.purgedSeries.push(seriesId);
+  }
+
+  async read(storedPath: string | null) {
+    return storedPath
+      ? { mimeType: 'image/png', bytes: Buffer.from([0x89, 0x50]) }
+      : null;
   }
 }
 
@@ -136,6 +191,7 @@ describe('EventSeriesService', () => {
   let tally: FakeRegistrationTally;
   let attachments: FakeAttachmentsService;
   let translations: FakeSeriesTranslations;
+  let logos: FakeLogoImages;
   let service: EventSeriesService;
 
   const minimal = {
@@ -148,11 +204,13 @@ describe('EventSeriesService', () => {
     tally = new FakeRegistrationTally();
     attachments = new FakeAttachmentsService();
     translations = new FakeSeriesTranslations();
+    logos = new FakeLogoImages();
     service = new EventSeriesService(
       repository,
       tally,
       attachments as unknown as AttachmentsService,
       translations,
+      logos as unknown as LogoImageService,
     );
   });
 
@@ -468,6 +526,122 @@ describe('EventSeriesService', () => {
         ConflictException,
       );
       expect(repository.rows).toHaveLength(1);
+    });
+  });
+
+  describe('logo (FR 2.1)', () => {
+    const png: LogoUpload = {
+      mimeType: 'image/png',
+      bytes: Buffer.from([0x89, 0x50, 0x4e, 0x47]),
+    };
+
+    it('answers a URL that names the series, never a stored path (E19)', async () => {
+      const created = await service.create(minimal);
+
+      const url = await service.setLogo(created.id, png);
+
+      // The whole of E19 in one assertion: the address carries the row's id and
+      // nothing about where the bytes are. A URL with `logos/stored-1` in it
+      // would put registration attachments one guess away.
+      expect(url).toBe(
+        `/api/media/series/${created.id}/logo?v=${new Date('2026-09-01T12:00:00Z').getTime()}`,
+      );
+      expect(url).not.toContain('stored-1');
+    });
+
+    it('shows the logo on the public pages once it is uploaded', async () => {
+      const created = await service.create(minimal);
+      await service.update(created.id, { status: 'published' });
+      await service.setLogo(created.id, png);
+
+      const [listed] = await service.listPublic();
+
+      expect(listed.logoUrl).toContain(`/api/media/series/${created.id}/logo`);
+    });
+
+    it('has no logo URL before anything is uploaded', async () => {
+      const created = await service.create(minimal);
+
+      expect((await service.getForOrganizer(created.id)).logoUrl).toBeNull();
+    });
+
+    it('removes the file it replaced, in that order', async () => {
+      const created = await service.create(minimal);
+      await service.setLogo(created.id, png);
+
+      await service.setLogo(created.id, png);
+
+      // Two files written, the first one gone: there is at most one logo per
+      // row, so a leftover would be invisible forever rather than merely
+      // wasteful.
+      expect(logos.stored).toHaveLength(2);
+      expect(logos.discarded).toEqual(['logos/stored-1']);
+    });
+
+    it('costs no bytes for a series that does not exist', async () => {
+      await expect(service.setLogo('series-99', png)).rejects.toThrow(
+        NotFoundException,
+      );
+
+      expect(logos.stored).toEqual([]);
+    });
+
+    it('leaves the volume as it was when the row write fails', async () => {
+      const created = await service.create(minimal);
+      jest
+        .spyOn(repository, 'setLogoPath')
+        .mockRejectedValueOnce(new Error('connection lost'));
+
+      await expect(service.setLogo(created.id, png)).rejects.toThrow(
+        'connection lost',
+      );
+
+      // The file was written before the column could point at it, so nothing
+      // else will ever name it — it goes here or never.
+      expect(logos.discarded).toEqual(['logos/stored-1']);
+    });
+
+    it('clears the column and unlinks the file when the logo is removed', async () => {
+      const created = await service.create(minimal);
+      await service.setLogo(created.id, png);
+
+      expect(await service.removeLogo(created.id)).toBeNull();
+
+      expect((await service.getForOrganizer(created.id)).logoUrl).toBeNull();
+      // Read before the write, or the path would already be `null` by the time
+      // anybody asked which file to unlink.
+      expect(logos.discarded).toEqual(['logos/stored-1']);
+    });
+
+    it('answers 404 when removing the logo of a series that is gone', async () => {
+      await expect(service.removeLogo('series-99')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('serves the logo of a series that is still a draft', async () => {
+      const created = await service.create(minimal);
+      await service.setLogo(created.id, png);
+
+      // Deliberate: reaching it needs the row's uuid, the bytes are a brand
+      // rather than participant data, and a draft whose logo 404s would break
+      // the organizer's own form in the state they are working in.
+      expect(await service.readLogo(created.id)).not.toBeNull();
+    });
+
+    it('answers nothing for an id that is not a series', async () => {
+      expect(await service.readLogo('series-99')).toBeNull();
+    });
+
+    it('unlinks every logo below a series before deleting it', async () => {
+      const created = await service.create(minimal);
+
+      await service.delete(created.id);
+
+      // The cascade reaches the events and takes their rows without touching
+      // the volume, so the paths have to be collected while the rows can still
+      // say them (E9).
+      expect(logos.purgedSeries).toEqual([created.id]);
     });
   });
 });

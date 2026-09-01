@@ -185,7 +185,7 @@ test.describe('the design settings in the browser', () => {
   }) => {
     await openDesign(page);
 
-    await page.locator('#branding-file-logo').setInputFiles({
+    await page.locator('#image-file-logo').setInputFiles({
       name: 'logo.svg',
       mimeType: 'image/svg+xml',
       buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>'),
@@ -258,7 +258,7 @@ test.describe('the design settings in the browser', () => {
 
     try {
       await openDesign(page);
-      await page.locator('#branding-file-logo').setInputFiles({
+      await page.locator('#image-file-logo').setInputFiles({
         name: 'brand.png',
         mimeType: 'image/png',
         buffer: PNG_1X1,

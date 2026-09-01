@@ -17,6 +17,12 @@ import { AttachmentsService } from '../attachments';
 import { isSlug, slugify } from '../common/slug';
 import { EventSeriesService } from '../event-series/event-series.service';
 import {
+  LogoImageService,
+  eventLogoUrl,
+  type LogoBytes,
+  type LogoUpload,
+} from '../logo-files';
+import {
   REGISTRATION_TALLY,
   type RegistrationTally,
 } from '../registration/ports/registration-tally';
@@ -105,6 +111,10 @@ export class EventsService {
     // write half of the same port belongs to the translation module above.
     @Inject(EVENT_TRANSLATION_REPOSITORY)
     private readonly translations: EventTranslationReader,
+    // The bytes of this event's logo (FR 3.1) — the same arrangement as in
+    // `EventSeriesService`: that service knows nothing about events, this one
+    // keeps the rule about which rows exist.
+    private readonly logos: LogoImageService,
   ) {}
 
   /** Every event of a series, drafts included (FR 2.3, organizer side). */
@@ -318,11 +328,71 @@ export class EventsService {
         `This event has ${confirmed} confirmed registration${confirmed === 1 ? '' : 's'} — archive it instead of deleting it.`,
       );
     }
-    await this.require(id);
+    const existing = await this.require(id);
     await this.attachments.purgeForEvent(id);
+    // Its logo too, while the row that names it is still there (E9).
+    await this.logos.discard([existing.logoPath]);
     if (!(await this.events.delete(id))) {
       throw new NotFoundException(`No event with id "${id}"`);
     }
+  }
+
+  /**
+   * Replaces this event's logo (FR 3.1).
+   *
+   * The same shape as `EventSeriesService.setLogo`, including the order of the
+   * three writes and why: the file exists before any column points at it, and a
+   * failure is compensated in the direction that keeps the landing page
+   * rendering. Deliberately the same code shape rather than a shared helper —
+   * what the two have in common is already in `LogoImageService`, and the rest
+   * is each service's own rule about which rows exist.
+   */
+  async setLogo(id: string, upload: LogoUpload): Promise<string | null> {
+    const existing = await this.require(id);
+    const stored = await this.logos.store(upload);
+
+    let updated: EventRecord | null;
+    try {
+      updated = await this.events.setLogoPath(id, stored);
+    } catch (error: unknown) {
+      await this.logos.discard([stored]);
+      throw error;
+    }
+
+    if (!updated) {
+      await this.logos.discard([stored]);
+      throw new NotFoundException(`No event with id "${id}"`);
+    }
+
+    await this.logos.discard([existing.logoPath]);
+    return eventLogoUrl(updated.id, updated.logoPath, updated.updatedAt);
+  }
+
+  /** Takes the logo away again; the column is cleared before the file goes. */
+  async removeLogo(id: string): Promise<null> {
+    // The path to unlink has to be read before the write — afterwards the row
+    // answers `null` for it.
+    const existing = await this.require(id);
+
+    if (!(await this.events.setLogoPath(id, null))) {
+      throw new NotFoundException(`No event with id "${id}"`);
+    }
+
+    await this.logos.discard([existing.logoPath]);
+    return null;
+  }
+
+  /**
+   * The bytes behind `GET /api/media/events/:id/logo`.
+   *
+   * No status check, for the reason `EventSeriesService.readLogo` gives: the
+   * uuid is not derivable, the bytes are a brand rather than participant data,
+   * and a draft whose logo 404s would break the organizer's own form.
+   */
+  async readLogo(id: string): Promise<LogoBytes | null> {
+    const found = await this.events.findById(id);
+    if (!found) return null;
+    return this.logos.read(found.logoPath);
   }
 
   private async require(id: string): Promise<EventRecord> {
@@ -469,8 +539,9 @@ function toPublicEvent(
     slug: record.slug,
     name: translation?.name ?? record.name,
     description: translation?.description ?? record.description,
-    // Never written either — see the same note in `event-series.service.ts`.
-    logoUrl: null,
+    // Resolved through the row, never as a stored path (E19) — and `null` while
+    // no logo is uploaded, which is the normal state.
+    logoUrl: eventLogoUrl(record.id, record.logoPath, record.updatedAt),
     eventType: record.eventType,
     startsAt: record.startsAt.toISOString(),
     endsAt,

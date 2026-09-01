@@ -240,6 +240,7 @@ export {
   type BrandingImages,
   type FontFamilyOption,
   type LocaleSettings,
+  type LogoImage,
   type ModuleFamily,
   type ModuleSummary,
   type ModuleToggle,
