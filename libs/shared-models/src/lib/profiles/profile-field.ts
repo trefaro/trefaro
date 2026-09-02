@@ -29,6 +29,8 @@
  * question keeps the answers already given (F34).
  */
 
+import type { AnswerableField, AnswerableFieldType } from '../registrations';
+
 /**
  * What a profile question can be.
  *
@@ -37,7 +39,7 @@
  * type exists here either (the argument is in `registrations/field.ts`: a
  * decimal separator is a locale question nobody wants to answer per field).
  */
-export type ProfileFieldType = 'text' | 'select' | 'checkbox';
+export type ProfileFieldType = AnswerableFieldType;
 
 export const PROFILE_FIELD_TYPES: readonly ProfileFieldType[] = [
   'text',
@@ -58,25 +60,22 @@ export const MAX_PROFILE_FIELDS = 20;
 /** The longest field of activity a profile may name (E36). */
 export const MAX_ACTIVITY_AREAS_LENGTH = 200;
 
-/** A profile question as a form has to render it. */
-export interface ProfileFieldPublic {
-  /** Stable; what the answer is stored under (F35). */
-  readonly key: string;
-  readonly label: string;
-  readonly type: ProfileFieldType;
-  /** Shown under the input — the place to say why something is asked. */
-  readonly helpText: string | null;
-  /** The choices of a select field; empty for every other type. */
-  readonly options: readonly string[];
-  /**
-   * Whether the profile form may be submitted without it.
-   *
-   * Required means required *of the form*, not of every existing profile: a
-   * question added today cannot make yesterday's profiles invalid, and nothing
-   * locks somebody out of their account over an unanswered question.
-   */
-  readonly required: boolean;
-}
+/**
+ * A profile question as a form has to render it.
+ *
+ * Deliberately not a declaration of its own: a profile question **is** a field
+ * whose answer is a value, with nothing added — so it is that type
+ * ({@link AnswerableField}) rather than a second copy of it. Two identical
+ * declarations would be two places the next property has to be added to, and
+ * one of them would be forgotten. The form component that draws both kits takes
+ * the shared type; that it happens to be exactly this one is why the profile
+ * form needed no special case (E35).
+ *
+ * `required` there means required *of the form*, not of every existing profile:
+ * a question added today cannot make yesterday's profiles invalid, and nothing
+ * locks somebody out of their account over an unanswered question.
+ */
+export type ProfileFieldPublic = AnswerableField;
 
 /** A profile question as the organizer manages it. */
 export interface ProfileField extends ProfileFieldPublic {

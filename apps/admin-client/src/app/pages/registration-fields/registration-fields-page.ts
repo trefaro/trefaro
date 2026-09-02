@@ -29,6 +29,14 @@ import {
   uploadTypeLabelKey,
 } from '@trefaro/shared-models';
 import { EventsAdminService } from '../../features/events/events-admin.service';
+import {
+  choiceLines,
+  inputChecked,
+  inputNumber,
+  inputValue,
+  lines,
+} from '../../features/fields/field-editing';
+import { fieldTypeKey } from '../../features/i18n/labels';
 import { RegistrationFieldsAdminService } from '../../features/registrations/registration-fields-admin.service';
 
 /** What the row's inputs hold until they are saved. */
@@ -546,9 +554,12 @@ export class RegistrationFieldsPage {
     return formatBytes(MAX_UPLOAD_BYTES, this.i18n.locale());
   }
 
-  protected typeKey(type: RegistrationFieldType): string {
-    return `admin.fields.type.${type}`;
-  }
+  /**
+   * Shared with the profile form's editor, because the word is the same word
+   * (F83): both name a *stored* type, and two vocabularies for one stored word
+   * would be two places a rewording can land in.
+   */
+  protected readonly typeKey = fieldTypeKey;
 
   private readonly fieldsService = inject(RegistrationFieldsAdminService);
   private readonly events = inject(EventsAdminService);
@@ -606,17 +617,9 @@ export class RegistrationFieldsPage {
     });
   }
 
-  protected value(event: Event): string {
-    return (event.target as HTMLInputElement | HTMLTextAreaElement).value;
-  }
-
-  protected checked(event: Event): boolean {
-    return (event.target as HTMLInputElement).checked;
-  }
-
-  protected number(event: Event): number {
-    return Number((event.target as HTMLInputElement).value);
-  }
+  protected readonly value = inputValue;
+  protected readonly checked = inputChecked;
+  protected readonly number = inputNumber;
 
   /** Ticks or unticks one accepted type of the question being added. */
   protected toggleNew(mimeType: string): void {
@@ -805,17 +808,9 @@ function draftOf(field: RegistrationField): FieldDraft {
   return {
     label: field.label,
     helpText: field.helpText ?? '',
-    optionsText: field.options.join('\n'),
+    optionsText: choiceLines(field.options),
     accept: [...field.accept],
     maxSizeMb: toMegabytes(field.maxSizeBytes),
     required: field.required,
   };
-}
-
-/** A text box of choices, one per line, blank lines dropped. */
-function lines(text: string): string[] {
-  return text
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
 }

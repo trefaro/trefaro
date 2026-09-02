@@ -9,12 +9,13 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { problemOf, type Problem } from '@trefaro/shared-http';
 import { TranslationService } from '@trefaro/shared-i18n';
-import { formatInstant, localTimeZone } from '@trefaro/shared-models';
+import {
+  MIN_PASSWORD_LENGTH,
+  formatInstant,
+  localTimeZone,
+} from '@trefaro/shared-models';
 import { AdminAccountsService } from '../../features/admins/admin-accounts.service';
 import { AuthService } from '../../features/auth/auth.service';
-
-/** Mirrors MIN_PASSWORD_LENGTH on the server; the server is the authority. */
-const MIN_PASSWORD_LENGTH = 12;
 
 /**
  * Administrator accounts (FR 1.2).

@@ -25,7 +25,14 @@ diese Eigenschaft.
   Geteilt wird dabei **die Regel, nie die Tabelle**: ein gemeinsamer Port für
   zwei Feldtabellen hätte zwei Implementierungen und einen bedeutungslosen Typ
   ergeben. Beim Ausziehen bleibt beim alten Dienst, was Zeilen kennt —
-  `LogoImageService` behält `purgeUnderSeries` und heißt weiter so.
+  `LogoImageService` behält `purgeUnderSeries` und heißt weiter so. Dieselbe
+  Rechnung kann über die Modulgrenze hinaus zeigen: die **Zahlen** der
+  Passwortregel liegen seit dem fünften Exemplar in `shared-models` (F141), die
+  Regel selbst bleibt in `business/common/password-policy.ts` und der Server
+  entscheidet weiter. Und sie kann auch **gegen** das Teilen ausfallen: für ein
+  Oberflächenbauteil, das zwei Anwendungen bräuchten, wäre eine neue geteilte
+  Bibliothek nötig — und die Liste der geteilten Libs kommt aus der Architektur
+  der Thesis, nicht aus einem Arbeitspaket (F145).
 - **Ein neuer Port muss in `exports` von `DataAccessModule`, nicht nur in
   `providers`.** `@Global()` macht das Modul überall sichtbar, aber ein
   Providertoken, das nicht exportiert ist, bleibt unauflösbar — mit einem

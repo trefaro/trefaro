@@ -14,12 +14,10 @@ import type { SetupState } from '@trefaro/shared-models';
 import {
   HEX_COLOR_PATTERN,
   MAX_ORGANIZATION_NAME_LENGTH,
+  MIN_PASSWORD_LENGTH,
 } from '@trefaro/shared-models';
 import { ThemeService } from '@trefaro/shared-theming';
 import { SetupService } from '../../features/setup/setup.service';
-
-/** Mirrors MIN_PASSWORD_LENGTH on the server; the server is the authority. */
-const MIN_PASSWORD_LENGTH = 12;
 
 /**
  * First-run setup of a fresh instance (FR 1.1, UC 02, AP 5 of phase 2).

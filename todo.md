@@ -490,16 +490,34 @@ answer, not an opinion.
 - [ ] **Wire `PushService.broadcast()` to actual event changes** (FR 3.15). There
       is deliberately no test-send endpoint — an unauthenticated one would be a
       spam vector.
-- [ ] **The organizer's screen for the profile field kit — assigned to AP 3.**
+- [x] **The organizer's screen for the profile field kit — built in AP 3.**
       AP 2 built `GET/POST /api/admin/profile-fields`, `PUT …/order` and
-      `PATCH/DELETE …/:id`, and they work; the plan assigned the _interface_ for
-      them to no work package. Raised at the end of AP 2 and **decided by Marius
-      on 2026-09-02: it goes into AP 3**, whose section in `docs/PHASE3.md` now
-      carries it, together with the two things that package must not assume (the
-      shared form component does not exist yet, and the registration form's
-      editor is a page rather than a component). Left here so AP 13 can tick it —
-      the reason it was an item at all is that an organization able to define its
-      profile questions only with `curl` cannot define them.
+      `PATCH/DELETE …/:id`, and they worked; the plan assigned the _interface_ for
+      them to no work package. Raised at the end of AP 2, **assigned by Marius on
+      2026-09-02 to AP 3**, and delivered there as
+      `pages/profile-fields/profile-fields-page.ts` behind `/profile-form`, with
+      its own navigation entry and an eight-test browser suite. Its neighbour is
+      the registration form's editor and the two stayed two pages; what they
+      share is `features/fields/field-editing.ts` and `fieldTypeKey()` (F144).
+- [ ] **The opt-in for being findable is not on the profile screen yet** (F142).
+      `searchable` has been writable since AP 2 and the profile form deliberately
+      does not offer it: a box promising "other participants can find you and
+      write to you" while nobody can search is a switch nothing reads, and for a
+      promise about visibility that is the wrong direction to be wrong in (E37).
+      **AP 5 owes it** — a participant search nobody can opt into is a search
+      nobody appears in. The endpoint takes it already
+      (`PATCH /api/participant/me`), so this is a screen and a sentence, not a
+      feature.
+- [ ] **Should there be a shared library for interface components?** (F145) The
+      participant client's `avatar-field.ts` and the organizer client's
+      `ImageUploadField` do the same four things to an uploaded image — choose,
+      check locally, preview, write — and cannot share code, because Nx keeps the
+      two applications apart and the list of shared libraries comes from the
+      thesis' architecture (HTTP, configuration, models, plug-ins, i18n) rather
+      than from a work package. Two callers in two applications is not yet an
+      argument; a third would be. **Marius decides**: it is a change to the fixed
+      stack, and the vocabularies differ as much as the code overlaps
+      (`admin.design.*` versus `profile.avatar.*`, F82).
 - [ ] **A `select` profile question whose choices shrink leaves answers behind
       that are no longer offered.** The same situation as a deleted question
       (F34) and deliberately not refused — but nothing tells the organizer that

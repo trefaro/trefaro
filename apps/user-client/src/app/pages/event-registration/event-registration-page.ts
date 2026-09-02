@@ -8,28 +8,31 @@ import {
   signal,
 } from '@angular/core';
 import {
-  FormControl,
   FormBuilder,
   FormRecord,
   ReactiveFormsModule,
   Validators,
-  type ValidatorFn,
 } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { problemOf, type Problem } from '@trefaro/shared-http';
 import { TranslationService } from '@trefaro/shared-i18n';
 import type {
+  AnswerableField,
   PublicEvent,
   RegistrationFieldPublic,
 } from '@trefaro/shared-models';
 import {
-  MAX_CUSTOM_TEXT_LENGTH,
   acceptAttribute,
   formatBytes,
   formatEventPeriod,
   uploadTypeLabelKey,
 } from '@trefaro/shared-models';
+import { CustomField } from '../../features/fields/custom-field';
+import {
+  syncAnswers,
+  type AnswerControl,
+} from '../../features/fields/field-answers';
 import { PublicEventsService } from '../../features/events/public-events.service';
 import {
   RegistrationsService,
@@ -59,7 +62,7 @@ import {
 @Component({
   selector: 'trefaro-event-registration-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, TranslocoPipe],
+  imports: [CustomField, ReactiveFormsModule, RouterLink, TranslocoPipe],
   template: `
     @if (sentTo(); as address) {
       <section class="done">
@@ -122,36 +125,22 @@ import {
         </label>
 
         @if (fields().length > 0) {
-          <div class="custom" formGroupName="customFields">
+          <div class="custom">
             @for (field of fields(); track field.key) {
-              <div class="custom__field">
-                @if (field.type === 'checkbox') {
-                  <label class="check">
-                    <input
-                      type="checkbox"
-                      [formControlName]="field.key"
-                      [attr.aria-describedby]="describedBy(field)"
-                    />
-                    <span>{{ labelOf(field) }}</span>
-                  </label>
-                } @else if (field.type === 'select') {
-                  <label>
-                    <span>{{ labelOf(field) }}</span>
-                    <select
-                      [formControlName]="field.key"
-                      [attr.aria-describedby]="describedBy(field)"
-                    >
-                      <!-- An empty first option, so nothing is answered by
-                           accident for somebody who scrolled past. -->
-                      <option value="">
-                        {{ 'register.choose' | transloco }}
-                      </option>
-                      @for (option of field.options; track option) {
-                        <option [value]="option">{{ option }}</option>
-                      }
-                    </select>
-                  </label>
-                } @else if (field.type === 'file') {
+              @if (asValueField(field); as question) {
+                <!-- Drawn by the component both field kits share (E35): the
+                     three types whose answer is a value look the same here and
+                     on the profile form, and they should. -->
+                <trefaro-custom-field
+                  [field]="question"
+                  [control]="answers.controls[field.key]"
+                />
+              } @else {
+                <!-- The one branch that stays here: a file answers with bytes
+                     that are a part of the request rather than a value in the
+                     answers (F37), and its input has no control the form can
+                     own. -->
+                <div class="custom__field">
                   <label>
                     <span>{{ labelOf(field) }}</span>
                     <input
@@ -165,22 +154,13 @@ import {
                   @if (fileProblem(field); as problem) {
                     <small class="notice" role="alert">{{ problem }}</small>
                   }
-                } @else {
-                  <label>
-                    <span>{{ labelOf(field) }}</span>
-                    <input
-                      [formControlName]="field.key"
-                      [attr.maxlength]="maxTextLength"
-                      [attr.aria-describedby]="describedBy(field)"
-                    />
-                  </label>
-                }
-                @if (field.helpText) {
-                  <small class="hint" [id]="hintId(field)">
-                    {{ field.helpText }}
-                  </small>
-                }
-              </div>
+                  @if (field.helpText) {
+                    <small class="hint" [id]="hintId(field)">
+                      {{ field.helpText }}
+                    </small>
+                  }
+                </div>
+              }
             }
           </div>
         }
@@ -307,8 +287,6 @@ export class EventRegistrationPage {
   /** The extra questions this event asks (F12), in form order. */
   protected readonly fields = signal<readonly RegistrationFieldPublic[]>([]);
 
-  protected readonly maxTextLength = MAX_CUSTOM_TEXT_LENGTH;
-
   /**
    * The files picked so far, by field key.
    *
@@ -324,11 +302,11 @@ export class EventRegistrationPage {
   /**
    * The answers, one control per defined field.
    *
-   * A `FormRecord` rather than a second typed group: the control names are not
-   * known until the definitions are read, which is exactly the case it exists
-   * for.
+   * Kept in a `FormRecord` and handed to the shared component one control at a
+   * time: `formControlName` would have made the component depend on standing
+   * inside this form, and it has to work on the profile form too (E35).
    */
-  private readonly answers = new FormRecord<FormControl<string | boolean>>({});
+  protected readonly answers = new FormRecord<AnswerControl>({});
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     firstName: ['', Validators.required],
@@ -358,6 +336,23 @@ export class EventRegistrationPage {
     effect(() => {
       void this.loadFields(this.seriesSlug(), this.eventSlug());
     });
+  }
+
+  /**
+   * The same definition seen as a question whose answer is a value, or `null`
+   * for a file field.
+   *
+   * The very object, not a copy: every property `AnswerableField` names is
+   * already on it, and the assertion narrows only `type`, which the branch has
+   * just established. Returning the same reference is what keeps the shared
+   * component's input stable across change detection.
+   */
+  protected asValueField(
+    field: RegistrationFieldPublic,
+  ): AnswerableField | null {
+    return field.type === 'file'
+      ? null
+      : (field as RegistrationFieldPublic & AnswerableField);
   }
 
   protected acceptOf(field: RegistrationFieldPublic): string | null {
@@ -547,62 +542,24 @@ export class EventRegistrationPage {
     } catch {
       fields = [];
     }
+    // Controls before the list: the template reads a control per field, and
+    // the two must never be one render apart.
+    syncAnswers(this.answers, this.valueFields(fields));
     this.fields.set(fields);
-    this.syncAnswers(fields);
   }
 
   /**
-   * Brings the controls in line with the definitions.
+   * The definitions whose answer is a value — everything but a file field.
    *
-   * Existing controls are kept: this runs again when the route parameters are
-   * re-emitted, and rebuilding the record would throw away what somebody has
-   * already typed.
+   * File fields deliberately get no control: their answer is a part of the
+   * request, not a value in `customFields`, and a value there is refused (F37).
    */
-  private syncAnswers(fields: readonly RegistrationFieldPublic[]): void {
-    // File fields deliberately get no control: their answer is a part of the
-    // request, not a value in `customFields`, and a value there is refused
-    // (F37).
-    const wanted = new Map(
-      fields
-        .filter((field) => field.type !== 'file')
-        .map((field) => [field.key, field]),
-    );
-
-    for (const key of Object.keys(this.answers.controls)) {
-      if (!wanted.has(key)) this.answers.removeControl(key);
-    }
-    for (const [key, field] of wanted) {
-      if (this.answers.contains(key)) continue;
-      this.answers.addControl(
-        key,
-        new FormControl<string | boolean>(
-          field.type === 'checkbox' ? false : '',
-          {
-            nonNullable: true,
-            validators: validatorsFor(field),
-          },
-        ),
-      );
-    }
-  }
-}
-
-/**
- * What the browser checks before the request goes out.
- *
- * A courtesy, not the rule: the server validates against the same definitions
- * and is what decides. `requiredTrue` for a checkbox, because a required
- * checkbox has to be ticked rather than merely answered.
- */
-function validatorsFor(field: RegistrationFieldPublic): ValidatorFn[] {
-  const validators: ValidatorFn[] = [];
-  if (field.required) {
-    validators.push(
-      field.type === 'checkbox' ? Validators.requiredTrue : Validators.required,
+  private valueFields(
+    fields: readonly RegistrationFieldPublic[],
+  ): readonly AnswerableField[] {
+    return fields.filter(
+      (field): field is RegistrationFieldPublic & AnswerableField =>
+        field.type !== 'file',
     );
   }
-  if (field.type === 'text') {
-    validators.push(Validators.maxLength(MAX_CUSTOM_TEXT_LENGTH));
-  }
-  return validators;
 }

@@ -7,7 +7,7 @@ einmal schiefgegangen.**
 Das ist keine zweite Anforderungsanalyse. Die Begründung jeder Entscheidung steht
 ausführlich woanders und wird hier nur mit ihrer Nummer zitiert:
 
-- **F1–F139** — Entscheidungsprotokoll in
+- **F1–F147** — Entscheidungsprotokoll in
   [`docs/Anforderungsanalyse_und_Umsetzungsplan.md`](../Anforderungsanalyse_und_Umsetzungsplan.md)
   (F62 wurde nie vergeben; F70 beantwortet, was für sie geplant war. **F125–F136
   sind reserviert, aber noch nicht vergeben** — sie gehören zu Arbeitspaketen der

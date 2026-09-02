@@ -5,10 +5,12 @@
  * organizer client all compile against these types, so a change to an API
  * contract breaks the build instead of a request at runtime.
  */
-export type {
-  AdminAccount,
-  AdminLoginRequest,
-  AdminSessionInfo,
+export {
+  MAX_PASSWORD_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  type AdminAccount,
+  type AdminLoginRequest,
+  type AdminSessionInfo,
 } from './lib/auth';
 export {
   eventSeriesStatusKey,
@@ -105,6 +107,8 @@ export {
   pageCount,
   uploadTypeLabel,
   uploadTypeLabelKey,
+  type AnswerableField,
+  type AnswerableFieldType,
   type AttachmentSummary,
   type ConfirmationState,
   type CustomFieldValue,

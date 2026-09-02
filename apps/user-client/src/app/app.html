@@ -26,6 +26,23 @@
 
 <nav class="app-nav" [attr.aria-label]="'app.nav.label' | transloco">
   <a class="app-nav__link" routerLink="/">{{ 'app.nav.series' | transloco }}</a>
+  <!-- Only where this instance keeps accounts at all (F53). An organization
+       that runs events and no community would otherwise carry a sign-in link
+       to a form the server answers 404 to. -->
+  @if (session.accountsEnabled()) { @if (session.isLoggedIn()) {
+  <a class="app-nav__link" routerLink="/profile"
+    >{{ 'profile.title' | transloco }}</a
+  >
+  <!-- A button, not a link: signing out changes something (F44 in miniature),
+       and a link previewer must not be able to end somebody's session. -->
+  <button type="button" class="app-nav__signout" (click)="signOut()">
+    {{ 'app.nav.signOut' | transloco }}
+  </button>
+  } @else {
+  <a class="app-nav__link" routerLink="/profile/login"
+    >{{ 'profile.login.title' | transloco }}</a
+  >
+  } }
   <!-- Plug-in hook point one: the navigation bar. -->
   <trefaro-plugin-slot mountPoint="navigation" />
 </nav>

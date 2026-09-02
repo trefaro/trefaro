@@ -57,6 +57,31 @@ besteht. Jede Zeile hier hat einmal einen halben Tag gekostet.
   ruft zusätzlich `ThemeService.apply()` (E20).
 - **Zwei Felder dürfen nicht „Name" heißen.** Person und Organisation im selben
   Formular sind für einen Screenreader nicht unterscheidbar (NFR 4).
+- **Ein Bauteil, das ein Formularfeld zeichnet, bekommt sein Control übergeben**
+  (F140). `[formControl]` mit einem Control, das der Aufrufer besitzt — nicht
+  `formControlName`, das den `ControlContainer` aus der Umgebung auflöst: das
+  Bauteil funktioniert dann unabhängig davon, wo es steht, und ist mit einem
+  Control und ohne Formular testbar. Beide Baukästen halten ihre Antworten in
+  einem `FormRecord` und geben das Mitglied zu dieser Frage weiter. Und: die
+  Controls werden **vor** der Feldliste gesetzt, sonst liest das Template einen
+  Zyklus lang ein Control, das es noch nicht gibt.
+- **Ein `<section>` ohne zugänglichen Namen ist keine `region`.** Ohne
+  `aria-labelledby` (oder `aria-label`) taucht der Abschnitt nicht im
+  Accessibility-Baum als Bereich auf — ein Screenreader kündigt eine namenlose
+  Gruppe an, und `getByRole('region', { name: … })` einer Browsersuite findet
+  gar nichts. Die Überschrift bekommt eine `id`, der Abschnitt zeigt darauf.
+- **Der Nutzer-Client fragt nur nach einer Sitzung, wenn dieser Browser schon
+  einmal angemeldet war** (F143). Sein Normalzustand ist anonym, und `GET
+/api/participant/me` antwortet dann 401 — eine rote Konsolenzeile und eine
+  sinnlose Anfrage bei jedem öffentlichen Seitenaufruf. Der Hinweis dafür steht
+  in `localStorage` (`trefaro.participant-session`) und ist **kein** Token: das
+  HttpOnly-Cookie bleibt die Autorität (E34). Gefunden von `start-up.spec.ts`,
+  die „ohne Konsolenfehler" prüft — die Prüfung wurde nicht gelockert.
+- **Ein Formular sperrt nicht, weil eine Nebenanfrage fehlschlug** (F146). Die
+  Profilseite füllt ihre eigenen Felder, sobald das Profil da ist, und die
+  Antworten erst, wenn auch die Fragen da sind — zwei Effekte, zwei Marken. Der
+  erste Entwurf wartete auf beides, und eine nicht ladbare Fragenliste machte ein
+  Pflichtfeld leer und das ganze Formular unabsendbar.
 - **Ein Client-Test, der Dateien liest, braucht `"node"` in
   `tsconfig.spec.json`** (Iconliste gegen `public/`, Manifest-Adresse gegen
   `index.html`).

@@ -8,6 +8,8 @@ export {
   MAX_REGISTRATION_FIELDS,
   REGISTRATION_FIELD_TYPES,
   formatAnswer,
+  type AnswerableField,
+  type AnswerableFieldType,
   type CustomFieldValue,
   type CustomFieldValues,
   type RegistrationField,

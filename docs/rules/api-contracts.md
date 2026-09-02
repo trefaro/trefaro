@@ -99,7 +99,9 @@ Link.
   die vollständige Antwortmenge. Sonst ließe sich „required" nicht beurteilen:
   eine Pflichtfrage ist eine Eigenschaft des Formulars, nicht eines Fragments.
   Wer nur den Namen korrigiert, darf deshalb nicht an einer Frage scheitern, die
-  vor drei Monaten gestellt wurde.
+  vor drei Monaten gestellt wurde. Die Kehrseite gilt für den Client (F146):
+  „es gibt keine Fragen" und „die Fragen sind unbekannt" sind zwei Zustände, und
+  wer sie verwechselt, schickt ein `{}`, das jede bisherige Antwort löscht.
 - **`?locale=` hat drei Antworten, und nur eine ist ein Fehler** (F94): fehlt der
   Parameter, stehen die Originale (kostenlos); eine wohlgeformte Sprache, in die
   niemand übersetzt hat, ist **kein** Fehler; was kein Sprachtag ist, ist ein 400.

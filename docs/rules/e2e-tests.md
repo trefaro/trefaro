@@ -60,8 +60,10 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   Millisekunde dazwischen macht den Test rot und sagt nichts.
 - **Der Teilnehmer-Login hat sein eigenes Drosselbudget** — 20 Versuche in fünf
   Minuten, getrennt vom Admin-Login (der Zähler hängt an Route **und** Adresse).
-  Die drei Kontosuiten in `apps/server-e2e` verbrauchen davon zwölf; wer eine
-  vierte schreibt, zählt vorher nach. Ein 429 sieht dort aus wie ein
+  Die drei Kontosuiten in `apps/server-e2e` verbrauchen davon zwölf, die
+  Browsersuite des Nutzer-Clients drei (einer je Engine, `profile.spec.ts`
+  meldet sich genau einmal an und beweist das neue Passwort in `server-e2e`);
+  wer eine weitere schreibt, zählt vorher nach. Ein 429 sieht dort aus wie ein
   Anmeldefehler und ist keiner.
 - **Was instanzweit ist, muss eine Suite selbst wieder abräumen.** Der
   Profil-Baukasten (`profile_field`) hat kein Event, an dem er hängt: eine
@@ -71,6 +73,38 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   `deleteProfileFields(prefix)` in `support/database.ts`, und jede Frage
   bekommt einen Schlüssel mit Lauf-Präfix. Dasselbe gilt für Konten: die Adresse
   ist instanzweit eindeutig (E31), also `deleteProfiles(domain)` im `afterAll`.
+- **Ein `afterAll`, das nach Muster löscht, löscht die Fixtures der anderen
+  Engines mit** (F147). Für ein Teilnehmerkonto gibt es bewusst keinen
+  Löschendpunkt, also räumt die Suite per SQL nach Adressmuster ab — mit einer
+  gemeinsamen Maildomain löschte die erste fertige Engine die **laufenden**
+  Konten der beiden anderen, deren Sitzungszeilen gingen per Fremdschlüssel mit,
+  und der Interceptor schob sie mitten im Test auf die Loginseite. Der Fehlschlag
+  sah wie ein kaputter Login aus. Also: je Engine eine eigene Domain
+  (`@<engine>.profiles.example.org`), und generell muss ein Muster, nach dem
+  gelöscht wird, den eigenen Lauf tragen.
+- **Was instanzweit sichtbar ist, sehen alle drei Engines.** Die Profilfragen
+  hängen an keinem Event, also stehen auf der Profilseite auch die Fragen der
+  beiden anderen Engines — eine Erläuterung mit demselben Wortlaut trifft dann
+  dreimal. Der Lauf gehört in den **Wortlaut**, nicht nur in den Schlüssel.
+  Aus demselben Grund seedet keine Browsersuite eine **Pflicht**frage: sie ließe
+  jedes `PATCH /api/participant/me` der anderen Engines scheitern.
+- **`allInnerTexts()` wartet nicht.** Nach einem `reload()` steht die Liste noch
+  nicht, und die Zusicherung vergleicht ein leeres Array — was als „die
+  Reihenfolge stimmt nicht" gemeldet wird. Vorher auf eine Zeile warten, dann
+  die Texte lesen.
+- **Ein Server, der zwischen den Läufen stehen bleibt, sammelt die
+  Drosselzähler.** `nx e2e` startet den Server als Abhängigkeit — wer aber
+  daneben ein eigenes `nx serve server` laufen lässt (etwa zum Debuggen), lässt
+  **einen** Prozess über alle Durchläufe hinweg zählen. Nach wenigen
+  Volldurchläufen reißen dann zwei Budgets, und beide sehen nach einem
+  Codefehler aus: das **Registrierungsbudget** (60 je 5 min, E4) lässt die
+  mailbasierten Tests auf eine Nachricht warten, die nie verschickt wurde — es
+  sieht nach kaputter Mail aus; das **Login-Budget** (20 je 5 min, danach 15
+  Minuten Sperre) lässt das Loginformular stehen, wo es steht, und der Test
+  meldet „URL ist noch `/profile/login`". Die Zähler liegen im Speicher, also
+  ist die Abhilfe die aus `decisions.md`: **den Server neu starten**, nicht die
+  Drosselung anfassen und nicht abwarten. Beim Arbeiten an einer einzelnen
+  Stelle hilft `--grep`.
 - **Die Entwicklungsdatenbank ist nicht die Werksvorgabe.** Wer einmal
   `tools/demo-seed/` laufen ließ, hat Organisationsname und Primärfarbe der
   Demo in `app_config` — und die Browsersuiten erwarten `#1f6f5c` aus der ersten

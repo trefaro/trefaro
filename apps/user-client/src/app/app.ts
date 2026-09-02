@@ -5,6 +5,7 @@ import { AppConfigService } from '@trefaro/shared-config';
 import { LanguageSwitcher } from '@trefaro/shared-i18n';
 import { PluginSlot } from '@trefaro/shared-plugins';
 import { ThemeService } from '@trefaro/shared-theming';
+import { ParticipantSessionService } from './features/auth/participant-session.service';
 import { AppIconService } from './features/pwa/app-icon.service';
 import { InstallHint } from './features/pwa/install-hint';
 import { OfflineBanner } from './features/pwa/offline-banner';
@@ -17,7 +18,9 @@ import { PushSubscriptionService } from './features/push/push-subscription.servi
  * entirely through the inherited `--trefaro-*` custom properties.
  *
  * The navigation carries one of the two plug-in hook points the architecture
- * defines; the other is on the event detail view.
+ * defines; the other is on the event detail view. Since phase 3 it also carries
+ * the logged-in state: the profile and signing out, or an invitation to sign in
+ * — and none of the three on an instance whose `profiles` module is off.
  *
  * The two PWA pieces of AP 12 sit around the outlet rather than inside a page,
  * because neither belongs to one: losing the network and being installable are
@@ -44,6 +47,7 @@ export class App {
 
   protected readonly theme = inject(ThemeService);
   protected readonly config = inject(AppConfigService);
+  protected readonly session = inject(ParticipantSessionService);
 
   constructor() {
     // Injected for its effect: it keeps `<link rel="apple-touch-icon">` on the
@@ -57,5 +61,17 @@ export class App {
       const url = (notification.data as { url?: string } | undefined)?.url;
       if (url) void this.router.navigateByUrl(url);
     });
+  }
+
+  /**
+   * Ends the session and goes back to the start page.
+   *
+   * Home rather than staying put: the only page that needs a session is the
+   * profile, and being left on it after signing out would mean the guard
+   * bouncing somebody to a login form they just left.
+   */
+  protected async signOut(): Promise<void> {
+    await this.session.logOut();
+    await this.router.navigateByUrl('/');
   }
 }

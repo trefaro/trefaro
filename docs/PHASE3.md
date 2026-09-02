@@ -1,6 +1,6 @@
 # Phase 3 — Profile, Kommunikation und Community-Kern
 
-**Status: in Arbeit** (seit 02.09.2026, AP 1 und AP 2 erledigt). Der Teil oberhalb von
+**Status: in Arbeit** (seit 02.09.2026, AP 1 bis AP 3 erledigt, **M6 erreicht**). Der Teil oberhalb von
 _Fortschritt_ ist der **Plan** und wird nicht mehr rückwirkend korrigiert; was
 tatsächlich passierte, steht unten je Paket — wie in
 [`PHASE1.md`](PHASE1.md) und [`PHASE2.md`](PHASE2.md). Was Marius **vor** einem
@@ -17,7 +17,8 @@ phase 3_ — dreizehn Einträge, jeder ist unten einem Arbeitspaket zugeordnet.
 
 Die Entscheidungen zählen bei **E31** weiter (Phase 1: E1–E16, Phase 2:
 E17–E30); Ergänzungen am Referenzdokument bekommen **F118** und folgende
-(F1–F117 sind vergeben, F62 nie).
+(F1–F117 sind vergeben, F62 nie). Vergeben sind inzwischen F118–F124 sowie
+F137–F147; **F125–F136 bleiben reserviert** für die Pakete, die noch kommen.
 
 **Vier Entscheidungen hat Marius am 02.09.2026 vorab getroffen**, bevor dieser
 Plan geschrieben wurde — sie sind der Rahmen, nicht Vorschläge: die Adresse ist
@@ -939,3 +940,115 @@ Server und gab die Oberfläche keinem Paket. **Marius hat sie am 02.09.2026 AP 3
 zugewiesen**; der Abschnitt dort trägt sie samt zwei Voraussetzungen, die man
 nicht annehmen darf (das gemeinsame Formularbauteil existiert noch nicht, und die
 Editorseite des Anmeldeformulars ist heute eine Seite und kein Bauteil).
+
+### AP 3 — Login, Registrierung und Profil in beiden Clients (erledigt, 02.09.2026) → **Meilenstein M6**
+
+Umgesetzt:
+
+- **Nutzer-Client, vier Seiten** — `pages/profile-register/`,
+  `pages/profile-confirm/`, `pages/profile-login/`, `pages/profile/`. Die Routen
+  `profile/confirm` und `profile/login` sind die beiden, auf die eine Mail zeigt;
+  ihre Adressen stehen als `PROFILE_CONFIRMATION_PATH` und `PROFILE_LOGIN_PATH`
+  in `shared-models`, und `app.routes.spec.ts` prüft, dass dieser Client sie
+  wirklich routet — ein geteilter Konstantenname verhindert nur eine Abweichung,
+  wenn ihn beide Seiten benutzen.
+- **`features/auth/`** — `ParticipantSessionService` (Sitzungssignal,
+  `restore`, `register`, `confirm`, `logIn`, `logOut`, `adopt`, `clear` und
+  `accountsEnabled` aus dem Modulschalter), `provideParticipantSession()` als
+  Startschritt **hinter** der Konfiguration, `participantSessionGuard` /
+  `participantAnonymousGuard`, `sessionExpiredInterceptor`.
+- **`features/fields/`** — `custom-field.ts`, das **eine** Bauteil für beide
+  Baukästen (F140), dazu `field-answers.ts` (`syncAnswers`, `fillAnswers`,
+  `validatorsFor`). Das öffentliche Anmeldeformular zeichnet seine drei
+  Werttypen jetzt damit und behält nur den Dateizweig — 105 Zeilen weg, 62 neu,
+  und `register.choose` heißt `fields.choose`, weil der Schlüssel dem Bauteil
+  gehört und nicht der Seite, auf der er zuerst stand.
+- **`features/profiles/`** — `ParticipantProfileService` (Fragen, `PATCH`,
+  Passwort, Avatar) und `avatar-field.ts`: rundes Bild, Initialen als
+  Platzhalter, Zwei-Schritt-Geste, lokale Typ- und Größenprüfung. Eigenes
+  Bauteil und nicht das des Veranstalter-Clients — die Begründung steht in
+  **F145**.
+- **Die Navigation trägt den angemeldeten Zustand** — Profil und Abmelden, oder
+  eine Einladung zum Anmelden, und nichts von beidem auf einer Instanz mit
+  abgeschaltetem `profiles`-Modul. Abmelden ist ein Knopf, kein Link.
+- **Veranstalter-Client: `pages/profile-fields/`** — Fragen anlegen,
+  umformulieren, Pflicht setzen, verschieben, löschen, gegen die Endpunkte aus
+  AP 2, erreichbar über einen eigenen Navigationseintrag (`/profile-form`). Die
+  Seite sagt auf dem Bildschirm, dass Löschen die Antworten behält (F34), und
+  fragt es noch einmal nach.
+- **Geteilt zwischen den beiden Editorseiten** (F144): `features/fields/field-editing.ts`
+  („eine Auswahl pro Zeile") und `fieldTypeKey()` in `features/i18n/labels.ts`.
+  Die Editorseite des Anmeldeformulars benutzt jetzt beides.
+- **`shared-models`** — `AnswerableField` und `AnswerableFieldType` als der
+  Vertrag, den beide Baukästen erfüllen (`ProfileFieldPublic` **ist** er);
+  `MIN_PASSWORD_LENGTH` und `MAX_PASSWORD_LENGTH` sind hierher gewandert
+  (**F141**), der Server re-exportiert sie und entscheidet weiter.
+
+Nachweise: 63 neue Unit-Tests im Nutzer-Client (53 → **116**), 9 im
+Veranstalter-Client (159 → **168**), Serverseite unverändert (**879** Units,
+**428** Vertragstests). Browsersuiten: **204** Nutzer (197 → 203 grün, einer in
+WebKit übersprungen) und **300** Veranstalter (266 → 274 grün, 26 übersprungen —
+die Profilfragen sind instanzweit und laufen nur in Chromium). Der Katalog
+wächst um 85 Schlüssel auf **749**, en und de vollständig.
+`nx run-many -t lint test build` über alle 13 Projekte fehlerfrei; keine
+Migration in diesem Paket, weil AP 2 sie schon geschrieben hat. Neue
+Entscheidungen: **F140–F147**.
+
+Was anders lief:
+
+- **Der Startlauf fragte bei jedem öffentlichen Seitenaufruf nach einer
+  Sitzung — und bekam 401.** Gefunden hat es `start-up.spec.ts` mit „ohne
+  Konsolenfehler": bei einem Client, dessen Normalzustand anonym ist, ist der
+  Sitzungsprobe-401 kein Ausnahmefall, sondern die Regel. Weder ein neuer
+  Endpunkt noch eine gelockerte Prüfung, sondern ein **Hinweis** in
+  `localStorage`: gefragt wird nur, wenn dieser Browser schon einmal angemeldet
+  war. Das Cookie bleibt die Autorität (**F143**).
+- **`searchable` ist bewusst nicht auf der Profilseite** (**F142**). Die Spalte
+  ist seit AP 2 schreibbar; ein Kästchen mit der Aufschrift „andere
+  Teilnehmende können Sie finden und Ihnen schreiben" wäre aber ein Schalter,
+  den nichts liest — und bei einer Zusage über Sichtbarkeit ist das die falsche
+  Richtung, in die man falsch liegt. **AP 5 schuldet ihn**, zusammen mit der
+  Suche, die er steuert; als Punkt in `todo.md`.
+- **Das Formularbauteil trägt nur drei der vier Feldarten.** E35 sagt „ein
+  Bauteil für beide Baukästen", und so weit trägt es auch — die Datei bleibt beim
+  Anmeldeformular, weil ihre Antwort Bytes im Request sind (F37) und ihr
+  Eingabefeld kein Control hat, das ein Formular besitzen kann. Das Control wird
+  dem Bauteil **übergeben** statt über `formControlName` aus der Umgebung geholt
+  (**F140**).
+- **Die Profilseite wartete zuerst auf die Fragen, bevor sie den Namen füllte.**
+  Ein Ausfall von `GET /api/participant/profile-fields` machte damit ein
+  Pflichtfeld leer und das ganze Formular unabsendbar. Jetzt zwei Effekte: die
+  eigenen Felder, sobald das Profil da ist, die Antworten, wenn auch die Fragen
+  da sind. Dazu die Kehrseite derselben Regel: `customFields` wird **gar nicht**
+  gesendet, wenn die Definitionen nicht gelesen werden konnten — ein `{}` hätte
+  jede bisherige Antwort gelöscht (**F146**).
+- **Die Passwortregel stand fünfmal im Code.** Zwei Seiten im
+  Veranstalter-Client trugen je ein `const MIN_PASSWORD_LENGTH = 12` mit dem
+  Kommentar, dass der Server die Autorität sei; Registrierung und
+  Passwortwechsel hätten zwei weitere gebraucht. Die Zahl liegt jetzt in
+  `shared-models` (**F141**) — der dritte Aufrufer ist der, bei dem man auszieht.
+- **Der Aufräumcode der Browsersuite löschte die Konten der anderen Engines.**
+  Drei Engines, eine Instanz, kein Löschendpunkt für ein Konto: abgeräumt wird
+  per SQL nach Adressmuster, und mit einer gemeinsamen Maildomain löschte die
+  erste fertige Engine die laufenden Konten der beiden anderen — deren
+  Sitzungszeilen gingen mit, die nächste Anfrage antwortete 401, und der
+  Interceptor schob sie mitten im Test auf die Loginseite. Es sah eine Stunde
+  lang nach einem kaputten Login aus (**F147**). Dieselbe Klasse: ein
+  `<section>` ohne `aria-labelledby` ist keine `region`, und `allInnerTexts()`
+  wartet nicht.
+- **Zwei Volldurchläufe der Nutzer-Suite in fünf Minuten reißen das
+  Registrierungsbudget.** 60 Registrierungen je fünf Minuten (E4), und drei
+  Suiten melden je Engine an; ab dem zweiten Durchlauf antwortet der Endpunkt
+  429, und die Tests scheitern beim Warten auf eine Mail, die nie verschickt
+  wurde. Steht jetzt in `docs/rules/e2e-tests.md`, weil es zweimal wie ein
+  Fehler im Code aussah.
+- **Der Veranstalter-Client hat keine zweite Editorseite bekommen, sondern eine
+  zweite Seite** (**F144**). Es ist der zweite Aufrufer, nicht der dritte, und
+  die Unterschiede sitzen in der Gestalt des Bearbeiteten — kein Event darüber,
+  kein Datei-Typ darunter. Geteilt wird, was ein Veranstalter nicht zweimal
+  lernen darf.
+
+Offen aus diesem Paket: **das Opt-in für die Auffindbarkeit** (F142, AP 5) und
+**die Frage, ob es eine geteilte Bibliothek für Oberflächenbauteile geben soll**
+(F145) — beides in `todo.md`, das zweite ist eine Stack-Entscheidung und gehört
+Marius.

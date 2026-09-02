@@ -1,0 +1,233 @@
+import { expect, test } from '@playwright/test';
+import { expectNoRawKeys, t } from './support/catalogue';
+import { accountConfirmationPathFrom, waitForMailTo } from './support/mail';
+import { png } from './support/png';
+import {
+  removeProfileField,
+  seedProfileField,
+} from './support/profile-fixtures';
+import { closeSeedDatabase, deleteProfiles } from './support/registration-seed';
+
+/**
+ * A participant account in a browser (FR 4.1–4.3, UC 09) — AP 3 of phase 3.
+ *
+ * The whole of it, through the parts a person actually touches: the registration
+ * form, the mail, the page its link points at, the login, the profile with the
+ * organization's own questions on it, the picture, and the password. The mail is
+ * read out of Mailpit, because a double opt-in that is only asserted inside the
+ * server has not been shown to work.
+ *
+ * **One login per engine.** The participant login allows twenty attempts per
+ * five minutes and client address, shared with the API contract suites (E4), so
+ * this file signs in exactly once per browser and proves the new password
+ * differently: that it works, and that other sessions end, is asserted in
+ * `apps/server-e2e/src/api/participant-profile.spec.ts`, where the sessions can
+ * be counted without a race.
+ *
+ * Each engine registers its own address and seeds its own profile question — the
+ * field kit is instance-wide, and three engines sharing one would be three
+ * engines editing one row.
+ */
+const CLIENT_URL =
+  process.env['BASE_URL'] ??
+  process.env['CLIENT_URL'] ??
+  'http://localhost:4200';
+
+/**
+ * The mail domain of one engine's accounts, and what its teardown deletes by.
+ *
+ * Per engine, and that is the whole point. Three engines run this file at the
+ * same time against one instance, and the teardown removes accounts **by
+ * pattern** because there is no endpoint that deletes one. A shared domain
+ * therefore meant the first engine to finish deleting the other two engines'
+ * live accounts — their session rows went with the profile, their next request
+ * answered 401, and the interceptor moved them to the login form in the middle
+ * of a test. The failure looked like a broken login and was a teardown.
+ */
+const addressDomain = (engine: string) => `@${engine}.profiles.example.org`;
+
+const PASSWORD = 'a long enough passphrase';
+const NEW_PASSWORD = 'an even longer passphrase';
+
+test.describe.configure({ mode: 'serial' });
+
+test.describe('a participant account', () => {
+  const seededFields: string[] = [];
+  /**
+   * The engine this worker is running, set by the test that creates accounts.
+   *
+   * Read from `testInfo` in the test rather than in a `beforeEach`, because
+   * Playwright insists on a destructuring pattern as a hook's first argument
+   * and there is no fixture this hook would want.
+   */
+  let engine = '';
+
+  test.afterAll(async () => {
+    for (const id of seededFields) {
+      await removeProfileField(CLIENT_URL, id);
+    }
+    seededFields.length = 0;
+    // The address is unique across the instance (E31), so a leftover account
+    // would send the next run down the "there is already one" branch. Only
+    // this engine's, for the reason beside `addressDomain`.
+    if (engine) await deleteProfiles(addressDomain(engine));
+    await closeSeedDatabase();
+  });
+
+  test('sends an anonymous visitor to the login and remembers where they were going', async ({
+    page,
+  }) => {
+    await page.goto('/profile');
+
+    await expect(page).toHaveURL(/\/profile\/login/);
+    await expect(
+      page.getByRole('heading', { name: t('profile.login.title') }),
+    ).toBeVisible();
+    await expectNoRawKeys(page);
+  });
+
+  test('registers, confirms by mail, signs in, edits the profile and its picture', async ({
+    page,
+  }, testInfo) => {
+    engine = testInfo.project.name;
+    const email = `e2e-${Date.now()}${addressDomain(engine)}`;
+    // The engine is in the wording as well as in the key: the profile form
+    // shows every instance-wide question, so all three engines' questions are
+    // on this page and a shared sentence would match three elements.
+    const helpText = `So we can put you in touch locally (${engine}).`;
+    const question = await seedProfileField(CLIENT_URL, {
+      key: `e2e-local-group-${engine}`,
+      label: `E2E local group (${engine})`,
+      helpText,
+    });
+    seededFields.push(question.id);
+
+    // --- registering ------------------------------------------------------
+    await page.goto('/profile/register');
+    await expectNoRawKeys(page);
+    await page.getByLabel(t('profile.firstName')).fill('Amina');
+    await page.getByLabel(t('profile.lastName')).fill('Okonkwo');
+    await page.getByLabel(t('profile.email')).fill(email);
+    await page.getByLabel(t('profile.password')).fill(PASSWORD);
+    await page
+      .getByRole('button', { name: t('profile.register.title') })
+      .click();
+
+    // Nothing is usable yet, and the page says so rather than welcoming anybody.
+    await expect(
+      page.getByRole('heading', { name: t('profile.register.done.title') }),
+    ).toBeVisible();
+    await expect(page.getByText(email)).toBeVisible();
+
+    // --- the mail ---------------------------------------------------------
+    const mail = await waitForMailTo(email, {
+      subject: new RegExp(t('mail.profileConfirm.subject')),
+    });
+    await page.goto(accountConfirmationPathFrom(mail));
+
+    // The link opens a page; a button confirms. A mail scanner that prefetches
+    // every URL must not be able to confirm an address (E5b).
+    await expect(
+      page.getByRole('heading', { name: t('profile.confirm.title') }),
+    ).toBeVisible();
+    await page
+      .getByRole('button', { name: t('profile.confirm.title') })
+      .click();
+    await expect(
+      page.getByRole('heading', { name: t('profile.confirm.done') }),
+    ).toBeVisible();
+
+    // --- signing in -------------------------------------------------------
+    // Scoped to the content: the navigation carries a sign-in link of its own
+    // while nobody is logged in, and both name the same page (F80).
+    await page
+      .getByRole('main')
+      .getByRole('link', { name: t('profile.login.title') })
+      .click();
+    await page.getByLabel(t('profile.email')).fill(email);
+    await page.getByLabel(t('profile.password')).fill(PASSWORD);
+    await page.getByRole('button', { name: t('profile.login.title') }).click();
+
+    await expect(page).toHaveURL(/\/profile$/);
+    await expect(
+      page.getByRole('heading', { name: t('profile.title') }),
+    ).toBeVisible();
+    await expectNoRawKeys(page);
+    // The address is shown and not editable: it is the identity (E31).
+    await expect(page.getByText(email)).toBeVisible();
+    await expect(page.getByLabel(t('profile.firstName'))).toHaveValue('Amina');
+
+    // --- the form, including the organization's own question --------------
+    await page
+      .getByLabel(t('profile.activityAreas'))
+      .fill('Election observation, citizens’ assemblies');
+    // Drawn by the component the registration form uses as well (E35), down to
+    // the explanation underneath.
+    await expect(page.getByText(helpText)).toBeVisible();
+    await page.getByLabel(question.label).fill('Cologne');
+    await page.getByRole('button', { name: t('profile.save') }).click();
+    await expect(page.getByText(t('profile.saved'))).toBeVisible();
+
+    // Read back from the server rather than from the form that wrote it.
+    await page.reload();
+    await expect(page.getByLabel(t('profile.activityAreas'))).toHaveValue(
+      'Election observation, citizens’ assemblies',
+    );
+    await expect(page.getByLabel(question.label)).toHaveValue('Cologne');
+
+    // --- the picture ------------------------------------------------------
+    const avatar = page.getByRole('region', {
+      name: t('profile.avatar.heading'),
+    });
+    // Until there is one, the initials stand in.
+    await expect(avatar.getByText('AO')).toBeVisible();
+    await page.getByLabel(t('profile.avatar.choose')).setInputFiles({
+      name: 'me.png',
+      mimeType: 'image/png',
+      buffer: png(64, 64),
+    });
+    // Choosing does not save: the preview comes first, because this picture is
+    // of a person and they see it before anybody else does.
+    await expect(avatar.getByText('me.png')).toBeVisible();
+    await page.getByRole('button', { name: t('profile.avatar.save') }).click();
+
+    const picture = avatar.getByRole('img', { name: t('profile.avatar.alt') });
+    await expect(picture).toBeVisible();
+    // Served by a route that carries no stored path and needs no session
+    // (F124), with a `?v=` that moves when the bytes do.
+    await expect(picture).toHaveAttribute(
+      'src',
+      /\/api\/media\/profiles\/[0-9a-f-]{36}\/avatar\?v=\d+/,
+    );
+
+    await page
+      .getByRole('button', { name: t('profile.avatar.remove') })
+      .click();
+    await expect(avatar.getByText('AO')).toBeVisible();
+
+    // --- the password -----------------------------------------------------
+    await page.getByLabel(t('profile.changePassword.current')).fill(PASSWORD);
+    await page.getByLabel(t('profile.changePassword.new')).fill(NEW_PASSWORD);
+    await page
+      .getByRole('button', { name: t('profile.changePassword.submit') })
+      .click();
+
+    await expect(
+      page.getByText(t('profile.changePassword.done')),
+    ).toBeVisible();
+    // Emptied afterwards: two boxes still holding a passphrase are two boxes on
+    // a screen somebody may walk away from.
+    await expect(
+      page.getByLabel(t('profile.changePassword.current')),
+    ).toHaveValue('');
+
+    // --- signing out ------------------------------------------------------
+    await page.getByRole('button', { name: t('app.nav.signOut') }).click();
+    await expect(page).toHaveURL(CLIENT_URL + '/');
+    await expect(
+      page
+        .getByRole('navigation', { name: t('app.nav.label') })
+        .getByRole('link', { name: t('profile.login.title') }),
+    ).toBeVisible();
+  });
+});

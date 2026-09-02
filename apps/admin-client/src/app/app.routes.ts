@@ -180,6 +180,16 @@ export const appRoutes: Route[] = [
         title: 'admin.modules.title',
       },
       {
+        // Instance-wide and therefore without a parent in the path, unlike an
+        // event's registration form (F122): a profile belongs to a person.
+        path: 'profile-form',
+        loadComponent: () =>
+          import('./pages/profile-fields/profile-fields-page').then(
+            (m) => m.ProfileFieldsPage,
+          ),
+        title: 'admin.profileFields.title',
+      },
+      {
         path: 'languages',
         loadComponent: () =>
           import('./pages/languages/languages-page').then(

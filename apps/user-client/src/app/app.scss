@@ -49,6 +49,20 @@
   text-decoration: none;
 }
 
+/* Looks like the links beside it and behaves like the button it is: signing
+   out changes something, so it must not be a link. */
+.app-nav__signout {
+  margin-inline-start: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--trefaro-color-primary-strong);
+  font: inherit;
+  font-weight: 500;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 @media (min-width: 48rem) {
   /* Also usable on a desktop, as NFR 6 requires — mobile-first, not mobile-only. */
   .app-nav {

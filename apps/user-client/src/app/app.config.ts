@@ -3,7 +3,11 @@ import {
   isDevMode,
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
-import { provideHttpClient, withFetch } from '@angular/common/http';
+import {
+  provideHttpClient,
+  withFetch,
+  withInterceptors,
+} from '@angular/common/http';
 import {
   provideRouter,
   withComponentInputBinding,
@@ -16,6 +20,8 @@ import {
   provideTrefaroTranslations,
 } from '@trefaro/shared-i18n';
 import { provideTrefaroPlugins } from '@trefaro/shared-plugins';
+import { provideParticipantSession } from './features/auth/provide-participant-session';
+import { sessionExpiredInterceptor } from './features/auth/session-expired.interceptor';
 import { appRoutes } from './app.routes';
 
 /**
@@ -30,7 +36,12 @@ import { appRoutes } from './app.routes';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideHttpClient(withFetch()),
+    provideHttpClient(
+      withFetch(),
+      // An expired session becomes a trip to the login form rather than a
+      // profile page full of failed requests.
+      withInterceptors([sessionExpiredInterceptor]),
+    ),
     // Route parameters are bound to component inputs, so a page reads
     // `eventId` as a signal input instead of subscribing to the route.
     //
@@ -46,6 +57,10 @@ export const appConfig: ApplicationConfig = {
     // name rather than in the product's (F60).
     provideTrefaroTitles(),
     provideTrefaroConfig(),
+    // Behind the configuration, which is what says whether this instance keeps
+    // participant accounts at all (F53), and ahead of the router, so the
+    // profile's guard can decide without a flash through the login form.
+    provideParticipantSession(),
     // The interface's own text, from the server rather than from this image
     // (E22). Behind the configuration, which is what says which languages
     // exist; ahead of the first render, so no screen paints its keys first.

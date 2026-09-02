@@ -33,6 +33,49 @@ export const REGISTRATION_FIELD_TYPES: readonly RegistrationFieldType[] = [
 ];
 
 /**
+ * The three field types whose answer is a value.
+ *
+ * `file` is the odd one out of the four: its answer is bytes in an `attachment`
+ * row rather than an entry in `custom_fields_json` (F37). Anything that renders
+ * or checks an *answer* therefore deals with these three — and the profile
+ * field kit, which has no registration to hang bytes off, never had a fourth
+ * (E35).
+ */
+export type AnswerableFieldType = Exclude<RegistrationFieldType, 'file'>;
+
+/**
+ * A field whose answer is a value, as a form has to draw it.
+ *
+ * What the two field kits have in common, and the reason the participant client
+ * has one form component rather than two (E35): a registration question and a
+ * profile question are drawn, labelled and described identically, and only the
+ * registration kit adds a fourth type with bytes behind it. Declared here
+ * rather than in either kit, because it belongs to neither — the registration
+ * kit's own type widens it, the profile kit's *is* it.
+ *
+ * The server holds the same shape one field narrower, for the same reason:
+ * `AnswerableField` in `business/common/field-kit.ts` needs no key to check an
+ * answer against a definition (F138). Shared is the rule, not the table.
+ */
+export interface AnswerableField {
+  /** Stable; what the answer is stored under (F35). */
+  readonly key: string;
+  readonly label: string;
+  readonly type: AnswerableFieldType;
+  /** Shown under the input — the place to say why something is asked. */
+  readonly helpText: string | null;
+  /** The choices of a select field; empty for every other type. */
+  readonly options: readonly string[];
+  /**
+   * Whether the form may be submitted without it.
+   *
+   * Required means required *of the form*, not of every row that already
+   * exists: a question added today cannot make yesterday's answers invalid.
+   */
+  readonly required: boolean;
+}
+
+/**
  * What one answer can be.
  *
  * A checkbox answers `true` or `false`; text and select answer with a string.

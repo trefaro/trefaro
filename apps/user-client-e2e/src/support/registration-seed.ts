@@ -52,6 +52,25 @@ export async function seedConfirmedRegistration(
 }
 
 /**
+ * Removes the participant accounts a run created (FR 4.1, E31).
+ *
+ * By SQL, because there is no endpoint for it: an organizer cannot delete
+ * somebody's account, and by design — "archiving is the rule, deleting the
+ * exception". A test account is the exception, and it has to go, because the
+ * address is unique across the instance (E31): a leftover would make the next
+ * run's registration take the "there is already an account" branch and wait for
+ * a mail that says something else.
+ *
+ * Deleted rather than anonymized: the sessions and the avatar path hang off the
+ * row by foreign key, so the row is what has to go.
+ */
+export async function deleteProfiles(emailSuffix: string): Promise<void> {
+  await db().query('DELETE FROM user_profile WHERE email LIKE $1', [
+    `%${emailSuffix}`,
+  ]);
+}
+
+/**
  * Closes the pool again, re-openably.
  *
  * A worker that seeds after the close reopens it: Playwright may put two specs

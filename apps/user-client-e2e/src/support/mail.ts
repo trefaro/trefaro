@@ -105,6 +105,26 @@ export function confirmationPathFrom(mail: CapturedMail): string {
 }
 
 /**
+ * The account confirmation link from the mail (FR 4.1, E5b), as a path.
+ *
+ * Its own matcher rather than a parameter on the one above: the two links go to
+ * two different pages, and a regular expression that took the path as an
+ * argument would let a caller ask for a page that does not exist. Relative for
+ * the reason the others are — the server writes its own configured client URL
+ * into the mail, and that need not be the address the browser uses.
+ */
+export function accountConfirmationPathFrom(mail: CapturedMail): string {
+  const match = /https?:\/\/[^\s]*\/profile\/confirm\?token=[^\s]+/.exec(
+    mail.text,
+  );
+  if (!match) {
+    throw new Error(`No account confirmation link in "${mail.subject}"`);
+  }
+  const url = new URL(match[0]);
+  return `${url.pathname}${url.search}`;
+}
+
+/**
  * The personal self-service link from the receipt (E11), as a path.
  *
  * Relative for the same reason as the confirmation path above: the server puts
