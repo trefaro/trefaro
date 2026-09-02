@@ -30,7 +30,7 @@ interface Notice {
  * The `family` column says which is which, since only a plug-in can fail to
  * appear after being switched on.
  *
- * Four decisions worth naming:
+ * Five decisions worth naming:
  *
  * 1. **The list comes from `/api/admin/modules`, not from the configuration.**
  *    `/api/config` carries the *enabled* modules; a page for switching the
@@ -45,7 +45,12 @@ interface Notice {
  *    does not see it needs to learn that its bundle failed, rather than conclude
  *    the product is broken. That is also the one thing this page knows and the
  *    server does not — the load happened here.
- * 4. **Names come from the catalogue, keys stay in the row.** Every module
+ * 4. **A prerequisite is shown, not discovered** (E42, AP 5 of phase 3). A
+ *    module may need another one switched on; the row says so by name, so the
+ *    409 that enforces it is a confirmation rather than a surprise. The
+ *    server's own message names the missing **key** and is shown as it comes
+ *    (F77) — the two together are what an organizer needs to act.
+ * 5. **Names come from the catalogue, keys stay in the row.** Every module
  *    carries a `titleKey`, resolved here against the catalogue the server
  *    serves (E22) — so this list is in the organizer's language, including the
  *    plug-ins'. The key itself stays visible beside the name: it is what the
@@ -90,6 +95,16 @@ interface Notice {
             <td>
               <strong>{{ module.name }}</strong>
               <br /><code>{{ module.key }}</code>
+              @if (module.requiresNames) {
+                <!-- Before the click, not after it: an organizer who cannot
+                     switch the search on has to be able to see why (E42). -->
+                <br /><small>
+                  {{
+                    'admin.modules.requires'
+                      | transloco: { modules: module.requiresNames }
+                  }}
+                </small>
+              }
             </td>
             <td>
               {{
@@ -244,9 +259,21 @@ export class ModulesPage {
    */
   protected readonly rows = computed(() => {
     this.i18n.locale();
-    return this.modules().map((module) => ({
+    const all = this.modules();
+    // Resolved once for the whole table, because a row needs the names of
+    // *other* rows: a prerequisite is declared by key (E42), and an organizer
+    // reads names.
+    const nameByKey = new Map(
+      all.map((module) => [module.key, this.name(module)]),
+    );
+
+    return all.map((module) => ({
       ...module,
-      name: this.name(module),
+      name: nameByKey.get(module.key) ?? module.key,
+      // Empty for almost everything, which is what the template tests for.
+      requiresNames: module.requires
+        .map((key) => nameByKey.get(key) ?? key)
+        .join(', '),
     }));
   });
 

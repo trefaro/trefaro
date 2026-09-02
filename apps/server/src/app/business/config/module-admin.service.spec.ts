@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import type { ServerPlugin } from '../plugin-api';
 import type { PluginRegistryService } from '../plugin-manager';
 import type { CoreModuleDescriptor } from './core-modules';
@@ -51,6 +51,27 @@ const CORE: readonly CoreModuleDescriptor[] = [
   { key: 'push', titleKey: 'modules.push.title', enabledByDefault: false },
 ];
 
+/**
+ * A pair with a prerequisite, for the E42 cases only.
+ *
+ * Its own list rather than two more entries in {@link CORE}: what the
+ * prerequisite tests need is a dependency, and every other test here would have
+ * to carry it in its expectations.
+ */
+const DEPENDENT: readonly CoreModuleDescriptor[] = [
+  {
+    key: 'profiles',
+    titleKey: 'modules.profiles.title',
+    enabledByDefault: true,
+  },
+  {
+    key: 'profile-search',
+    titleKey: 'modules.profileSearch.title',
+    enabledByDefault: true,
+    requires: ['profiles'],
+  },
+];
+
 const ROOM_PLANNING = {
   key: 'room-planning',
   version: '0.1.0',
@@ -80,13 +101,19 @@ interface Harness {
   enabled: Set<string>;
 }
 
-function harness(options: { enabled?: readonly string[] } = {}): Harness {
+function harness(
+  options: {
+    enabled?: readonly string[];
+    core?: readonly CoreModuleDescriptor[];
+  } = {},
+): Harness {
   const enabled = new Set(options.enabled ?? ['media-links']);
+  const core = options.core ?? CORE;
   const refreshed: string[] = [];
   const repository = new FakeModuleConfigRepository();
 
   const coreModules = {
-    all: () => CORE,
+    all: () => core,
     isEnabled: (key: string) => enabled.has(key),
     refresh: async () => {
       refreshed.push('core');
@@ -204,5 +231,101 @@ describe('ModuleAdminService', () => {
     // it — the keys that exist are the descriptors of this image.
     expect(repository.written).toEqual([]);
     expect(refreshed).toEqual([]);
+  });
+
+  describe('a module with a prerequisite (E42)', () => {
+    it('reports what it needs, so the row can say so before the click', () => {
+      const { service } = harness({ core: DEPENDENT });
+
+      const byKey = new Map(
+        service.list().map((module) => [module.key, module]),
+      );
+
+      expect(byKey.get('profile-search')?.requires).toEqual(['profiles']);
+      // Everything else says "nothing", rather than leaving the field out: one
+      // shape for every row keeps the table one table.
+      expect(byKey.get('profiles')?.requires).toEqual([]);
+      expect(
+        service
+          .list()
+          .filter((module) => module.family === 'plugin')
+          .map((module) => module.requires),
+      ).toEqual([[], []]);
+    });
+
+    it('refuses to switch on while the prerequisite is off, and names it', async () => {
+      const { service, repository, refreshed } = harness({
+        core: DEPENDENT,
+        enabled: [],
+      });
+
+      await expect(service.setEnabled('profile-search', true)).rejects.toThrow(
+        ConflictException,
+      );
+      // The key, not only a refusal: the organizer has to know which other
+      // switch to find, and the key is what the list and the table call it.
+      await expect(service.setEnabled('profile-search', true)).rejects.toThrow(
+        /"profiles"/,
+      );
+
+      // Nothing at all happened — a refused switch leaves the instance as it was.
+      expect(repository.written).toEqual([]);
+      expect(refreshed).toEqual([]);
+    });
+
+    it('refuses to switch the prerequisite off while a dependant is on, and names the dependant', async () => {
+      const { service, repository } = harness({
+        core: DEPENDENT,
+        enabled: ['profiles', 'profile-search'],
+      });
+
+      // The half that is easy to forget: a prerequisite that can be withdrawn
+      // under a running dependant is not a prerequisite. And it is refused
+      // rather than resolved — switching the search off as well would answer a
+      // question the organizer did not ask.
+      await expect(service.setEnabled('profiles', false)).rejects.toThrow(
+        /"profile-search"/,
+      );
+      expect(repository.written).toEqual([]);
+    });
+
+    it('lets the prerequisite go once nothing depends on it any more', async () => {
+      const { service, repository } = harness({
+        core: DEPENDENT,
+        enabled: ['profiles'],
+      });
+
+      await service.setEnabled('profiles', false);
+
+      expect(repository.written).toEqual([
+        { moduleKey: 'profiles', enabled: false },
+      ]);
+    });
+
+    it('lets the dependant on once the prerequisite is there', async () => {
+      const { service, repository } = harness({
+        core: DEPENDENT,
+        enabled: ['profiles'],
+      });
+
+      await service.setEnabled('profile-search', true);
+
+      expect(repository.written).toEqual([
+        { moduleKey: 'profile-search', enabled: true },
+      ]);
+    });
+
+    it('says nothing about a dependant that is off itself', async () => {
+      const { service, repository } = harness({
+        core: DEPENDENT,
+        enabled: ['profiles'],
+      });
+
+      // `profile-search` declares the prerequisite but is switched off, so
+      // withdrawing it breaks nothing that is running.
+      await service.setEnabled('profiles', false);
+
+      expect(repository.written).toHaveLength(1);
+    });
   });
 });

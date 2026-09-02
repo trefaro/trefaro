@@ -50,6 +50,18 @@ export class ModuleSummaryDto implements ModuleSummary {
   enabledByDefault!: boolean;
 
   @ApiProperty({
+    isArray: true,
+    type: String,
+    example: ['profiles'],
+    description:
+      'Module keys that have to be on before this one can be (E42). Empty ' +
+      'for almost everything. Switching this module on while one of them is ' +
+      'off answers 409 and names it; switching one of them off while this ' +
+      'module is on answers 409 as well. Nothing is ever resolved silently.',
+  })
+  requires!: readonly string[];
+
+  @ApiProperty({
     nullable: true,
     example: '0.1.0',
     description: 'The plug-in’s own version; `null` for a core module.',

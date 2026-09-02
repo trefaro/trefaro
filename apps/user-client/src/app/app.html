@@ -36,6 +36,13 @@
   <a class="app-nav__link" routerLink="/registrations"
     >{{ 'mine.list.title' | transloco }}</a
   >
+  <!-- Only where the directory is switched on (E42): an instance may keep
+       accounts and still not let the people in them find each other. -->
+  @if (peopleEnabled()) {
+  <a class="app-nav__link" routerLink="/participants"
+    >{{ 'people.title' | transloco }}</a
+  >
+  }
   <a class="app-nav__link" routerLink="/profile"
     >{{ 'profile.title' | transloco }}</a
   >

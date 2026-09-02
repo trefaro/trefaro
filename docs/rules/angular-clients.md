@@ -77,6 +77,14 @@ besteht. Jede Zeile hier hat einmal einen halben Tag gekostet.
   in `localStorage` (`trefaro.participant-session`) und ist **kein** Token: das
   HttpOnly-Cookie bleibt die Autorität (E34). Gefunden von `start-up.spec.ts`,
   die „ohne Konsolenfehler" prüft — die Prüfung wurde nicht gelockert.
+- **Ein Control, dessen Kästchen nicht auf dem Bildschirm steht, schickt
+  trotzdem seinen Wert** (F151). Ein `@if` im Template entfernt die Ansicht, nicht
+  das Mitglied der `FormGroup` — `getRawValue()` liefert weiter den Vorgabewert.
+  Auf der Profilseite hätte das auf einer Instanz mit abgeschalteter
+  Teilnehmersuche `searchable: false` geschrieben und jemandem still die
+  Sichtbarkeit genommen, die er auf einer anderen Konfiguration gewählt hat
+  (Abschalten löscht nichts, E14). Regel: **wer ein Feld nur bedingt zeigt,
+  schickt es auch nur bedingt** — dieselbe Bedingung, an einer Stelle.
 - **Ein Formular sperrt nicht, weil eine Nebenanfrage fehlschlug** (F146). Die
   Profilseite füllt ihre eigenen Felder, sobald das Profil da ist, und die
   Antworten erst, wenn auch die Fragen da sind — zwei Effekte, zwei Marken. Der

@@ -48,12 +48,15 @@ export {
   type PublicEventSeries,
 } from './lib/events';
 export {
+  DEFAULT_PROFILE_SEARCH_PAGE_SIZE,
   MAX_ACTIVITY_AREAS_LENGTH,
   MAX_PROFILE_FIELDS,
+  MAX_PROFILE_SEARCH_PAGE_SIZE,
   PROFILES_MODULE_KEY,
   PROFILE_CONFIRMATION_PATH,
   PROFILE_FIELD_TYPES,
   PROFILE_LOGIN_PATH,
+  PROFILE_SEARCH_MODULE_KEY,
   type AvatarImage,
   type ParticipantAccount,
   type ParticipantLoginRequest,
@@ -69,6 +72,10 @@ export {
   type ProfileFieldType,
   type ProfileRegistrationAcknowledgement,
   type ProfileRegistrationRequest,
+  type ProfileSearchHit,
+  type ProfileSearchPage,
+  type ProfileSearchQuery,
+  type PublicProfile,
 } from './lib/profiles';
 export {
   DASHBOARD_LATEST_REGISTRATIONS,

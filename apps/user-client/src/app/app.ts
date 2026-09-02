@@ -1,7 +1,13 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+} from '@angular/core';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AppConfigService } from '@trefaro/shared-config';
+import { PROFILE_SEARCH_MODULE_KEY } from '@trefaro/shared-models';
 import { LanguageSwitcher } from '@trefaro/shared-i18n';
 import { PluginSlot } from '@trefaro/shared-plugins';
 import { ThemeService } from '@trefaro/shared-theming';
@@ -21,7 +27,9 @@ import { PushSubscriptionService } from './features/push/push-subscription.servi
  * defines; the other is on the event detail view. Since phase 3 it also carries
  * the logged-in state: the registrations, the profile and signing out, or an
  * invitation to sign in — and none of them on an instance whose `profiles`
- * module is off.
+ * module is off. Finding other participants hangs on a second switch of its
+ * own (`profile-search`, E42): accounts without a community directory are a
+ * combination an organization may want.
  *
  * The two PWA pieces of AP 12 sit around the outlet rather than inside a page,
  * because neither belongs to one: losing the network and being installable are
@@ -49,6 +57,17 @@ export class App {
   protected readonly theme = inject(ThemeService);
   protected readonly config = inject(AppConfigService);
   protected readonly session = inject(ParticipantSessionService);
+
+  /**
+   * Whether this instance runs a participant directory (FR 4.4, F53).
+   *
+   * A computed rather than a call in the template: the flag arrives with the
+   * configuration, and a navigation that read it once at construction would
+   * keep an entry an organizer has just switched off (E20).
+   */
+  protected readonly peopleEnabled = computed(() =>
+    this.config.isModuleEnabled(PROFILE_SEARCH_MODULE_KEY),
+  );
 
   constructor() {
     // Injected for its effect: it keeps `<link rel="apple-touch-icon">` on the

@@ -147,7 +147,7 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    (offen geblieben: die Feedbackrunde mit Democracy International)
 2. **✅ 29.08.2026, M5** Whitelabel-Theming, Modul-Verwaltung, i18n, PWA,
    Installations-Story → `docs/PHASE2.md`
-3. **In Arbeit** (AP 1–AP 4 erledigt, M6 erreicht) Profile, Nachrichten,
+3. **In Arbeit** (AP 1–AP 5 erledigt, M6 erreicht) Profile, Nachrichten,
    Echtzeit-/Gruppenchat, Push, Profilsuche → `docs/PHASE3.md`
 4. Plug-ins: Programmvorschläge, Forum, Raumplanung, QR-Check-In
 5. Härtung, Usability-Test mit Democracy International (Pilotpartner), Doku,
@@ -166,22 +166,29 @@ bewusst; die Begründungen stehen in `docs/rules/`. Katalog damals 646 → 654.
 
 **Phase 3 läuft** (seit 02.09.2026): Plan in `docs/PHASE3.md`, dreizehn
 Arbeitspakete, Entscheidungen **E31–E45**, Nachträge ab **F118** (vergeben:
-F118–F125, F137–F149; F126–F136 bleiben reserviert). **AP 1 (Teilnehmerkonto und
+F118–F128, F137–F152; F129–F136 bleiben reserviert). **AP 1 (Teilnehmerkonto und
 Login), AP 2 (Profil und Feld-Baukasten), AP 3 (Login, Registrierung und Profil
-in beiden Clients, **Meilenstein M6**) und AP 4 (die Anmeldung kennt den
-Menschen) sind erledigt** — Protokoll je Paket unter _Fortschritt_. Als nächstes
-AP 5: die Profilsuche (FR 4.4). Katalog **758** Schlüssel.
+in beiden Clients, **Meilenstein M6**), AP 4 (die Anmeldung kennt den Menschen)
+und AP 5 (Profilsuche) sind erledigt** — Protokoll je Paket unter _Fortschritt_.
+Als nächstes AP 6: Gespräche, Nachrichten und Bilder (FR 4.5, Teil 1). Katalog
+**780** Schlüssel.
 
 Aus AP 4: die Selbstbedienung kennt zwei Ansprüche — das signierte Token aus der
 Mail und die Sitzung, aufgelöst über die Adresse (F148) —, die
 Teilnehmerübersicht hat ihre Profilspalte (F149) und **eine Mail spricht die
 Sprache ihres Empfängers, samt Inhalt** (F125).
 
-Drei Punkte warten auf ein anderes Paket bzw. auf Marius: das Opt-in
-`searchable` gehört zur Profilsuche in AP 5 (F142 — ein Schalter, den nichts
-liest, verspricht Sichtbarkeit, die es nicht gibt), das **Storno über die
+Aus AP 5: `business/profile-search/` mit zwei Lesezugriffen unter
+`/api/participant/profiles`, und das Opt-in **kann nichts umgehen** — die SQL des
+Ports trägt `searchable` und die Bestätigung, nicht der Aufrufer (F152).
+`searchable` steht jetzt auf der Profilseite, aber nur wo eine Suche es liest
+(F151, schließt F142); ein fremdes Profil trägt **keine Adresse** (F150); und ein
+Modulschalter darf eine **Voraussetzung** haben, die er nie still auflöst
+(F128) — `profile-search` braucht `profiles`, `chat` bekommt seine in AP 6.
+
+Zwei Punkte warten auf ein anderes Paket bzw. auf Marius: das **Storno über die
 Sitzung** gehört zu AP 12 (F148), und ob es eine geteilte Bibliothek für
-Oberflächenbauteile geben soll, ist eine Stack-Entscheidung (F145). Alles drei in
+Oberflächenbauteile geben soll, ist eine Stack-Entscheidung (F145). Beides in
 `todo.md`.
 
 ## Betriebskontext

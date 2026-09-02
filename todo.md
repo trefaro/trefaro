@@ -511,15 +511,17 @@ answer, not an opinion.
       therefore hides the button when it was opened through the account rather
       than offering one that cannot work. Nothing below `require` has to change
       for it; if AP 12 is dropped, this is the one line of it worth keeping.
-- [ ] **The opt-in for being findable is not on the profile screen yet** (F142).
-      `searchable` has been writable since AP 2 and the profile form deliberately
-      does not offer it: a box promising "other participants can find you and
-      write to you" while nobody can search is a switch nothing reads, and for a
-      promise about visibility that is the wrong direction to be wrong in (E37).
-      **AP 5 owes it** — a participant search nobody can opt into is a search
-      nobody appears in. The endpoint takes it already
-      (`PATCH /api/participant/me`), so this is a screen and a sentence, not a
-      feature.
+- [x] **The opt-in for being findable — on the profile screen since AP 5**
+      (F142, closed by F151). It waited for the search it governs: a box
+      promising "other participants can find you and write to you" while nobody
+      can search is a switch nothing reads, and for a promise about visibility
+      that is the wrong direction to be wrong in (E37). It is now at the end of
+      the form, under the answers it publishes, and only where
+      `profile-search` is switched on — the same argument applies to an instance
+      that runs accounts without a directory. The half that was not in the
+      original entry: the form sends `searchable` **only** when it asked for it,
+      because a control whose box is hidden still carries its default and would
+      have quietly withdrawn somebody's visibility.
 - [ ] **Should there be a shared library for interface components?** (F145) The
       participant client's `avatar-field.ts` and the organizer client's
       `ImageUploadField` do the same four things to an uploaded image — choose,
@@ -533,9 +535,26 @@ answer, not an opinion.
 - [ ] **A `select` profile question whose choices shrink leaves answers behind
       that are no longer offered.** The same situation as a deleted question
       (F34) and deliberately not refused — but nothing tells the organizer that
-      four people answered "Bonn" before "Bonn" was removed from the list. The
-      participant overview shows unasked-for answers under their key; the profile
-      view of AP 5 should do the same. Cheap to add there, pointless before it.
+      four people answered "Bonn" before "Bonn" was removed from the list. Still
+      open, and now only for the **organizer**: that is where the information is
+      missing, and the participant search of AP 5 turned out to be the wrong
+      place to put it. Its profile view shows an answer to a question that is
+      still asked whatever the option list now says — so a shrunk `select` is
+      visible there — but it deliberately does **not** show answers whose
+      question is gone under their bare key (F150): the organizer's panel is an
+      audit of a form, a participant is reading a person, and `local-group:
+    Bonn` is diagnostics rather than a fact about anybody.
+
+- [ ] **`formatAnswer` answers in English, and the organizer client shows it.**
+      The helper in `shared-models` turns a tick into `yes` / `no` — words from a
+      library that knows no catalogue — and the participant overview's detail
+      panel renders them as they come, in a screen an organization reads in its
+      own language (NFR 4). Found in AP 5, while drawing the answers of somebody
+      else's profile; the participant client therefore does **not** use it and
+      spells the tick itself (`common.yes` / `common.no`, both catalogued). The
+      organizer's panel is a screen AP 5 does not touch, so it was left alone
+      rather than fixed in passing: two keys and two lines, whenever that page is
+      open anyway.
 
 ## Checkable after phase 4 — plug-ins
 

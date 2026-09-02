@@ -116,13 +116,30 @@ test.describe('the module administration in the browser', () => {
     // flag. A switch wired to nothing is a prop, and it becomes visible the
     // moment an organizer is shown the list — so a key is listed here together
     // with the code behind it, never before. `profiles` earned its row back in
-    // AP 1 of phase 3; `chat` and `profile-search` have not yet.
-    for (const withdrawn of ['newsletter', 'chat', 'profile-search']) {
+    // AP 1 of phase 3, `profile-search` in AP 5; `chat` has not yet.
+    for (const withdrawn of ['newsletter', 'chat']) {
       await expect(row(page, withdrawn)).toHaveCount(0);
     }
 
     await expect(row(page, 'profiles')).toContainText(
       t('modules.profiles.title'),
+    );
+  });
+
+  test('names in the row what a module needs before it can be on (E42)', async ({
+    page,
+  }) => {
+    await openModules(page);
+
+    // By name, not by key. An organizer who cannot switch the search on has to
+    // be able to read why in the row rather than discover it from a 409 —
+    // which is the whole reason the prerequisite travels in the payload.
+    await expect(row(page, 'profile-search')).toContainText(
+      t('admin.modules.requires', { modules: t('modules.profiles.title') }),
+    );
+    // And nothing of the sort where there is nothing to need.
+    await expect(row(page, 'media-links')).not.toContainText(
+      t('admin.modules.requires', { modules: t('modules.profiles.title') }),
     );
   });
 

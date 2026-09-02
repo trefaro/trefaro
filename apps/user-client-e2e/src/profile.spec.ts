@@ -10,6 +10,7 @@ import {
   closeSeedDatabase,
   deleteProfiles,
   seedConfirmedRegistration,
+  seedSearchableProfile,
 } from './support/registration-seed';
 import { asAdmin } from './support/series-fixtures';
 
@@ -33,10 +34,12 @@ import { asAdmin } from './support/series-fixtures';
  * field kit is instance-wide, and three engines sharing one would be three
  * engines editing one row.
  *
- * Since AP 4 the same test also walks "my registrations" (FR 4.7). It has to
- * happen in here rather than in a file of its own for the reason above: a
- * second file would mean a fourth, fifth and sixth login, and there are twenty
- * per five minutes for every suite of this repository together.
+ * Since AP 4 the same test also walks "my registrations" (FR 4.7), and since
+ * AP 5 the participant search (FR 4.4). Both have to happen in here rather than
+ * in files of their own for the reason above: each new file would mean three
+ * more logins, and there are twenty per five minutes for every suite of this
+ * repository together. The person the search finds is seeded, in **this
+ * engine's** address domain, so the teardown that already exists removes them.
  */
 const CLIENT_URL =
   process.env['BASE_URL'] ??
@@ -345,6 +348,67 @@ test.describe('a participant account', () => {
 
     await page.getByRole('link', { name: t('mine.list.back') }).click();
     await expect(page).toHaveURL(/\/registrations$/);
+
+    // --- finding other participants (FR 4.4) ------------------------------
+    // Somebody to find, per engine: what is searchable is instance-wide, so
+    // all three engines' fixtures are in the directory at the same time and a
+    // shared name would make each engine assert on another's row.
+    const findable = {
+      firstName: 'Bo',
+      lastName: `E2E-Findable-${engine}`,
+      activityAreas: `Election observation in ${engine}`,
+    };
+    await seedSearchableProfile({
+      ...findable,
+      email: `findable-${Date.now()}${addressDomain(engine)}`,
+    });
+
+    // The opt-in that AP 3 deliberately left off this form until there was a
+    // search to switch on (F142).
+    await page.goto('/profile');
+    const optIn = page.getByLabel(t('profile.searchable'));
+    await expect(optIn).not.toBeChecked();
+    await optIn.check();
+    await page.getByRole('button', { name: t('profile.save') }).click();
+    await expect(page.getByText(t('profile.saved'))).toBeVisible();
+    // Read back from the server: a tick that only lives in the form promises a
+    // visibility nobody has been given.
+    await page.reload();
+    await expect(page.getByLabel(t('profile.searchable'))).toBeChecked();
+
+    await page
+      .getByRole('navigation', { name: t('app.nav.label') })
+      .getByRole('link', { name: t('people.title') })
+      .click();
+    await expect(page).toHaveURL(/\/participants$/);
+    await expectNoRawKeys(page);
+    // The sentence for somebody who cannot be found is gone, because they can.
+    await expect(page.getByText(t('people.optIn'))).toHaveCount(0);
+
+    await page.getByLabel(t('people.query')).fill(findable.lastName);
+    await page.getByRole('button', { name: t('people.submit') }).click();
+
+    const person = page.getByRole('link', {
+      name: `${findable.firstName} ${findable.lastName}`,
+    });
+    await expect(person).toBeVisible();
+    // The row carries what they work on, which is the other half of what the
+    // search searches (E36). That the reader is never in their own result is
+    // asserted where the whole result set can be counted, in
+    // `apps/server-e2e/src/api/profile-search.spec.ts`.
+    await expect(page.getByText(findable.activityAreas)).toBeVisible();
+    await person.click();
+
+    await expect(page).toHaveURL(/\/participants\/[0-9a-f-]{36}$/);
+    await expect(
+      page.getByRole('heading', {
+        name: `${findable.firstName} ${findable.lastName}`,
+      }),
+    ).toBeVisible();
+    await expect(page.getByText(findable.activityAreas)).toBeVisible();
+    await expectNoRawKeys(page);
+    await page.getByRole('link', { name: t('people.detail.back') }).click();
+    await expect(page).toHaveURL(/\/participants$/);
 
     // --- signing out ------------------------------------------------------
     await page.getByRole('button', { name: t('app.nav.signOut') }).click();

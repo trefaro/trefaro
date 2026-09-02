@@ -212,6 +212,57 @@ export async function deleteRegistrations(eventId: string): Promise<void> {
 }
 
 /**
+ * A participant account, put into the table directly (FR 4.1, FR 4.4).
+ *
+ * The deliberate exception the other seeds also claim, and here it is not only
+ * about cost: two of the states the participant search has to be held to
+ * **cannot** be produced through the API at all. `searchable` is only writable
+ * behind a session (`PATCH /api/participant/me`), and a session only exists
+ * after the address has confirmed itself (E32) — so "opted in but never
+ * confirmed" has no path through the endpoints, and that is precisely the row
+ * that must not appear in a directory.
+ *
+ * The password hash is nonsense on purpose: these fixtures are looked **for**,
+ * never logged in as, and a suite that could log in as them would be spending
+ * the participant login budget on rows it never reads (E4).
+ */
+export interface SeededProfile {
+  readonly email: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly activityAreas?: string | null;
+  /** Defaults to `false`, exactly like the column (E37, F13). */
+  readonly searchable?: boolean;
+  /** Defaults to confirmed; `false` leaves the double opt-in outstanding. */
+  readonly confirmed?: boolean;
+  readonly customFields?: Readonly<Record<string, string | boolean>>;
+  readonly preferredLocale?: string;
+}
+
+/** Inserts one profile and returns its id. */
+export async function seedProfile(profile: SeededProfile): Promise<string> {
+  const result = await pool.query<{ id: string }>(
+    `INSERT INTO user_profile
+       (email, password_hash, first_name, last_name, preferred_locale,
+        activity_areas, custom_fields_json, searchable, confirmed_at)
+     VALUES ($1, 'not-a-usable-hash', $2, $3, $4, $5, $6::jsonb, $7,
+             CASE WHEN $8 THEN now() ELSE NULL END)
+     RETURNING id`,
+    [
+      profile.email.toLowerCase(),
+      profile.firstName,
+      profile.lastName,
+      profile.preferredLocale ?? 'en',
+      profile.activityAreas ?? null,
+      JSON.stringify(profile.customFields ?? {}),
+      profile.searchable ?? false,
+      profile.confirmed ?? true,
+    ],
+  );
+  return result.rows[0].id;
+}
+
+/**
  * Removes the participant accounts a suite created (FR 4.1).
  *
  * There is no endpoint for this, and deliberately so: deleting one's own

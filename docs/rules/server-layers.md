@@ -29,7 +29,10 @@ diese Eigenschaft.
   Rechnung kann über die Modulgrenze hinaus zeigen: die **Zahlen** der
   Passwortregel liegen seit dem fünften Exemplar in `shared-models` (F141), die
   Regel selbst bleibt in `business/common/password-policy.ts` und der Server
-  entscheidet weiter. Und sie kann auch **gegen** das Teilen ausfallen: für ein
+  entscheidet weiter. In AP 5 traf es `searchTerms`: zwei Kopien (Übersicht,
+  Kontaktliste) waren **nicht** wortgleich — eine kappte bei fünf Wörtern, die
+  andere nicht —, und das ist der Drift, den die Regel meint. Jetzt
+  `business/common/search-terms.ts`, mit der Kappung für alle drei. Und sie kann auch **gegen** das Teilen ausfallen: für ein
   Oberflächenbauteil, das zwei Anwendungen bräuchten, wäre eine neue geteilte
   Bibliothek nötig — und die Liste der geteilten Libs kommt aus der Architektur
   der Thesis, nicht aus einem Arbeitspaket (F145).
@@ -54,6 +57,14 @@ diese Eigenschaft.
   Modul, dem die Konten gehören (E33). Der Weg über einen Port ist hier nicht
   Geschmack — `MailModule` kann `ProfilesModule` nicht importieren, weil dieses
   Mail verschickt.
+- **Eine Regel, die nichts vergessen darf, gehört in die Anweisung** (F152).
+  `SearchableProfileRepository` hat keine Methode, die ein Profil ohne Opt-in
+  zurückgeben könnte: `searchable = true` und `confirmed_at IS NOT NULL` stehen
+  in **beiden** Statements, nicht in den Aufrufern. Der Aufrufer, der es
+  vergessen hätte, ist der, der **ein** Profil über seine Id holt — und dessen
+  Fehler wäre nicht ein falsches Ergebnis, sondern ein veröffentlichtes Profil.
+  Dasselbe Muster wie bei der Platzgrenze (F43): was nicht schiefgehen darf,
+  wird nicht oben geprüft, sondern unten unmöglich gemacht.
 - **Eine Liste darf nicht eine Abfrage je Zeile werden** (F49) — und das gilt
   auch, wenn die Zeilen aus einem anderen Modul kommen: `EventsService.locate`
   ist drei Abfragen, also hat „meine Anmeldungen" `locateMany(ids, locale)`

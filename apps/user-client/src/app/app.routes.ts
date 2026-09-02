@@ -3,6 +3,7 @@ import {
   participantAnonymousGuard,
   participantSessionGuard,
 } from './features/auth/participant-session.guard';
+import { profileSearchGuard } from './features/profiles/profile-search.service';
 
 /**
  * Routes of the participant client.
@@ -14,6 +15,10 @@ import {
  * participant login of phase 3 goes in front of the second one and leaves the
  * links already in people's inboxes working. The third such page is the
  * objection to further invitations (E15), which needs no account by design.
+ *
+ * AP 5 adds the two pages of the participant search (FR 4.4), both behind the
+ * session **and** behind the `profile-search` module: a bookmark that outlives
+ * the switch leads to the start page rather than to a search that answers 404.
  *
  * Since AP 4 of phase 3 the login is a second way to the same self-service:
  * `registrations` lists what an address holds and `registrations/:id` opens one
@@ -90,6 +95,27 @@ export const appRoutes: Route[] = [
         (m) => m.MyRegistrationPage,
       ),
     title: 'mine.title',
+  },
+  {
+    // The community directory of AP 5 (FR 4.4). Two guards, and they answer
+    // two different questions: the session decides whether somebody may see
+    // the page, the module whether this instance runs one at all (F53).
+    path: 'participants',
+    pathMatch: 'full',
+    canActivate: [participantSessionGuard, profileSearchGuard],
+    loadComponent: () =>
+      import('./pages/people/people-page').then((m) => m.PeoplePage),
+    title: 'people.title',
+  },
+  {
+    // Somebody else's profile. The same title as the search: this is that
+    // section of the client, and the tab cannot carry a name it has not
+    // fetched yet.
+    path: 'participants/:id',
+    canActivate: [participantSessionGuard, profileSearchGuard],
+    loadComponent: () =>
+      import('./pages/people/person-page').then((m) => m.PersonPage),
+    title: 'people.title',
   },
   {
     // The objection link in an invitation points here (E15, F58); the token

@@ -16,6 +16,7 @@ import { ADMIN_USER_REPOSITORY } from '../business/login/ports/admin-user.reposi
 import { MEDIA_LINK_TALLY } from '../business/media-links/ports/media-link-tally';
 import { MEDIA_LINK_REPOSITORY } from '../business/media-links/ports/media-link.repository';
 import { MODULE_CONFIG_REPOSITORY } from '../business/config/ports/module-config.repository';
+import { SEARCHABLE_PROFILE_REPOSITORY } from '../business/profile-search/ports/searchable-profile.repository';
 import { PROFILE_FIELD_REPOSITORY } from '../business/profiles/ports/profile-field.repository';
 import { PROGRAM_ITEM_SIGNUP_REPOSITORY } from '../business/program/ports/program-item-signup.repository';
 import { PROGRAM_ITEM_TRANSLATION_REPOSITORY } from '../business/program/ports/program-item-translation.repository';
@@ -52,6 +53,7 @@ import { TypeormLogoPathsRepository } from './repositories/typeorm-logo-paths.re
 import { TypeormMediaLinkRepository } from './repositories/typeorm-media-link.repository';
 import { TypeormModuleConfigRepository } from './repositories/typeorm-module-config.repository';
 import { TypeormProfileDirectory } from './repositories/typeorm-profile-directory.repository';
+import { TypeormSearchableProfileRepository } from './repositories/typeorm-searchable-profile.repository';
 import { TypeormProfileFieldRepository } from './repositories/typeorm-profile-field.repository';
 import { TypeormProgramItemSignupRepository } from './repositories/typeorm-program-item-signup.repository';
 import { TypeormProgramItemTranslationRepository } from './repositories/typeorm-program-item-translation.repository';
@@ -108,6 +110,7 @@ export class DataAccessModule {
         TypeormModuleConfigRepository,
         TypeormProfileDirectory,
         TypeormProfileFieldRepository,
+        TypeormSearchableProfileRepository,
         TypeormProgramItemRepository,
         TypeormProgramItemTranslationRepository,
         TypeormProgramItemSignupRepository,
@@ -234,6 +237,13 @@ export class DataAccessModule {
           provide: PROFILE_DIRECTORY,
           useExisting: TypeormProfileDirectory,
         },
+        // A third reader of the same table, and the narrowest: a read-only
+        // window on the rows that opted in, so the search cannot reach an
+        // account it may not show (E37).
+        {
+          provide: SEARCHABLE_PROFILE_REPOSITORY,
+          useExisting: TypeormSearchableProfileRepository,
+        },
         {
           provide: REGISTRATION_FIELD_REPOSITORY,
           useExisting: TypeormRegistrationFieldRepository,
@@ -273,6 +283,7 @@ export class DataAccessModule {
         MODULE_CONFIG_REPOSITORY,
         PROFILE_DIRECTORY,
         PROFILE_FIELD_REPOSITORY,
+        SEARCHABLE_PROFILE_REPOSITORY,
         PROGRAM_ITEM_REPOSITORY,
         PROGRAM_ITEM_SIGNUP_REPOSITORY,
         PROGRAM_ITEM_TRANSLATION_REPOSITORY,

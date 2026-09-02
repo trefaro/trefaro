@@ -23,3 +23,12 @@ export {
   type ProfileFieldPublic,
   type ProfileFieldType,
 } from './profile-field';
+export {
+  DEFAULT_PROFILE_SEARCH_PAGE_SIZE,
+  MAX_PROFILE_SEARCH_PAGE_SIZE,
+  PROFILE_SEARCH_MODULE_KEY,
+  type ProfileSearchHit,
+  type ProfileSearchPage,
+  type ProfileSearchQuery,
+  type PublicProfile,
+} from './profile-search';

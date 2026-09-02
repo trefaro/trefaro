@@ -64,6 +64,40 @@ export async function seedConfirmedRegistration(
  * Deleted rather than anonymized: the sessions and the avatar path hang off the
  * row by foreign key, so the row is what has to go.
  */
+/**
+ * A confirmed participant account that has opted into the search (FR 4.4).
+ *
+ * Somebody for the search to find, and the same exception as the registration
+ * above: this row is looked **for**, never logged in as. Doing it through the
+ * endpoints would cost a registration, a confirmation mail and a login out of
+ * budgets three e2e projects share (E4) — and `searchable` cannot be set
+ * without a session at all, so the fixture could not be built that way in one
+ * pass anyway.
+ *
+ * The password hash is nonsense on purpose: nothing may sign in as this row.
+ */
+export async function seedSearchableProfile(person: {
+  email: string;
+  firstName: string;
+  lastName: string;
+  activityAreas: string;
+}): Promise<string> {
+  const result = await db().query<{ id: string }>(
+    `INSERT INTO user_profile
+       (email, password_hash, first_name, last_name, preferred_locale,
+        activity_areas, searchable, confirmed_at)
+     VALUES ($1, 'not-a-usable-hash', $2, $3, 'en', $4, true, now())
+     RETURNING id`,
+    [
+      person.email.toLowerCase(),
+      person.firstName,
+      person.lastName,
+      person.activityAreas,
+    ],
+  );
+  return result.rows[0].id;
+}
+
 export async function deleteProfiles(emailSuffix: string): Promise<void> {
   await db().query('DELETE FROM user_profile WHERE email LIKE $1', [
     `%${emailSuffix}`,

@@ -55,6 +55,20 @@ export interface ModuleSummary {
   readonly enabled: boolean;
   /** What a fresh instance starts with — shown as "default" in the list. */
   readonly enabledByDefault: boolean;
+  /**
+   * Keys this module needs switched on before it can be (E42).
+   *
+   * Empty for almost everything, and never resolved silently: switching a
+   * module on without its prerequisite is refused with the missing key named,
+   * and so is switching a prerequisite off while something depends on it. The
+   * alternative — "then I will switch the others on for you" — is a switch that
+   * does more than it says.
+   *
+   * Here rather than only on the server, because the administration shows the
+   * prerequisite in the row: an organizer who cannot switch the participant
+   * search on has to be able to see why without pressing the button first.
+   */
+  readonly requires: readonly string[];
   /** Plug-ins only: the plug-in's own version. */
   readonly version: string | null;
   /** Plug-ins only: the bundle the clients load; `null` for a server-only one. */

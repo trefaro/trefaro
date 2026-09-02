@@ -1,6 +1,6 @@
 # Phase 3 — Profile, Kommunikation und Community-Kern
 
-**Status: in Arbeit** (seit 02.09.2026, AP 1 bis AP 4 erledigt, **M6 erreicht**). Der Teil oberhalb von
+**Status: in Arbeit** (seit 02.09.2026, AP 1 bis AP 5 erledigt, **M6 erreicht**). Der Teil oberhalb von
 _Fortschritt_ ist der **Plan** und wird nicht mehr rückwirkend korrigiert; was
 tatsächlich passierte, steht unten je Paket — wie in
 [`PHASE1.md`](PHASE1.md) und [`PHASE2.md`](PHASE2.md). Was Marius **vor** einem
@@ -17,8 +17,8 @@ phase 3_ — dreizehn Einträge, jeder ist unten einem Arbeitspaket zugeordnet.
 
 Die Entscheidungen zählen bei **E31** weiter (Phase 1: E1–E16, Phase 2:
 E17–E30); Ergänzungen am Referenzdokument bekommen **F118** und folgende
-(F1–F117 sind vergeben, F62 nie). Vergeben sind inzwischen F118–F125 sowie
-F137–F149; **F126–F136 bleiben reserviert** für die Pakete, die noch kommen.
+(F1–F117 sind vergeben, F62 nie). Vergeben sind inzwischen F118–F128 sowie
+F137–F152; **F129–F136 bleiben reserviert** für die Pakete, die noch kommen.
 
 **Vier Entscheidungen hat Marius am 02.09.2026 vorab getroffen**, bevor dieser
 Plan geschrieben wurde — sie sind der Rahmen, nicht Vorschläge: die Adresse ist
@@ -744,7 +744,10 @@ bekam ihre eigene Nummer, weil sie noch zweimal auftreten wird. **F138** und
 den Port) und was ein Passwortwechsel mit den anderen Sitzungen macht. **F140
 bis F147** kamen in AP 3 dazu, **F148** und **F149** in AP 4 — wie eine Sitzung
 eine Anmeldung beansprucht und was die Profilspalte behauptet; F125 war für
-dieses Paket reserviert und ist vergeben.
+dieses Paket reserviert und ist vergeben. In AP 5 sind die drei reservierten
+Nummern **F126–F128** vergeben und drei neue dazugekommen (**F150–F152**): was
+ein fremdes Profil trägt, wo das Opt-in steht — und wer dafür sorgt, dass ein
+nicht auffindbares Profil nirgends auftaucht.
 
 ## Definition of Done für Phase 3
 
@@ -1138,3 +1141,99 @@ user-client` aus einem Unterordner gestartet ließ die beiden PWA-Suiten
 Offen aus diesem Paket: **das Storno über die Sitzung** (F148) — es gehört zu
 FR 4.7 und damit zu **AP 12**; in `todo.md` vermerkt, damit AP 13 es abhaken
 kann.
+
+### AP 5 — Profilsuche (erledigt, 02.09.2026)
+
+Umgesetzt:
+
+- **`business/profile-search/` mit zwei Lesezugriffen** (**F126**):
+  `GET /api/participant/profiles` — serverseitig gefiltert, sortiert (Nachname,
+  Vorname, Id als letztes Kriterium), gezählt und gefenstert (20, höchstens 50)
+  — und `GET /api/participant/profiles/:id`. Zwei Suchfelder statt eines mit
+  Syntax: das erste über Namen **und** Tätigkeitsbereich, das zweite allein über
+  den Tätigkeitsbereich (E36). Ein `ILIKE '%wort%'` je Wort, alle mit `AND`, kein
+  `pg_trgm` (F32). Beide Felder dürfen leer sein — dann ist es das Verzeichnis.
+  Der eigene Eintrag fehlt in der eigenen Suche, und zwar in der Abfrage.
+- **Das Opt-in kann nichts umgehen** (**F152**). `SearchableProfileRepository`
+  hat keine Methode, die ein verborgenes Profil zurückgeben könnte: beide
+  Anweisungen tragen `searchable = true` **und** `confirmed_at IS NOT NULL`.
+  Verborgen, unbestätigt und unbekannt sind **eine** Antwort — ein wortgleiches
+  404 —, weil wer eine Id herausgibt, das Profilbild mit herausgibt (F124). Ein
+  eigener schmaler Port statt `UserProfileRepository`, aus dem Grund, der schon
+  `ProfileDirectory` trägt (E33).
+- **Was ein fremdes Profil trägt** (**F150**): Trefferzeile mit Name, Bild und
+  Tätigkeitsbereich, Einzelansicht zusätzlich mit den Antworten auf die
+  instanzweiten Fragen (E35). **Keine Adresse** in keiner der beiden — Kontakt
+  ist ein Gespräch (AP 6), nie ein Postfach, das eine Antwort herausgegeben hat
+  (F55). Ein Vertragstest prüft das stumpf: kein `@` im ganzen Rumpf.
+- **Ein Modulschalter mit Voraussetzung** (**F128**, E42): `profile-search`
+  braucht `profiles`, der Deskriptor nennt es, `ModuleSummary.requires` trägt es
+  zum Client, und die Modulverwaltung zeigt es **als Namen** in der Zeile.
+  Einschalten ohne Voraussetzung ist ein 409 mit dem fehlenden Schlüssel,
+  Ausschalten der Voraussetzung unter einem laufenden Abhängigen ein 409 mit den
+  Abhängigen — beides **vor** dem Schreiben, ein verweigerter Klick ändert
+  nichts. Standardmäßig **an**, wie `profiles`: die Entscheidung, die ein Profil
+  schützt, ist die des Menschen (**F127**), und die steht auf „unsichtbar" —
+  eine frische Instanz bietet also eine Suche an, die niemanden findet, und das
+  ist die richtige Richtung.
+- **Das Opt-in ist auf der Profilseite** (**F151**, schließt F142) — aber nur,
+  wenn `profile-search` an ist, mit einem Satz, der nennt, was sichtbar wird und
+  was das Zurücknehmen bedeutet. Und die wichtigere Hälfte: das Formular schickt
+  `searchable` **nur**, wenn es danach gefragt hat.
+- **Nutzer-Client: `pages/people/`** — die Suchseite (zwei Felder, „Mehr
+  anzeigen" statt Seitennummern, erste Seite noch vor der ersten Eingabe) und
+  ein fremdes Profil mit beschrifteten Antworten. Wer sucht und selbst nicht
+  auffindbar ist, liest dort einen Satz mit Link ins Profil. Beide Routen hinter
+  Sitzung **und** Modul (`profileSearchGuard`), der Navigationseintrag
+  „Teilnehmende finden" hängt am selben Schalter.
+- **`business/common/search-terms.ts`** — der dritte Aufrufer war da (F138),
+  siehe unten.
+
+Nachweise: 21 neue Unit-Tests im Server (910 → **931**), eine neue
+Vertragssuite `api/profile-search.spec.ts` mit 17 Fällen und zwei neue in
+`api/modules.spec.ts` für beide Richtungen der Voraussetzung (444 → **463**).
+13 neue Unit-Tests im Nutzer-Client (128 → **141**), einer im
+Veranstalter-Client (168 → **169**). Browsersuiten: Nutzer **203** grün (1 in
+WebKit übersprungen) — die Strecke „Teilnehmende finden" läuft wieder im
+bestehenden Test von `profile.spec.ts` mit, aus demselben Grund wie in AP 4
+(E4) — und Veranstalter **280** grün (277 → 280, 26 übersprungen). Der Katalog
+wächst um 22 Schlüssel auf **780**, en und de vollständig.
+`nx run-many -t lint test build` über alle 13 Projekte fehlerfrei. **Keine
+Migration in diesem Paket:** AP 5 fasst kein Schema an, und die `false`-Zeile
+des zurückkehrenden Schlüssels hat die Migration aus AP 1 schon mitgelöscht.
+Neue Entscheidungen: **F126**, **F127**, **F128**, **F150**, **F151**, **F152**.
+
+Was anders lief:
+
+- **Der dritte Aufrufer war da — und die beiden ersten waren nicht gleich.**
+  `searchTerms` stand zweimal im Code (Teilnehmerübersicht, Kontaktliste), und
+  eine der beiden Fassungen kappte bei fünf Wörtern, die andere nicht. Genau das
+  ist der Drift, den F138 meint: drei Kopien sind zwei Verhaltensweisen. Der
+  Splitter liegt jetzt in `business/common/search-terms.ts`, mit der Kappung für
+  alle drei.
+- **Ein Kästchen, das nicht auf dem Bildschirm steht, schickt trotzdem seinen
+  Wert.** Das `searchable`-Control liegt im Formular, unabhängig vom
+  Modulschalter — ein Speichern hätte auf einer Instanz mit abgeschalteter Suche
+  `searchable: false` geschrieben und jemandem still die Sichtbarkeit genommen,
+  die er einmal gewählt hat. Beim Bauen aufgefallen, mit Test festgehalten
+  (F151), und als Angular-Falle nach `docs/rules/`.
+- **Zwei Fixture-Zustände haben keinen Weg durch die API.** „Auffindbar, aber
+  unbestätigt" lässt sich nicht über Endpunkte herstellen — `searchable` ist nur
+  hinter einer Sitzung schreibbar, und eine Sitzung gibt es erst nach der
+  Bestätigung (E32) —, und genau diese Zeile darf im Verzeichnis nicht
+  auftauchen. Deshalb `seedProfile` in `support/database.ts`, mit der Begründung
+  daneben.
+- **`formatAnswer` antwortet englisch.** Beim Zeichnen der Antworten eines
+  fremden Profils aufgefallen: die Funktion in `shared-models` gibt „yes" und
+  „no" zurück, und der Veranstalter-Client zeigt das unübersetzt in seinem
+  Detailpanel (NFR 4). Der Nutzer-Client benutzt sie deshalb **nicht** und
+  buchstabiert das Häkchen selbst (`common.yes`/`common.no`); der fremde
+  Bildschirm ist nicht Teil dieses Pakets und steht als Punkt in `todo.md`.
+- **Eine Voraussetzung muss in der richtigen Reihenfolge zurückgesetzt werden.**
+  Der Vertragstest schaltet beide Schalter aus und wieder ein — und das
+  Zurücksetzen verweigert sich selbst, wenn es mit dem Abhängigen beginnt. Steht
+  in `docs/rules/e2e-tests.md`.
+
+Offen aus diesem Paket: nichts. `chat` bekommt seine Voraussetzung in **AP 6**,
+zusammen mit seinem Modul — ein Deskriptor entsteht mit dem Code dahinter (E21),
+und deshalb konnte AP 5 nur die eine Hälfte des Abnahmekriteriums zeigen.

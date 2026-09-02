@@ -1,5 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { AppConfigService } from '@trefaro/shared-config';
 import {
   provideTranslationsForTest,
   TranslationService,
@@ -117,6 +118,8 @@ describe('ProfilePage', () => {
     setUp: (profiles: FakeProfiles) => void = () => {
       /* the defaults */
     },
+    /** Whether this instance runs a participant directory (F142). */
+    searchEnabled = false,
   ) {
     session = new FakeSession();
     profiles = new FakeProfiles();
@@ -128,7 +131,15 @@ describe('ProfilePage', () => {
           'profile.title': 'Your profile',
           'profile.firstName': 'First name',
           'profile.saved': 'Saved',
+          'profile.searchable': 'Let other participants find me',
         }),
+        {
+          provide: AppConfigService,
+          useValue: {
+            isModuleEnabled: (key: string) =>
+              searchEnabled && key === 'profile-search',
+          },
+        },
         { provide: ParticipantSessionService, useValue: session },
         { provide: ParticipantProfileService, useValue: profiles },
         {
@@ -261,6 +272,34 @@ describe('ProfilePage', () => {
       newPassword: '',
     });
     expect(page.passwordChanged()).toBe(true);
+  });
+
+  describe('the opt-in for being findable (F142)', () => {
+    it('is absent where nothing would read it, and is not written either', async () => {
+      const { page, text } = await render();
+
+      expect(text()).not.toContain('Let other participants find me');
+      await page.save();
+      // The decisive half: the control exists in the form whatever the module
+      // says, so a save that included it would quietly withdraw somebody's
+      // visibility on an instance whose directory is switched off — where the
+      // column keeps what it holds (E14).
+      expect('searchable' in profiles.updates[0]).toBe(false);
+    });
+
+    it('is on screen, prefilled, and saved where the search exists', async () => {
+      const { page, text } = await render(() => {
+        /* the defaults */
+      }, true);
+
+      expect(text()).toContain('Let other participants find me');
+      expect(page.form.getRawValue()).toMatchObject({ searchable: false });
+
+      page.form.patchValue({ searchable: true });
+      await page.save();
+
+      expect(profiles.updates[0].searchable).toBe(true);
+    });
   });
 
   it('keeps what was typed when the password change is refused', async () => {

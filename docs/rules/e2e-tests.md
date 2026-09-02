@@ -60,14 +60,16 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   Millisekunde dazwischen macht den Test rot und sagt nichts.
 - **Der Teilnehmer-Login hat sein eigenes Drosselbudget** — 20 Versuche in fünf
   Minuten, getrennt vom Admin-Login (der Zähler hängt an Route **und** Adresse).
-  Die vier Kontosuiten in `apps/server-e2e` verbrauchen davon dreizehn
-  (`my-registrations.spec.ts` kam in AP 4 mit einer dazu), die Browsersuite des
+  Die fünf Kontosuiten in `apps/server-e2e` verbrauchen davon vierzehn
+  (`my-registrations.spec.ts` kam in AP 4 mit einer dazu, `profile-search.spec.ts`
+  in AP 5 mit einer — dort braucht nur der **Suchende** eine Sitzung, die
+  Gefundenen sind geseedet), die Browsersuite des
   Nutzer-Clients drei (einer je Engine, `profile.spec.ts` meldet sich genau
   einmal an und beweist das neue Passwort in `server-e2e`); wer eine weitere
   schreibt, zählt vorher nach. Ein 429 sieht dort aus wie ein Anmeldefehler und
   ist keiner. **Deshalb wächst `profile.spec.ts` statt Nachbarn zu bekommen:**
-  „meine Anmeldungen" (AP 4) läuft in dessen einem Test mit, weil eine eigene
-  Datei drei weitere Anmeldungen gekostet hätte.
+  „meine Anmeldungen" (AP 4) und die Profilsuche (AP 5) laufen in dessen einem
+  Test mit, weil jede eigene Datei drei weitere Anmeldungen gekostet hätte.
 - **Was instanzweit ist, muss eine Suite selbst wieder abräumen.** Der
   Profil-Baukasten (`profile_field`) hat kein Event, an dem er hängt: eine
   liegengebliebene **Pflichtfrage** lässt jedes `PATCH /api/participant/me`
@@ -114,6 +116,20 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   ist die Abhilfe die aus `decisions.md`: **den Server neu starten**, nicht die
   Drosselung anfassen und nicht abwarten. Beim Arbeiten an einer einzelnen
   Stelle hilft `--grep`.
+- **Ein Schalterpaar wird in der umgekehrten Reihenfolge zurückgesetzt.** Wer
+  eine Voraussetzung testet (E42, F128), schaltet den Abhängigen aus, dann die
+  Voraussetzung — und muss im `finally` die **Voraussetzung zuerst** wieder
+  einschalten. Andernfalls verweigert sich das Zurücksetzen selbst, mit genau dem
+  409, den der Test beweisen wollte.
+- **Ein Fixture, das die API nicht herstellen kann, wird geseedet — mit
+  Begründung.** „Auffindbar, aber unbestätigt" hat keinen Weg durch die
+  Endpunkte: `searchable` ist nur hinter einer Sitzung schreibbar, und eine
+  Sitzung gibt es erst nach dem Double-Opt-In (E32). Genau diese Zeile darf im
+  Verzeichnis nicht auftauchen, also gehört sie in die Suite — `seedProfile` in
+  `apps/server-e2e/src/support/database.ts`,
+  `seedSearchableProfile` in der Browsersuite. Der Passwort-Hash ist dort
+  Unsinn: nach so einer Zeile wird **gesucht**, mit ihr wird nie angemeldet, und
+  ein Login würde ein Budget verbrauchen (E4).
 - **Die Entwicklungsdatenbank ist nicht die Werksvorgabe.** Wer einmal
   `tools/demo-seed/` laufen ließ, hat Organisationsname und Primärfarbe der
   Demo in `app_config` — und die Browsersuiten erwarten `#1f6f5c` aus der ersten

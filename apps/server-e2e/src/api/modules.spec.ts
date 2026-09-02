@@ -31,6 +31,7 @@ interface ModuleSummary {
   titleKey: string;
   enabled: boolean;
   enabledByDefault: boolean;
+  requires: string[];
   version: string | null;
   bundleUrl: string | null;
   mountPoints: string[];
@@ -162,9 +163,11 @@ describe('the module administration', () => {
     // `profile-search` come back with theirs, and there will be no newsletter
     // module at all (F8).
     expect(keys).toContain('profiles');
+    // `profile-search` came back in AP 5 of phase 3, the day it had endpoints
+    // to switch off.
+    expect(keys).toContain('profile-search');
     expect(keys).not.toContain('newsletter');
     expect(keys).not.toContain('chat');
-    expect(keys).not.toContain('profile-search');
   });
 
   it('starts the returning module on rather than off (E21, F63)', async () => {
@@ -178,6 +181,50 @@ describe('the module administration', () => {
       enabled: true,
       enabledByDefault: true,
     });
+  });
+
+  it('names what a module needs before it can be switched on (E42)', async () => {
+    expect((await find('profile-search')).requires).toEqual(['profiles']);
+    // One shape for every row: "nothing" is an empty list, not a missing field.
+    expect((await find('profiles')).requires).toEqual([]);
+    expect((await find('room-planning')).requires).toEqual([]);
+  });
+
+  it('refuses both directions of a broken prerequisite, and names the key (E42)', async () => {
+    // The instance starts with both on, which is the state that makes the
+    // second half of the rule assertable at all.
+    expect((await find('profiles')).enabled).toBe(true);
+    expect((await find('profile-search')).enabled).toBe(true);
+
+    try {
+      // Switching the prerequisite off under a running dependant: refused,
+      // with the dependant named. Not resolved — switching the search off as
+      // well would answer a question nobody asked.
+      const withdrawn = await toggle('profiles', false);
+      expect(withdrawn.status).toBe(409);
+      expect(JSON.stringify(withdrawn.body)).toContain('profile-search');
+      // And nothing happened: a refused switch leaves the instance as it was.
+      expect((await find('profiles')).enabled).toBe(true);
+
+      // The other direction. First put the instance into the state where it
+      // can be asked: search off, then accounts off.
+      expect((await toggle('profile-search', false)).status).toBe(200);
+      expect((await toggle('profiles', false)).status).toBe(200);
+
+      const premature = await toggle('profile-search', true);
+      expect(premature.status).toBe(409);
+      // The missing key by name: an organizer has to know which other switch
+      // to look for, and the key is what this list and `module_config` call it.
+      expect(JSON.stringify(premature.body)).toContain('profiles');
+      expect((await find('profile-search')).enabled).toBe(false);
+    } finally {
+      // In this order, or the restore would refuse itself.
+      await toggle('profiles', true);
+      await toggle('profile-search', true);
+    }
+
+    expect((await find('profiles')).enabled).toBe(true);
+    expect((await find('profile-search')).enabled).toBe(true);
   });
 
   it('carries version and bundle for a plug-in and neither for a core module', async () => {

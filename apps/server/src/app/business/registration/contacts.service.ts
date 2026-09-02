@@ -14,6 +14,7 @@ import {
   DEFAULT_CONTACT_PAGE_SIZE,
   MAX_CONTACT_PAGE_SIZE,
 } from '@trefaro/shared-models';
+import { searchTerms } from '../common/search-terms';
 import {
   REGISTRATION_REPOSITORY,
   type RegistrationRepository,
@@ -153,16 +154,6 @@ function toContact(record: SeriesContactRecord): SeriesContact {
     events: record.events,
     lastRegisteredAt: record.lastRegisteredAt.toISOString(),
   };
-}
-
-/** The same split the participant overview uses: all words have to match. */
-function searchTerms(search: string | undefined): readonly string[] {
-  return (search ?? '')
-    .toLowerCase()
-    .split(/\s+/)
-    .map((term) => term.trim())
-    .filter((term) => term.length > 0)
-    .slice(0, 5);
 }
 
 function positiveInteger(value: number | undefined, fallback: number): number {

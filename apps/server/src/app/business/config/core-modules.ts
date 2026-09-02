@@ -1,6 +1,7 @@
 import {
   MEDIA_LINKS_MODULE_KEY,
   PROFILES_MODULE_KEY,
+  PROFILE_SEARCH_MODULE_KEY,
   PUSH_MODULE_KEY,
 } from '@trefaro/shared-models';
 
@@ -25,6 +26,8 @@ import {
  *   descriptor list is not a roadmap. `profiles` came back in AP 1 of phase 3,
  *   the day it had endpoints to switch off — which is the shape of the rule:
  *   a key appears here together with the code behind it, never before.
+ *   `profile-search` came back in AP 5, on the same terms; `chat` waits for
+ *   AP 6, which is why its prerequisite is declared nowhere yet.
  * - `push` stays and is real: its subscription endpoints carry the guard, and
  *   `/api/config` withholds the VAPID key while the module is off, so a client
  *   does not offer a subscription nothing would store (NFR 7).
@@ -49,6 +52,21 @@ export interface CoreModuleDescriptor {
    */
   readonly titleKey: string;
   readonly enabledByDefault: boolean;
+  /**
+   * Keys that have to be on before this module can be (E42).
+   *
+   * Declared here rather than checked in the service, so the administration can
+   * show the prerequisite in the row and the check has one source. Enforced in
+   * both directions by `ModuleAdminService`: switching this on without its
+   * prerequisite is a 409 naming the missing key, and so is switching the
+   * prerequisite off while this is on. Never resolved silently — "then I will
+   * switch the others off for you" is a switch that does more than it says.
+   *
+   * Only core modules can carry one. A plug-in reaches core data through the
+   * plug-in contract (E12), which is always there; a plug-in that needed
+   * another module switched on would be reaching past that contract.
+   */
+  readonly requires?: readonly string[];
 }
 
 export const CORE_MODULES: readonly CoreModuleDescriptor[] = [
@@ -62,6 +80,21 @@ export const CORE_MODULES: readonly CoreModuleDescriptor[] = [
     key: PROFILES_MODULE_KEY,
     titleKey: 'modules.profiles.title',
     enabledByDefault: true,
+  },
+  // Finding other participants (FR 4.4, UC 12). On by default, like the
+  // accounts it needs: the decision that protects a profile is the person's own
+  // `searchable`, which is off until they say otherwise (E37, F13) — so a fresh
+  // instance offers a search that finds nobody, which is the right way round.
+  // An organization that wants accounts without a community directory switches
+  // this off, and then the search endpoints answer 404 (F53) and the opt-in
+  // disappears from the profile form, because a switch nothing reads is worse
+  // than an absent one (F142).
+  {
+    key: PROFILE_SEARCH_MODULE_KEY,
+    titleKey: 'modules.profileSearch.title',
+    enabledByDefault: true,
+    // There is nothing to search without accounts (E42).
+    requires: [PROFILES_MODULE_KEY],
   },
   // Embedding external stream and media library links costs nothing when unused.
   {

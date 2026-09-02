@@ -24,6 +24,7 @@ import {
   PARTICIPANT_SORTS,
 } from '@trefaro/shared-models';
 import { AttachmentsService } from '../attachments';
+import { searchTerms } from '../common/search-terms';
 import {
   PROFILE_DIRECTORY,
   type ProfileDirectory,
@@ -355,21 +356,6 @@ function toRow(
     confirmedAt: record.confirmedAt?.toISOString() ?? null,
     customFields: record.customFields,
   };
-}
-
-/**
- * Splits the search box into words.
- *
- * Every word has to match, so "amina okonkwo" finds the person whichever order
- * the organizer types the two names in — which is the way people actually search
- * for someone they half remember.
- */
-function searchTerms(search: string | undefined): readonly string[] {
-  return (search ?? '')
-    .trim()
-    .toLowerCase()
-    .split(/\s+/)
-    .filter((term) => term.length > 0);
 }
 
 function sortColumn(sort: ParticipantSort | undefined): ParticipantSort {

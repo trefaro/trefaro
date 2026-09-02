@@ -38,10 +38,14 @@ import { ModulesPage } from './modules-page';
 const NAMES: Record<string, Record<string, string>> = {
   en: {
     'modules.mediaLinks.title': 'Media links',
+    'modules.profiles.title': 'Participant accounts',
+    'modules.profileSearch.title': 'Participant search',
     'plugins.roomPlanning.title': 'Room planning',
   },
   de: {
     'modules.mediaLinks.title': 'Medien-Links',
+    'modules.profiles.title': 'Teilnehmerkonten',
+    'modules.profileSearch.title': 'Teilnehmersuche',
     'plugins.roomPlanning.title': 'Raumplanung',
   },
 };
@@ -71,13 +75,18 @@ function camel(key: string): string {
   return key.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
-function core(key: string, enabled: boolean): ModuleSummary {
+function core(
+  key: string,
+  enabled: boolean,
+  requires: readonly string[] = [],
+): ModuleSummary {
   return {
     key,
     family: 'core',
     titleKey: `modules.${camel(key)}.title`,
     enabled,
     enabledByDefault: true,
+    requires,
     version: null,
     bundleUrl: null,
     mountPoints: [],
@@ -91,6 +100,9 @@ function plugin(key: string, enabled: boolean): ModuleSummary {
     titleKey: `plugins.${camel(key)}.title`,
     enabled,
     enabledByDefault: false,
+    // A plug-in reaches core data through the plug-in contract, which is
+    // always there — so it has no prerequisite to declare (E42).
+    requires: [],
     version: '0.1.0',
     bundleUrl: `/api/plugins/${key}/main.js`,
     mountPoints: ['event-detail'],
@@ -162,6 +174,7 @@ describe('ModulesPage', () => {
           'admin.modules.plugin': 'Plug-in',
           'admin.modules.default': 'default: {{state}}',
           'admin.modules.version': 'version {{version}}',
+          'admin.modules.requires': 'Needs {{modules}}',
           'admin.modules.bundle.failed': 'failed',
           'admin.modules.empty': 'This image ships no optional module.',
           'admin.modules.switchedOff':
@@ -221,6 +234,20 @@ describe('ModulesPage', () => {
       'Disable',
       'Enable',
     ]);
+  });
+
+  it('names a prerequisite before anybody presses the button (E42)', async () => {
+    const page = render({
+      modules: [
+        core('profiles', true),
+        core('profile-search', false, ['profiles']),
+      ],
+    });
+    await page.settle();
+
+    // By name, not by key: the key is what `module_config` calls it, the name
+    // is what the organizer is looking for in the row above.
+    expect(page.text()).toContain('Needs Participant accounts');
   });
 
   it('says which kind a module is, because only a plug-in has a bundle', async () => {

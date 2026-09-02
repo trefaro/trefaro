@@ -13,12 +13,14 @@ import {
   Validators,
 } from '@angular/forms';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { AppConfigService } from '@trefaro/shared-config';
 import { problemOf, type Problem } from '@trefaro/shared-http';
 import { TranslationService } from '@trefaro/shared-i18n';
 import {
   MAX_ACTIVITY_AREAS_LENGTH,
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
+  PROFILE_SEARCH_MODULE_KEY,
   type ParticipantProfileUpdate,
   type ProfileFieldPublic,
 } from '@trefaro/shared-models';
@@ -46,11 +48,16 @@ import { ParticipantProfileService } from '../../features/profiles/participant-p
  * changing it would cut their history rather than carry it along, and the
  * sentence under the field says so instead of a disabled input saying nothing.
  *
- * `searchable` is deliberately **not** on this screen yet. The column is
- * writable since AP 2, but nothing reads it until the participant search
- * exists (AP 5), and a switch that promises "other participants can find and
- * write to you" while nobody can search would be a promise this instance does
- * not keep. It belongs beside the search it governs.
+ * `searchable` arrived with AP 5, and only where it means something: the box is
+ * drawn when the `profile-search` module is on. Until AP 5 it was deliberately
+ * absent, because a switch promising "other participants can find and write to
+ * you" while nobody can search would have been a promise this instance does not
+ * keep (F142) — and the same argument applies to an instance that switched the
+ * directory off, which is why the box follows the module rather than the code.
+ *
+ * It sits at the end of the form, under the answers it publishes, because that
+ * is what its sentence is about: the switch decides who may read everything
+ * above it.
  */
 @Component({
   selector: 'trefaro-profile-page',
@@ -126,6 +133,16 @@ import { ParticipantProfileService } from '../../features/profiles/participant-p
               [field]="field"
               [control]="answers.controls[field.key]"
             />
+          }
+
+          @if (searchEnabled()) {
+            <label class="tick">
+              <input type="checkbox" formControlName="searchable" />
+              <span>{{ 'profile.searchable' | transloco }}</span>
+            </label>
+            <small class="hint">
+              {{ 'profile.searchableHint' | transloco }}
+            </small>
           }
 
           <div class="actions">
@@ -262,6 +279,16 @@ import { ParticipantProfileService } from '../../features/profiles/participant-p
       font-weight: 600;
     }
 
+    .tick {
+      flex-direction: row;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    .tick input {
+      inline-size: auto;
+    }
+
     .actions {
       display: flex;
       align-items: center;
@@ -303,12 +330,25 @@ export class ProfilePage {
   private readonly session = inject(ParticipantSessionService);
   private readonly profiles = inject(ParticipantProfileService);
   private readonly i18n = inject(TranslationService);
+  private readonly config = inject(AppConfigService);
 
   protected readonly maxActivityAreasLength = MAX_ACTIVITY_AREAS_LENGTH;
   protected readonly minPasswordLength = MIN_PASSWORD_LENGTH;
   protected readonly maxPasswordLength = MAX_PASSWORD_LENGTH;
 
   protected readonly account = this.session.participant;
+
+  /**
+   * Whether this instance runs a participant directory (FR 4.4, F142).
+   *
+   * The opt-in is only shown where something reads it. On an instance with
+   * `profile-search` switched off the column keeps whatever it holds (E14) —
+   * switching a module off deletes nothing — but the form neither promises nor
+   * withdraws a visibility that does not exist here.
+   */
+  protected readonly searchEnabled = computed(() =>
+    this.config.isModuleEnabled(PROFILE_SEARCH_MODULE_KEY),
+  );
 
   /** The questions this instance asks (E35), in form order. */
   protected readonly fields = signal<readonly ProfileFieldPublic[]>([]);
@@ -354,6 +394,7 @@ export class ProfilePage {
     lastName: ['', Validators.required],
     preferredLocale: [''],
     activityAreas: ['', Validators.maxLength(MAX_ACTIVITY_AREAS_LENGTH)],
+    searchable: [false],
     customFields: this.answers,
   });
 
@@ -398,6 +439,7 @@ export class ProfilePage {
         lastName: me.lastName,
         preferredLocale: me.preferredLocale,
         activityAreas: me.activityAreas ?? '',
+        searchable: me.searchable,
       });
     });
 
@@ -444,6 +486,11 @@ export class ProfilePage {
       preferredLocale: raw.preferredLocale,
       // An empty box means "no longer stated" rather than the empty string.
       activityAreas: raw.activityAreas.trim() || null,
+      // Only where the box was on screen. An instance with the directory
+      // switched off must not have its participants' opt-in rewritten by a
+      // form that never asked about it — the control would send its own
+      // default and quietly withdraw somebody's visibility.
+      ...(this.searchEnabled() ? { searchable: raw.searchable } : {}),
       // Only when the definitions were read — see `fieldsLoaded`.
       ...(this.fieldsLoaded() ? { customFields: raw.customFields } : {}),
     };

@@ -22,8 +22,11 @@ Zeit und endet beim gleichen Ergebnis.
 - **Schriftarten sind ein mitgelieferter Katalog, kein Upload** (E18) — als
   Startpunkt bestätigt; der Upload ist zurückgestellt, nicht verworfen
   (`todo.md`).
-- **Mails übersetzen keine Inhalte** (bis Phase 3): die Sprache einer Mail wählt
-  niemand (E24), und einen Inhalt in eine nicht gewählte Sprache zu übersetzen
-  ist eine halbe Entscheidung.
+- **Mails übersetzten keine Inhalte — bis Phase 3** (E24): solange die Sprache
+  einer Mail niemand gewählt hatte, wäre ein in diese Sprache übersetzter Inhalt
+  eine halbe Entscheidung gewesen. **Seit AP 4 der Phase 3 gilt das Gegenteil**,
+  und zwar aus demselben Grund: der Empfänger _hat_ eine Sprache gewählt, also
+  folgt der Inhalt der Sprache des Briefes (F125). Unverändert bleibt, wie grob
+  der Rückfall greift — Einheit ist eine ganze Mail (E24, F87).
 
 Siehe auch: die Regel zur Arbeitspaket-Freigabe (`CLAUDE.md`), [Ausgehende Mail](mail.md).

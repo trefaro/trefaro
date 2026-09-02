@@ -53,6 +53,17 @@ Link.
   Attrappe. Wer den Schalter zur Laufzeit umlegt, ruft `refresh()` — und die
   Modulverwaltung liest den Zustand aus den **Registries**, nie aus der Tabelle;
   ein unbekannter Schlüssel ist ein 404, keine neue Zeile.
+- **Ein Modulschalter darf eine Voraussetzung haben, und löst sie nie still
+  auf** (F128, E42). Der Deskriptor nennt sie (`CoreModuleDescriptor.requires`),
+  `ModuleSummary.requires` trägt sie zum Client, die Modulverwaltung zeigt sie
+  **als Namen** in der Zeile. Einschalten ohne die Voraussetzung ist ein **409
+  mit dem fehlenden Schlüssel**, Ausschalten der Voraussetzung unter einem
+  laufenden Abhängigen ein **409 mit den Abhängigen** — beides **vor** dem
+  Schreiben, damit ein verweigerter Klick nichts ändert. „Dann schalte ich die
+  anderen eben mit ab" wäre ein Schalter, der mehr tut als er sagt. Nur
+  Kernmodule können eine haben: ein Plug-in erreicht Kerndaten über den
+  Plug-in-Vertrag (E12), und der ist immer da. Bisher eine: `profile-search`
+  braucht `profiles`; `chat` bekommt seine mit seinem Modul.
 - **Ein zurückkehrender Modulschlüssel bringt eine Altlast mit.** Phase 2 zog
   fünf Attrappen-Deskriptoren zurück und ließ ihre `module_config`-Zeilen liegen
   („Abschalten löscht nie Daten"). Für eine `true`-Zeile ist das richtig — jemand
@@ -62,7 +73,9 @@ Link.
   findet es aus, ohne es je ausgeschaltet zu haben. Deshalb löscht die Migration
   des Arbeitspakets die `false`-Zeile des zurückkehrenden Schlüssels;
   `ensureDefaults` schreibt sie beim nächsten Start aus dem Deskriptor neu. Gilt
-  noch für `chat` und `profile-search`.
+  noch für `chat` — `profiles` (AP 1) und `profile-search` (AP 5) sind zurück,
+  und beide kosteten keine eigene Migration: die aus AP 1 hat die `false`-Zeilen
+  **aller drei** Schlüssel auf einmal gelöscht.
 - **Das Selbstbedienungs-Token steht beim Lesen in der Query, beim Ändern im
   Rumpf** (F44): Lesen ist, was der Link in der Mail tut; ändern darf kein
   Linkvorschau-Dienst können. Nur eine **bestätigte** Anmeldung hat eine
@@ -102,6 +115,14 @@ Link.
   vor drei Monaten gestellt wurde. Die Kehrseite gilt für den Client (F146):
   „es gibt keine Fragen" und „die Fragen sind unbekannt" sind zwei Zustände, und
   wer sie verwechselt, schickt ein `{}`, das jede bisherige Antwort löscht.
+- **Ein Parameter, der nichts ändert, wird nicht deklariert.** Die Kehrseite der
+  Zeile über `forbidNonWhitelisted` weiter unten: `GET /api/participant/profiles`
+  nimmt **kein** `?locale=`, weil an seiner Antwort nichts übersetzt ist — ein
+  Name ist ein Name, der Tätigkeitsbereich ist der Text des Menschen selbst, und
+  die Beschriftungen der Profilfragen kommen aus dem Feld-Baukasten. Ein
+  mitdeklariertes `locale` wäre die Zusage, dass es etwas bewirkt; so ist es ein
+  400, und das ist die ehrliche Antwort. Der Client schickt es dort deshalb
+  nicht.
 - **`?locale=` hat drei Antworten, und nur eine ist ein Fehler** (F94): fehlt der
   Parameter, stehen die Originale (kostenlos); eine wohlgeformte Sprache, in die
   niemand übersetzt hat, ist **kein** Fehler; was kein Sprachtag ist, ist ein 400.
@@ -134,6 +155,17 @@ Link.
   angemeldeten Teilnehmer, welche Anmeldungen existieren. Und: die Liste
   (`/api/participant/registrations`) zeigt jeden Zustand, das Storno über die
   Sitzung fehlt bis AP 12 bewusst.
+- **Die Profilsuche nennt kein Profil, das sie nicht zeigt** (F126, F150, F152).
+  Zwei Lesezugriffe unter `/api/participant/profiles`, und beide antworten nur
+  über Zeilen mit `searchable = true` **und** bestätigter Adresse — die Regel
+  liegt in der SQL des Ports, nicht in den Aufrufern (E37). Verborgen,
+  unbestätigt und unbekannt sind **eine** Antwort, ein wortgleiches 404: wer eine
+  Id herausgibt, gibt das Profilbild mit heraus (F124). Eine Trefferzeile trägt
+  Name, Bild und Tätigkeitsbereich, die Einzelansicht zusätzlich die Antworten
+  auf die Profilfragen — und **keine** der beiden eine Adresse: Kontakt ist ein
+  Gespräch, nie ein Postfach aus einer Antwort (F55). Der eigene Eintrag fehlt in
+  der eigenen Suche, und zwar in der Abfrage: nachträglich entfernt wäre die
+  Gesamtzahl eine zu hoch.
 - **`/api/participant/**` braucht keine eigene Drosselung, `/api/user/**`
   schon.** Die tokenbasierten Selbstbedienungsrouten tragen `@Throttle` (60 je 5
   min), weil ein Token im Prinzip erratbar ist und jeder Aufruf einen HMAC
