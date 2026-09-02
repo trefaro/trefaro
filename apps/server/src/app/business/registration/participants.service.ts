@@ -24,6 +24,10 @@ import {
   PARTICIPANT_SORTS,
 } from '@trefaro/shared-models';
 import { AttachmentsService } from '../attachments';
+import {
+  PROFILE_DIRECTORY,
+  type ProfileDirectory,
+} from '../common/ports/profile-directory.port';
 import { EventsService } from '../events';
 import { MailDeliveryError, MailService, PublicLinks } from '../mail';
 import {
@@ -74,6 +78,11 @@ export class ParticipantsService {
     // For the one message this service sends: the cancellation notice (F59).
     private readonly mail: MailService,
     private readonly links: PublicLinks,
+    // Whether an address has an account (FR 3.3, E31) — a narrow port rather
+    // than the accounts module, because a table showing a yes/no must not be
+    // able to read a profile (F124).
+    @Inject(PROFILE_DIRECTORY)
+    private readonly directory: ProfileDirectory,
   ) {}
 
   /**
@@ -108,8 +117,12 @@ export class ParticipantsService {
       this.registrations.countByStatus(eventId),
     ]);
 
+    // After the page, not beside it: what is asked for is exactly the
+    // addresses on this page, in one query (E31).
+    const accounts = await this.accountsOf(slice.rows);
+
     return {
-      rows: slice.rows.map(toRow),
+      rows: slice.rows.map((row) => toRow(row, accounts.has(row.email))),
       total: slice.total,
       page,
       pageSize,
@@ -145,12 +158,13 @@ export class ParticipantsService {
    */
   async get(id: string): Promise<ParticipantDetail> {
     const registration = await this.require(id);
-    const [{ event }, attachments] = await Promise.all([
+    const [{ event }, attachments, accounts] = await Promise.all([
       this.events.locate(registration.eventId),
       this.attachments.summariesFor(registration.id),
+      this.accountsOf([registration]),
     ]);
     return {
-      ...toRow(registration),
+      ...toRow(registration, accounts.has(registration.email)),
       eventId: registration.eventId,
       eventName: event.name,
       attachments,
@@ -184,7 +198,7 @@ export class ParticipantsService {
     actor: StatusChangeActor,
   ): Promise<ParticipantRow> {
     const registration = await this.require(id);
-    if (registration.status === status) return toRow(registration);
+    if (registration.status === status) return this.rowOf(registration);
 
     this.assertAllowed(registration, status);
 
@@ -199,7 +213,37 @@ export class ParticipantsService {
       await this.notifyCancelled(updated);
     }
 
-    return toRow(updated);
+    return this.rowOf(updated);
+  }
+
+  /**
+   * One row, with the answer to "does this address have an account?" fetched.
+   *
+   * For the two single-row answers. The client replaces its row with what comes
+   * back, so leaving the mark out here would make a cancellation look like a
+   * lost account.
+   */
+  private async rowOf(
+    registration: RegistrationRecord,
+  ): Promise<ParticipantRow> {
+    const accounts = await this.accountsOf([registration]);
+    return toRow(registration, accounts.has(registration.email));
+  }
+
+  /**
+   * Which of these registrations' addresses have an account (E31).
+   *
+   * An empty page asks nothing. The port would answer an empty question
+   * without a round trip as well, but a table filtered down to no rows is the
+   * normal case here, and the cheapest query is the one nobody sends.
+   */
+  private async accountsOf(
+    registrations: readonly RegistrationRecord[],
+  ): Promise<ReadonlySet<string>> {
+    if (registrations.length === 0) return new Set();
+    return this.directory.withAccount(
+      registrations.map((registration) => registration.email),
+    );
   }
 
   /**
@@ -227,22 +271,30 @@ export class ParticipantsService {
     registration: RegistrationRecord,
   ): Promise<void> {
     try {
-      // `locate` rather than the public lookup: the notice has to go out even
-      // if the event has meanwhile gone back to being a draft (the same
-      // reasoning as for the self-service links).
-      const { event, seriesSlug } = await this.events.locate(
-        registration.eventId,
-      );
-      await this.mail.sendRegistrationCancelled(registration.email, {
-        firstName: registration.firstName,
-        event: {
-          name: event.name,
-          startsAt: event.startsAt,
-          endsAt: event.endsAt,
-          timezone: event.timezone,
-          url: this.links.event(seriesSlug, event.slug),
+      await this.mail.sendRegistrationCancelled(
+        registration.email,
+        async (locale) => {
+          // `locate` rather than the public lookup: the notice has to go out
+          // even if the event has meanwhile gone back to being a draft (the
+          // same reasoning as for the self-service links). With the letter's
+          // language, so the title is the one its reader was written to in
+          // (F125).
+          const { event, seriesSlug } = await this.events.locate(
+            registration.eventId,
+            locale,
+          );
+          return {
+            firstName: registration.firstName,
+            event: {
+              name: event.name,
+              startsAt: event.startsAt,
+              endsAt: event.endsAt,
+              timezone: event.timezone,
+              url: this.links.event(seriesSlug, event.slug),
+            },
+          };
         },
-      });
+      );
     } catch (error: unknown) {
       if (!(error instanceof MailDeliveryError)) throw error;
       this.logger.warn(
@@ -284,7 +336,10 @@ export class ParticipantsService {
 /** Said the same way wherever a registration cannot be found any more. */
 const GONE = 'This registration no longer exists.';
 
-function toRow(record: RegistrationRecord): ParticipantRow {
+function toRow(
+  record: RegistrationRecord,
+  hasProfile: boolean,
+): ParticipantRow {
   return {
     id: record.id,
     firstName: record.firstName,
@@ -295,6 +350,7 @@ function toRow(record: RegistrationRecord): ParticipantRow {
     status: record.status,
     newsletterOptIn: record.newsletterOptIn,
     contactOptOut: record.contactOptOut,
+    hasProfile,
     registeredAt: record.createdAt.toISOString(),
     confirmedAt: record.confirmedAt?.toISOString() ?? null,
     customFields: record.customFields,

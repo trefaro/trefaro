@@ -7,6 +7,7 @@ import {
   MailService,
   PublicLinks,
   type InvitationMailContext,
+  type MailContent,
 } from '../mail';
 import { TokenSigner } from '../security';
 import { InvitationSenderService } from './invitation-sender.service';
@@ -96,35 +97,64 @@ class FakeInvitationRepository {
   }
 }
 
+/**
+ * The mail service, which since AP 4 asks the sender for its content (F125).
+ *
+ * {@link localeOf} plays the part `MailCatalogue` plays for real: it decides
+ * which language each recipient's letter turns out to be in, and the sender is
+ * called back with it. That is what lets these tests state the property that
+ * matters for a batch — the same language is resolved once, not once per
+ * recipient.
+ */
 class RecordingMailService {
   readonly sent: { to: string; context: InvitationMailContext }[] = [];
   failFor = new Set<string>();
+  /** Per address, because a batch is exactly where two languages meet. */
+  locales = new Map<string, string>();
 
   async sendInvitation(
     to: string,
-    context: InvitationMailContext,
+    content: MailContent<InvitationMailContext>,
   ): Promise<void> {
     if (this.failFor.has(to)) {
       throw new MailDeliveryError(new Error('Mailbox unavailable'));
     }
+    const context =
+      typeof content === 'function'
+        ? await (content as (locale: string) => Promise<InvitationMailContext>)(
+            this.locales.get(to) ?? 'en',
+          )
+        : content;
     this.sent.push({ to, context });
   }
 }
 
 class FakeSeriesService {
-  async getForOrganizer(): Promise<EventSeries> {
-    return SERIES;
+  readonly asked: (string | undefined)[] = [];
+  /** What the series is called in another language (FR 3.12). */
+  translated = new Map<string, string>();
+
+  async nameOf(_id: string, locale?: string): Promise<string> {
+    this.asked.push(locale);
+    return (locale ? this.translated.get(locale) : undefined) ?? SERIES.name;
   }
 }
 
 class FakeEventsService {
   missing = false;
   readonly asked: string[] = [];
+  readonly locales: (string | undefined)[] = [];
+  translated = new Map<string, string>();
 
-  async locate(id: string): Promise<EventLocation> {
+  async locate(id: string, locale?: string): Promise<EventLocation> {
     this.asked.push(id);
+    this.locales.push(locale);
     if (this.missing) throw new Error('No such event');
-    return { event: EVENT, seriesSlug: 'democracy-days' };
+    const name = locale ? this.translated.get(locale) : undefined;
+    return {
+      event: name ? { ...EVENT, name } : EVENT,
+      seriesSlug: 'democracy-days',
+    };
   }
 }
 
@@ -132,6 +162,7 @@ describe('InvitationSenderService', () => {
   let repository: FakeInvitationRepository;
   let mail: RecordingMailService;
   let events: FakeEventsService;
+  let series: FakeSeriesService;
   let sender: InvitationSenderService;
 
   /** `start` returns immediately by design, so the tests await the work. */
@@ -141,9 +172,10 @@ describe('InvitationSenderService', () => {
     repository = new FakeInvitationRepository();
     mail = new RecordingMailService();
     events = new FakeEventsService();
+    series = new FakeSeriesService();
     sender = new InvitationSenderService(
       repository as unknown as InvitationRepository,
-      new FakeSeriesService() as unknown as EventSeriesService,
+      series as unknown as EventSeriesService,
       events as unknown as EventsService,
       mail as unknown as MailService,
       new PublicLinks(ENV),
@@ -233,9 +265,43 @@ describe('InvitationSenderService', () => {
 
     // Not once per recipient: two hundred mails must not be two hundred lookups.
     expect(events.asked).toEqual(['event-1']);
+    expect(series.asked).toEqual(['en']);
     expect(mail.sent[0].context.event?.url).toBe(
       'https://events.example.org/series/democracy-days/events/kickoff',
     );
+  });
+
+  it('resolves once per language, not once per recipient (F125)', async () => {
+    repository.invitation = record({ eventId: 'event-1' });
+    repository.pending = [recipient(1), recipient(2), recipient(3)];
+    mail.locales.set('person1@example.org', 'de');
+    mail.locales.set('person2@example.org', 'de');
+    mail.locales.set('person3@example.org', 'en');
+    events.translated.set('de', 'Auftakt in Köln');
+    series.translated.set('de', 'Tage der Demokratie');
+
+    sender.start('invitation-1');
+    await drain();
+
+    // Two hundred addresses share a handful of languages: what is resolved per
+    // language is the series name and the event block, and nothing else.
+    expect(events.locales).toEqual(['de', 'en']);
+    expect(series.asked).toEqual(['de', 'en']);
+    expect(mail.sent[0].context.event?.name).toBe('Auftakt in Köln');
+    expect(mail.sent[0].context.seriesName).toBe('Tage der Demokratie');
+    expect(mail.sent[2].context.event?.name).toBe('Kickoff in Köln');
+  });
+
+  it('leaves the organizer’s own words untranslated', async () => {
+    repository.pending = [recipient(1)];
+    mail.locales.set('person1@example.org', 'de');
+
+    sender.start('invitation-1');
+    await drain();
+
+    // The invitation *is* what the organizer typed. A letter that translated
+    // half of itself would be worse than one that translated none of it.
+    expect(mail.sent[0].context.subject).toBe(record().subject);
   });
 
   it('sends the message even if the event was deleted meanwhile', async () => {

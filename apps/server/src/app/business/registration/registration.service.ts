@@ -112,7 +112,7 @@ export class RegistrationService {
       await this.attachments.store(registration.id, uploads);
     }
 
-    await this.notify(registration, event, seriesSlug);
+    await this.notify(registration, event);
     return { email };
   }
 
@@ -158,7 +158,7 @@ export class RegistrationService {
 
     // The receipt is a courtesy. The confirmation has already happened, and
     // failing the request now would leave the participant believing it did not.
-    await this.sendReceipt(confirmed, event, seriesSlug);
+    await this.sendReceipt(confirmed, event);
     return { state: 'confirmed', ...about };
   }
 
@@ -232,12 +232,11 @@ export class RegistrationService {
   private async notify(
     registration: RegistrationRecord,
     event: PublicEvent,
-    seriesSlug: string,
   ): Promise<void> {
     if (registration.status === 'confirmed') {
       // Carries no link that grants anything, so sending it again on request is
       // harmless — and it is the answer to "I never got a confirmation".
-      await this.sendReceipt(registration, event, seriesSlug);
+      await this.sendReceipt(registration, event);
       return;
     }
 
@@ -248,10 +247,13 @@ export class RegistrationService {
     );
 
     try {
-      await this.mail.sendRegistrationConfirmation(registration.email, {
-        ...this.context(registration, event, seriesSlug),
-        confirmUrl: this.links.token(CONFIRMATION_PATH, token),
-      });
+      await this.mail.sendRegistrationConfirmation(
+        registration.email,
+        async (locale) => ({
+          ...(await this.context(registration, locale)),
+          confirmUrl: this.links.token(CONFIRMATION_PATH, token),
+        }),
+      );
     } catch (error: unknown) {
       if (!(error instanceof MailDeliveryError)) throw error;
       // Without this mail the registration cannot be completed, so the
@@ -266,7 +268,6 @@ export class RegistrationService {
   private async sendReceipt(
     registration: RegistrationRecord,
     event: PublicEvent,
-    seriesSlug: string,
   ): Promise<void> {
     // Minted fresh on every receipt (E11): the token is signed rather than
     // stored, so re-sending this mail is how somebody who lost their personal
@@ -278,10 +279,13 @@ export class RegistrationService {
     );
 
     try {
-      await this.mail.sendRegistrationConfirmed(registration.email, {
-        ...this.context(registration, event, seriesSlug),
-        selfServiceUrl: this.links.token(SELF_SERVICE_PATH, token),
-      });
+      await this.mail.sendRegistrationConfirmed(
+        registration.email,
+        async (locale) => ({
+          ...(await this.context(registration, locale)),
+          selfServiceUrl: this.links.token(SELF_SERVICE_PATH, token),
+        }),
+      );
     } catch (error: unknown) {
       if (!(error instanceof MailDeliveryError)) throw error;
       this.logger.warn(
@@ -290,11 +294,28 @@ export class RegistrationService {
     }
   }
 
-  private context(
+  /**
+   * What every one of these mails says about the event — in the mail's own
+   * language (F125).
+   *
+   * Located again rather than reusing the event the flow already read: that one
+   * was fetched before anybody knew which language this letter would be written
+   * in, and an event's name is content the organization may have translated
+   * (FR 3.12). The alternative — a German title inside an English letter — is
+   * the mixture E24 exists to prevent.
+   *
+   * By id and without a status check, like every other mail: an organizer who
+   * unpublishes an event while confirmations are in flight must not turn them
+   * into errors.
+   */
+  private async context(
     registration: RegistrationRecord,
-    event: PublicEvent,
-    seriesSlug: string,
-  ): RegistrationMailContext {
+    locale: string,
+  ): Promise<RegistrationMailContext> {
+    const { event, seriesSlug } = await this.events.locate(
+      registration.eventId,
+      locale,
+    );
     const mailEvent: MailEvent = {
       name: event.name,
       startsAt: event.startsAt,

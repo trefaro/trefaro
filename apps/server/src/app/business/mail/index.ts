@@ -1,4 +1,8 @@
-export { MailDeliveryError, MailService } from './mail.service';
+export {
+  MailDeliveryError,
+  MailService,
+  type MailContent,
+} from './mail.service';
 export { MailCatalogue } from './mail-catalogue.service';
 export { MailModule } from './mail.module';
 export { PublicLinks } from './public-links.service';

@@ -12,6 +12,22 @@ import type {
   RegistrationMailContext,
 } from './templates';
 
+/**
+ * A mail's content, or how to build it once the language is known (F125).
+ *
+ * Four of the six mails name an event, and an event's name is content the
+ * organization may have translated (FR 3.12). Which language a letter is
+ * written in is decided one line below the caller — by the recipient's
+ * preference and E24's whole-mail fallback together — so a caller that needs
+ * its content in that same language cannot know it beforehand. It passes a
+ * function instead and is called back with the answer.
+ *
+ * The other two mails name nothing translatable and pass a plain value: a
+ * lambda that ignores its argument would be ceremony, not information.
+ */
+export type MailContent<Context> =
+  Context | ((locale: string) => Context | Promise<Context>);
+
 /** Raised when a message could not be handed to the mail server. */
 export class MailDeliveryError extends Error {
   constructor(readonly cause: unknown) {
@@ -42,9 +58,9 @@ export class MailService {
   /** The double opt-in request. @throws MailDeliveryError */
   async sendRegistrationConfirmation(
     to: string,
-    context: ConfirmationMailContext,
+    content: MailContent<ConfirmationMailContext>,
   ): Promise<void> {
-    await this.send(MAIL_TEMPLATES.registrationConfirmation, to, context);
+    await this.send(MAIL_TEMPLATES.registrationConfirmation, to, content);
   }
 
   /**
@@ -57,9 +73,9 @@ export class MailService {
    */
   async sendRegistrationConfirmed(
     to: string,
-    context: ReceiptMailContext,
+    content: MailContent<ReceiptMailContext>,
   ): Promise<void> {
-    await this.send(MAIL_TEMPLATES.registrationConfirmed, to, context);
+    await this.send(MAIL_TEMPLATES.registrationConfirmed, to, content);
   }
 
   /**
@@ -74,9 +90,9 @@ export class MailService {
    */
   async sendRegistrationCancelled(
     to: string,
-    context: RegistrationMailContext,
+    content: MailContent<RegistrationMailContext>,
   ): Promise<void> {
-    await this.send(MAIL_TEMPLATES.registrationCancelled, to, context);
+    await this.send(MAIL_TEMPLATES.registrationCancelled, to, content);
   }
 
   /**
@@ -88,9 +104,9 @@ export class MailService {
    */
   async sendInvitation(
     to: string,
-    context: InvitationMailContext,
+    content: MailContent<InvitationMailContext>,
   ): Promise<void> {
-    await this.send(MAIL_TEMPLATES.invitation, to, context);
+    await this.send(MAIL_TEMPLATES.invitation, to, content);
   }
 
   /**
@@ -99,9 +115,9 @@ export class MailService {
    */
   async sendProfileConfirmation(
     to: string,
-    context: ProfileConfirmationMailContext,
+    content: MailContent<ProfileConfirmationMailContext>,
   ): Promise<void> {
-    await this.send(MAIL_TEMPLATES.profileConfirmation, to, context);
+    await this.send(MAIL_TEMPLATES.profileConfirmation, to, content);
   }
 
   /**
@@ -116,18 +132,23 @@ export class MailService {
    */
   async sendProfileExists(
     to: string,
-    context: ProfileExistsMailContext,
+    content: MailContent<ProfileExistsMailContext>,
   ): Promise<void> {
-    await this.send(MAIL_TEMPLATES.profileExists, to, context);
+    await this.send(MAIL_TEMPLATES.profileExists, to, content);
   }
 
   private async send<Context>(
     template: MailTemplate<Context>,
     to: string,
-    context: Context,
+    content: MailContent<Context>,
   ): Promise<void> {
-    const strings = await this.catalogue.strings(template.keys);
-    const mail = template.render(strings, context);
+    // The address travels along to be read, not to be written to (F55): it
+    // decides which language this letter is in (F125).
+    const strings = await this.catalogue.strings(template.keys, to);
+    const mail = template.render(
+      strings,
+      await resolve(content, strings.locale),
+    );
     try {
       await this.mailer.send({ to, ...mail });
     } catch (error: unknown) {
@@ -140,4 +161,19 @@ export class MailService {
       throw new MailDeliveryError(error);
     }
   }
+}
+
+/**
+ * The content, built in the language the letter is actually in.
+ *
+ * A context is never itself a function in this application, so the test is
+ * unambiguous — and it is made in one place rather than in six senders.
+ */
+async function resolve<Context>(
+  content: MailContent<Context>,
+  locale: string,
+): Promise<Context> {
+  return typeof content === 'function'
+    ? await (content as (locale: string) => Context | Promise<Context>)(locale)
+    : content;
 }

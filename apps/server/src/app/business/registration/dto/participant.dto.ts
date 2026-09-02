@@ -54,6 +54,14 @@ export class ParticipantRowDto implements ParticipantRow {
   })
   contactOptOut!: boolean;
 
+  @ApiProperty({
+    description:
+      'Whether this address has a confirmed participant account (FR 3.3, ' +
+      'E31). A yes/no and nothing more: an id would hand out the profile ' +
+      'picture with it (F124).',
+  })
+  hasProfile!: boolean;
+
   @ApiProperty({ example: '2026-08-24T09:30:00.000Z' })
   registeredAt!: string;
 

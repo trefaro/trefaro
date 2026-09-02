@@ -147,7 +147,7 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    (offen geblieben: die Feedbackrunde mit Democracy International)
 2. **✅ 29.08.2026, M5** Whitelabel-Theming, Modul-Verwaltung, i18n, PWA,
    Installations-Story → `docs/PHASE2.md`
-3. **In Arbeit** (AP 1–AP 3 erledigt, M6 erreicht) Profile, Nachrichten,
+3. **In Arbeit** (AP 1–AP 4 erledigt, M6 erreicht) Profile, Nachrichten,
    Echtzeit-/Gruppenchat, Push, Profilsuche → `docs/PHASE3.md`
 4. Plug-ins: Programmvorschläge, Forum, Raumplanung, QR-Check-In
 5. Härtung, Usability-Test mit Democracy International (Pilotpartner), Doku,
@@ -166,17 +166,23 @@ bewusst; die Begründungen stehen in `docs/rules/`. Katalog damals 646 → 654.
 
 **Phase 3 läuft** (seit 02.09.2026): Plan in `docs/PHASE3.md`, dreizehn
 Arbeitspakete, Entscheidungen **E31–E45**, Nachträge ab **F118** (vergeben:
-F118–F124, F137–F147; F125–F136 bleiben reserviert). **AP 1 (Teilnehmerkonto und
-Login), AP 2 (Profil und Feld-Baukasten) und AP 3 (Login, Registrierung und
-Profil in beiden Clients, **Meilenstein M6**) sind erledigt** — Protokoll je
-Paket unter _Fortschritt_. Als nächstes AP 4: die Anmeldung kennt den Menschen
-(FR 3.3, 4.7). Katalog **749** Schlüssel.
+F118–F125, F137–F149; F126–F136 bleiben reserviert). **AP 1 (Teilnehmerkonto und
+Login), AP 2 (Profil und Feld-Baukasten), AP 3 (Login, Registrierung und Profil
+in beiden Clients, **Meilenstein M6**) und AP 4 (die Anmeldung kennt den
+Menschen) sind erledigt** — Protokoll je Paket unter _Fortschritt_. Als nächstes
+AP 5: die Profilsuche (FR 4.4). Katalog **758** Schlüssel.
 
-Zwei Punkte aus AP 3 warten auf ein anderes Paket bzw. auf Marius: das Opt-in
+Aus AP 4: die Selbstbedienung kennt zwei Ansprüche — das signierte Token aus der
+Mail und die Sitzung, aufgelöst über die Adresse (F148) —, die
+Teilnehmerübersicht hat ihre Profilspalte (F149) und **eine Mail spricht die
+Sprache ihres Empfängers, samt Inhalt** (F125).
+
+Drei Punkte warten auf ein anderes Paket bzw. auf Marius: das Opt-in
 `searchable` gehört zur Profilsuche in AP 5 (F142 — ein Schalter, den nichts
-liest, verspricht Sichtbarkeit, die es nicht gibt), und ob es eine geteilte
-Bibliothek für Oberflächenbauteile geben soll, ist eine Stack-Entscheidung
-(F145). Beides in `todo.md`.
+liest, verspricht Sichtbarkeit, die es nicht gibt), das **Storno über die
+Sitzung** gehört zu AP 12 (F148), und ob es eine geteilte Bibliothek für
+Oberflächenbauteile geben soll, ist eine Stack-Entscheidung (F145). Alles drei in
+`todo.md`.
 
 ## Betriebskontext
 

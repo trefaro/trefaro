@@ -50,6 +50,10 @@ class FakeEventSeriesRepository implements EventSeriesRepository {
     return this.rows.find((row) => row.id === id) ?? null;
   }
 
+  async findByIds(): Promise<readonly EventSeriesRecord[]> {
+    throw new Error('not used in this suite');
+  }
+
   async findBySlug(slug: string): Promise<EventSeriesRecord | null> {
     return this.rows.find((row) => row.slug === slug) ?? null;
   }

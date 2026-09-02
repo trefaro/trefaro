@@ -8,9 +8,10 @@ import type {
 } from '@trefaro/shared-models';
 import type { TrefaroEnv } from '../../core/config/env';
 import type { AttachmentsService } from '../attachments';
+import type { ProfileDirectory } from '../common/ports/profile-directory.port';
 import type { EventLocation, EventsService } from '../events';
 import { MailDeliveryError, MailService, PublicLinks } from '../mail';
-import type { RegistrationMailContext } from '../mail';
+import type { MailContent, RegistrationMailContext } from '../mail';
 import { ParticipantsService } from './participants.service';
 import type {
   RegistrationChanges,
@@ -120,6 +121,10 @@ class RecordingRegistrationRepository implements RegistrationRepository {
     return this.slice;
   }
 
+  async searchByAddress(): Promise<RegistrationSlice> {
+    throw new Error('not used in this suite — that is the self-service’s side');
+  }
+
   async countByStatus(): Promise<RegistrationCounts> {
     return this.counts;
   }
@@ -161,25 +166,46 @@ class FakeEventsService {
     return this.event;
   }
 
+  /** What the event is called in another language (FR 3.12). */
+  translated = new Map<string, string>();
+
   /** Whatever the event's status is — that is the point of `locate`. */
-  async locate(id: string): Promise<EventLocation> {
+  async locate(id: string, locale?: string): Promise<EventLocation> {
     if (!this.event || this.event.id !== id) {
       throw new NotFoundException(`No event with id "${id}"`);
     }
-    return { event: this.event, seriesSlug: 'climate-2027' };
+    const name = locale ? this.translated.get(locale) : undefined;
+    return {
+      event: name ? { ...this.event, name } : this.event,
+      seriesSlug: 'climate-2027',
+    };
   }
 }
 
-/** The one message this service sends: the cancellation notice (F59). */
+/**
+ * The one message this service sends: the cancellation notice (F59).
+ *
+ * Since AP 4 the mail service asks for its content once the letter's language
+ * is settled (F125), so this fake plays that part — {@link locale} is what
+ * `MailCatalogue` would have decided, and the notice's event title has to
+ * follow it.
+ */
 class RecordingMailService {
   readonly cancelled: { to: string; context: RegistrationMailContext }[] = [];
   failing = false;
+  locale = 'en';
 
   async sendRegistrationCancelled(
     to: string,
-    context: RegistrationMailContext,
+    content: MailContent<RegistrationMailContext>,
   ): Promise<void> {
     if (this.failing) throw new MailDeliveryError(new Error('SMTP is down'));
+    const context =
+      typeof content === 'function'
+        ? await (
+            content as (locale: string) => Promise<RegistrationMailContext>
+          )(this.locale)
+        : content;
     this.cancelled.push({ to, context });
   }
 }
@@ -187,6 +213,29 @@ class RecordingMailService {
 const ENV = {
   publicUserClientUrl: 'https://events.example.org/',
 } as TrefaroEnv;
+
+/**
+ * Who of a page's addresses has an account (FR 3.3, E31).
+ *
+ * Records what it was asked, because the interesting property is not the answer
+ * but the number of questions: the participant overview renders a page of rows
+ * and must not turn it into one lookup per line.
+ */
+class RecordingProfileDirectory implements ProfileDirectory {
+  accounts = new Set<string>();
+  readonly asked: readonly string[][] = [];
+
+  async withAccount(emails: readonly string[]): Promise<ReadonlySet<string>> {
+    (this.asked as string[][]).push([...emails]);
+    return new Set(emails.filter((email) => this.accounts.has(email)));
+  }
+
+  async localeFor(): Promise<string | null> {
+    throw new Error(
+      'not used in this suite — that is the mail composer’s side',
+    );
+  }
+}
 
 /** The files of one registration, as the detail panel asks for them (E9). */
 class FakeAttachmentsService {
@@ -206,6 +255,7 @@ describe('ParticipantsService', () => {
   let events: FakeEventsService;
   let attachments: FakeAttachmentsService;
   let mail: RecordingMailService;
+  let directory: RecordingProfileDirectory;
   let service: ParticipantsService;
 
   beforeEach(() => {
@@ -213,12 +263,14 @@ describe('ParticipantsService', () => {
     events = new FakeEventsService();
     attachments = new FakeAttachmentsService();
     mail = new RecordingMailService();
+    directory = new RecordingProfileDirectory();
     service = new ParticipantsService(
       repository,
       events as unknown as EventsService,
       attachments as unknown as AttachmentsService,
       mail as unknown as MailService,
       new PublicLinks(ENV),
+      directory,
     );
   });
 
@@ -311,6 +363,51 @@ describe('ParticipantsService', () => {
       expect(page.rows[0].newsletterOptIn).toBe(true);
     });
 
+    it('marks the addresses that have an account (FR 3.3)', async () => {
+      repository.slice = {
+        rows: [
+          record(),
+          record({ id: 'registration-2', email: 'ben@example.org' }),
+        ],
+        total: 2,
+      };
+      directory.accounts.add('amina@example.org');
+
+      const page = await service.list('event-1', {});
+
+      // The column phase 1 left out rather than shipping one that always says
+      // "no profile" (E13).
+      expect(page.rows[0].hasProfile).toBe(true);
+      expect(page.rows[1].hasProfile).toBe(false);
+    });
+
+    it('asks once for the whole page, not once per row', async () => {
+      repository.slice = {
+        rows: [
+          record(),
+          record({ id: 'registration-2', email: 'ben@example.org' }),
+        ],
+        total: 2,
+      };
+
+      await service.list('event-1', {});
+
+      // This screen is rated the most important of the product and has to stay
+      // fast at two thousand rows; N+1 is how it stops being.
+      expect(directory.asked).toEqual([
+        ['amina@example.org', 'ben@example.org'],
+      ]);
+    });
+
+    it('asks nothing at all for an empty page', async () => {
+      repository.slice = { rows: [], total: 0 };
+
+      const page = await service.list('event-1', {});
+
+      expect(page.rows).toEqual([]);
+      expect(directory.asked).toEqual([]);
+    });
+
     it('reports the whole event even while a filter is applied', async () => {
       repository.slice = {
         rows: [record({ status: 'confirmed' })],
@@ -399,6 +496,15 @@ describe('ParticipantsService', () => {
       expect(detail.email).toBe('amina@example.org');
     });
 
+    it('says whether this person has an account, like the row does', async () => {
+      repository.rows = [record()];
+      directory.accounts.add('amina@example.org');
+
+      const detail = await service.get('registration-1');
+
+      expect(detail.hasProfile).toBe(true);
+    });
+
     it('still opens after the event went back to being a draft', async () => {
       repository.rows = [record()];
       events.event = { ...EVENT, status: 'draft' };
@@ -456,6 +562,23 @@ describe('ParticipantsService', () => {
       expect(row.status).toBe('cancelled');
       // That somebody once confirmed is a fact, and cancelling is a new one.
       expect(row.confirmedAt).toBe('2026-08-24T10:00:00.000Z');
+    });
+
+    it('keeps the profile mark on the row it answers with', async () => {
+      repository.rows = [
+        record({ status: 'confirmed', confirmedAt: new Date() }),
+      ];
+      directory.accounts.add('amina@example.org');
+
+      const row = await service.setStatus(
+        'registration-1',
+        'cancelled',
+        'organizer',
+      );
+
+      // The client replaces its row with this one; a flag that came back false
+      // would make a cancellation look like a lost account.
+      expect(row.hasProfile).toBe(true);
     });
 
     it('does nothing when the status is already the one asked for', async () => {
@@ -557,6 +680,18 @@ describe('ParticipantsService', () => {
       expect(mail.cancelled[0].context.event.url).toBe(
         'https://events.example.org/series/climate-2027/events/kickoff',
       );
+    });
+
+    it('names the event in the language the notice is written in (F125)', async () => {
+      repository.rows = [
+        record({ status: 'confirmed', confirmedAt: new Date() }),
+      ];
+      mail.locale = 'de';
+      events.translated.set('de', 'Auftakt in Köln');
+
+      await service.setStatus('registration-1', 'cancelled', 'organizer');
+
+      expect(mail.cancelled[0].context.event.name).toBe('Auftakt in Köln');
     });
 
     it('says nothing when the participant cancelled it themselves', async () => {

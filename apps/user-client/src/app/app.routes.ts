@@ -15,6 +15,11 @@ import {
  * links already in people's inboxes working. The third such page is the
  * objection to further invitations (E15), which needs no account by design.
  *
+ * Since AP 4 of phase 3 the login is a second way to the same self-service:
+ * `registrations` lists what an address holds and `registrations/:id` opens one
+ * of them with no token at all — the same component as `registrations/me`,
+ * because the view and its rules are identical.
+ *
  * The four `profile/*` routes are the account itself (FR 4.1–4.3). Three of
  * them are for somebody who is *not* logged in — registering, confirming,
  * logging in — and only `profile` needs a session. Two of the four are linked
@@ -54,8 +59,32 @@ export const appRoutes: Route[] = [
   {
     // The personal link in the confirmation receipt points here (E11); the token
     // arrives as a query parameter and is bound to the page's input, exactly as
-    // for the confirmation above.
+    // for the confirmation above. Before `registrations/:id`, so a link from a
+    // mail is never read as an id.
     path: 'registrations/me',
+    loadComponent: () =>
+      import('./pages/my-registration/my-registration-page').then(
+        (m) => m.MyRegistrationPage,
+      ),
+    title: 'mine.title',
+  },
+  {
+    // What the navigation points at once somebody is signed in (FR 4.7): the
+    // list a token cannot open, because a token speaks for one registration.
+    path: 'registrations',
+    pathMatch: 'full',
+    canActivate: [participantSessionGuard],
+    loadComponent: () =>
+      import('./pages/my-registrations/my-registrations-page').then(
+        (m) => m.MyRegistrationsPage,
+      ),
+    title: 'mine.list.title',
+  },
+  {
+    // The same page as `registrations/me`, reached without a token: the id
+    // comes from the path and the session says whose it is (E31).
+    path: 'registrations/:id',
+    canActivate: [participantSessionGuard],
     loadComponent: () =>
       import('./pages/my-registration/my-registration-page').then(
         (m) => m.MyRegistrationPage,

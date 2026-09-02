@@ -1,6 +1,7 @@
 import {
   PROFILE_CONFIRMATION_PATH,
   PROFILE_LOGIN_PATH,
+  SELF_SERVICE_PATH,
 } from '@trefaro/shared-models';
 import { appRoutes } from './app.routes';
 
@@ -16,12 +17,21 @@ import { appRoutes } from './app.routes';
 describe('participant client routes', () => {
   const paths = appRoutes.map((route) => route.path);
 
-  it.each([PROFILE_CONFIRMATION_PATH, PROFILE_LOGIN_PATH])(
+  it.each([PROFILE_CONFIRMATION_PATH, PROFILE_LOGIN_PATH, SELF_SERVICE_PATH])(
     'routes %s, because a mail links to it',
     (path) => {
       expect(paths).toContain(path.replace(/^\//, ''));
     },
   );
+
+  it('matches `registrations/me` before `registrations/:id`', () => {
+    // Otherwise the link every confirmed participant has in their inbox is
+    // read as an id, and a page they hold a valid token for asks them to log
+    // in (E11).
+    expect(paths.indexOf('registrations/me')).toBeLessThan(
+      paths.indexOf('registrations/:id'),
+    );
+  });
 
   it('matches the more specific profile paths before `profile` itself', () => {
     const profile = paths.indexOf('profile');

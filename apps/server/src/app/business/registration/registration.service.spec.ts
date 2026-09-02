@@ -15,7 +15,11 @@ import type { TrefaroEnv } from '../../core/config/env';
 import type { AttachmentsService, UploadedFile } from '../attachments';
 import type { EventLocation, EventsService } from '../events';
 import { MailDeliveryError, MailService, PublicLinks } from '../mail';
-import type { ConfirmationMailContext, RegistrationMailContext } from '../mail';
+import type {
+  ConfirmationMailContext,
+  MailContent,
+  RegistrationMailContext,
+} from '../mail';
 import { TokenSigner } from '../security';
 import type {
   CheckedSubmission,
@@ -117,6 +121,10 @@ class FakeRegistrationRepository implements RegistrationRepository {
     throw new Error('not used in this suite');
   }
 
+  async searchByAddress(): Promise<RegistrationSlice> {
+    throw new Error('not used in this suite');
+  }
+
   async countByStatus(): Promise<RegistrationCounts> {
     throw new Error('not used in this suite');
   }
@@ -139,28 +147,46 @@ class FakeRegistrationRepository implements RegistrationRepository {
 }
 
 /** Records what would have gone out, and can be told to fail. */
+/**
+ * The mail service, which since AP 4 asks for its content (F125).
+ *
+ * The letter's language is resolved inside `MailService`, so a caller hands in
+ * a function and is called back with it. This fake plays that part with
+ * {@link locale}, which is what lets a test assert that the *content* followed
+ * the language the letter was written in.
+ */
 class RecordingMailService {
   readonly confirmations: ConfirmationMailContext[] = [];
   readonly receipts: RegistrationMailContext[] = [];
   readonly recipients: string[] = [];
   failing = false;
+  /** The language `MailCatalogue` would have settled on for these letters. */
+  locale = 'en';
 
   async sendRegistrationConfirmation(
     to: string,
-    context: ConfirmationMailContext,
+    content: MailContent<ConfirmationMailContext>,
   ): Promise<void> {
     if (this.failing) throw new MailDeliveryError(new Error('ECONNREFUSED'));
     this.recipients.push(to);
-    this.confirmations.push(context);
+    this.confirmations.push(await this.resolve(content));
   }
 
   async sendRegistrationConfirmed(
     to: string,
-    context: RegistrationMailContext,
+    content: MailContent<RegistrationMailContext>,
   ): Promise<void> {
     if (this.failing) throw new MailDeliveryError(new Error('ECONNREFUSED'));
     this.recipients.push(to);
-    this.receipts.push(context);
+    this.receipts.push(await this.resolve(content));
+  }
+
+  private async resolve<Context>(
+    content: MailContent<Context>,
+  ): Promise<Context> {
+    return typeof content === 'function'
+      ? await (content as (locale: string) => Promise<Context>)(this.locale)
+      : content;
   }
 }
 
@@ -210,14 +236,23 @@ class FakeEventsService {
   event: PublicEvent = EVENT;
   /** Set to make the public lookup behave like a draft or unknown event. */
   publiclyVisible = true;
+  /** What the event is called in another language (FR 3.12). */
+  translated = new Map<string, string>();
+  /** Which languages `locate` was asked for, in order. */
+  readonly located: (string | undefined)[] = [];
 
   async getPublic(): Promise<PublicEvent> {
     if (!this.publiclyVisible) throw new NotFoundException('No such event');
     return this.event;
   }
 
-  async locate(): Promise<EventLocation> {
-    return { event: this.event, seriesSlug: 'buergerraete' };
+  async locate(_id: string, locale?: string): Promise<EventLocation> {
+    this.located.push(locale);
+    const name = locale ? this.translated.get(locale) : undefined;
+    return {
+      event: name ? { ...this.event, name } : this.event,
+      seriesSlug: 'buergerraete',
+    };
   }
 }
 
@@ -345,6 +380,19 @@ describe('RegistrationService', () => {
       // the participant can neither complete nor see.
       expect(repository.rows).toHaveLength(0);
       expect(mail.recipients).toEqual([]);
+    });
+
+    it('names the event in the language the mail is written in (F125)', async () => {
+      mail.locale = 'de';
+      events.translated.set('de', 'Auftakt in Köln');
+
+      await service.register('buergerraete', 'kickoff', INPUT);
+
+      // The other half of "mail in the recipient's language": a German letter
+      // that named the English original would be half a decision, and the half
+      // that is missing is the reader's.
+      expect(events.located).toContain('de');
+      expect(mail.confirmations[0].event.name).toBe('Auftakt in Köln');
     });
 
     it('links to the participant client, not to the API (E5b)', async () => {

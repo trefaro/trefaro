@@ -1,6 +1,6 @@
 # Phase 3 — Profile, Kommunikation und Community-Kern
 
-**Status: in Arbeit** (seit 02.09.2026, AP 1 bis AP 3 erledigt, **M6 erreicht**). Der Teil oberhalb von
+**Status: in Arbeit** (seit 02.09.2026, AP 1 bis AP 4 erledigt, **M6 erreicht**). Der Teil oberhalb von
 _Fortschritt_ ist der **Plan** und wird nicht mehr rückwirkend korrigiert; was
 tatsächlich passierte, steht unten je Paket — wie in
 [`PHASE1.md`](PHASE1.md) und [`PHASE2.md`](PHASE2.md). Was Marius **vor** einem
@@ -17,8 +17,8 @@ phase 3_ — dreizehn Einträge, jeder ist unten einem Arbeitspaket zugeordnet.
 
 Die Entscheidungen zählen bei **E31** weiter (Phase 1: E1–E16, Phase 2:
 E17–E30); Ergänzungen am Referenzdokument bekommen **F118** und folgende
-(F1–F117 sind vergeben, F62 nie). Vergeben sind inzwischen F118–F124 sowie
-F137–F147; **F125–F136 bleiben reserviert** für die Pakete, die noch kommen.
+(F1–F117 sind vergeben, F62 nie). Vergeben sind inzwischen F118–F125 sowie
+F137–F149; **F126–F136 bleiben reserviert** für die Pakete, die noch kommen.
 
 **Vier Entscheidungen hat Marius am 02.09.2026 vorab getroffen**, bevor dieser
 Plan geschrieben wurde — sie sind der Rahmen, nicht Vorschläge: die Adresse ist
@@ -741,7 +741,10 @@ Entscheidung entpuppt, wird zusammengelegt, und die freigewordene Nummer bleibt
 unvergeben (wie F62). **F137** war nicht geplant — die Zeile fiel in AP 1 auf und
 bekam ihre eigene Nummer, weil sie noch zweimal auftreten wird. **F138** und
 **F139** kamen in AP 2 dazu: was zwei Baukästen wirklich teilen (die Regel, nicht
-den Port) und was ein Passwortwechsel mit den anderen Sitzungen macht.
+den Port) und was ein Passwortwechsel mit den anderen Sitzungen macht. **F140
+bis F147** kamen in AP 3 dazu, **F148** und **F149** in AP 4 — wie eine Sitzung
+eine Anmeldung beansprucht und was die Profilspalte behauptet; F125 war für
+dieses Paket reserviert und ist vergeben.
 
 ## Definition of Done für Phase 3
 
@@ -1052,3 +1055,86 @@ Offen aus diesem Paket: **das Opt-in für die Auffindbarkeit** (F142, AP 5) und
 **die Frage, ob es eine geteilte Bibliothek für Oberflächenbauteile geben soll**
 (F145) — beides in `todo.md`, das zweite ist eine Stack-Entscheidung und gehört
 Marius.
+
+### AP 4 — Die Anmeldung kennt den Menschen (erledigt, 02.09.2026)
+
+Umgesetzt:
+
+- **Die Sitzung ist der zweite Anspruch auf dieselbe Anmeldung** (**F148**).
+  `SelfServiceService.require` nimmt einen `SelfServiceClaim` — Token aus der
+  Mail **oder** Sitzung plus Anmelde-Id, aufgelöst über Adressgleichheit (E31).
+  Ab der Statusprüfung ist es derselbe Code; die Links in den Postfächern
+  funktionieren unverändert, und ein Vertragstest fährt genau das nach.
+- **`GET /api/participant/registrations`** — meine Anmeldungen, nach Eventstart
+  absteigend, Id als letztes Kriterium, paginiert (10, höchstens 50), jeder
+  Zustand dabei. Dazu `GET /…/:id` (dieselbe Ansicht wie der Link öffnet) und
+  `PUT`/`DELETE /…/:id/program-items/:itemId/signup` für die Plätze (FR 3.10).
+  Alle vier hinter dem `profiles`-Schalter (F53) und ohne eigene Drosselung: ein
+  Token ist im Prinzip erratbar, eine Sitzung nicht.
+- **Kein Storno über die Sitzung** — die Regel hat noch keinen zweiten Weg, der
+  Link kann es heute, und **AP 12 schuldet ihn** (F148, FR 4.7 ist P3). Die
+  Detailseite zeigt den Knopf deshalb nur mit Token, statt einen anzubieten, der
+  nicht funktioniert.
+- **Ein Port für eine Adresse** (**F149**): `ProfileDirectory` in
+  `business/common/ports/` mit `withAccount(emails)` und `localeFor(email)` —
+  zwei Fragen, zwei Module (Übersicht und Mail), kein Zugriff auf ein Profil.
+- **Die Teilnehmerübersicht hat ihre Profilspalte** (FR 3.3, die Lücke aus
+  E13): ein Ja/Nein über ein **bestätigtes** Konto, einmal je Seite gefragt,
+  ohne Id und ohne Namen (F124). Auch im Detailpanel, dort als Wort.
+- **Mail in der Sprache des Empfängers** (**F125**): `MailCatalogue.strings()`
+  bekommt die Adresse und fragt den Port nach der gewählten Sprache; die Kette
+  ist Empfänger → Instanzvorgabe → Englisch, der Rückfall aus E24 bleibt
+  unangetastet. Und der **Inhalt folgt derselben Entscheidung**: `MailService`
+  nimmt statt eines Kontextes eine Funktion (`MailContent<T>`) und ruft sie mit
+  der Sprache auf, in der der Brief wirklich steht. Vier Mails übersetzen so
+  ihren Eventtitel; die Einladung löst je Sprache einmal auf, nicht je
+  Empfänger.
+- **`EventsService.locateMany`** (plus `findByIds` an zwei Repositories und
+  `EventSeriesService.slugsOf`/`nameOf`) — eine Liste von Anmeldungen nennt ihre
+  Events in drei Abfragen statt in drei je Zeile (F49).
+- **Nutzer-Client: `pages/my-registrations/`** — die Liste, die ein Token nicht
+  öffnen kann, mit „Mehr anzeigen" statt einer Seitennummerierung. Die
+  Detailseite `pages/my-registration/` beantwortet jetzt beide Wege: `token` aus
+  der Query oder `id` aus dem Pfad, ein Bauteil, eine Regelstrecke. **Der
+  Navigationseintrag „Meine Anmeldungen" ist da** — der Grund, warum er fehlte,
+  war die fehlende Anmeldung.
+
+Nachweise: 31 neue Unit-Tests im Server (879 → **910**) und eine neue
+Vertragssuite `api/my-registrations.spec.ts` mit 16 Fällen (428 → **444**), die
+beide Hälften der Zusage nachfährt: ein Link aus einem Postfach funktioniert
+weiter, und eine Sitzung braucht keinen. 12 neue Unit-Tests im Nutzer-Client
+(116 → **128**), der Veranstalter-Client unverändert (**168**). Browsersuiten:
+Nutzer **203** grün (1 in WebKit übersprungen) — die Strecke „meine Anmeldungen"
+läuft im bestehenden Test von `profile.spec.ts` mit, weil eine eigene Datei drei
+weitere Anmeldungen gekostet hätte (E4) — und Veranstalter **277** grün (274 →
+277, 26 übersprungen). Der Katalog wächst um 9 Schlüssel auf **758**, en und de
+vollständig. `nx run-many -t lint test build` über alle 13 Projekte fehlerfrei.
+**Keine Migration in diesem Paket:** AP 4 fasst kein Schema an — genau das ist
+E31 (`registration` bekommt keine `user_id`), und die Mail-Locale steht in einer
+Spalte, die AP 1 schon geschrieben hat. Neue Entscheidungen: **F125**, **F148**,
+**F149**.
+
+Was anders lief:
+
+- **`forbidNonWhitelisted` prüft die ganze Query gegen das Query-DTO.** Ein
+  Endpunkt mit Objekt-Query **und** `?locale=` antwortet 400, bevor ein Handler
+  ihn sieht — das erste Mal in diesem Repository, dass beides zusammenkam. Der
+  Ausweg ist ein deklariertes `locale` im DTO, gelesen wird es weiter durch
+  `LocaleQueryPipe`, weil dort die Regel liegt (F94). Steht in
+  `docs/rules/api-contracts.md`.
+- **Ein Backtick in einem Angular-Template-Kommentar**, wieder — diesmal in der
+  Teilnehmerübersicht. Der Compiler meldete `NG1002` und fünf Folgefehler an
+  ganz anderen Stellen. Die Regel stand schon in
+  `docs/rules/angular-clients.md`; sie stand nur nicht im Kopf.
+- **Ein Client-Test, der Dateien liest, hängt am Arbeitsverzeichnis.** `nx test
+user-client` aus einem Unterordner gestartet ließ die beiden PWA-Suiten
+  scheitern (Iconliste, Manifest-Adresse) — acht rote Tests, die nichts mit der
+  Änderung zu tun hatten. Steht jetzt in `docs/rules/tooling-traps.md`.
+- **Die Zusicherung über eine Tabellenzelle musste eine Zelle sein.** „Die Zeile
+  enthält Ja" war grün, bevor es die Spalte gab: die Newsletter-Spalte daneben
+  sagt für dieselbe Person dasselbe. Die Browsersuite liest jetzt die Zelle an
+  der Position, die der Kopfzeilentest festhält.
+
+Offen aus diesem Paket: **das Storno über die Sitzung** (F148) — es gehört zu
+FR 4.7 und damit zu **AP 12**; in `todo.md` vermerkt, damit AP 13 es abhaken
+kann.

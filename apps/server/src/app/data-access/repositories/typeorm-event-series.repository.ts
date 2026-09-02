@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
+import { In, QueryFailedError, Repository } from 'typeorm';
 import {
   EventSeriesSlugTakenError,
   type EventSeriesChanges,
@@ -39,6 +39,16 @@ export class TypeormEventSeriesRepository implements EventSeriesRepository {
   async findById(id: string): Promise<EventSeriesRecord | null> {
     const row = await this.repository.findOneBy({ id });
     return row ? toRecord(row) : null;
+  }
+
+  async findByIds(
+    ids: readonly string[],
+  ): Promise<readonly EventSeriesRecord[]> {
+    // `IN ()` is not valid SQL, and a query that can only come back empty is a
+    // round trip for nothing.
+    if (ids.length === 0) return [];
+    const rows = await this.repository.findBy({ id: In([...ids]) });
+    return rows.map(toRecord);
   }
 
   async findBySlug(slug: string): Promise<EventSeriesRecord | null> {

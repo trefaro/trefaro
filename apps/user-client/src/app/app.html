@@ -30,6 +30,12 @@
        that runs events and no community would otherwise carry a sign-in link
        to a form the server answers 404 to. -->
   @if (session.accountsEnabled()) { @if (session.isLoggedIn()) {
+  <!-- The entry that was missing until there was a login to put in front of it
+       (E11): a link in the navigation would have led to a page asking for a
+       token. -->
+  <a class="app-nav__link" routerLink="/registrations"
+    >{{ 'mine.list.title' | transloco }}</a
+  >
   <a class="app-nav__link" routerLink="/profile"
     >{{ 'profile.title' | transloco }}</a
   >

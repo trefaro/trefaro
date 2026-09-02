@@ -187,6 +187,47 @@ export class EventsService {
   }
 
   /**
+   * Several events by id, with their series' addresses, in three queries.
+   *
+   * The list counterpart of {@link locate}, and it exists for the reason that
+   * one has: "my registrations" (FR 4.7) names events it found by address, so a
+   * per-row `locate` would be three queries per line. Same rules as `locate` —
+   * by id, no visibility check, translated for the reader.
+   *
+   * Ids nothing matches are absent from the map rather than an error: the
+   * caller holds rows that point at events, and a row whose event is gone is a
+   * row to leave out, not a page to refuse.
+   */
+  async locateMany(
+    ids: readonly string[],
+    locale?: string,
+  ): Promise<ReadonlyMap<string, EventLocation>> {
+    if (ids.length === 0) return new Map();
+
+    const records = await this.events.findByIds(ids);
+    const [series, translations] = await Promise.all([
+      this.series.slugsOf(records.map((record) => record.seriesId)),
+      this.translationsFor(
+        records.map((record) => record.id),
+        locale,
+      ),
+    ]);
+
+    const located = new Map<string, EventLocation>();
+    for (const record of records) {
+      const seriesSlug = series.get(record.seriesId);
+      // A series that vanished between the two queries takes its events with
+      // it; the row is left out rather than answered without an address.
+      if (!seriesSlug) continue;
+      located.set(record.id, {
+        event: toPublicEvent(record, translations.get(record.id)),
+        seriesSlug,
+      });
+    }
+    return located;
+  }
+
+  /**
    * The translations of a set of events, or nothing at all.
    *
    * `undefined` short-circuits before the query: an instance that serves one

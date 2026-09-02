@@ -54,6 +54,8 @@ export interface EventSeriesRepository {
   /** Only what participants may see. */
   findPublished(): Promise<readonly EventSeriesRecord[]>;
   findById(id: string): Promise<EventSeriesRecord | null>;
+  /** Several series by id, in no promised order — for a list of events (FR 4.7). */
+  findByIds(ids: readonly string[]): Promise<readonly EventSeriesRecord[]>;
   findBySlug(slug: string): Promise<EventSeriesRecord | null>;
   /** @throws EventSeriesSlugTakenError */
   create(series: NewEventSeries): Promise<EventSeriesRecord>;

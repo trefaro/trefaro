@@ -19,8 +19,9 @@ import { PushSubscriptionService } from './features/push/push-subscription.servi
  *
  * The navigation carries one of the two plug-in hook points the architecture
  * defines; the other is on the event detail view. Since phase 3 it also carries
- * the logged-in state: the profile and signing out, or an invitation to sign in
- * — and none of the three on an instance whose `profiles` module is off.
+ * the logged-in state: the registrations, the profile and signing out, or an
+ * invitation to sign in — and none of them on an instance whose `profiles`
+ * module is off.
  *
  * The two PWA pieces of AP 12 sit around the outlet rather than inside a page,
  * because neither belongs to one: losing the network and being installable are

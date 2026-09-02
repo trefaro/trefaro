@@ -51,6 +51,7 @@ function row(overrides: Partial<ParticipantRow> = {}): ParticipantRow {
     status: 'pending',
     newsletterOptIn: false,
     contactOptOut: false,
+    hasProfile: false,
     registeredAt: '2026-08-24T09:30:00.000Z',
     confirmedAt: null,
     customFields: {},

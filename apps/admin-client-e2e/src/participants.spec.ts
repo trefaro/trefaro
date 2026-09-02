@@ -105,11 +105,53 @@ test.describe('participant overview', () => {
       t('admin.participants.colStatus', {}, 'de'),
       t('admin.participants.colRegistered', {}, 'de'),
       t('admin.participants.colNewsletter', {}, 'de'),
+      t('admin.participants.colProfile', {}, 'de'),
       '',
     ]);
     await expect(
       page.getByRole('row', { name: /Okonkwo, Amina/ }),
     ).toContainText('@participants.example.org');
+    await expectNoRawKeys(page);
+  });
+
+  test('marks the addresses that have a participant account (FR 3.3)', async ({
+    page,
+  }) => {
+    await page.goto(overview());
+    // Waited for, not assumed: `allInnerTexts()` does not wait, and an empty
+    // row reads as a missing column.
+    await expect(
+      page.getByRole('row', { name: /Okonkwo, Amina/ }),
+    ).toBeVisible();
+
+    // The column phase 1 left out rather than shipping one that always says
+    // "no profile" (E13). By cell rather than by row text: the newsletter
+    // column next to it says "Yes" as well, so a row-wide assertion would pass
+    // without this column existing. The order is pinned by the header test
+    // above — name, address, status, registered, newsletter, profile.
+    const profileCell = async (name: RegExp): Promise<string> => {
+      const cells = await page
+        .getByRole('row', { name })
+        .getByRole('cell')
+        .allInnerTexts();
+      return cells[5].trim();
+    };
+
+    expect(await profileCell(/Okonkwo, Amina/)).toBe(
+      t('admin.participants.yes'),
+    );
+    expect(await profileCell(/Adeyemi, Bruno/)).toBe('—');
+
+    // The detail panel names it too, so an organizer who opened one row does
+    // not have to go back to the table for it.
+    await page
+      .getByRole('row', { name: /Okonkwo, Amina/ })
+      .getByRole('link')
+      .first()
+      .click();
+    await expect(page.getByRole('complementary')).toContainText(
+      t('admin.participants.colProfile'),
+    );
     await expectNoRawKeys(page);
   });
 

@@ -104,6 +104,22 @@ export interface RegistrationSearch {
   readonly limit: number;
 }
 
+/**
+ * What "my registrations" asks the database for (FR 4.7, E31).
+ *
+ * By address and across events, because that is what a person is here: the
+ * registrations of somebody are the ones carrying their address, and there is
+ * no `user_id` to join on — deliberately (E31). No status filter: every state
+ * is listed, since the two that make somebody ask "am I registered?" are
+ * exactly `pending` and `cancelled`.
+ */
+export interface RegistrationsOfAddress {
+  /** Already normalized by the service; compared case-insensitively. */
+  readonly email: string;
+  readonly offset: number;
+  readonly limit: number;
+}
+
 /** One page, plus how many rows the filter matched in total. */
 export interface RegistrationSlice {
   readonly rows: readonly RegistrationRecord[];
@@ -165,6 +181,15 @@ export interface RegistrationRepository {
   delete(id: string): Promise<boolean>;
   /** One page of one event's registrations, filtered, sorted and counted. */
   search(query: RegistrationSearch): Promise<RegistrationSlice>;
+  /**
+   * One page of the registrations of one address, across events (FR 4.7).
+   *
+   * Ordered by the event that starts last first, so the next event is at the
+   * top and the archive below it, with the id as the tie-breaker every list of
+   * this application ends on. The order lives in SQL rather than in the
+   * service, because the date it sorts by is on a different table.
+   */
+  searchByAddress(query: RegistrationsOfAddress): Promise<RegistrationSlice>;
   /** All four numbers of one event in one query, whatever the table filter is. */
   countByStatus(eventId: string): Promise<RegistrationCounts>;
   /**

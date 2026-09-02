@@ -1,5 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { FALLBACK_LOCALE } from '@trefaro/shared-models';
+import {
+  PROFILE_DIRECTORY,
+  type ProfileDirectory,
+} from '../common/ports/profile-directory.port';
 import { ConfigurationService } from '../config';
 import { CatalogueService } from '../i18n';
 import { ALL_MAIL_KEYS, mailStrings, type MailStrings } from './templates';
@@ -33,19 +37,35 @@ export class MailCatalogue {
   constructor(
     private readonly catalogue: CatalogueService,
     private readonly configuration: ConfigurationService,
+    // Which language an address has chosen (F125) — a port, not the accounts
+    // module: mail cannot import it (that module sends mail), and what is
+    // needed is one field of one row (F100).
+    @Inject(PROFILE_DIRECTORY)
+    private readonly directory: ProfileDirectory,
   ) {}
 
   /**
-   * The words for one mail, in the best language this instance can write it in.
+   * The words for one mail, in the best language it can be written in.
    *
-   * The language is the organization's default rather than anything read off a
-   * request: an instance run in German writes German, and phase 1 has no place
-   * to ask a participant for a preference. Once profiles exist (phase 3) the
-   * choice moves to the person, and only the first line here changes.
+   * Two questions in order (F125). **Whose language is this?** — the
+   * recipient's, if that address has an account and a preference on it;
+   * otherwise the organization's default, which is the only answer phase 1 and
+   * 2 could give. **Can that language write this letter?** — E24, unchanged:
+   * if one piece is missing the whole mail goes out in English.
+   *
+   * The answer carries the language it settled on, and the caller renders the
+   * *content* in the same one — otherwise a German event title would end up in
+   * an English letter, which is the mixture E24 exists to prevent.
+   *
+   * @param recipient the address this mail is going to, when there is one to
+   *   ask about. Only ever used to read a preference: nothing is sent from
+   *   here, and no profile is read (F55).
    */
-  async strings(keys: readonly string[]): Promise<MailStrings> {
-    const { defaultLocale } = await this.configuration.getLocaleSettings();
-    const tag = defaultLocale.trim().toLowerCase();
+  async strings(
+    keys: readonly string[],
+    recipient?: string,
+  ): Promise<MailStrings> {
+    const tag = await this.languageFor(recipient);
 
     if (tag !== FALLBACK_LOCALE) {
       const own = await this.catalogue.ownTexts(tag);
@@ -63,6 +83,23 @@ export class MailCatalogue {
 
     const { catalogue } = await this.catalogue.resolve(FALLBACK_LOCALE);
     return mailStrings(FALLBACK_LOCALE, keys, catalogue);
+  }
+
+  /**
+   * Whose language a letter is written in, before E24 has its say.
+   *
+   * A preference that cannot write this mail falls back to English rather than
+   * to the instance's default: somebody who chose Swahili has said that they do
+   * not read the organization's German, and the default is not a second guess
+   * at what they meant. English is the key list (E23) and the one language
+   * every instance can write.
+   */
+  private async languageFor(recipient?: string): Promise<string> {
+    const chosen = recipient ? await this.directory.localeFor(recipient) : null;
+    if (chosen) return chosen.trim().toLowerCase();
+
+    const { defaultLocale } = await this.configuration.getLocaleSettings();
+    return defaultLocale.trim().toLowerCase();
   }
 
   /**

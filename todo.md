@@ -416,48 +416,52 @@ answer, not an opinion.
 
 ## Checkable after phase 3 — profiles, messaging, chat, push
 
-- [ ] **Put the participant login in front of "my registration"** (E11's second
-      half). The signed link stays valid — that is what was promised — and the
-      login becomes a second way to resolve the same registration.
-      `SelfServiceService.require` is the one place that has to learn it, and
-      nothing below it changes. Verify: an old link from an inbox still works
-      after the login exists, and a logged-in participant needs no link.
-- [ ] **"My registration" is not linked from anywhere.** The page exists (E11)
-      and is only reachable through the personal link in the receipt, which is
-      correct as long as there is no participant login: a link in the navigation
-      would lead to a page that asks for a token. Once phase 3 has the login, the
-      navigation gets the entry and the link keeps working.
-      Moved here in AP 13 of phase 2: nothing about phase 2 changed the
-      condition, which is the participant login.
+- [x] **Put the participant login in front of "my registration" — done in AP 4**
+      (E11's second half). `SelfServiceService.require` takes a
+      `SelfServiceClaim` now: the signed token, or a session plus registration
+      id resolved by address equality (E31). From the status check down it is the
+      same code, and the endpoints under `/api/participant/registrations` answer
+      with the same view the link opens (F148). Both halves are proven in
+      `apps/server-e2e/src/api/my-registrations.spec.ts` — an old link still
+      works, and a logged-in participant needs none. **Cancelling** is the one
+      operation the session cannot do yet; see the entry below.
+- [x] **"My registration" is linked from the navigation — done in AP 4.** The
+      condition was the participant login, and it fell away in AP 3. The entry
+      points at `registrations`, the list a token cannot open (a token speaks for
+      one registration, a person is not a registration); `registrations/:id`
+      opens one of them with the same component the mailed link uses, and the
+      link keeps working.
 
 - [ ] **A sign-up belongs to a registration, not to a person** (`program_item_signup.registration_id`).
       Once `user_profile` exists, decide whether a participant sees their seats
       across events — that needs a join over `registration`, not a second column
       here.
 
-- [ ] **Mail in the participant's own language.** AP 4 sends every mail in the
-      locale the instance is configured with (`app_config.default_locale`),
-      because phase 1 has nowhere to ask a participant for a preference. Once
-      profiles exist, the choice belongs to the person. Since AP 10 of phase 2
-      that is one line: `MailCatalogue.strings()` reads the instance's default
-      locale and everything below it — the whole-mail fallback of E24 included —
-      already works per language, so a participant's own locale replaces the
-      lookup and nothing else changes.
+- [x] **Mail in the participant's own language — done in AP 4** (F125). It was
+      not quite one line: `MailCatalogue.strings(keys, to)` asks
+      `ProfileDirectory.localeFor` (a narrow port, because `MailModule` cannot
+      import the module that owns accounts — that module sends mail), and the
+      chain is recipient → instance default → English. Unconfirmed accounts
+      count: the one mail they ever get is their own confirmation request, and
+      the language was picked on the form a moment earlier.
 
-- [ ] **The event's name in a mail follows the mail's language.** AP 11 of phase
-      2 translates content on the public read endpoints; a mail still carries
-      the originals. Deliberate: the language of a mail is the instance's
-      default (E24) and nobody chooses it, so translating the content into it
-      would be half a decision — and the half that is missing is the reader's.
-      Once a profile carries a language, both halves move together: the mail
-      locale and the content locale become the same value, read in the same
-      place. Verify: a participant whose profile says German gets a German mail
-      naming the event's German title.
+- [x] **The event's name in a mail follows the mail's language — done in AP 4**
+      (F125). Both halves move together, and the order matters: E24 can still
+      flip the language, so the sender must not build its context beforehand.
+      `MailService` therefore takes `MailContent<T>` — a context **or** a
+      function called with the language the letter turned out to be in. Four of
+      the six mails name an event and translate it that way; the invitation
+      resolves once per language rather than once per recipient. Verified against
+      Mailpit: a German profile gets a German letter naming the German title,
+      and an address without an account gets the instance's language and the
+      original.
 
-- [ ] **The participant overview gains its profile-status column.** FR 3.3 asks
-      for it, and phase 1 left it out rather than shipping a column that always
-      says "no profile" (E13 of [`docs/PHASE1.md`](docs/PHASE1.md)). Verify: a
-      participant who created a profile is marked as such in the table.
+- [x] **The participant overview has its profile-status column — done in AP 4**
+      (F149). A yes/no over a **confirmed** account (an outstanding double
+      opt-in issues no session, so "yes" would promise what E32 withholds),
+      asked once per page through `ProfileDirectory.withAccount`, and
+      deliberately without an id or a name — handing out a profile id hands out
+      the picture with it (F124). In the table and in the detail panel.
 
 - [ ] **Web Push on real devices.** The one part of spike 3 that could not be
       verified. Needs a production build, because Angular only registers the
@@ -499,6 +503,14 @@ answer, not an opinion.
       its own navigation entry and an eight-test browser suite. Its neighbour is
       the registration form's editor and the two stayed two pages; what they
       share is `features/fields/field-editing.ts` and `fieldTypeKey()` (F144).
+- [ ] **Cancelling one's own registration still needs the mailed link** (F148).
+      AP 4 gave `SelfServiceService.require` its second claim, and the session
+      uses it for reading and for programme seats — but `cancel` has no
+      participant route, because the phase plan assigns that half of FR 4.7 to
+      **AP 12** (`DELETE /api/participant/registrations/:id`). The detail page
+      therefore hides the button when it was opened through the account rather
+      than offering one that cannot work. Nothing below `require` has to change
+      for it; if AP 12 is dropped, this is the one line of it worth keeping.
 - [ ] **The opt-in for being findable is not on the profile screen yet** (F142).
       `searchable` has been writable since AP 2 and the profile form deliberately
       does not offer it: a box promising "other participants can find you and

@@ -46,9 +46,14 @@ class RecordingMailer implements Mailer {
 class StubCatalogue {
   locale = 'de';
   readonly asked: string[][] = [];
+  readonly recipients: (string | undefined)[] = [];
 
-  async strings(keys: readonly string[]): Promise<MailStrings> {
+  async strings(
+    keys: readonly string[],
+    recipient?: string,
+  ): Promise<MailStrings> {
     this.asked.push([...keys]);
+    this.recipients.push(recipient);
     return mailStrings(
       this.locale,
       keys,
@@ -98,6 +103,45 @@ describe('MailService', () => {
     // Nothing here decides it; the assertion is that nothing here overrides it
     // either — the rendered subject is the one the resolved strings produced.
     expect(mailer.sent[0].subject).toBe('[mail.confirm.subject]');
+  });
+
+  it('tells the catalogue who the letter is for (F125)', async () => {
+    await service.sendRegistrationConfirmation('a@example.org', CONTEXT);
+
+    // Not to send anything — the mailer already has the address — but so the
+    // language can be the reader's rather than the instance's.
+    expect(catalogue.recipients).toEqual(['a@example.org']);
+  });
+
+  it('builds the content in the language the letter turned out to be in', async () => {
+    catalogue.locale = 'en';
+    const seen: string[] = [];
+
+    await service.sendRegistrationConfirmation('a@example.org', (locale) => {
+      seen.push(locale);
+      return {
+        ...CONTEXT,
+        confirmUrl: `https://events.example.org/${locale}/confirm`,
+      };
+    });
+
+    // The half that would otherwise drift: a German event title inside an
+    // English letter is exactly the mixture E24 refuses (F125). Asserted
+    // through the one context value this template renders verbatim — that the
+    // words themselves follow the language is `mail-catalogue`'s subject.
+    expect(seen).toEqual(['en']);
+    expect(mailer.sent[0].text).toContain('/en/confirm');
+  });
+
+  it('takes a plain context for a mail that says nothing about content', async () => {
+    await service.sendProfileConfirmation('a@example.org', {
+      firstName: 'Amina',
+      confirmUrl: 'https://events.example.org/profile/confirm?token=abc.def',
+    });
+
+    // Two of the six mails name neither an event nor a series, so asking them
+    // to declare a dependency on the language would be noise.
+    expect(mailer.sent).toHaveLength(1);
   });
 
   it('reports a delivery failure instead of pretending to have sent', async () => {

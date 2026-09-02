@@ -60,11 +60,14 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   Millisekunde dazwischen macht den Test rot und sagt nichts.
 - **Der Teilnehmer-Login hat sein eigenes Drosselbudget** — 20 Versuche in fünf
   Minuten, getrennt vom Admin-Login (der Zähler hängt an Route **und** Adresse).
-  Die drei Kontosuiten in `apps/server-e2e` verbrauchen davon zwölf, die
-  Browsersuite des Nutzer-Clients drei (einer je Engine, `profile.spec.ts`
-  meldet sich genau einmal an und beweist das neue Passwort in `server-e2e`);
-  wer eine weitere schreibt, zählt vorher nach. Ein 429 sieht dort aus wie ein
-  Anmeldefehler und ist keiner.
+  Die vier Kontosuiten in `apps/server-e2e` verbrauchen davon dreizehn
+  (`my-registrations.spec.ts` kam in AP 4 mit einer dazu), die Browsersuite des
+  Nutzer-Clients drei (einer je Engine, `profile.spec.ts` meldet sich genau
+  einmal an und beweist das neue Passwort in `server-e2e`); wer eine weitere
+  schreibt, zählt vorher nach. Ein 429 sieht dort aus wie ein Anmeldefehler und
+  ist keiner. **Deshalb wächst `profile.spec.ts` statt Nachbarn zu bekommen:**
+  „meine Anmeldungen" (AP 4) läuft in dessen einem Test mit, weil eine eigene
+  Datei drei weitere Anmeldungen gekostet hätte.
 - **Was instanzweit ist, muss eine Suite selbst wieder abräumen.** Der
   Profil-Baukasten (`profile_field`) hat kein Event, an dem er hängt: eine
   liegengebliebene **Pflichtfrage** lässt jedes `PATCH /api/participant/me`
@@ -88,6 +91,12 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   dreimal. Der Lauf gehört in den **Wortlaut**, nicht nur in den Schlüssel.
   Aus demselben Grund seedet keine Browsersuite eine **Pflicht**frage: sie ließe
   jedes `PATCH /api/participant/me` der anderen Engines scheitern.
+- **Eine Zusicherung über eine Tabellenzelle muss eine Zelle sein.** „Die Zeile
+  enthält _Ja_" war grün, **bevor** es die Profilspalte gab: die
+  Newsletter-Spalte daneben sagt für dieselbe Person dasselbe. Wer eine neue
+  Spalte prüft, liest `getByRole('cell')` an der Position, die der
+  Kopfzeilentest festhält — und ergänzt diesen zuerst, sonst prüfen beide Tests
+  nichts.
 - **`allInnerTexts()` wartet nicht.** Nach einem `reload()` steht die Liste noch
   nicht, und die Zusicherung vergleicht ein leeres Array — was als „die
   Reihenfolge stimmt nicht" gemeldet wird. Vorher auf eine Zeile warten, dann

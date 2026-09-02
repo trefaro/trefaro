@@ -227,6 +227,11 @@ interface Bar extends RegistrationWeek {
               </th>
             }
             <th>{{ 'admin.participants.colNewsletter' | transloco }}</th>
+            <!-- Not sortable: the flag is not a column of the registration
+                 table but an EXISTS over the address (E31), and a sort key the
+                 server does not offer would be a header that lies when
+                 clicked. -->
+            <th>{{ 'admin.participants.colProfile' | transloco }}</th>
             <th></th>
           </tr>
         </thead>
@@ -259,6 +264,13 @@ interface Bar extends RegistrationWeek {
                   —
                 }
               </td>
+              <td>
+                @if (row.hasProfile) {
+                  {{ 'admin.participants.yes' | transloco }}
+                } @else {
+                  —
+                }
+              </td>
               <td class="actions">
                 @if (row.status === 'cancelled') {
                   <button type="button" (click)="reinstate(row)">
@@ -273,7 +285,7 @@ interface Bar extends RegistrationWeek {
             </tr>
           } @empty {
             <tr>
-              <td colspan="6" class="meta">
+              <td colspan="7" class="meta">
                 {{ emptyMessageKey() | transloco }}
               </td>
             </tr>
@@ -348,6 +360,15 @@ interface Bar extends RegistrationWeek {
           <dd>
             {{
               (person.newsletterOptIn
+                ? 'admin.participants.yes'
+                : 'admin.participants.no'
+              ) | transloco
+            }}
+          </dd>
+          <dt>{{ 'admin.participants.colProfile' | transloco }}</dt>
+          <dd>
+            {{
+              (person.hasProfile
                 ? 'admin.participants.yes'
                 : 'admin.participants.no'
               ) | transloco

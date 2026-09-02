@@ -65,6 +65,10 @@ class FakeEventRepository implements EventRepository {
     return this.rows.find((row) => row.id === id) ?? null;
   }
 
+  async findByIds(): Promise<readonly EventRecord[]> {
+    throw new Error('not used in this suite');
+  }
+
   async findBySlug(
     seriesId: string,
     slug: string,

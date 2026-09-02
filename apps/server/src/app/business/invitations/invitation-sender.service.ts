@@ -139,7 +139,18 @@ export class InvitationSenderService implements OnApplicationBootstrap {
     const invitation = await this.invitations.findById(invitationId);
     if (!invitation) return;
 
-    const shared = await this.shared(invitation);
+    // One resolution per language, not per recipient (F125). Two hundred
+    // addresses share a handful of languages at most, and the series name and
+    // the event block are the same for everybody reading in one of them.
+    const shared = new Map<string, Promise<SharedContext>>();
+    const sharedFor = (locale: string): Promise<SharedContext> => {
+      const known = shared.get(locale);
+      if (known) return known;
+      const resolving = this.shared(invitation, locale);
+      shared.set(locale, resolving);
+      return resolving;
+    };
+
     let previous: string | null = null;
 
     for (;;) {
@@ -158,8 +169,8 @@ export class InvitationSenderService implements OnApplicationBootstrap {
       previous = recipient.id;
 
       try {
-        await this.mail.sendInvitation(recipient.email, {
-          ...shared,
+        await this.mail.sendInvitation(recipient.email, async (locale) => ({
+          ...(await sharedFor(locale)),
           firstName: recipient.firstName,
           // Signed per recipient and per registration: the link speaks for the
           // person who received this mail and for nobody else (F58).
@@ -171,7 +182,7 @@ export class InvitationSenderService implements OnApplicationBootstrap {
               INVITATION_OPT_OUT_TTL_MS,
             ),
           ),
-        });
+        }));
         await this.invitations.markSent(recipient.id);
       } catch (error: unknown) {
         // Only a delivery failure is recorded and skipped. Anything else — the
@@ -187,28 +198,38 @@ export class InvitationSenderService implements OnApplicationBootstrap {
   }
 
   /**
-   * What every mail of this invitation has in common.
+   * What every mail of this invitation in one language has in common.
    *
-   * Resolved once: the series' name and, if the invitation names one, the event
-   * with its public address. Through {@link EventsService.locate}, so an
-   * invitation to an event that is still a draft — which is the normal case,
-   * because an organizer invites before publishing — has a working link.
+   * The series' name and, if the invitation names one, the event with its
+   * public address — both in the language the letter is written in (F125).
+   * Through {@link EventsService.locate}, so an invitation to an event that is
+   * still a draft — which is the normal case, because an organizer invites
+   * before publishing — has a working link.
+   *
+   * The organizer's own words are not translated and never will be: `subject`
+   * and `paragraphs` are what they typed, and a letter that translated half of
+   * itself would be worse than one that translated none of it.
    */
-  private async shared(invitation: InvitationRecord): Promise<SharedContext> {
-    const series = await this.series.getForOrganizer(invitation.seriesId);
+  private async shared(
+    invitation: InvitationRecord,
+    locale: string,
+  ): Promise<SharedContext> {
     return {
-      seriesName: series.name,
+      seriesName: await this.series.nameOf(invitation.seriesId, locale),
       subject: invitation.subject,
       paragraphs: invitationParagraphs(invitation.body),
       event: invitation.eventId
-        ? await this.mailEvent(invitation.eventId)
+        ? await this.mailEvent(invitation.eventId, locale)
         : null,
     };
   }
 
-  private async mailEvent(eventId: string): Promise<MailEvent | null> {
+  private async mailEvent(
+    eventId: string,
+    locale: string,
+  ): Promise<MailEvent | null> {
     try {
-      const { event, seriesSlug } = await this.events.locate(eventId);
+      const { event, seriesSlug } = await this.events.locate(eventId, locale);
       return {
         name: event.name,
         startsAt: event.startsAt,

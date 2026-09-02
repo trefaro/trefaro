@@ -118,6 +118,35 @@ export class EventSeriesService {
     return toEventSeries(found);
   }
 
+  /**
+   * The public addresses of several series, by id (FR 4.7).
+   *
+   * For a list of events that were found by something other than their series
+   * — every one of them needs the slug to build a link, and one lookup per row
+   * is how a page becomes N+1 queries. Slugs are not translated (E7), so this
+   * takes no language.
+   */
+  async slugsOf(ids: readonly string[]): Promise<ReadonlyMap<string, string>> {
+    const found = await this.series.findByIds([...new Set(ids)]);
+    return new Map(found.map((record) => [record.id, record.slug]));
+  }
+
+  /**
+   * A series' name by id, in one language, whatever its status is (F125).
+   *
+   * For the invitation footer, which says which series an address is being
+   * written to about — and does so in the language of the letter, like the
+   * event block above it. Deliberately without a visibility check and without
+   * the participant shape: an organizer invites *before* publishing, and what
+   * is wanted here is one translated field, not a public page.
+   */
+  async nameOf(id: string, locale?: string): Promise<string> {
+    const found = await this.series.findById(id);
+    if (!found) throw new NotFoundException(`No event series with id "${id}"`);
+    const translations = await this.translationsFor([id], locale);
+    return toPublicEventSeries(found, translations.get(id)).name;
+  }
+
   /** 404 for a series that is not published — it must look absent, not hidden. */
   async getPublicBySlug(
     slug: string,

@@ -101,6 +101,13 @@ export interface SeededEvent {
   readonly eventSlug: string;
   /** Distinctive, so a locator for the event's row cannot match a link named after the page. */
   readonly eventName: string;
+  /**
+   * The one address of this fixture that also has a participant account.
+   *
+   * For the profile column (FR 3.3, AP 4): the table says whether an address
+   * can log in, and only a row of `user_profile` can make that true.
+   */
+  readonly accountEmail: string;
 }
 
 interface Created {
@@ -152,6 +159,8 @@ export async function seedParticipants(label: string): Promise<SeededEvent> {
     ).json();
 
     await insertRegistrations(event.id, label);
+    const accountEmail = addressOf(PARTICIPANTS[0], label);
+    await insertAccount(accountEmail);
 
     return {
       seriesId: series.id,
@@ -159,6 +168,7 @@ export async function seedParticipants(label: string): Promise<SeededEvent> {
       eventId: event.id,
       eventSlug: event.slug,
       eventName,
+      accountEmail,
     };
   } finally {
     await context.dispose();
@@ -169,6 +179,11 @@ export async function seedParticipants(label: string): Promise<SeededEvent> {
 export async function removeParticipants(seeded: SeededEvent): Promise<void> {
   await db().query('DELETE FROM registration WHERE event_id = $1', [
     seeded.eventId,
+  ]);
+  // The account is instance-wide (E31), so it has to go by address rather than
+  // with the event — a leftover would mark somebody else's row in the next run.
+  await db().query('DELETE FROM user_profile WHERE lower(email) = lower($1)', [
+    seeded.accountEmail,
   ]);
 
   const context = await request.newContext({
@@ -186,6 +201,37 @@ export async function closeFixtureDatabase(): Promise<void> {
   const open = pool;
   pool = null;
   await open?.end();
+}
+
+/** The address one of the named participants registered with. */
+function addressOf(
+  person: { readonly firstName: string; readonly lastName: string },
+  label: string,
+): string {
+  return `${person.firstName}.${person.lastName}.${label}@participants.example.org`.toLowerCase();
+}
+
+/**
+ * A confirmed participant account for one of the seeded addresses.
+ *
+ * By SQL, like the registrations and for a sharper version of the same reason:
+ * a real account costs a registration, a mail and a confirmation, and nobody
+ * logs into this one. The password hash is a placeholder on purpose — the
+ * column is `NOT NULL`, and a value that cannot verify is the honest way to say
+ * that this fixture is not a credential.
+ *
+ * `confirmed_at` is set, because that is what the column claims: an account
+ * whose double opt-in is outstanding is not a profile yet (E32).
+ */
+async function insertAccount(email: string): Promise<void> {
+  await db().query(
+    `INSERT INTO user_profile
+       (email, password_hash, first_name, last_name, preferred_locale,
+        confirmed_at)
+     VALUES ($1, 'not-a-usable-hash', 'Amina', 'Okonkwo', 'en', now())
+     ON CONFLICT DO NOTHING`,
+    [email],
+  );
 }
 
 async function insertRegistrations(

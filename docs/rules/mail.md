@@ -35,6 +35,22 @@ gröber als in der Oberfläche.
 - **Die Einheit des Rückfalls ist eine Mail** (E24, F87), nicht der Katalog und
   nicht ein Schlüssel: wer die drei Anmeldemails übersetzt hat und die Einladung
   nicht, schickt drei deutsche und eine englische.
+- **Die Sprache gehört dem Empfänger, wenn er eine gewählt hat** (F125).
+  `MailCatalogue.strings(keys, to)` fragt `ProfileDirectory.localeFor` — die
+  Kette ist **Empfänger → Vorgabe der Instanz → Englisch**, und der Sprung nach
+  Englisch ist Absicht: wer Swahili gewählt hat, liest das Deutsch der
+  Organisation nicht, und die Vorgabe wäre ein zweites Raten. Auch ein
+  **unbestätigtes** Konto zählt; die einzige Mail, die es je bekommt, ist seine
+  eigene Bestätigung, und die Sprache stand einen Augenblick vorher auf dem
+  Formular.
+- **Der Inhalt folgt der Sprache des Briefes, nicht umgekehrt** (F125). E24 kann
+  die Sprache noch kippen, also darf ein Absender seinen Kontext **nicht** vorher
+  bauen: `MailService` nimmt `MailContent<T>` — einen Kontext **oder** eine
+  Funktion, die mit der endgültigen Sprache aufgerufen wird. Wer einen Eventtitel
+  in eine Mail schreibt, holt ihn in dieser Funktion (`events.locate(id, locale)`),
+  sonst steht der deutsche Titel im englischen Brief. Ein Stapelversand löst **je
+  Sprache** einmal auf, nicht je Empfänger; die Worte des Veranstalters bleiben
+  unübersetzt.
 - **In den Katalog wandern Sätze, nie die Auszeichnung um sie herum** (F86).
   `<div>`, `<p>`, `<strong>` und der Link bleiben Code. Daraus die Reihenfolge:
   **erst den Katalogtext maskieren, dann interpolieren** — Platzhalter überstehen

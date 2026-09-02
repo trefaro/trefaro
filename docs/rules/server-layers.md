@@ -45,7 +45,23 @@ diese Eigenschaft.
 - **Zählen statt Lesen:** wer nur Zahlen braucht, bekommt einen eigenen schmalen
   Port (`RegistrationTally`, `ProgramTally`) statt Zugriff auf die Zeilen. Einen
   zählenden Port bekommt, was groß oder unbegrenzt ist; dreißig winzige
-  Felddefinitionen werden in der Geschäftslogik gezählt (F49).
+  Felddefinitionen werden in der Geschäftslogik gezählt (F49). Dasselbe Muster
+  für eine **Frage über eine Adresse**: `ProfileDirectory` in
+  `business/common/ports/` beantwortet genau zwei — hat diese Adresse ein
+  bestätigtes Konto (Teilnehmerübersicht, F149) und in welcher Sprache wird ihr
+  geschrieben (Mail, F125). Nicht `UserProfileRepository` an zwei weitere
+  Module: der kann ein ganzes Konto lesen **und** schreiben, und das darf das
+  Modul, dem die Konten gehören (E33). Der Weg über einen Port ist hier nicht
+  Geschmack — `MailModule` kann `ProfilesModule` nicht importieren, weil dieses
+  Mail verschickt.
+- **Eine Liste darf nicht eine Abfrage je Zeile werden** (F49) — und das gilt
+  auch, wenn die Zeilen aus einem anderen Modul kommen: `EventsService.locate`
+  ist drei Abfragen, also hat „meine Anmeldungen" `locateMany(ids, locale)`
+  daneben (dazu `findByIds` an zwei Repositories und
+  `EventSeriesService.slugsOf`). Wer eine solche Batch-Lesung anlegt, hält die
+  Regeln der Einzelfassung: dieselbe 404-Regel, derselbe Statusverzicht — und
+  eine Id, die nichts trifft, fehlt in der Antwort, statt sie scheitern zu
+  lassen.
 - **Eine Zusammensetzung gehört über ihre Teile.** `business/dashboard`,
   `business/content-translations` und `business/manifest` importieren ihre
   Quellen; im Elternmodul hätte derselbe Service den Kreis geschlossen und einen

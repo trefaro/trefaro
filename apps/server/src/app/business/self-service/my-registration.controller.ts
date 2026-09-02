@@ -21,7 +21,7 @@ import { ApiLocaleQuery, LocaleQueryPipe } from '../common/locale-query.pipe';
 import { MyRegistrationDto } from './dto/my-registration.dto';
 import { SelfServiceTokenDto } from './dto/self-service-token.dto';
 import { SELF_SERVICE_CALLS_PER_WINDOW } from './self-service.limits';
-import { SelfServiceService } from './self-service.service';
+import { SelfServiceService, byLink } from './self-service.service';
 
 /**
  * "My registration" (E11) — the participant's own view, with no account.
@@ -63,7 +63,7 @@ export class MyRegistrationController {
     @Query('locale', LocaleQueryPipe) locale?: string,
   ): Promise<MyRegistrationDto> {
     return this.selfService.view(
-      required(token),
+      byLink(required(token)),
       locale,
     ) as Promise<MyRegistrationDto>;
   }
@@ -90,7 +90,7 @@ export class MyRegistrationController {
     @Query('locale', LocaleQueryPipe) locale?: string,
   ): Promise<MyRegistrationDto> {
     return this.selfService.cancel(
-      body.token,
+      byLink(body.token),
       locale,
     ) as Promise<MyRegistrationDto>;
   }

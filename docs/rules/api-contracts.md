@@ -115,6 +115,32 @@ Link.
   `POST` schreibt die Empfängerzeilen und antwortet **202**; die Zeilen _sind_ die
   Warteschlange, der Fortschritt wird aus ihnen **gezählt**, nie daneben
   gespeichert.
+- **Ein Objekt-Query und `?locale=` müssen sich einig sein.**
+  `forbidNonWhitelisted` (in `core/validation.ts`) prüft die **ganze** Query
+  gegen das DTO, das ein Handler mit `@Query()` entgegennimmt — ein Endpunkt mit
+  Query-Objekt **und** Sprache antwortet deshalb 400, bevor er läuft, und der
+  Fehlschlag sieht nach einem kaputten Client aus. Das DTO **deklariert** die
+  Sprache mit (`ListMyRegistrationsDto.locale`), gelesen wird sie weiter über
+  `@Query('locale', LocaleQueryPipe)`, weil dort die Regel liegt (F94). Zum
+  ersten Mal aufgetreten in AP 4 der Phase 3, als „meine Anmeldungen" beides
+  brauchte.
+- **Die Selbstbedienung hat zwei Ansprüche und eine Regelstrecke** (F148).
+  `SelfServiceService.require` nimmt einen `SelfServiceClaim`: das signierte
+  Token aus der Mail (E11) oder eine Sitzung plus Anmelde-Id, aufgelöst über
+  **Adressgleichheit** (E31). Ab der Statusprüfung ist es derselbe Code — wer
+  eine Ausnahme nur für einen der beiden Wege braucht, hat den Schnitt falsch
+  gelegt. Eine Anmeldung, die einer **anderen** Adresse gehört, ist ein 404 mit
+  demselben Wortlaut wie eine unbekannte Id; alles andere sagt einem
+  angemeldeten Teilnehmer, welche Anmeldungen existieren. Und: die Liste
+  (`/api/participant/registrations`) zeigt jeden Zustand, das Storno über die
+  Sitzung fehlt bis AP 12 bewusst.
+- **`/api/participant/**` braucht keine eigene Drosselung, `/api/user/**`
+  schon.** Die tokenbasierten Selbstbedienungsrouten tragen `@Throttle` (60 je 5
+  min), weil ein Token im Prinzip erratbar ist und jeder Aufruf einen HMAC
+  kostet (E4); hinter einer Sitzung greift die globale Grenze. Was jede
+  Teilnehmerroute dagegen **braucht**, sind `@UseGuards(CoreModuleEnabledGuard)`
+  und `@CoreModuleController(PROFILES_MODULE_KEY)` — eine Instanz ohne Konten
+  antwortet dort 404, nicht 401 (F53).
 - **Query-Parameter kommen als `undefined` an**, auch wenn ein Angular-`input()`
   einen Standardwert hat. `ApiClient.put/delete/post` nehmen ebenfalls
   Query-Parameter — auch ein `PUT` muss die Sprache tragen können.

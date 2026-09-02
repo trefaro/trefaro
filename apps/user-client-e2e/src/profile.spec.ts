@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type APIRequestContext } from '@playwright/test';
 import { expectNoRawKeys, t } from './support/catalogue';
 import { accountConfirmationPathFrom, waitForMailTo } from './support/mail';
 import { png } from './support/png';
@@ -6,7 +6,12 @@ import {
   removeProfileField,
   seedProfileField,
 } from './support/profile-fixtures';
-import { closeSeedDatabase, deleteProfiles } from './support/registration-seed';
+import {
+  closeSeedDatabase,
+  deleteProfiles,
+  seedConfirmedRegistration,
+} from './support/registration-seed';
+import { asAdmin } from './support/series-fixtures';
 
 /**
  * A participant account in a browser (FR 4.1–4.3, UC 09) — AP 3 of phase 3.
@@ -27,6 +32,11 @@ import { closeSeedDatabase, deleteProfiles } from './support/registration-seed';
  * Each engine registers its own address and seeds its own profile question — the
  * field kit is instance-wide, and three engines sharing one would be three
  * engines editing one row.
+ *
+ * Since AP 4 the same test also walks "my registrations" (FR 4.7). It has to
+ * happen in here rather than in a file of its own for the reason above: a
+ * second file would mean a fourth, fifth and sixth login, and there are twenty
+ * per five minutes for every suite of this repository together.
  */
 const CLIENT_URL =
   process.env['BASE_URL'] ??
@@ -49,10 +59,69 @@ const addressDomain = (engine: string) => `@${engine}.profiles.example.org`;
 const PASSWORD = 'a long enough passphrase';
 const NEW_PASSWORD = 'an even longer passphrase';
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+interface Created {
+  id: string;
+}
+
+/**
+ * A confirmed registration for this account's address, on an event of its own.
+ *
+ * Its own series and event per engine, because the row is found by address
+ * equality (E31) and three engines sharing one event would be three engines
+ * reading each other's list. The series and the event go through the
+ * administrative API — the path an organizer takes — and the registration is
+ * seeded by SQL (see `support/registration-seed.ts` for why: a public
+ * registration costs two mails and a slice of the rate limit).
+ */
+async function seedRegistrationFor(
+  admin: APIRequestContext,
+  email: string,
+  label: string,
+): Promise<{ seriesId: string; registrationId: string; eventName: string }> {
+  const series: Created = await (
+    await admin.post('/api/admin/series', {
+      data: {
+        name: `E2E Series My Registrations ${label}`,
+        description: 'Holds the event this account is registered for.',
+        status: 'published',
+      },
+    })
+  ).json();
+
+  const eventName = `E2E My Registration Event ${label}`;
+  const event: Created = await (
+    await admin.post(`/api/admin/series/${series.id}/events`, {
+      data: {
+        name: eventName,
+        description: 'The event the account’s own registration is for.',
+        eventType: 'onsite',
+        startsAt: new Date(Date.now() + 40 * DAY_MS).toISOString(),
+        endsAt: new Date(Date.now() + 41 * DAY_MS).toISOString(),
+        timezone: 'Europe/Berlin',
+        venueName: 'E2E Bürgerhaus Kalk',
+        languages: ['de'],
+        status: 'published',
+      },
+    })
+  ).json();
+
+  const registrationId = await seedConfirmedRegistration(event.id, {
+    email,
+    firstName: 'Amina',
+    lastName: 'Okonkwo',
+  });
+
+  return { seriesId: series.id, registrationId, eventName };
+}
+
 test.describe.configure({ mode: 'serial' });
 
 test.describe('a participant account', () => {
   const seededFields: string[] = [];
+  /** The series and the registration this engine seeded, for the teardown. */
+  let seeded: { seriesId: string; registrationId: string } | null = null;
   /**
    * The engine this worker is running, set by the test that creates accounts.
    *
@@ -67,6 +136,18 @@ test.describe('a participant account', () => {
       await removeProfileField(CLIENT_URL, id);
     }
     seededFields.length = 0;
+    if (seeded) {
+      // The registration first: a confirmed one blocks deleting its series
+      // (E14), which is the rule this suite relies on rather than tests.
+      const admin = await asAdmin(CLIENT_URL);
+      try {
+        await admin.delete(`/api/admin/registrations/${seeded.registrationId}`);
+        await admin.delete(`/api/admin/series/${seeded.seriesId}`);
+      } finally {
+        await admin.dispose();
+      }
+      seeded = null;
+    }
     // The address is unique across the instance (E31), so a leftover account
     // would send the next run down the "there is already one" branch. Only
     // this engine's, for the reason beside `addressDomain`.
@@ -220,6 +301,50 @@ test.describe('a participant account', () => {
     await expect(
       page.getByLabel(t('profile.changePassword.current')),
     ).toHaveValue('');
+
+    // --- my registrations (FR 4.7) ----------------------------------------
+    const admin = await asAdmin(CLIENT_URL);
+    let eventName = '';
+    try {
+      const fixture = await seedRegistrationFor(admin, email, engine);
+      seeded = fixture;
+      eventName = fixture.eventName;
+    } finally {
+      await admin.dispose();
+    }
+
+    // The navigation entry that was missing until there was a login to put in
+    // front of it (E11).
+    await page
+      .getByRole('navigation', { name: t('app.nav.label') })
+      .getByRole('link', { name: t('mine.list.title') })
+      .click();
+    await expect(page).toHaveURL(/\/registrations$/);
+    await expectNoRawKeys(page);
+
+    // Found by address equality, so a row written before this account existed
+    // belongs to it (E31).
+    const entry = page.getByRole('link', { name: eventName });
+    await expect(entry).toBeVisible();
+    await entry.click();
+
+    // No token anywhere in the address, and the page is the same one the mailed
+    // link opens.
+    await expect(page).toHaveURL(/\/registrations\/[0-9a-f-]{36}$/);
+    await expect(
+      page.getByRole('heading', { name: t('mine.title') }),
+    ).toBeVisible();
+    await expect(page.getByText(email)).toBeVisible();
+    await expectNoRawKeys(page);
+    // Two things a session does not get: the warning about a link it does not
+    // hold, and a cancellation the session cannot do yet (AP 12).
+    await expect(page.getByText(t('mine.keepLink'))).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: t('mine.cancel') }),
+    ).toHaveCount(0);
+
+    await page.getByRole('link', { name: t('mine.list.back') }).click();
+    await expect(page).toHaveURL(/\/registrations$/);
 
     // --- signing out ------------------------------------------------------
     await page.getByRole('button', { name: t('app.nav.signOut') }).click();

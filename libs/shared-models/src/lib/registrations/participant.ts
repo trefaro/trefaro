@@ -30,6 +30,19 @@ export interface ParticipantRow {
   readonly newsletterOptIn: boolean;
   /** The participant asked not to be invited to later events again (E15). */
   readonly contactOptOut: boolean;
+  /**
+   * Whether this address has a confirmed participant account (FR 3.3, E31).
+   *
+   * The profile column phase 1 left out, because a column that always says "no
+   * profile" is worse than no column (E13). A yes/no and nothing else: the
+   * organizer learns that this person can log in, not who they are on their
+   * profile — that would mean handing out an id, and an id is a picture (F124).
+   *
+   * Confirmed only. An account whose double opt-in is still outstanding cannot
+   * be logged into (E32), so calling it a profile would promise the organizer
+   * something they cannot rely on.
+   */
+  readonly hasProfile: boolean;
   /** When the form was submitted, ISO 8601. */
   readonly registeredAt: string;
   /**

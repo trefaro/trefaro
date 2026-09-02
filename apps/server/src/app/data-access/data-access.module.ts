@@ -2,6 +2,7 @@ import { DynamicModule, Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ATTACHMENT_REPOSITORY } from '../business/attachments/ports/attachment.repository';
 import { FILE_STORE } from '../business/attachments/ports/file-store';
+import { PROFILE_DIRECTORY } from '../business/common/ports/profile-directory.port';
 import { APP_CONFIG_REPOSITORY } from '../business/config/ports/app-config.repository';
 import { EVENT_SERIES_TRANSLATION_REPOSITORY } from '../business/event-series/ports/event-series-translation.repository';
 import { EVENT_SERIES_REPOSITORY } from '../business/event-series/ports/event-series.repository';
@@ -50,6 +51,7 @@ import { LOGO_PATHS_REPOSITORY } from '../business/logo-files/ports/logo-paths.r
 import { TypeormLogoPathsRepository } from './repositories/typeorm-logo-paths.repository';
 import { TypeormMediaLinkRepository } from './repositories/typeorm-media-link.repository';
 import { TypeormModuleConfigRepository } from './repositories/typeorm-module-config.repository';
+import { TypeormProfileDirectory } from './repositories/typeorm-profile-directory.repository';
 import { TypeormProfileFieldRepository } from './repositories/typeorm-profile-field.repository';
 import { TypeormProgramItemSignupRepository } from './repositories/typeorm-program-item-signup.repository';
 import { TypeormProgramItemTranslationRepository } from './repositories/typeorm-program-item-translation.repository';
@@ -104,6 +106,7 @@ export class DataAccessModule {
         TypeormLogoPathsRepository,
         TypeormMediaLinkRepository,
         TypeormModuleConfigRepository,
+        TypeormProfileDirectory,
         TypeormProfileFieldRepository,
         TypeormProgramItemRepository,
         TypeormProgramItemTranslationRepository,
@@ -224,6 +227,13 @@ export class DataAccessModule {
           provide: USER_SESSION_REPOSITORY,
           useExisting: TypeormUserSessionRepository,
         },
+        // The same table read from outside the accounts module, and only ever
+        // two questions about an address (F100): has it got an account, and in
+        // which language is it written to.
+        {
+          provide: PROFILE_DIRECTORY,
+          useExisting: TypeormProfileDirectory,
+        },
         {
           provide: REGISTRATION_FIELD_REPOSITORY,
           useExisting: TypeormRegistrationFieldRepository,
@@ -261,6 +271,7 @@ export class DataAccessModule {
         MEDIA_LINK_REPOSITORY,
         MEDIA_LINK_TALLY,
         MODULE_CONFIG_REPOSITORY,
+        PROFILE_DIRECTORY,
         PROFILE_FIELD_REPOSITORY,
         PROGRAM_ITEM_REPOSITORY,
         PROGRAM_ITEM_SIGNUP_REPOSITORY,

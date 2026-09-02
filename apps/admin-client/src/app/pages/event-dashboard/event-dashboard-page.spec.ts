@@ -43,6 +43,7 @@ function row(overrides: Partial<ParticipantRow> = {}): ParticipantRow {
     status: 'confirmed',
     newsletterOptIn: false,
     contactOptOut: false,
+    hasProfile: false,
     registeredAt: '2026-08-24T09:30:00.000Z',
     confirmedAt: '2026-08-24T10:00:00.000Z',
     customFields: {},

@@ -22,7 +22,7 @@ import { ApiLocaleQuery, LocaleQueryPipe } from '../common/locale-query.pipe';
 import { MyRegistrationDto } from './dto/my-registration.dto';
 import { SelfServiceTokenDto } from './dto/self-service-token.dto';
 import { SELF_SERVICE_CALLS_PER_WINDOW } from './self-service.limits';
-import { SelfServiceService } from './self-service.service';
+import { SelfServiceService, byLink } from './self-service.service';
 
 /**
  * Claiming and giving up a seat in one session (FR 3.10, E11).
@@ -76,7 +76,7 @@ export class ProgramSignupController {
   ): Promise<MyRegistrationDto> {
     return this.selfService.signUp(
       id,
-      body.token,
+      byLink(body.token),
       locale,
     ) as Promise<MyRegistrationDto>;
   }
@@ -101,7 +101,7 @@ export class ProgramSignupController {
   ): Promise<MyRegistrationDto> {
     return this.selfService.signOff(
       id,
-      body.token,
+      byLink(body.token),
       locale,
     ) as Promise<MyRegistrationDto>;
   }

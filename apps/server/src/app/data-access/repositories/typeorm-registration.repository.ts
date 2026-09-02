@@ -14,6 +14,7 @@ import {
   type RegistrationRecord,
   type RegistrationRepository,
   type RegistrationSearch,
+  type RegistrationsOfAddress,
   type RegistrationSlice,
   type SeriesContactRecord,
   type SeriesContactSearch,
@@ -127,6 +128,37 @@ export class TypeormRegistrationRepository
     builder.addOrderBy('registration.id', 'ASC');
 
     const [rows, total] = await builder
+      .offset(query.offset)
+      .limit(query.limit)
+      .getManyAndCount();
+
+    return { rows: rows.map(toRecord), total };
+  }
+
+  /**
+   * The registrations of one address, newest event first (FR 4.7, E31).
+   *
+   * Joined to `event` for the order and for nothing else: the sort key is the
+   * event's start, and a service cannot sort by a column it never reads. The
+   * join is by table rather than by entity, so this repository still answers
+   * with registrations only — what a page needs about the events it names is
+   * resolved by the module that owns them.
+   */
+  async searchByAddress(
+    query: RegistrationsOfAddress,
+  ): Promise<RegistrationSlice> {
+    const [rows, total] = await this.repository
+      .createQueryBuilder('registration')
+      .innerJoin('event', 'event', 'event.id = registration.event_id')
+      // The same comparison the unique index uses (E10): one address is one
+      // person however it was typed.
+      .where('lower(registration.email) = lower(:email)', {
+        email: query.email,
+      })
+      .orderBy('event.starts_at', 'DESC')
+      // A unique tie-breaker, always last: two events starting in the same
+      // minute must not swap places between two pages.
+      .addOrderBy('registration.id', 'ASC')
       .offset(query.offset)
       .limit(query.limit)
       .getManyAndCount();

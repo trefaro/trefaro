@@ -26,22 +26,36 @@ import {
   registrationStatusKey,
   seatsLeft,
 } from '@trefaro/shared-models';
-import { SelfServiceService } from '../../features/self-service/self-service.service';
+import {
+  SelfServiceService,
+  byLink,
+  bySession,
+  type SelfServiceAccess,
+} from '../../features/self-service/self-service.service';
 
 /**
- * "My registration" — the page the personal link in the receipt opens (E11).
+ * "My registration" — one registration, reached in either of two ways (E11).
  *
- * FR 3.10 is P1 and the participant login is P2, so this page is reached with a
- * signed token rather than a session. Three things follow from that, and all
- * three are visible in the markup:
+ * The personal link in the receipt is the first, and it is why this page exists:
+ * FR 3.10 is P1 and the participant login was P2. Since AP 4 of phase 3 the
+ * same page also answers at `registrations/:id` for somebody who is logged in —
+ * one screen, two credentials, because the view and the rules are identical and
+ * a second page would be a second place to change them.
+ *
+ * Four things follow, and all four are visible in the markup:
  *
  * 1. **It shows only this registration.** No other participant, and no list of
  *    who signed up for what — the numbers are as far as it goes.
- * 2. **It says what the link is worth.** Whoever holds it can change this
- *    registration, and somebody forwarding the mail should know that.
+ * 2. **It says what the link is worth** — but only when a link is what got
+ *    somebody here. Whoever holds it can change this registration, and somebody
+ *    forwarding the mail should know that; somebody who signed in has nothing to
+ *    keep to themselves.
  * 3. **A missing token is its own message.** A mail client that broke the link
  *    across two lines is the usual cause, and "invalid link" would send the
  *    reader looking for the wrong problem.
+ * 4. **Cancelling needs the link.** The rule exists and the mailed link can do
+ *    it; the session's way to it is AP 12, so the button is absent rather than
+ *    present and broken.
  *
  * Times are the venue's throughout (E8), grouped into days with the same helpers
  * the public timeline uses — one implementation of "which day is this session
@@ -52,7 +66,7 @@ import { SelfServiceService } from '../../features/self-service/self-service.ser
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, TranslocoPipe],
   template: `
-    @if (!tokenValue()) {
+    @if (!access()) {
       <h1>{{ 'mine.title' | transloco }}</h1>
       <p class="notice" role="alert">{{ 'mine.noToken' | transloco }}</p>
     } @else if (registration(); as mine) {
@@ -158,7 +172,7 @@ import { SelfServiceService } from '../../features/self-service/self-service.ser
           </section>
         }
 
-        @if (mine.status !== 'cancelled') {
+        @if (mine.status !== 'cancelled' && linkToken()) {
           <section aria-labelledby="cancel-heading">
             <h2 id="cancel-heading">{{ 'mine.cannotCome' | transloco }}</h2>
             <p class="meta">{{ 'mine.cancelHint' | transloco }}</p>
@@ -173,7 +187,15 @@ import { SelfServiceService } from '../../features/self-service/self-service.ser
           </section>
         }
 
-        <p class="meta">{{ 'mine.keepLink' | transloco }}</p>
+        @if (linkToken()) {
+          <p class="meta">{{ 'mine.keepLink' | transloco }}</p>
+        } @else {
+          <p class="meta">
+            <a routerLink="/registrations">{{
+              'mine.list.back' | transloco
+            }}</a>
+          </p>
+        }
       </article>
     } @else if (error(); as problem) {
       <h1>{{ 'mine.title' | transloco }}</h1>
@@ -308,11 +330,28 @@ export class MyRegistrationPage {
    *
    * A query parameter that is not in the URL arrives as `undefined` and
    * overrides an `input()` default, so the default would look like a guarantee
-   * it is not — hence {@link tokenValue}.
+   * it is not — hence {@link access}.
    */
   readonly token = input<string>();
 
-  protected readonly tokenValue = computed(() => this.token() ?? '');
+  /** From the path, when a logged-in participant opened `registrations/:id`. */
+  readonly id = input<string>();
+
+  /**
+   * Which credential this visit has, or `null` for neither.
+   *
+   * The token wins if both are somehow present: a link is what somebody is
+   * holding in their hand, and it works whether or not they are also signed in.
+   */
+  protected readonly access = computed<SelfServiceAccess | null>(() => {
+    const token = this.token();
+    if (token) return byLink(token);
+    const id = this.id();
+    return id ? bySession(id) : null;
+  });
+
+  /** The token, when this visit came from a mail — for the two link-only parts. */
+  protected readonly linkToken = computed(() => this.token() ?? '');
 
   private readonly selfService = inject(SelfServiceService);
   private readonly i18n = inject(TranslationService);
@@ -325,7 +364,7 @@ export class MyRegistrationPage {
     // The language is read here so a switch re-runs the effect: the event's name
     // and the session titles are translated on the server (FR 3.12).
     effect(() => {
-      void this.load(this.tokenValue(), this.i18n.locale());
+      void this.load(this.access(), this.i18n.locale());
     });
   }
 
@@ -415,22 +454,14 @@ export class MyRegistrationPage {
   }
 
   protected signUp(session: MyProgramItem): Promise<void> {
-    return this.change(() =>
-      this.selfService.signUp(
-        session.id,
-        this.tokenValue(),
-        this.i18n.locale(),
-      ),
+    return this.withAccess((access) =>
+      this.selfService.signUp(session.id, access, this.i18n.locale()),
     );
   }
 
   protected signOff(session: MyProgramItem): Promise<void> {
-    return this.change(() =>
-      this.selfService.signOff(
-        session.id,
-        this.tokenValue(),
-        this.i18n.locale(),
-      ),
+    return this.withAccess((access) =>
+      this.selfService.signOff(session.id, access, this.i18n.locale()),
     );
   }
 
@@ -441,19 +472,30 @@ export class MyRegistrationPage {
     // Every one of these answers with the whole page, so every one carries the
     // language: without it, claiming a seat would switch the page to English.
     await this.change(() =>
-      this.selfService.cancel(this.tokenValue(), this.i18n.locale()),
+      this.selfService.cancel(this.linkToken(), this.i18n.locale()),
     );
   }
 
-  private async load(token: string, locale: string): Promise<void> {
-    if (!token) return;
+  private async load(
+    access: SelfServiceAccess | null,
+    locale: string,
+  ): Promise<void> {
+    if (!access) return;
     this.error.set(null);
     try {
-      this.registration.set(await this.selfService.view(token, locale));
+      this.registration.set(await this.selfService.view(access, locale));
     } catch (error: unknown) {
       this.registration.set(null);
       this.report(error, 'mine.error.load');
     }
+  }
+
+  /** Runs one change with whichever credential this visit has. */
+  private withAccess(
+    action: (access: SelfServiceAccess) => Promise<MyRegistration>,
+  ): Promise<void> {
+    const access = this.access();
+    return access ? this.change(() => action(access)) : Promise.resolve();
   }
 
   /**
@@ -474,7 +516,7 @@ export class MyRegistrationPage {
       // The refusal is usually "somebody else took the last seat", so the page
       // is reloaded: showing the old numbers beside the message would invite the
       // same click again.
-      await this.load(this.tokenValue(), this.i18n.locale());
+      await this.load(this.access(), this.i18n.locale());
     } finally {
       this.busy.set(false);
     }

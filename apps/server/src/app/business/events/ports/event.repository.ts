@@ -82,6 +82,14 @@ export interface EventRepository {
   /** Only the published ones, in date order. */
   findPublishedBySeries(seriesId: string): Promise<readonly EventRecord[]>;
   findById(id: string): Promise<EventRecord | null>;
+  /**
+   * Several events by id, in no promised order (FR 4.7).
+   *
+   * For a list that names events it did not find by series — "my
+   * registrations" is the first — where one lookup per row would turn a page
+   * into N+1 queries. Ids nothing matches are simply absent.
+   */
+  findByIds(ids: readonly string[]): Promise<readonly EventRecord[]>;
   findBySlug(seriesId: string, slug: string): Promise<EventRecord | null>;
   /** @throws EventSlugTakenError */
   create(event: NewEvent): Promise<EventRecord>;

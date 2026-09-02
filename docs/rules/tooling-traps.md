@@ -13,6 +13,17 @@ dass das Werkzeug etwas anderes tut als erwartet.
   ist unter Vitest (`libs/*`) der Arbeitsbereich und unter Jest (`apps/server`)
   das Projektverzeichnis. Wer in einem Servertest eine Datei des Arbeitsbereichs
   liest, **sucht sie nach oben**, statt einen Pfad zu raten.
+- **Und beide starten aus dem Verzeichnis, aus dem `nx` gestartet wurde.**
+  `nx test user-client` aus einem Unterordner heraus ließ die zwei PWA-Suiten
+  scheitern, die Dateien lesen (Iconliste gegen `public/`, Manifest-Adresse
+  gegen `index.html`) — acht rote Tests, die mit der Änderung nichts zu tun
+  hatten, und `nx` merkt sich den Lauf danach als „flaky". Testläufe gehören in
+  die **Wurzel des Arbeitsbereichs**.
+- **Eine einzelne Suite fährt man mit dem Runner, nicht mit `nx`.** `--filter`
+  von Jest meint **Module**, keinen Testnamen, und die Nx-Schemata lehnen
+  positionale Pfade ab. Für den Server:
+  `npx jest -c jest.config.cts --testPathPatterns=<teil>` aus `apps/server`
+  (die Datei heißt `.cts`, nicht `.ts`). Playwright nimmt `--grep`.
 
 - **Eine schon gelaufene Migration läuft nicht erneut.** Es gibt kein
   Migrations-CLI in diesem Repository — der Server migriert beim Start. Wer eine
