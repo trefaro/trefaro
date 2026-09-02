@@ -3,7 +3,11 @@
 **Status: in Arbeit** (seit 02.09.2026, AP 1 und AP 2 erledigt). Der Teil oberhalb von
 _Fortschritt_ ist der **Plan** und wird nicht mehr rückwirkend korrigiert; was
 tatsächlich passierte, steht unten je Paket — wie in
-[`PHASE1.md`](PHASE1.md) und [`PHASE2.md`](PHASE2.md).
+[`PHASE1.md`](PHASE1.md) und [`PHASE2.md`](PHASE2.md). Was Marius **vor** einem
+Paket am Zuschnitt ändert, wird dagegen oben eingetragen und mit Datum
+gekennzeichnet: das ist keine Korrektur der Vergangenheit, sondern der Auftrag
+für das Paket, das noch kommt. Bisher einmal geschehen — AP 3 hat am 02.09.2026
+den Profil-Baukasten im Veranstalter-Client dazubekommen.
 
 Grundlage: Kapitel 6, Phase 3 in
 [`Anforderungsanalyse_und_Umsetzungsplan.md`](Anforderungsanalyse_und_Umsetzungsplan.md)
@@ -55,6 +59,7 @@ der Usability-Test (Phase 5); Gamification (FR 4.9, bewusst nie).
 | 4.1 · 4.2         | Teilnehmerkonto, Double-Opt-In, Login, Sitzung, Passwort             | AP 1         |
 | 4.3               | Profil verwalten: Name, Bild, Sprache, Tätigkeitsbereich, Felder     | AP 2         |
 | 4.1–4.3           | Login, Registrierung und Profil im Nutzer-Client                     | AP 3         |
+| 4.3               | Der Profil-Baukasten im Veranstalter-Client (Marius, 02.09.2026)     | AP 3         |
 | 3.3 · 4.7         | Die Anmeldung kennt den Menschen: Profilspalte, Selbstbedienung      | AP 4         |
 | 4.4               | Profilsuche mit Sichtbarkeits-Opt-in                                 | AP 5         |
 | 4.5               | Gespräche, Nachrichten und Bilder — ohne Echtzeit                    | AP 6         |
@@ -473,7 +478,7 @@ Feldschlüssel ein 400 ist, eine gelöschte Profilfrage ihre Antworten **behält
 (F34), ein Avatar mit falschen ersten Bytes abgelehnt wird und
 `/api/media/profiles/:id/avatar` das Bild ohne Pfad und ohne Sitzung ausliefert.
 
-### AP 3 — Login, Registrierung und Profil im Nutzer-Client (FR 4.1–4.3) → **Meilenstein M6**
+### AP 3 — Login, Registrierung und Profil in beiden Clients (FR 4.1–4.3) → **Meilenstein M6**
 
 Nutzer-Client: Registrierungs- und Loginseite, Bestätigungsseite,
 Profilbearbeitung mit dem generischen Formularbauteil, Navigationseintrag für
@@ -482,9 +487,33 @@ den angemeldeten Zustand, Abmelden. Der Sitzungszustand ist ein Signal, das
 Startsequenz aus der Thesis bleibt: Konfiguration, Theming, dann alles andere).
 Alle Texte in Englisch und Deutsch im Katalog (E22, F70, F80).
 
+**Veranstalter-Client: die Seite für den Profil-Baukasten** — Fragen anlegen,
+umformulieren, Pflicht setzen, Reihenfolge ändern, löschen, gegen die Endpunkte
+aus AP 2. **Von Marius am 02.09.2026 hierher gegeben**, nachdem AP 2 gemeldet
+hatte, dass der Plan diese Oberfläche keinem Paket zuweist: die Endpunkte allein
+sind für die Zielgruppe dieser Anwendung keine Funktion. Vorbild und Nachbar ist
+`pages/registration-fields/registration-fields-page.ts` — dieselbe Ordnung
+(Liste, Formular, Reihenfolge als Ganzes), ohne Event im Pfad und ohne die
+Datei-Eigenschaften (`accept`, `maxSizeBytes`), die es im Profil nicht gibt.
+
+Zwei Dinge, die dabei nicht vorausgesetzt werden dürfen — nachgesehen am Ende von
+AP 2, damit dieses Paket nicht davon ausgeht:
+
+- **Das „generische Formularbauteil" gibt es noch nicht.** Das öffentliche
+  Anmeldeformular zeichnet seine Felder **inline** in
+  `pages/event-registration/event-registration-page.ts`. E35 will ein Bauteil für
+  beide Baukästen; also gehört das Ausziehen in dieses Paket — ein zweites Mal
+  dieselben drei Feldtypen zu zeichnen wäre genau die Kopie, die driftet.
+- **Auch die Editorseite ist heute eine Seite und kein Bauteil** (821 Zeilen).
+  Was sich teilen lässt, wird beim Bauen entschieden; was nicht, wird begründet.
+  Geteilt wird die Regel, nie die Ähnlichkeit (F138).
+
 **Fertig, wenn** jemand sich im Browser registrieren, bestätigen, anmelden, sein
 Profil ändern und abmelden kann, mobil-zuerst, in beiden Sprachen, in allen drei
-Browsern der Suite. **M6: die Instanz hat Teilnehmerkonten.**
+Browsern der Suite — und wenn ein Veranstalter eine Profilfrage anlegen,
+umformulieren, verschieben und löschen kann, ohne die API anzufassen, wobei die
+Antworten einer gelöschten Frage sichtbar erhalten bleiben (F34).
+**M6: die Instanz hat Teilnehmerkonten.**
 
 ### AP 4 — Die Anmeldung kennt den Menschen (FR 3.3, 4.7; vier `todo.md`-Einträge)
 
@@ -903,8 +932,10 @@ false` ist eine Zeile SQL und die wichtigste dieser Migration: ein
   Aktivistenprofil, das durch eine Migration auffindbar wird, ist der Unfall,
   den E37 verhindert.
 
-Offen aus diesem Paket: **der Veranstalter-Client hat keine Seite für den
-Profil-Baukasten.** Die Endpunkte stehen, die Fragen lassen sich nur über die API
-anlegen — der Plan nennt für AP 2 ausdrücklich nur den Server und gibt die
-Oberfläche keinem Paket. Eingetragen in `todo.md`; der naheliegende Ort ist AP 3
-(dort entsteht ohnehin das Formularbauteil) oder ein eigenes kleines Paket.
+Offen aus diesem Paket, und schon entschieden: **der Veranstalter-Client hat
+keine Seite für den Profil-Baukasten.** Die Endpunkte stehen, die Fragen ließen
+sich nur über die API anlegen — der Plan nennt für AP 2 ausdrücklich nur den
+Server und gab die Oberfläche keinem Paket. **Marius hat sie am 02.09.2026 AP 3
+zugewiesen**; der Abschnitt dort trägt sie samt zwei Voraussetzungen, die man
+nicht annehmen darf (das gemeinsame Formularbauteil existiert noch nicht, und die
+Editorseite des Anmeldeformulars ist heute eine Seite und kein Bauteil).

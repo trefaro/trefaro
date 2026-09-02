@@ -490,15 +490,16 @@ answer, not an opinion.
 - [ ] **Wire `PushService.broadcast()` to actual event changes** (FR 3.15). There
       is deliberately no test-send endpoint — an unauthenticated one would be a
       spam vector.
-- [ ] **The organizer has no screen for the profile field kit.** AP 2 built
-      `GET/POST /api/admin/profile-fields`, `PUT …/order` and
-      `PATCH/DELETE …/:id`, and they work — but the plan assigns the _interface_
-      for them to no work package: AP 2 is explicitly server-side, AP 3 is the
-      participant client, AP 10 is the organizer's message overview. So an
-      organization can only define its profile questions with `curl`, which for
-      the audience of this application means it cannot define them at all. The
-      obvious home is AP 3, where the shared form component is built anyway, or a
-      small package of its own. Noted 2026-09-02 in AP 2, not silently deferred.
+- [ ] **The organizer's screen for the profile field kit — assigned to AP 3.**
+      AP 2 built `GET/POST /api/admin/profile-fields`, `PUT …/order` and
+      `PATCH/DELETE …/:id`, and they work; the plan assigned the _interface_ for
+      them to no work package. Raised at the end of AP 2 and **decided by Marius
+      on 2026-09-02: it goes into AP 3**, whose section in `docs/PHASE3.md` now
+      carries it, together with the two things that package must not assume (the
+      shared form component does not exist yet, and the registration form's
+      editor is a page rather than a component). Left here so AP 13 can tick it —
+      the reason it was an item at all is that an organization able to define its
+      profile questions only with `curl` cannot define them.
 - [ ] **A `select` profile question whose choices shrink leaves answers behind
       that are no longer offered.** The same situation as a deleted question
       (F34) and deliberately not refused — but nothing tells the organizer that
