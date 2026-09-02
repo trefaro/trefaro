@@ -24,6 +24,7 @@ import {
   PARTICIPANT_SORTS,
 } from '@trefaro/shared-models';
 import { AttachmentsService } from '../attachments';
+import { pageWindow } from '../common/page-window';
 import { searchTerms } from '../common/search-terms';
 import {
   PROFILE_DIRECTORY,
@@ -98,10 +99,9 @@ export class ParticipantsService {
   ): Promise<ParticipantPage> {
     await this.events.getForOrganizer(eventId);
 
-    const page = positiveInteger(query.page, 1);
-    const pageSize = clamp(
-      positiveInteger(query.pageSize, DEFAULT_PARTICIPANT_PAGE_SIZE),
-      1,
+    const { page, pageSize, offset } = pageWindow(
+      query,
+      DEFAULT_PARTICIPANT_PAGE_SIZE,
       MAX_PARTICIPANT_PAGE_SIZE,
     );
 
@@ -112,7 +112,7 @@ export class ParticipantsService {
         status: query.status ?? null,
         sort: sortColumn(query.sort),
         direction: sortDirection(query.direction),
-        offset: (page - 1) * pageSize,
+        offset,
         limit: pageSize,
       }),
       this.registrations.countByStatus(eventId),
@@ -368,16 +368,6 @@ function sortDirection(direction: SortDirection | undefined): SortDirection {
   return direction === 'asc' || direction === 'desc'
     ? direction
     : DEFAULT_SORT_DIRECTION;
-}
-
-function positiveInteger(value: number | undefined, fallback: number): number {
-  return Number.isFinite(value) && (value as number) >= 1
-    ? Math.floor(value as number)
-    : fallback;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 /**

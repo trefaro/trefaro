@@ -645,6 +645,7 @@
   "mine.seats.full": "Ausgebucht · {{count}} von {{capacity}} belegt",
   "mine.signMeUp": "Platz buchen",
   "mine.title": "Meine Anmeldung",
+  "modules.chat.title": "Nachrichten",
   "modules.mediaLinks.title": "Medien-Links",
   "modules.profileSearch.title": "Teilnehmersuche",
   "modules.profiles.title": "Teilnehmerkonten",

@@ -2,6 +2,8 @@ import { AdminSessionEntity } from './admin-session.entity';
 import { AdminUserEntity } from './admin-user.entity';
 import { AppConfigEntity } from './app-config.entity';
 import { AttachmentEntity } from './attachment.entity';
+import { ConversationMemberEntity } from './conversation-member.entity';
+import { ConversationEntity } from './conversation.entity';
 import { EventSeriesTranslationEntity } from './event-series-translation.entity';
 import { EventSeriesEntity } from './event-series.entity';
 import { EventTranslationEntity } from './event-translation.entity';
@@ -9,6 +11,7 @@ import { EventEntity } from './event.entity';
 import { InvitationRecipientEntity } from './invitation-recipient.entity';
 import { InvitationEntity } from './invitation.entity';
 import { MediaLinkEntity } from './media-link.entity';
+import { MessageEntity } from './message.entity';
 import { ModuleConfigEntity } from './module-config.entity';
 import { ProfileFieldEntity } from './profile-field.entity';
 import { ProgramItemSignupEntity } from './program-item-signup.entity';
@@ -25,6 +28,11 @@ export { AdminSessionEntity } from './admin-session.entity';
 export { AdminUserEntity } from './admin-user.entity';
 export { APP_CONFIG_SINGLETON_ID, AppConfigEntity } from './app-config.entity';
 export { AttachmentEntity } from './attachment.entity';
+export {
+  ConversationMemberEntity,
+  type ConversationMemberType,
+} from './conversation-member.entity';
+export { ConversationEntity } from './conversation.entity';
 export { EventSeriesTranslationEntity } from './event-series-translation.entity';
 export { EventSeriesEntity } from './event-series.entity';
 export { EventTranslationEntity } from './event-translation.entity';
@@ -35,6 +43,7 @@ export {
 } from './invitation-recipient.entity';
 export { InvitationEntity } from './invitation.entity';
 export { MediaLinkEntity } from './media-link.entity';
+export { MessageEntity } from './message.entity';
 export { ModuleConfigEntity } from './module-config.entity';
 export { ProfileFieldEntity } from './profile-field.entity';
 export { ProgramItemSignupEntity } from './program-item-signup.entity';
@@ -71,6 +80,9 @@ export const CORE_ENTITIES = [
   RegistrationEntity,
   RegistrationFieldEntity,
   AttachmentEntity,
+  ConversationEntity,
+  ConversationMemberEntity,
+  MessageEntity,
   TranslationOverrideEntity,
   UserProfileEntity,
   UserSessionEntity,

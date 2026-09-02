@@ -38,8 +38,17 @@
  * a brand and an avatar is a picture of a person. An operator has to be able to
  * see, and a `CHECK` has to be able to say, which of the two a stored path is —
  * `CHK_user_profile_avatar_path` allows nothing but this prefix.
+ *
+ * `messages` is the fifth, for the pictures sent in a chat (E40). Its row is an
+ * `attachment` like a registration's file, which is exactly why it needs a
+ * subtree of its own: `CHK_attachment_area` is what keeps the two kinds of
+ * attachment apart, and the promise E9 makes about `attachments/` — never
+ * served, only ever handed to an authenticated organizer — has to keep meaning
+ * what it says. A picture in a conversation is served, to members of that
+ * conversation, and so it lives somewhere else.
  */
-export type FileArea = 'attachments' | 'branding' | 'logos' | 'avatars';
+export type FileArea =
+  'attachments' | 'branding' | 'logos' | 'avatars' | 'messages';
 
 export interface FileStore {
   /**

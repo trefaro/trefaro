@@ -39,9 +39,14 @@ Entscheidungsprotokoll (`docs/Anforderungsanalyse_und_Umsetzungsplan.md`).
   gegen den behaupteten Typ. Die erlaubten Typen sind ein Katalog in
   `shared-models` — ein neuer Typ braucht dort einen Eintrag **und** eine Signatur
   in `file-signature.ts`.
-- **Das Upload-Volume wird nie statisch ausgeliefert** (E9). Einziger Weg zu den
-  Bytes: `GET /api/admin/attachments/:id`, immer als `attachment`-Download.
-  `/api/media` ist für Branding und ausdrücklich nicht dafür.
+- **Das Upload-Volume wird nie statisch ausgeliefert** (E9). Zu einer
+  **Anmeldungsdatei** führt genau ein Weg: `GET /api/admin/attachments/:id`,
+  immer als `attachment`-Download, und der Port dahinter sieht nichts anderes
+  (F155). Seit AP 6 liegt in derselben Tabelle auch das Bild einer
+  Chatnachricht — in einem **eigenen** Teilbaum `messages/`, mit einer eigenen
+  Route, die über die Nachricht auflöst und Mitgliedschaft prüft (F156). Die
+  beiden Arten sind nirgends verwechselbar: nicht im Pfad, nicht in der Spalte
+  (`CHK_attachment_area`) und nicht in einem Verzeichnislisting.
 - **Kaskaden löschen Zeilen, keine Dateien.** Wer Anmeldungen (mittelbar) löscht —
   Anmeldung, Event, Reihe — ruft vorher `AttachmentsService.purge…`, solange die
   Zeilen noch sagen können, welche Dateien gemeint sind.
@@ -134,6 +139,43 @@ Entscheidungsprotokoll (`docs/Anforderungsanalyse_und_Umsetzungsplan.md`).
   über `setAvatarPath`, nie über `UserProfileChanges` (F116). Eigener Teilbaum
   und nicht eine Ecke von `logos/`: ein Logo ist eine Marke, ein Avatar das Bild
   eines Menschen, und ein Operator muss das mit `ls` unterscheiden können.
+- **Zwei Menschen haben genau ein Gespräch, und das garantiert die Datenbank**
+  (F153). `conversation.direct_key` trägt die beiden Profil-Ids sortiert, ist
+  `UNIQUE` und laut `CHK_conversation_direct_key` genau für `type = 'direct'`
+  gesetzt; der Port fügt mit `ON CONFLICT DO NOTHING` ein und liest zurück.
+  „Lesen, dann schreiben" ist die Rennsituation, die zwei gleichzeitige Klicks
+  in zwei Gespräche verwandelt. Gebaut wird der Schlüssel **nur** in der
+  Datenzugriffsschicht.
+- **Gelesen ist ein Zustand des Mitglieds, nicht der Nachricht** (E38).
+  `conversation_member.last_read_at`, kein `message.read_at`: in einer Gruppe
+  ist „gelesen" je Empfänger wahr. Ungelesenes wird **gezählt**, nie gespeichert
+  (F56) — und gezählt wird nur, was jemand **anderes** geschrieben hat.
+- **Eine Mitgliedschaft hat keinen Fremdschlüssel auf ihr Mitglied** (E39):
+  `member_id` zeigt je nach `member_type` auf `admin_user` oder `user_profile`.
+  Der Preis ist bewusst — die Alternative wären zwei nullbare Spalten mit einem
+  `CHECK` und ein Coalesce in jeder Abfrage. Folge, die man kennen muss: ein
+  gelöschtes Profil nimmt seine Gespräche **nicht** mit (es gibt bis Phase 5
+  keinen Weg, ein Profil zu löschen), und wer per SQL aufräumt, nennt die
+  Gespräche ausdrücklich.
+- **Eine Nachricht ist Text, Bild oder beides — nie nichts** (E40).
+  `CHK_message_content`, dazu `CHK_message_body` gegen einen Rumpf aus
+  Leerzeichen. Kein `updated_at`, kein Lösch-Flag: eine Nachricht, die nach dem
+  Lesen umgeschrieben werden kann, macht das Gespräch darüber zu einem anderen.
+- **Das Bild einer Nachricht ohne Text lässt sich nicht löschen** (F158), und
+  das ist kein Fehler, sondern was zwei Klauseln zusammen sagen:
+  `message.attachment_id` ist `ON DELETE SET NULL` (eine gelöschte Datei löscht
+  keine Nachricht), und `CHK_message_content` verlangt Text oder Bild. Also
+  darf ein Bild von einer Nachricht **mit** Worten weg, und eine Nachricht kann
+  nicht geleert werden. Wer aufräumt, hält die Reihenfolge: Anhangs-Ids merken,
+  Gespräch löschen (kaskadiert die Nachrichten), dann die Anhänge.
+- **Das Bild einer Nachricht ist ein `attachment` in `messages/`** (F155, E40):
+  `registration_id` und `field_key` sind **gemeinsam** nullbar
+  (`CHK_attachment_owner`) — ein Chatbild beantwortet keine Formularfrage —, und
+  `CHK_attachment_area` erlaubt einer Anmeldungsdatei nur `attachments/%`, einem
+  Chatbild nur `messages/%`. Dieselbe dritte Schicht wie bei den Logos (F113),
+  und hier trägt sie mehr als Ordnung: die Zusage von E9 über `attachments/`
+  („wird nie ausgeliefert") muss weiter gelten, während ein Chatbild
+  ausgeliefert wird — an Mitglieder.
 - **Ein Event erbt das Logo seiner Reihe nicht** (F114). Jede Zeile zeigt ihr
   eigenes oder keines; der Rückfall ist die Kopfzeile, die das Organisationslogo
   ohnehin auf jeder Seite trägt. Eine Kette hätte dasselbe Bild zweimal auf eine

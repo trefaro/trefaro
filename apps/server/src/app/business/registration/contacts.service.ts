@@ -14,6 +14,7 @@ import {
   DEFAULT_CONTACT_PAGE_SIZE,
   MAX_CONTACT_PAGE_SIZE,
 } from '@trefaro/shared-models';
+import { pageWindow } from '../common/page-window';
 import { searchTerms } from '../common/search-terms';
 import {
   REGISTRATION_REPOSITORY,
@@ -64,17 +65,16 @@ export class ContactsService {
     seriesId: string,
     query: ContactQuery,
   ): Promise<SeriesContactPage> {
-    const page = positiveInteger(query.page, 1);
-    const pageSize = clamp(
-      positiveInteger(query.pageSize, DEFAULT_CONTACT_PAGE_SIZE),
-      1,
+    const { page, pageSize, offset } = pageWindow(
+      query,
+      DEFAULT_CONTACT_PAGE_SIZE,
       MAX_CONTACT_PAGE_SIZE,
     );
 
     const slice = await this.registrations.searchSeriesContacts({
       seriesId,
       terms: searchTerms(query.search),
-      offset: (page - 1) * pageSize,
+      offset,
       limit: pageSize,
     });
 
@@ -154,14 +154,4 @@ function toContact(record: SeriesContactRecord): SeriesContact {
     events: record.events,
     lastRegisteredAt: record.lastRegisteredAt.toISOString(),
   };
-}
-
-function positiveInteger(value: number | undefined, fallback: number): number {
-  return Number.isInteger(value) && (value as number) > 0
-    ? (value as number)
-    : fallback;
-}
-
-function clamp(value: number, low: number, high: number): number {
-  return Math.min(Math.max(value, low), high);
 }

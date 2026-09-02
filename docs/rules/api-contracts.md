@@ -62,8 +62,11 @@ Link.
   Schreiben, damit ein verweigerter Klick nichts ändert. „Dann schalte ich die
   anderen eben mit ab" wäre ein Schalter, der mehr tut als er sagt. Nur
   Kernmodule können eine haben: ein Plug-in erreicht Kerndaten über den
-  Plug-in-Vertrag (E12), und der ist immer da. Bisher eine: `profile-search`
-  braucht `profiles`; `chat` bekommt seine mit seinem Modul.
+  Plug-in-Vertrag (E12), und der ist immer da. Bisher zwei, und beide dieselbe:
+  `profile-search` und `chat` brauchen `profiles`. **`chat` braucht
+  ausdrücklich nicht `profile-search`** — ohne Verzeichnis lässt sich kein neues
+  Gespräch beginnen, die bestehenden bleiben lesbar (E14, E37), und eine
+  Voraussetzung hätte behauptet, Nachrichten seien ohne Verzeichnis sinnlos.
 - **Ein zurückkehrender Modulschlüssel bringt eine Altlast mit.** Phase 2 zog
   fünf Attrappen-Deskriptoren zurück und ließ ihre `module_config`-Zeilen liegen
   („Abschalten löscht nie Daten"). Für eine `true`-Zeile ist das richtig — jemand
@@ -73,9 +76,12 @@ Link.
   findet es aus, ohne es je ausgeschaltet zu haben. Deshalb löscht die Migration
   des Arbeitspakets die `false`-Zeile des zurückkehrenden Schlüssels;
   `ensureDefaults` schreibt sie beim nächsten Start aus dem Deskriptor neu. Gilt
-  noch für `chat` — `profiles` (AP 1) und `profile-search` (AP 5) sind zurück,
-  und beide kosteten keine eigene Migration: die aus AP 1 hat die `false`-Zeilen
-  **aller drei** Schlüssel auf einmal gelöscht.
+  **für keinen mehr** — `profiles` (AP 1), `profile-search` (AP 5) und `chat`
+  (AP 6) sind zurück, und keiner kostete eine eigene Migration: die aus AP 1 hat
+  die `false`-Zeilen **aller drei** Schlüssel auf einmal gelöscht. Der eine
+  Schlüssel, der nie zurückkommt, ist `newsletter` (F8) — und er ist deshalb das
+  Beispiel, an dem `core-module-registry.service.spec.ts` „ein Flag ohne
+  Deskriptor" prüft.
 - **Das Selbstbedienungs-Token steht beim Lesen in der Query, beim Ändern im
   Rumpf** (F44): Lesen ist, was der Link in der Mail tut; ändern darf kein
   Linkvorschau-Dienst können. Nur eine **bestätigte** Anmeldung hat eine
@@ -83,6 +89,35 @@ Link.
   öffentliche Adresse — sonst wäre jeder Link tot, sobald das Event auf Entwurf
   zurückgeht. `ProgramService.listForEvent` und `EventsService.locate` sind genau
   dafür da.
+- **Genau eine Medienroute prüft eine Berechtigung** (F156, E40).
+  `/api/media/messages/:id/attachment` gibt das Bild einer Nachricht nur an ein
+  **Mitglied** des Gesprächs. Die Begründung von F115/F124 trägt dort **nicht**:
+  ein Logo ist eine Marke, ein Avatar reist mit einer Id, die sein Leser
+  ohnehin sehen darf — ein Chatbild ist Inhalt in einem privaten Gespräch.
+  Adressiert wird über die **Nachricht**, nicht über die Datei: Mitgliedschaft
+  ist eine Eigenschaft des Gesprächs, und eine Anhangs-Id sagt darüber nichts.
+  Die Sitzung verlangt `@RequiresParticipant()` — ein Dekorator, der nur
+  **verschärfen** kann, weshalb er F69 nicht aufhebt (der Fehler in seiner
+  Richtung ist ein 401, das nie kommt, nie ein offener Endpunkt). Kein `?v=`,
+  weil eine Nachricht nicht bearbeitet werden kann (E14). Der Veranstalter liest
+  dieselben Bytes **nicht** hier: zwei Zielgruppen, zwei Präfixe, zwei Guards
+  (E33) — ein Guard, der beide Cookies nimmt, ist der, den E34 verbietet. Und
+  `GET /api/admin/attachments/:id` bedient seit AP 6 **nur** Anmeldungsdateien
+  (F155), sonst käme ein Veranstalter mit einer Id an ein privates Bild.
+- **Der Chat antwortet mit zwei Codes, und jeder sagt eine Sache** (F157). Ein
+  Gespräch **beginnen** ist **403** für alles, was nicht angeschrieben werden
+  darf — unbekannt, unbestätigt, kein Opt-in, zurückgenommen —, wortgleich
+  (F124); **400** nur für die **eigene** Id, denn die kennt der Fragende.
+  Alles danach fragt nur nach Mitgliedschaft, und „nicht deins" ist ein **404**
+  mit dem Wortlaut einer unbekannten Id. Die Bildroute hat ihren **eigenen**
+  dritten Satz für ihre drei Fehlschläge — sie darf den des Gesprächs nicht
+  borgen.
+- **Der Verlauf eines Gesprächs paginiert über einen Cursor** (F154), als
+  einzige Liste dieser Anwendung. `?before=<Nachrichten-Id>`, Vergleich über
+  `(created_at, id)`, `hasMore` statt `total`. Der Grund ist, was die Liste ist:
+  sie wächst am Ende, während sie gelesen wird, also bedeutet „Seite 2" eine
+  Sekunde später etwas anderes. Eine Id aus einem fremden Gespräch ergibt ein
+  **leeres** Fenster, keinen Fehler.
 - **Eine Medienroute nimmt nie einen Pfad, aber auch keinen Status** (F113, F115).
   `/api/media/branding/{logo,app-icon}` löst über `app_config` auf,
   `/api/media/series/:id/logo`, `…/events/:id/logo` und
@@ -171,8 +206,13 @@ Link.
   min), weil ein Token im Prinzip erratbar ist und jeder Aufruf einen HMAC
   kostet (E4); hinter einer Sitzung greift die globale Grenze. Was jede
   Teilnehmerroute dagegen **braucht**, sind `@UseGuards(CoreModuleEnabledGuard)`
-  und `@CoreModuleController(PROFILES_MODULE_KEY)` — eine Instanz ohne Konten
-  antwortet dort 404, nicht 401 (F53).
+  und `@CoreModuleController(<Schlüssel>)` — eine Instanz ohne das Modul
+  antwortet dort 404, nicht 401 (F53). Der Schlüssel ist der des Moduls, nicht
+  `profiles`: die Profilsuche prüft `profile-search`, der Chat `chat`, und einer
+  genügt, weil die Voraussetzung dort erzwungen wird, wo geschaltet wird (E42).
+  **Reihenfolge beachten:** der Teilnehmer-Guard ist global und läuft **vor**
+  einem Controller-Guard, also antwortet eine Route ohne Cookie 401, auch wenn
+  ihr Modul aus ist.
 - **Query-Parameter kommen als `undefined` an**, auch wenn ein Angular-`input()`
   einen Standardwert hat. `ApiClient.put/delete/post` nehmen ebenfalls
   Query-Parameter — auch ein `PUT` muss die Sprache tragen können.

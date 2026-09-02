@@ -491,6 +491,30 @@ answer, not an opinion.
 - [ ] **Delete the `chat:echo` spike handler.** It is a phase 0 artifact and must
       not reach a release. The socket verification script goes with it, or gets
       pointed at a real message.
+- [ ] **Purge a conversation's pictures when the conversation goes — belongs to
+      AP 10.** Deleting an **event** cascades through `conversation` to
+      `message`, and a cascade removes rows but no files (E9). AP 6 built the
+      schema that makes it possible and creates no row it could hit: only a
+      `group` conversation hangs off an event, and nothing creates one until AP
+      10 assembles groups. That package extends
+      `AttachmentsService.purgeForEvent` — and holds the order F158 spells out:
+      remember the attachment ids, delete the conversation, then the
+      attachments. The reverse fails on `CHK_message_content`.
+- [ ] **A deleted profile leaves its conversations standing** —
+      `conversation_member.member_id` carries no foreign key (E39), on purpose.
+      Nothing can delete a profile today (there is no endpoint, by design), so
+      this is erasure work for **phase 5**, together with the rest of it: what a
+      person may have removed, what stays because somebody else wrote it, and
+      what a conversation looks like when one side is gone.
+- [ ] **Eight copies of `isUniqueViolation` in `data-access/repositories/`** —
+      `typeorm-{admin-user,event,event-series,profile-field,
+    program-item-signup,user-profile,registration,registration-field}`. The
+      same six lines each. F138 says the third caller is where something moves
+      out; AP 6 avoided adding a ninth (its insert uses `ON CONFLICT DO NOTHING`
+      instead of an exception as control flow) rather than doing the extraction
+      inside a package that had no business touching eight files. Small and
+      mechanical — and worth checking for drift while doing it, which is what
+      `searchTerms` (AP 5) and `pageWindow` (AP 6) both turned out to have.
 - [ ] **Wire `PushService.broadcast()` to actual event changes** (FR 3.15). There
       is deliberately no test-send endpoint — an unauthenticated one would be a
       spam vector.
@@ -543,7 +567,7 @@ answer, not an opinion.
       visible there — but it deliberately does **not** show answers whose
       question is gone under their bare key (F150): the organizer's panel is an
       audit of a form, a participant is reading a person, and `local-group:
-    Bonn` is diagnostics rather than a fact about anybody.
+  Bonn` is diagnostics rather than a fact about anybody.
 
 - [ ] **`formatAnswer` answers in English, and the organizer client shows it.**
       The helper in `shared-models` turns a tick into `yes` / `no` — words from a

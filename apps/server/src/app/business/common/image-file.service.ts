@@ -8,6 +8,7 @@ import {
 import {
   BRANDING_MIME_TYPES,
   MAX_BRANDING_BYTES,
+  MAX_MESSAGE_IMAGE_BYTES,
   brandingTypeSummary,
   formatBytes,
 } from '@trefaro/shared-models';
@@ -39,8 +40,12 @@ export interface ImageBytes {
  * served. `branding` is absent too — `BrandingService` keeps its own copy of
  * this reasoning because its paths live in one row of `app_config` and it has a
  * pair of them to keep straight.
+ *
+ * `messages` is the third, for the pictures of a chat (E40). It is the first
+ * area whose images are **not** public and the first with a ceiling of its own
+ * — see {@link CEILING}.
  */
-export type ImageArea = 'logos' | 'avatars';
+export type ImageArea = 'logos' | 'avatars' | 'messages';
 
 /**
  * What each area's images are called, for the sentences a refusal is made of.
@@ -52,6 +57,31 @@ export type ImageArea = 'logos' | 'avatars';
 const NOUN: Record<ImageArea, string> = {
   logos: 'A logo',
   avatars: 'A profile picture',
+  messages: 'A picture in a message',
+};
+
+/**
+ * The most an image of each area may weigh.
+ *
+ * Two of the three share a number, and the third does not — which is a change
+ * from what this service said when it had two areas ("deliberately the same
+ * limits"). That sentence was right about a logo and an avatar: both are chrome
+ * around the content, both are exported once by somebody looking at them, and
+ * two answers to "what may I upload here" would have been two answers to the
+ * same question.
+ *
+ * A picture in a message is a different question. It is content — a photograph
+ * somebody took at an event and is sending to the people who were there — and
+ * it comes off a phone unretouched. At half a megabyte the feature would be
+ * ornamental, so it gets `MAX_MESSAGE_IMAGE_BYTES`, still far below the ten
+ * megabytes a public registration endpoint has to bound. The endpoint behind it
+ * needs a session and a membership, so the laxer number is not the one worth
+ * attacking.
+ */
+const CEILING: Record<ImageArea, number> = {
+  logos: MAX_BRANDING_BYTES,
+  avatars: MAX_BRANDING_BYTES,
+  messages: MAX_MESSAGE_IMAGE_BYTES,
 };
 
 /**
@@ -181,16 +211,16 @@ export class ImageFileService {
    */
   private assertAcceptable(area: ImageArea, upload: ImageUpload): void {
     const noun = NOUN[area];
+    const ceiling = CEILING[area];
 
     if (upload.bytes.length === 0) {
       throw new BadRequestException('The uploaded image is empty.');
     }
 
-    if (upload.bytes.length > MAX_BRANDING_BYTES) {
+    if (upload.bytes.length > ceiling) {
       throw new PayloadTooLargeException(
-        `${noun} may be up to ${formatBytes(MAX_BRANDING_BYTES)}; this file ` +
-          `is ${formatBytes(upload.bytes.length)}. Please export it at the ` +
-          'size it is displayed at.',
+        `${noun} may be up to ${formatBytes(ceiling)}; this file is ` +
+          `${formatBytes(upload.bytes.length)}.`,
       );
     }
 

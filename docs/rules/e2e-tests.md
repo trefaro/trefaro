@@ -60,10 +60,12 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   Millisekunde dazwischen macht den Test rot und sagt nichts.
 - **Der Teilnehmer-Login hat sein eigenes Drosselbudget** — 20 Versuche in fünf
   Minuten, getrennt vom Admin-Login (der Zähler hängt an Route **und** Adresse).
-  Die fünf Kontosuiten in `apps/server-e2e` verbrauchen davon vierzehn
+  Die sechs Kontosuiten in `apps/server-e2e` verbrauchen davon **sechzehn**
   (`my-registrations.spec.ts` kam in AP 4 mit einer dazu, `profile-search.spec.ts`
   in AP 5 mit einer — dort braucht nur der **Suchende** eine Sitzung, die
-  Gefundenen sind geseedet), die Browsersuite des
+  Gefundenen sind geseedet; `chat.spec.ts` in AP 6 mit **zwei**: ein Gespräch hat
+  zwei Seiten, und die dritte Person der Suite ist wieder geseedet, weil zu ihr
+  nur **geschrieben** wird), die Browsersuite des
   Nutzer-Clients drei (einer je Engine, `profile.spec.ts` meldet sich genau
   einmal an und beweist das neue Passwort in `server-e2e`); wer eine weitere
   schreibt, zählt vorher nach. Ein 429 sieht dort aus wie ein Anmeldefehler und
@@ -121,6 +123,20 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   Voraussetzung — und muss im `finally` die **Voraussetzung zuerst** wieder
   einschalten. Andernfalls verweigert sich das Zurücksetzen selbst, mit genau dem
   409, den der Test beweisen wollte.
+- **Was in der Datenbank hängen bleibt, wenn kein Fremdschlüssel es mitnimmt,
+  räumt die Suite ausdrücklich ab.** `conversation_member.member_id` trägt
+  bewusst keinen Fremdschlüssel (E39), also lässt `deleteProfiles(domain)` die
+  Gespräche stehen — und `direct_key` ist instanzweit eindeutig. Dazu die
+  **Reihenfolge**, die F158 erklärt: erst die Anhangs-Ids merken, dann das
+  Gespräch löschen (das kaskadiert die Nachrichten), dann die Anhänge. Umgekehrt
+  scheitert es an `CHK_message_content`, und der Fehlschlag steht im `afterAll`,
+  wo er nach einem kaputten Test aussieht und keiner ist.
+  `deleteConversations(ids)` in `support/database.ts`.
+- **Eine Zusicherung über eine Sortierung stellt den Zustand selbst her.** „Die
+  Gesprächsliste beginnt mit dem zuletzt bewegten" hing zuerst davon ab, in
+  welches Gespräch ein **früherer** Test zuletzt geschrieben hatte — grün, aber
+  aus dem falschen Grund, und beim nächsten neuen Test rot. Wer eine Reihenfolge
+  behauptet, schreibt vorher die Zeile, die sie beweist.
 - **Ein Fixture, das die API nicht herstellen kann, wird geseedet — mit
   Begründung.** „Auffindbar, aber unbestätigt" hat keinen Weg durch die
   Endpunkte: `searchable` ist nur hinter einer Sitzung schreibbar, und eine

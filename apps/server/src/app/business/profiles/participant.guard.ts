@@ -8,6 +8,7 @@ import { PATH_METADATA } from '@nestjs/common/constants';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { allowsAnonymous } from '../common/allow-anonymous';
+import { requiresParticipant } from './requires-participant';
 import type { AuthenticatedParticipant } from './ports/user-session.repository';
 import { UserSessionService } from './user-session.service';
 import { USER_SESSION_COOKIE } from './user-session-cookie';
@@ -57,6 +58,10 @@ export function isParticipantPath(
  *
  * Creating and confirming an account stay under `/api/user`: at that point
  * there is nobody to authenticate.
+ *
+ * One route asks for the session without having it in its path, and says so
+ * with {@link RequiresParticipant}: the picture of a chat message, which lives
+ * under the media prefix because that is where stored bytes are served from.
  */
 @Injectable()
 export class ParticipantGuard implements CanActivate {
@@ -70,10 +75,17 @@ export class ParticipantGuard implements CanActivate {
     // authenticates itself (E41).
     if (context.getType() !== 'http') return true;
 
-    const guarded = isParticipantPath(
-      this.reflector.get(PATH_METADATA, context.getClass()),
-      this.reflector.get(PATH_METADATA, context.getHandler()),
-    );
+    const guarded =
+      isParticipantPath(
+        this.reflector.get(PATH_METADATA, context.getClass()),
+        this.reflector.get(PATH_METADATA, context.getHandler()),
+      ) ||
+      // The one route that needs a session without saying so in its path: the
+      // picture of a message, which belongs under the media prefix (E19) and
+      // must not be public (E40). A decorator that only ever *adds* a
+      // requirement is safe in a way one that removed it would not be —
+      // see `requires-participant.ts`.
+      requiresParticipant(this.reflector, context);
     if (!guarded) return true;
 
     if (allowsAnonymous(this.reflector, context)) return true;

@@ -95,6 +95,7 @@ describe('ParticipantGuard', () => {
   function guardFor(options: {
     controllerPath: string;
     allowAnonymous?: boolean;
+    requiresParticipant?: boolean;
     resolves?: AuthenticatedParticipant | null;
   }): ParticipantGuard {
     const reflector = {
@@ -102,7 +103,12 @@ describe('ParticipantGuard', () => {
         key === PATH_METADATA && target === ConversationsController
           ? options.controllerPath
           : undefined,
-      getAllAndOverride: () => options.allowAnonymous,
+      // Two decorators are read here, and they pull in opposite directions —
+      // so the double has to tell them apart.
+      getAllAndOverride: (key: unknown) =>
+        key === 'trefaro:requiresParticipant'
+          ? options.requiresParticipant
+          : options.allowAnonymous,
     } as unknown as Reflector;
     const sessions = {
       resolve: () => Promise.resolve(options.resolves ?? null),
@@ -180,6 +186,32 @@ describe('ParticipantGuard', () => {
       controllerPath: 'participant/auth',
       allowAnonymous: true,
     });
+
+    await expect(
+      guard.canActivate(contextFor({ cookies: {} } as RequestWithParticipant)),
+    ).resolves.toBe(true);
+  });
+
+  it('demands a session where a decorator asks for one, whatever the path says', async () => {
+    // `/api/media/messages/:id/attachment` (E40). Stored bytes are served
+    // under the media prefix (E19), so this one route cannot say what it needs
+    // in its path — and a decorator that only ever *adds* a requirement does
+    // not undo the argument of F69.
+    const guard = guardFor({
+      controllerPath: 'media/messages',
+      requiresParticipant: true,
+    });
+
+    await expect(
+      guard.canActivate(contextFor({ cookies: {} } as RequestWithParticipant)),
+    ).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('leaves the other media routes public', async () => {
+    // The logos and the avatar (F113, F115, F124): no session, and no
+    // decorator either — the difference between them and a chat picture is the
+    // whole argument of E40.
+    const guard = guardFor({ controllerPath: 'media/profiles' });
 
     await expect(
       guard.canActivate(contextFor({ cookies: {} } as RequestWithParticipant)),

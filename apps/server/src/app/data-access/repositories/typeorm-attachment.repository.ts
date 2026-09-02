@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, IsNull, Repository } from 'typeorm';
 import type {
   AttachmentRecord,
   AttachmentRepository,
@@ -29,7 +29,15 @@ export class TypeormAttachmentRepository implements AttachmentRepository {
   ) {}
 
   async findById(id: string): Promise<AttachmentRecord | null> {
-    const row = await this.repository.findOneBy({ id });
+    // A registration's file, and only that: since AP 6 of phase 3 this table
+    // also holds the pictures sent in a chat (E40), and this port does not see
+    // them. So the organizer's download route answers 404 for a chat picture
+    // without knowing it exists — the rule lives in the statement, not in the
+    // caller (F152).
+    const row = await this.repository.findOneBy({
+      id,
+      registrationId: Not(IsNull()),
+    });
     return row ? toRecord(row) : null;
   }
 
@@ -98,7 +106,14 @@ export class TypeormAttachmentRepository implements AttachmentRepository {
     );
   }
 
-  /** One statement: delete and report what was deleted. */
+  /**
+   * One statement: delete and report what was deleted.
+   *
+   * Every delete of this port is additionally scoped to rows that have a
+   * registration, so no caller here can remove a chat picture — not even
+   * `deleteByIds`, whose ids come from this port's own reads. The pictures of a
+   * conversation are removed where the conversation is (E40).
+   */
   private async removeWhere(
     condition: string,
     parameters: Record<string, unknown>,
@@ -108,6 +123,7 @@ export class TypeormAttachmentRepository implements AttachmentRepository {
       .delete()
       .from(AttachmentEntity)
       .where(condition, parameters)
+      .andWhere('registration_id IS NOT NULL')
       .returning('*')
       .execute();
     return (result.raw as readonly RawAttachment[]).map(fromRaw);
@@ -139,11 +155,18 @@ function fromRaw(row: RawAttachment): AttachmentRecord {
   };
 }
 
+/**
+ * A row this port may answer with.
+ *
+ * The two owner columns are nullable in the table and not in the record, and
+ * that holds because every statement here is scoped to rows that have a
+ * registration — a chat picture never reaches this function.
+ */
 function toRecord(row: AttachmentEntity): AttachmentRecord {
   return {
     id: row.id,
-    registrationId: row.registrationId,
-    fieldKey: row.fieldKey,
+    registrationId: row.registrationId as string,
+    fieldKey: row.fieldKey as string,
     path: row.path,
     fileName: row.fileName,
     mimeType: row.mimeType,

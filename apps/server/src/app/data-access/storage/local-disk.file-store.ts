@@ -12,14 +12,21 @@ import { ENV } from '../../core/config/env.module';
 /**
  * How many characters of the generated name become a subdirectory.
  *
- * Only for the attachments: a single directory with a hundred thousand entries
- * is slow to list on every filesystem an organization is likely to run this on.
- * The other three areas are bounded by rows somebody creates by hand —
- * `branding/` holds at most two files, `logos/` at most one per series and
- * event, `avatars/` at most one per account — so a fan-out would only make `ls`
- * less useful than it should be.
+ * A single directory with a hundred thousand entries is slow to list on every
+ * filesystem an organization is likely to run this on, so the two areas that
+ * grow without a bound get a fan-out: `attachments/`, one file per file field
+ * per registration, and `messages/`, one per picture anybody ever sends in a
+ * conversation.
+ *
+ * The other three are bounded by rows somebody creates by hand — `branding/`
+ * holds at most two files, `logos/` at most one per series and event,
+ * `avatars/` at most one per account — so a fan-out would only make `ls` less
+ * useful than it should be.
  */
 const FAN_OUT = 2;
+
+/** The areas whose file count nobody controls — see {@link FAN_OUT}. */
+const FANNED_OUT: readonly FileArea[] = ['attachments', 'messages'];
 
 /**
  * The upload volume, as a file store (E9).
@@ -39,8 +46,9 @@ const FAN_OUT = 2;
  *   the same bytes to a filesystem and must never be the same thing to this
  *   application: the public route serves the second kind and could not be made
  *   safe if the two lived in one directory.
- * - **Attachments are spread over subdirectories** by the first characters of
- *   the name; branding files are not — see {@link FAN_OUT}.
+ * - **The unbounded areas are spread over subdirectories** by the first
+ *   characters of the name; the ones a person fills by hand are not — see
+ *   {@link FAN_OUT}.
  * - **The path that is returned is relative.** It is stored in a row that has to
  *   survive the volume being mounted somewhere else.
  */
@@ -55,10 +63,9 @@ export class LocalDiskFileStore implements FileStore {
 
   async save(area: FileArea, bytes: Buffer): Promise<string> {
     const name = randomUUID();
-    const relative =
-      area === 'attachments'
-        ? join(area, name.slice(0, FAN_OUT), name)
-        : join(area, name);
+    const relative = FANNED_OUT.includes(area)
+      ? join(area, name.slice(0, FAN_OUT), name)
+      : join(area, name);
     const absolute = this.absolute(relative);
 
     await mkdir(dirname(absolute), { recursive: true });

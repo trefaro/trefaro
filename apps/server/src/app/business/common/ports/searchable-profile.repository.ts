@@ -1,5 +1,17 @@
 /**
- * Port for the participant search (FR 4.4).
+ * Port for the profiles that opted in (FR 4.4, FR 4.5 — E37).
+ *
+ * In `business/common/ports/` because two modules read it (F100): the search
+ * shows these profiles, and the chat may open a conversation with exactly
+ * these and no others. That is not two uses of a convenient interface but one
+ * rule with two readers — `searchable` is the opt-in for being **found** and
+ * for being **written to**, one switch with one meaning (E37, F13) — and a
+ * second port would be a second chance to get it wrong.
+ *
+ * Note what it is not: contactability is asked here, membership is not. A
+ * conversation that is already running stays readable and answerable after its
+ * other side withdraws the switch (E14), so `ChatModule` asks this port when a
+ * conversation **begins** and never again.
  *
  * A read-only window on `user_profile`, and deliberately **not**
  * `UserProfileRepository`: that one can read a whole account, including the

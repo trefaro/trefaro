@@ -1,9 +1,18 @@
 /**
- * Port for stored files (E9, F12).
+ * Port for the files uploaded with a registration (E9, F12).
  *
  * The business layer knows this interface; the data access layer implements it.
  *
- * Two things about it are deliberate:
+ * **It cannot see a message's picture.** Since AP 6 of phase 3 the `attachment`
+ * table also holds the pictures sent in a chat (E40), and every statement
+ * behind this port carries `registration_id IS NOT NULL` — so `findById`
+ * answers `null` for a chat picture and the organizer's download route answers
+ * 404 for it without a branch of its own. The rule is in the statement rather
+ * than in the callers, for the reason F152 gives: what must not go wrong is
+ * made impossible below, not remembered above. A chat picture is reached
+ * through the message it is in, by a member of that conversation.
+ *
+ * Two more things about it are deliberate:
  *
  * - **Every delete answers with the rows it removed.** A file lives in two
  *   places — a row here and bytes in the volume — and only the caller that just
@@ -14,7 +23,13 @@
  *   can never describe bytes other than its own.
  */
 
-/** A stored file in business-layer terms — no ORM types. */
+/**
+ * A registration's stored file in business-layer terms — no ORM types.
+ *
+ * Both owner fields are non-null here although the columns are nullable: this
+ * port only ever sees rows that have a registration, which is what makes the
+ * two fields safe to read without a check at every call site.
+ */
 export interface AttachmentRecord {
   readonly id: string;
   readonly registrationId: string;

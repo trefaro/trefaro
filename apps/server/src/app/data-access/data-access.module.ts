@@ -2,6 +2,8 @@ import { DynamicModule, Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ATTACHMENT_REPOSITORY } from '../business/attachments/ports/attachment.repository';
 import { FILE_STORE } from '../business/attachments/ports/file-store';
+import { CONVERSATION_REPOSITORY } from '../business/chat/ports/conversation.repository';
+import { MESSAGE_REPOSITORY } from '../business/chat/ports/message.repository';
 import { PROFILE_DIRECTORY } from '../business/common/ports/profile-directory.port';
 import { APP_CONFIG_REPOSITORY } from '../business/config/ports/app-config.repository';
 import { EVENT_SERIES_TRANSLATION_REPOSITORY } from '../business/event-series/ports/event-series-translation.repository';
@@ -16,7 +18,7 @@ import { ADMIN_USER_REPOSITORY } from '../business/login/ports/admin-user.reposi
 import { MEDIA_LINK_TALLY } from '../business/media-links/ports/media-link-tally';
 import { MEDIA_LINK_REPOSITORY } from '../business/media-links/ports/media-link.repository';
 import { MODULE_CONFIG_REPOSITORY } from '../business/config/ports/module-config.repository';
-import { SEARCHABLE_PROFILE_REPOSITORY } from '../business/profile-search/ports/searchable-profile.repository';
+import { SEARCHABLE_PROFILE_REPOSITORY } from '../business/common/ports/searchable-profile.repository';
 import { PROFILE_FIELD_REPOSITORY } from '../business/profiles/ports/profile-field.repository';
 import { PROGRAM_ITEM_SIGNUP_REPOSITORY } from '../business/program/ports/program-item-signup.repository';
 import { PROGRAM_ITEM_TRANSLATION_REPOSITORY } from '../business/program/ports/program-item-translation.repository';
@@ -43,6 +45,8 @@ import { TypeormAdminSessionRepository } from './repositories/typeorm-admin-sess
 import { TypeormAdminUserRepository } from './repositories/typeorm-admin-user.repository';
 import { TypeormAppConfigRepository } from './repositories/typeorm-app-config.repository';
 import { TypeormAttachmentRepository } from './repositories/typeorm-attachment.repository';
+import { TypeormConversationRepository } from './repositories/typeorm-conversation.repository';
+import { TypeormMessageRepository } from './repositories/typeorm-message.repository';
 import { TypeormEventSeriesTranslationRepository } from './repositories/typeorm-event-series-translation.repository';
 import { TypeormEventSeriesRepository } from './repositories/typeorm-event-series.repository';
 import { TypeormEventTranslationRepository } from './repositories/typeorm-event-translation.repository';
@@ -97,6 +101,8 @@ export class DataAccessModule {
       providers: [
         TypeormAdminUserRepository,
         TypeormAttachmentRepository,
+        TypeormConversationRepository,
+        TypeormMessageRepository,
         LocalDiskFileStore,
         TypeormAdminSessionRepository,
         TypeormAppConfigRepository,
@@ -142,6 +148,18 @@ export class DataAccessModule {
         {
           provide: FILE_STORE,
           useExisting: LocalDiskFileStore,
+        },
+        // Conversations and their lines (FR 4.5). Two ports rather than one:
+        // the overview reads conversations without touching a message, and the
+        // history reads messages without needing to know who is in one — and
+        // both are scoped to the asking member in SQL (E38, F152).
+        {
+          provide: CONVERSATION_REPOSITORY,
+          useExisting: TypeormConversationRepository,
+        },
+        {
+          provide: MESSAGE_REPOSITORY,
+          useExisting: TypeormMessageRepository,
         },
         {
           provide: EVENT_SERIES_REPOSITORY,
@@ -271,6 +289,8 @@ export class DataAccessModule {
         ADMIN_SESSION_REPOSITORY,
         APP_CONFIG_REPOSITORY,
         ATTACHMENT_REPOSITORY,
+        CONVERSATION_REPOSITORY,
+        MESSAGE_REPOSITORY,
         FILE_STORE,
         EVENT_SERIES_REPOSITORY,
         EVENT_SERIES_TRANSLATION_REPOSITORY,

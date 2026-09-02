@@ -1,4 +1,5 @@
 import {
+  CHAT_MODULE_KEY,
   MEDIA_LINKS_MODULE_KEY,
   PROFILES_MODULE_KEY,
   PROFILE_SEARCH_MODULE_KEY,
@@ -22,12 +23,13 @@ import {
  * - `newsletter` is gone. There will be no newsletter module (F8), and inviting
  *   former participants is explicitly not one (F55). Should the opt-in
  *   administration of FR 4.8 arrive in phase 3, it gets a key of its own then.
- * - `chat` and `profile-search` are gone and come back with their modules; a
+ * - `chat` and `profile-search` were gone and came back with their modules; a
  *   descriptor list is not a roadmap. `profiles` came back in AP 1 of phase 3,
  *   the day it had endpoints to switch off — which is the shape of the rule:
  *   a key appears here together with the code behind it, never before.
- *   `profile-search` came back in AP 5, on the same terms; `chat` waits for
- *   AP 6, which is why its prerequisite is declared nowhere yet.
+ *   `profile-search` came back in AP 5 and `chat` in AP 6, both on the same
+ *   terms. All three keys are now real, and the five withdrawn placeholders of
+ *   phase 2 are down to one that will never return: `newsletter`.
  * - `push` stays and is real: its subscription endpoints carry the guard, and
  *   `/api/config` withholds the VAPID key while the module is off, so a client
  *   does not offer a subscription nothing would store (NFR 7).
@@ -94,6 +96,24 @@ export const CORE_MODULES: readonly CoreModuleDescriptor[] = [
     titleKey: 'modules.profileSearch.title',
     enabledByDefault: true,
     // There is nothing to search without accounts (E42).
+    requires: [PROFILES_MODULE_KEY],
+  },
+  // Writing to one another (FR 4.5, UC 13). On by default, like the accounts
+  // and the directory it sits beside, and for the same reason: nobody can be
+  // written to until they switch `searchable` on themselves (E37, F13), so a
+  // fresh instance has a chat in which no conversation can be started yet.
+  // An organization that wants a participant directory without messaging
+  // switches this off, and then the conversation endpoints — and the route
+  // that serves a message's picture — answer 404 (F53). Switching it off
+  // deletes nothing (E14): the conversations are still there when it returns.
+  {
+    key: CHAT_MODULE_KEY,
+    titleKey: 'modules.chat.title',
+    enabledByDefault: true,
+    // A conversation is between accounts (E42). Deliberately **not**
+    // `profile-search` as well: without the directory no new conversation can
+    // be opened, but the ones that exist stay readable — a prerequisite would
+    // claim that messaging is meaningless without a directory.
     requires: [PROFILES_MODULE_KEY],
   },
   // Embedding external stream and media library links costs nothing when unused.

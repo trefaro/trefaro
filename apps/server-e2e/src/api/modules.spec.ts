@@ -159,15 +159,15 @@ describe('the module administration', () => {
 
     // Six keys named core modules until AP 4 of phase 2 and one of them read
     // its flag. A key appears here together with the code behind it, never
-    // before: `profiles` came back with AP 1 of phase 3, `chat` and
-    // `profile-search` come back with theirs, and there will be no newsletter
-    // module at all (F8).
+    // before: `profiles` came back with AP 1 of phase 3, `profile-search` with
+    // AP 5 and `chat` with AP 6 — each on the day it had endpoints to switch
+    // off. `newsletter` is the one that never returns: there will be no
+    // newsletter module (F8), and inviting former participants is explicitly
+    // not one (F55).
     expect(keys).toContain('profiles');
-    // `profile-search` came back in AP 5 of phase 3, the day it had endpoints
-    // to switch off.
     expect(keys).toContain('profile-search');
+    expect(keys).toContain('chat');
     expect(keys).not.toContain('newsletter');
-    expect(keys).not.toContain('chat');
   });
 
   it('starts the returning module on rather than off (E21, F63)', async () => {
@@ -185,6 +185,10 @@ describe('the module administration', () => {
 
   it('names what a module needs before it can be switched on (E42)', async () => {
     expect((await find('profile-search')).requires).toEqual(['profiles']);
+    // The chat's prerequisite arrived with its module in AP 6 — which is the
+    // other half of AP 5's acceptance criterion, and the reason it could only
+    // be shown for one key back then.
+    expect((await find('chat')).requires).toEqual(['profiles']);
     // One shape for every row: "nothing" is an empty list, not a missing field.
     expect((await find('profiles')).requires).toEqual([]);
     expect((await find('room-planning')).requires).toEqual([]);
@@ -198,17 +202,19 @@ describe('the module administration', () => {
 
     try {
       // Switching the prerequisite off under a running dependant: refused,
-      // with the dependant named. Not resolved — switching the search off as
+      // with **both** dependants named. Not resolved — switching them off as
       // well would answer a question nobody asked.
       const withdrawn = await toggle('profiles', false);
       expect(withdrawn.status).toBe(409);
       expect(JSON.stringify(withdrawn.body)).toContain('profile-search');
+      expect(JSON.stringify(withdrawn.body)).toContain('chat');
       // And nothing happened: a refused switch leaves the instance as it was.
       expect((await find('profiles')).enabled).toBe(true);
 
       // The other direction. First put the instance into the state where it
-      // can be asked: search off, then accounts off.
+      // can be asked: both dependants off, then accounts off.
       expect((await toggle('profile-search', false)).status).toBe(200);
+      expect((await toggle('chat', false)).status).toBe(200);
       expect((await toggle('profiles', false)).status).toBe(200);
 
       const premature = await toggle('profile-search', true);
@@ -217,14 +223,21 @@ describe('the module administration', () => {
       // to look for, and the key is what this list and `module_config` call it.
       expect(JSON.stringify(premature.body)).toContain('profiles');
       expect((await find('profile-search')).enabled).toBe(false);
+
+      const prematureChat = await toggle('chat', true);
+      expect(prematureChat.status).toBe(409);
+      expect(JSON.stringify(prematureChat.body)).toContain('profiles');
+      expect((await find('chat')).enabled).toBe(false);
     } finally {
       // In this order, or the restore would refuse itself.
       await toggle('profiles', true);
       await toggle('profile-search', true);
+      await toggle('chat', true);
     }
 
     expect((await find('profiles')).enabled).toBe(true);
     expect((await find('profile-search')).enabled).toBe(true);
+    expect((await find('chat')).enabled).toBe(true);
   });
 
   it('carries version and bundle for a plug-in and neither for a core module', async () => {

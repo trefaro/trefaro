@@ -1,6 +1,6 @@
 # Phase 3 — Profile, Kommunikation und Community-Kern
 
-**Status: in Arbeit** (seit 02.09.2026, AP 1 bis AP 5 erledigt, **M6 erreicht**). Der Teil oberhalb von
+**Status: in Arbeit** (seit 02.09.2026, AP 1 bis AP 6 erledigt, **M6 erreicht**). Der Teil oberhalb von
 _Fortschritt_ ist der **Plan** und wird nicht mehr rückwirkend korrigiert; was
 tatsächlich passierte, steht unten je Paket — wie in
 [`PHASE1.md`](PHASE1.md) und [`PHASE2.md`](PHASE2.md). Was Marius **vor** einem
@@ -18,7 +18,7 @@ phase 3_ — dreizehn Einträge, jeder ist unten einem Arbeitspaket zugeordnet.
 Die Entscheidungen zählen bei **E31** weiter (Phase 1: E1–E16, Phase 2:
 E17–E30); Ergänzungen am Referenzdokument bekommen **F118** und folgende
 (F1–F117 sind vergeben, F62 nie). Vergeben sind inzwischen F118–F128 sowie
-F137–F152; **F129–F136 bleiben reserviert** für die Pakete, die noch kommen.
+F137–F159; **F129–F136 bleiben reserviert** für die Pakete, die noch kommen.
 
 **Vier Entscheidungen hat Marius am 02.09.2026 vorab getroffen**, bevor dieser
 Plan geschrieben wurde — sie sind der Rahmen, nicht Vorschläge: die Adresse ist
@@ -1237,3 +1237,123 @@ Was anders lief:
 Offen aus diesem Paket: nichts. `chat` bekommt seine Voraussetzung in **AP 6**,
 zusammen mit seinem Modul — ein Deskriptor entsteht mit dem Code dahinter (E21),
 und deshalb konnte AP 5 nur die eine Hälfte des Abnahmekriteriums zeigen.
+
+### AP 6 — Gespräche, Nachrichten und Bilder (erledigt, 02.09.2026)
+
+Umgesetzt:
+
+- **`business/chat/` mit zwei Diensten und sechs Endpunkten.**
+  `ConversationsService` besitzt die Zugangsregel, `MessagesService` die Zeilen
+  und das Bild. `GET/POST /api/participant/conversations`,
+  `GET/POST …/:id/messages`, `PUT …/:id/read` und
+  `GET /api/media/messages/:id/attachment`. Der Gateway aus Spike 4 bleibt
+  unangetastet — er wird in AP 7 echt.
+- **Die Zugangsregel hat zwei Hälften, und sie sind nicht dieselbe Prüfung**
+  (**F157**). Ein Gespräch **beginnen** fragt nach `searchable` — über den Port
+  aus AP 5, der jetzt in `business/common/ports/` liegt, weil zwei Module ihn
+  lesen (F100). Alles **danach** fragt nur nach Mitgliedschaft: wer den Schalter
+  zurücknimmt, verschwindet aus der Suche und kann nicht neu angeschrieben
+  werden, **laufende Gespräche bleiben lesbar und beantwortbar** (E14, E37) — für
+  beide Seiten. Codes: 403 für jede Verweigerung des Beginns, wortgleich (F124);
+  400 nur für die **eigene** Id; 404 für „nicht deins", mit dem Wortlaut einer
+  unbekannten Id.
+- **Zwei Menschen haben genau ein Gespräch, und das garantiert die Datenbank**
+  (**F153**). `conversation.direct_key` mit `UNIQUE`, gesetzt genau für
+  `type = 'direct'`; der Port fügt mit `ON CONFLICT DO NOTHING` ein und liest
+  zurück. Die einzige Abweichung vom Schemaentwurf dieser Phase, und ihre
+  Begründung ist eine Rennsituation, die der Entwurf nicht ausdrücken konnte.
+- **Ungelesen wird gezählt, nie gespeichert** (E38, F56).
+  `conversation_member.last_read_at` ist der einzige Zustand; die Zahl entsteht
+  als korrelierte Unterabfrage in derselben Anweisung, die die Zeile liest — eine
+  Abfrage je Seite, nicht je Zeile (F49). Gezählt wird nur, was **jemand anderes**
+  geschrieben hat.
+- **Der Verlauf paginiert über einen Cursor** (**F154**) — die eine Liste dieser
+  Anwendung, die es tut, weil sie beim Lesen hinten wächst. `?before=<Id>`,
+  Vergleich über `(created_at, id)`, `hasMore` statt `total`, und eine Id aus
+  einem fremden Gespräch ergibt ein leeres Fenster statt eines Fehlers.
+- **Eine Nachricht ist Text, Bild oder beides — nie nichts** (E40). 400 mit einem
+  Satz, bevor `CHK_message_content` es sagen muss; ein Rumpf aus Leerzeichen ist
+  nichts. Bild und Text kommen in **einer** Anfrage: `multipart/form-data`, Text
+  im Feld `body`, Bild im Teil `image` — **ohne** `payload`-Teil, denn F39
+  braucht einen nur, weil eine Anmeldung verschachtelte Felder hat. Derselbe
+  Endpunkt nimmt reines JSON für eine Nachricht ohne Bild.
+- **Das Bild ist ein `attachment` in einem eigenen Teilbaum** (**F155**).
+  `messages/` als fünfter `FileArea`, `ImageFileService` als vierter Aufrufer
+  seiner vier Prüfungen (F38) und erster mit einer **eigenen** Obergrenze (4 MB
+  statt 512 KB: ein Logo ist Beiwerk, ein Chatbild kommt aus einer
+  Telefonkamera). `registration_id` und `field_key` werden gemeinsam nullbar
+  (`CHK_attachment_owner`), `CHK_attachment_area` hält die beiden Arten
+  auseinander — und `GET /api/admin/attachments/:id` bedient seither **nur**
+  Anmeldungsdateien, weil ein Veranstalter sonst mit einer Id an ein Bild aus
+  einem privaten Gespräch käme.
+- **Die eine Medienroute mit Berechtigung** (**F156**). Adressiert über die
+  **Nachricht**, nicht über die Datei; Sitzung über `@RequiresParticipant()`,
+  einen Dekorator, der nur verschärfen kann; ein wortgleiches 404 für „keine
+  Nachricht", „kein Bild" und „fremdes Gespräch"; `private, immutable` ohne `?v=`,
+  weil eine Nachricht nicht bearbeitet werden kann (E14). Der Veranstalter liest
+  dieselben Bytes nicht hier — sein Fenster kommt mit AP 10, unter seinem Präfix.
+- **Modulschalter `chat` mit Voraussetzung `profiles`** (E42) — womit die zweite
+  Hälfte des Abnahmekriteriums von AP 5 jetzt geprüft ist. **Nicht**
+  `profile-search` als Voraussetzung: ohne Verzeichnis lässt sich kein neues
+  Gespräch beginnen, die bestehenden bleiben lesbar, und eine Voraussetzung hätte
+  etwas Stärkeres und Falsches behauptet. Standardmäßig **an**, wie die beiden
+  Nachbarn: niemand ist erreichbar, bis er `searchable` selbst einschaltet.
+- **Migration `Conversations1787790700000`**: `conversation` (drei Arten, Form je
+  Art als **ein** `CHECK`), `conversation_member` (Primärschlüssel aus drei
+  Spalten, kein Fremdschlüssel auf `member_id` — E39), `message` (Index
+  `(conversation_id, created_at DESC, id DESC)`, eindeutiger Index auf
+  `attachment_id`), dazu die beiden neuen `attachment`-Constraints. `down`
+  einmal von Hand gefahren, mit 4 Gesprächen, 22 Nachrichten und 10 Bildern in
+  der Datenbank, und danach `up` wieder — beides fehlerfrei.
+
+Nachweise: Server-Units **966** (+35), Vertragstests **495** (+32, alle
+in der neuen Suite `api/chat.spec.ts`; die beiden Voraussetzungs-Tests in
+`modules.spec.ts` decken jetzt beide Schlüssel ab),
+`shared-models` **92** (+4), Nutzer-Client 141, Veranstalter-Client 169.
+Browsersuiten grün: 203 (+1 übersprungen) und 280 (+26 übersprungen) — der
+Veranstalter-Client zeigt die neue Zeile und ihre Voraussetzung, geprüft in
+`modules.spec.ts`. Katalog **781** (`modules.chat.title`, en und de).
+`nx run-many -t lint test build` über alle 13 Projekte fehlerfrei. Neue
+Entscheidungen: **F153**–**F159**.
+
+Was anders lief:
+
+- **Zwei Constraints trafen sich, und zusammen sagen sie mehr** (**F158**).
+  `message.attachment_id` ist `ON DELETE SET NULL`, damit eine gelöschte Datei
+  keine Nachricht löscht; `CHK_message_content` verlangt Text oder Bild. Also
+  lässt sich das Bild einer Nachricht **ohne** Text nicht löschen — die Zeile
+  wäre leer. Gefunden hat es der Aufräumcode der Vertragssuite, nicht der
+  Entwurf. Die Regel daraus ist eine Reihenfolge: Anhangs-Ids merken, Gespräch
+  löschen, dann die Anhänge.
+- **Der sechste Aufrufer zog die Paginierung um** (**F159**), und wie in AP 5 war
+  der Fund nicht die Wiederholung, sondern der Drift: vier von fünf Kopien wiesen
+  eine gebrochene Seitenzahl ab, die der Teilnehmerübersicht las `2.7` als Seite 2. Beobachtbar war das nie, weil jedes DTO `@IsInt()` trägt — und genau deshalb
+  hielt es fünf Kopien durch. Jetzt `business/common/page-window.ts`.
+- **Eine Route brauchte eine Sitzung, ohne es im Pfad sagen zu können.** Der
+  Präfix für gespeicherte Bytes ist `/api/media` (E19), der Guard hängt am
+  deklarierten Pfad (E33) — und ein Chatbild darf nicht öffentlich sein. Statt
+  die Route zu verschieben oder einen Guard mit zwei Cookies zu bauen (was E34
+  verbietet) gibt es `@RequiresParticipant()`: ein Dekorator, der **nur**
+  verschärfen kann, weshalb er das Argument von F69 nicht aufhebt. Mit zwei
+  Guard-Tests festgehalten.
+- **Zwei Anmeldungen für drei Menschen.** Das Login-Budget ist instanzweit
+  (20 je 5 min, E4) und die Kontosuiten verbrauchen schon vierzehn. Die dritte
+  Person der Chat-Suite ist deshalb geseedet: sie ist auffindbar und meldet sich
+  nie an, was für die Nichtmitglied-Fälle genügt — geschrieben wird **zu** ihr.
+- **Rohes SQL für zwei Lesezugriffe.** Die Ungelesen-Zahl ist eine korrelierte
+  Unterabfrage, die auf `cm.last_read_at` der äußeren Abfrage zeigt; ein
+  Query-Builder, der aliasqualifizierte Namen umschreibt, ist für eine Abfrage,
+  bei der genau das die Aussage ist, das falsche Werkzeug. Bewusste Ausnahme in
+  dieser Schicht, mit Begründung an der Konstante.
+- **Die Beispielzeile eines Tests war plötzlich falsch.**
+  `core-module-registry.service.spec.ts` benutzte `chat` als Beispiel für „ein
+  Schlüssel, dessen Deskriptor diese Version nicht ausliefert". Seit diesem Paket
+  gibt es den Deskriptor. Umgestellt auf `newsletter` — den einen Schlüssel, der
+  nie zurückkommt (F8).
+
+Offen aus diesem Paket: **der Purge der Bilder eines Gesprächs.** Das Löschen
+eines **Events** kaskadiert über `conversation` bis `message`, und eine Kaskade
+löscht Zeilen, keine Dateien (E9). Gruppengespräche entstehen erst in **AP 10**,
+also kann heute keine solche Zeile existieren; der Purge gehört dorthin, wo er
+gegen eine echte Gruppe geprüft werden kann. Steht in `todo.md`, und die
+Reihenfolge, die er braucht, steht in F158.

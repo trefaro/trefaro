@@ -294,6 +294,71 @@ export async function deleteProfileFields(keyPrefix: string): Promise<void> {
   ]);
 }
 
+/**
+ * Removes the conversations a suite created, and the pictures in them (E40).
+ *
+ * There is no endpoint for this, and there is no cascade either:
+ * `conversation_member.member_id` carries no foreign key on purpose (E39), so
+ * deleting the accounts leaves the conversations standing. The rows have to go
+ * all the same — a unique `direct_key` and a growing `messages/` subtree are
+ * both instance-wide.
+ *
+ * The order is the interesting part, and it is the order the real purge of AP
+ * 10 will need: **read the attachment ids, delete the conversations, then
+ * delete the attachments.** Deleting an attachment first does not work, and
+ * the reason is a pair of constraints meeting: `message.attachment_id` is
+ * `ON DELETE SET NULL`, so a removed file leaves the message standing (E40) —
+ * but a message that is a picture **alone** would then have neither text nor
+ * picture, which `CHK_message_content` forbids. Together the two say something
+ * sensible: you may take the file off a message that also has words, and you
+ * may not empty a message out. Whoever wants the file gone deletes the message.
+ *
+ * The **files** stay in the volume either way: SQL cannot unlink one, which is
+ * the same limitation the migration's `down` has.
+ */
+export async function deleteConversations(
+  ids: readonly string[],
+): Promise<void> {
+  if (ids.length === 0) return;
+
+  const pictures = await pool.query<{ attachment_id: string }>(
+    `SELECT attachment_id FROM message
+      WHERE conversation_id = ANY($1::uuid[]) AND attachment_id IS NOT NULL`,
+    [ids],
+  );
+
+  // Cascades through `message`, which is what frees the attachment rows.
+  await pool.query('DELETE FROM conversation WHERE id = ANY($1::uuid[])', [
+    ids,
+  ]);
+
+  const attachments = pictures.rows.map((row) => row.attachment_id);
+  if (attachments.length > 0) {
+    await pool.query('DELETE FROM attachment WHERE id = ANY($1::uuid[])', [
+      attachments,
+    ]);
+  }
+}
+
+/**
+ * The `attachment` row behind one message's picture (E40).
+ *
+ * There is no endpoint that hands out this id, and that is the point: the
+ * picture is addressed by the **message**, so a member never learns which file
+ * it is. The chat suite needs it to prove the other half of the rule — that
+ * `GET /api/admin/attachments/:id` answers 404 for it, because the organizer's
+ * download route serves the files a registration collected and nothing else.
+ */
+export async function messageAttachmentId(
+  messageId: string,
+): Promise<string | null> {
+  const result = await pool.query<{ attachment_id: string | null }>(
+    'SELECT attachment_id FROM message WHERE id = $1',
+    [messageId],
+  );
+  return result.rows[0]?.attachment_id ?? null;
+}
+
 export async function closeDatabase(): Promise<void> {
   await pool.end();
 }

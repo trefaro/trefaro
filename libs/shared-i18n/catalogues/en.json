@@ -645,6 +645,7 @@
   "mine.seats.full": "Full · {{count}} of {{capacity}} taken",
   "mine.signMeUp": "Sign me up",
   "mine.title": "My registration",
+  "modules.chat.title": "Messages",
   "modules.mediaLinks.title": "Media links",
   "modules.profileSearch.title": "Participant search",
   "modules.profiles.title": "Participant accounts",

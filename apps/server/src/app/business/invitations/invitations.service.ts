@@ -20,6 +20,7 @@ import {
   MAX_INVITATION_RECIPIENTS,
   invitationState,
 } from '@trefaro/shared-models';
+import { pageWindow } from '../common/page-window';
 import { EventSeriesService } from '../event-series';
 import { EventsService } from '../events';
 import { ContactsService } from '../registration';
@@ -88,16 +89,15 @@ export class InvitationsService {
   ): Promise<InvitationPage> {
     await this.series.getForOrganizer(seriesId);
 
-    const page = positiveInteger(query.page, 1);
-    const pageSize = clamp(
-      positiveInteger(query.pageSize, DEFAULT_INVITATION_PAGE_SIZE),
-      1,
+    const { page, pageSize, offset } = pageWindow(
+      query,
+      DEFAULT_INVITATION_PAGE_SIZE,
       MAX_INVITATION_PAGE_SIZE,
     );
 
     const slice = await this.invitations.findBySeries(
       seriesId,
-      (page - 1) * pageSize,
+      offset,
       pageSize,
     );
     // One query for every count on the page, not one per row.
@@ -242,14 +242,4 @@ function text(value: string, what: string): string {
     throw new BadRequestException(`An invitation needs a ${what}.`);
   }
   return trimmed;
-}
-
-function positiveInteger(value: number | undefined, fallback: number): number {
-  return Number.isInteger(value) && (value as number) > 0
-    ? (value as number)
-    : fallback;
-}
-
-function clamp(value: number, low: number, high: number): number {
-  return Math.min(Math.max(value, low), high);
 }

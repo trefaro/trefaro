@@ -7,13 +7,14 @@ import {
   type ProfileSearchQuery,
   type PublicProfile,
 } from '@trefaro/shared-models';
+import { pageWindow } from '../common/page-window';
 import { searchTerms } from '../common/search-terms';
 import { avatarUrl } from '../profiles';
 import {
   SEARCHABLE_PROFILE_REPOSITORY,
   type SearchableProfileRecord,
   type SearchableProfileRepository,
-} from './ports/searchable-profile.repository';
+} from '../common/ports/searchable-profile.repository';
 
 /**
  * What every unanswerable request about a profile says.
@@ -65,18 +66,17 @@ export class ProfileSearchService {
     viewerId: string,
     query: ProfileSearchQuery,
   ): Promise<ProfileSearchPage> {
-    const pageSize = clamp(
-      positive(query.pageSize, DEFAULT_PROFILE_SEARCH_PAGE_SIZE),
-      1,
+    const { page, pageSize, offset } = pageWindow(
+      query,
+      DEFAULT_PROFILE_SEARCH_PAGE_SIZE,
       MAX_PROFILE_SEARCH_PAGE_SIZE,
     );
-    const page = positive(query.page, 1);
 
     const slice = await this.profiles.search({
       terms: searchTerms(query.search),
       activityTerms: searchTerms(query.activityAreas),
       excludeId: viewerId,
-      offset: (page - 1) * pageSize,
+      offset,
       limit: pageSize,
     });
 
@@ -119,23 +119,4 @@ function toHit(profile: SearchableProfileRecord): ProfileSearchHit {
     avatarUrl: avatarUrl(profile.id, profile.avatarPath, profile.updatedAt),
     activityAreas: profile.activityAreas,
   };
-}
-
-/**
- * A page number that is not one falls back to the default.
- *
- * The same reading `ContactsService` takes: a zeroth page and a page of zero
- * rows are not smaller requests, they are no request — so they get the default
- * rather than the nearest legal value. The DTO refuses both with a 400 before
- * this runs; this is what keeps the service honest when it is called from
- * anywhere else.
- */
-function positive(value: number | undefined, fallback: number): number {
-  return Number.isInteger(value) && (value as number) > 0
-    ? (value as number)
-    : fallback;
-}
-
-function clamp(value: number, low: number, high: number): number {
-  return Math.min(Math.max(value, low), high);
 }

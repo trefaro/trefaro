@@ -32,7 +32,12 @@ diese Eigenschaft.
   entscheidet weiter. In AP 5 traf es `searchTerms`: zwei Kopien (Übersicht,
   Kontaktliste) waren **nicht** wortgleich — eine kappte bei fünf Wörtern, die
   andere nicht —, und das ist der Drift, den die Regel meint. Jetzt
-  `business/common/search-terms.ts`, mit der Kappung für alle drei. Und sie kann auch **gegen** das Teilen ausfallen: für ein
+  `business/common/search-terms.ts`, mit der Kappung für alle drei. In AP 6 traf es das **Fenster** einer
+  paginierten Liste: fünf Services hatten dieselben zwei privaten Helfer, der
+  Chat wäre der sechste gewesen — und wieder war der Fund der Drift (vier
+  Kopien wiesen `2.7` als Seitenzahl ab, die der Teilnehmerübersicht las sie als
+  Seite 2). Jetzt `business/common/page-window.ts`, mit der strengeren Lesart
+  (F159). Und sie kann auch **gegen** das Teilen ausfallen: für ein
   Oberflächenbauteil, das zwei Anwendungen bräuchten, wäre eine neue geteilte
   Bibliothek nötig — und die Liste der geteilten Libs kommt aus der Architektur
   der Thesis, nicht aus einem Arbeitspaket (F145).
@@ -57,6 +62,22 @@ diese Eigenschaft.
   Modul, dem die Konten gehören (E33). Der Weg über einen Port ist hier nicht
   Geschmack — `MailModule` kann `ProfilesModule` nicht importieren, weil dieses
   Mail verschickt.
+- **Ein Port, den zwei Module lesen, zieht nach `business/common/ports/`**
+  (F100) — und `SearchableProfileRepository` ist der Fall, an dem das mehr als
+  Ordnung ist: die Suche zeigt diese Profile, der Chat darf genau mit ihnen ein
+  Gespräch beginnen. Das ist nicht zweimal dieselbe bequeme Schnittstelle,
+  sondern **eine** Regel mit zwei Lesern (`searchable` ist das Opt-in für
+  gefunden **und** angeschrieben werden, E37), und ein zweiter Port wäre eine
+  zweite Gelegenheit, sie falsch zu treffen. Gefragt wird er nur beim
+  **Beginnen**: danach entscheidet Mitgliedschaft, sonst würde ein
+  zurückgenommener Schalter ein laufendes Gespräch stummschalten (E14).
+- **Rohes SQL ist in dieser Schicht erlaubt, wenn der Query-Builder das falsche
+  Werkzeug ist.** Die Ungelesen-Zahl des Chats ist eine **korrelierte**
+  Unterabfrage auf `cm.last_read_at` der äußeren Abfrage; ein Builder, der
+  aliasqualifizierte Namen umschreibt, ist für eine Abfrage, bei der genau die
+  Zuordnung der Aliase die Aussage ist, ungeeignet. Ausnahme mit Begründung an
+  der Konstante — und die Regel darüber bleibt: eine Liste ist eine Abfrage je
+  **Seite**, nie je Zeile (F49).
 - **Eine Regel, die nichts vergessen darf, gehört in die Anweisung** (F152).
   `SearchableProfileRepository` hat keine Methode, die ein Profil ohne Opt-in
   zurückgeben könnte: `searchable = true` und `confirmed_at IS NOT NULL` stehen
@@ -64,7 +85,12 @@ diese Eigenschaft.
   vergessen hätte, ist der, der **ein** Profil über seine Id holt — und dessen
   Fehler wäre nicht ein falsches Ergebnis, sondern ein veröffentlichtes Profil.
   Dasselbe Muster wie bei der Platzgrenze (F43): was nicht schiefgehen darf,
-  wird nicht oben geprüft, sondern unten unmöglich gemacht.
+  wird nicht oben geprüft, sondern unten unmöglich gemacht. Seit AP 6 zweimal
+  angewandt: `AttachmentRepository` trägt `registration_id IS NOT NULL` in
+  **jeder** Anweisung, also kann die Download-Route des Veranstalters ein
+  Chatbild nicht ausliefern (F155), und `ConversationRepository` hat keine
+  Methode ohne den Mitgliedschafts-Join — „nicht deins" und „gibt es nicht"
+  werden dadurch dieselbe Antwort, ohne dass ein Aufrufer daran denken muss.
 - **Eine Liste darf nicht eine Abfrage je Zeile werden** (F49) — und das gilt
   auch, wenn die Zeilen aus einem anderen Modul kommen: `EventsService.locate`
   ist drei Abfragen, also hat „meine Anmeldungen" `locateMany(ids, locale)`

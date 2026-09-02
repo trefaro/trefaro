@@ -116,14 +116,22 @@ test.describe('the module administration in the browser', () => {
     // flag. A switch wired to nothing is a prop, and it becomes visible the
     // moment an organizer is shown the list — so a key is listed here together
     // with the code behind it, never before. `profiles` earned its row back in
-    // AP 1 of phase 3, `profile-search` in AP 5; `chat` has not yet.
-    for (const withdrawn of ['newsletter', 'chat']) {
-      await expect(row(page, withdrawn)).toHaveCount(0);
-    }
+    // AP 1 of phase 3, `profile-search` in AP 5 and `chat` in AP 6.
+    // `newsletter` never will: there is no newsletter module (F8).
+    await expect(row(page, 'newsletter')).toHaveCount(0);
 
-    await expect(row(page, 'profiles')).toContainText(
-      t('modules.profiles.title'),
-    );
+    // Key and name spelled out in pairs rather than derived from one another:
+    // an identifier and a name are different things, which is why every
+    // descriptor declares its `titleKey` (`media-links` could not spell its
+    // own).
+    const returned = [
+      ['profiles', 'modules.profiles.title'],
+      ['profile-search', 'modules.profileSearch.title'],
+      ['chat', 'modules.chat.title'],
+    ] as const;
+    for (const [key, titleKey] of returned) {
+      await expect(row(page, key)).toContainText(t(titleKey));
+    }
   });
 
   test('names in the row what a module needs before it can be on (E42)', async ({
@@ -135,6 +143,11 @@ test.describe('the module administration in the browser', () => {
     // be able to read why in the row rather than discover it from a 409 —
     // which is the whole reason the prerequisite travels in the payload.
     await expect(row(page, 'profile-search')).toContainText(
+      t('admin.modules.requires', { modules: t('modules.profiles.title') }),
+    );
+    // The chat says the same thing, and its prerequisite arrived with its
+    // module in AP 6.
+    await expect(row(page, 'chat')).toContainText(
       t('admin.modules.requires', { modules: t('modules.profiles.title') }),
     );
     // And nothing of the sort where there is nothing to need.

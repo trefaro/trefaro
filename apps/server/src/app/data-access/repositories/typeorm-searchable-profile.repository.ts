@@ -6,7 +6,7 @@ import type {
   SearchableProfileRepository,
   SearchableProfileSearch,
   SearchableProfileSlice,
-} from '../../business/profile-search/ports/searchable-profile.repository';
+} from '../../business/common/ports/searchable-profile.repository';
 import { UserProfileEntity } from '../entities';
 
 /**

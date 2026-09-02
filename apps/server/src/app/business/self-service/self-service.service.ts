@@ -16,6 +16,7 @@ import {
   DEFAULT_MY_REGISTRATION_PAGE_SIZE,
   MAX_MY_REGISTRATION_PAGE_SIZE,
 } from '@trefaro/shared-models';
+import { pageWindow } from '../common/page-window';
 import { EventsService, type EventLocation } from '../events';
 import { ProgramService, ProgramSignupsService } from '../program';
 import { ParticipantsService } from '../registration';
@@ -143,16 +144,15 @@ export class SelfServiceService {
     query: { readonly page?: number; readonly pageSize?: number },
     locale?: string,
   ): Promise<MyRegistrationPage> {
-    const page = positiveInteger(query.page, 1);
-    const pageSize = clamp(
-      positiveInteger(query.pageSize, DEFAULT_MY_REGISTRATION_PAGE_SIZE),
-      1,
+    const { page, pageSize, offset } = pageWindow(
+      query,
+      DEFAULT_MY_REGISTRATION_PAGE_SIZE,
       MAX_MY_REGISTRATION_PAGE_SIZE,
     );
 
     const slice = await this.registrations.searchByAddress({
       email: email.trim().toLowerCase(),
-      offset: (page - 1) * pageSize,
+      offset,
       limit: pageSize,
     });
 
@@ -390,15 +390,4 @@ function toSummary(
 /** An address is the identity, and identities are not case-sensitive (E31). */
 function sameAddress(left: string, right: string): boolean {
   return left.trim().toLowerCase() === right.trim().toLowerCase();
-}
-
-/** A page number that is not one falls back to the first, like everywhere else. */
-function positiveInteger(value: number | undefined, fallback: number): number {
-  return Number.isInteger(value) && (value as number) > 0
-    ? (value as number)
-    : fallback;
-}
-
-function clamp(value: number, low: number, high: number): number {
-  return Math.min(Math.max(value, low), high);
 }

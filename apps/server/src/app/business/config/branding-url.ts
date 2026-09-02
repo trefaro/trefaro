@@ -21,7 +21,17 @@ import type { AppConfigRecord } from './ports/app-config.repository';
  *   URL before they could paint a stale image.
  */
 
-/** Public URL prefix under which files stored by this instance are served. */
+/**
+ * URL prefix under which the stored images of this instance are served.
+ *
+ * Public for all of them but one. `…/branding/*`, `…/series/:id/logo`,
+ * `…/events/:id/logo` and `…/profiles/:id/avatar` need no session, each for a
+ * reason of its own (F113, F115, F124); `…/messages/:id/attachment` needs one
+ * **and** a membership, because a picture inside a private conversation is
+ * content rather than a mark (E40). One prefix all the same: what these routes
+ * share is that they resolve stored bytes through a row and never through a
+ * path in the URL, and that is what the prefix is for.
+ */
 export const MEDIA_URL_PREFIX = '/api/media';
 
 /**

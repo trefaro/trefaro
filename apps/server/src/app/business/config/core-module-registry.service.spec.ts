@@ -79,17 +79,19 @@ describe('CoreModuleRegistryService', () => {
   });
 
   it('ignores a flag whose descriptor this version no longer ships', async () => {
-    // `chat` was a core module key until AP 4 of phase 2 and comes back with its
-    // module in phase 3 (E21). The row is left alone — switching a module off
-    // deletes nothing, and neither does withdrawing its descriptor — so an
-    // instance that had it on finds it on again. Until then nothing answers for
-    // it.
-    await repository.setEnabled('chat', true);
+    // Five placeholder keys were withdrawn in AP 4 of phase 2 (E21) and their
+    // rows were left alone — switching a module off deletes nothing, and
+    // neither does withdrawing its descriptor — so an instance that had one on
+    // finds it on again the day the module arrives. Three of them have:
+    // `profiles` in AP 1 of phase 3, `profile-search` in AP 5, `chat` in AP 6.
+    // `newsletter` is the one that never will (F8), and it is what this test
+    // uses: nothing answers for a key no descriptor claims.
+    await repository.setEnabled('newsletter', true);
     await service.onApplicationBootstrap();
 
-    expect(service.isEnabled('chat')).toBe(false);
-    expect(service.enabledKeys()).not.toContain('chat');
-    expect(repository.rows.get('chat')?.enabled).toBe(true);
+    expect(service.isEnabled('newsletter')).toBe(false);
+    expect(service.enabledKeys()).not.toContain('newsletter');
+    expect(repository.rows.get('newsletter')?.enabled).toBe(true);
   });
 
   it('answers no for a module key that is not a core module', async () => {
@@ -107,6 +109,7 @@ describe('CoreModuleRegistryService', () => {
     await service.onApplicationBootstrap();
 
     expect(service.enabledKeys()).toEqual([
+      'chat',
       'media-links',
       'profile-search',
       'profiles',
@@ -123,6 +126,7 @@ describe('CoreModuleRegistryService', () => {
     expect(service.all().map((module) => module.key)).toEqual([
       'profiles',
       'profile-search',
+      'chat',
       'media-links',
       'push',
     ]);

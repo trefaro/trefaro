@@ -5,7 +5,7 @@ import type {
   SearchableProfileRepository,
   SearchableProfileSearch,
   SearchableProfileSlice,
-} from './ports/searchable-profile.repository';
+} from '../common/ports/searchable-profile.repository';
 
 /**
  * The participant search (FR 4.4) — AP 5.
