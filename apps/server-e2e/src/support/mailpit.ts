@@ -88,6 +88,21 @@ export function confirmationTokenFrom(mail: CapturedMail): string {
 }
 
 /**
+ * The `token` of the account confirmation link in a message (FR 4.1, E32).
+ *
+ * A different path from the registration confirmation on purpose: an account and
+ * a registration are confirmed by two different mails, on two different days,
+ * and a helper that matched both would let one suite pass on the other's mail.
+ */
+export function accountConfirmationTokenFrom(mail: CapturedMail): string {
+  const match = /profile\/confirm\?token=([A-Za-z0-9_.%-]+)/.exec(mail.text);
+  if (!match) {
+    throw new Error(`No account confirmation link in "${mail.subject}"`);
+  }
+  return decodeURIComponent(match[1]);
+}
+
+/**
  * The `token` of the personal self-service link in a message (E11).
  *
  * Only the receipt carries one — the confirmation request deliberately does not,

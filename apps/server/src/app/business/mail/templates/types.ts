@@ -57,6 +57,33 @@ export interface ReceiptMailContext extends RegistrationMailContext {
 }
 
 /**
+ * The double opt-in for a participant account (FR 4.1, E32).
+ *
+ * No event: an account belongs to the person and not to an event, which is the
+ * same reason the profile field kit is instance-wide (E35). The only mail in
+ * this application that says nothing about a date.
+ */
+export interface ProfileConfirmationMailContext {
+  readonly firstName: string;
+  /** Where the participant confirms — a page, not the API (E5b). */
+  readonly confirmUrl: string;
+}
+
+/**
+ * What is sent when somebody registers an address that already has an account.
+ *
+ * The counterpart to E32 on the outgoing side: the form answers the same way
+ * whether the address was known or not, so the difference has to be in the
+ * message — which only its recipient reads. It carries no token, because there
+ * is nothing to authorize; re-sending it is harmless by construction.
+ */
+export interface ProfileExistsMailContext {
+  readonly firstName: string;
+  /** The login page of the participant client. */
+  readonly loginUrl: string;
+}
+
+/**
  * An invitation to former participants of a series (FR 2.4, F24).
  *
  * The organizer writes `subject` and the paragraphs; the template writes

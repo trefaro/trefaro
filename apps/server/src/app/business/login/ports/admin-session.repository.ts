@@ -1,3 +1,4 @@
+import type { ResolvedSession } from '../../common/resolved-session';
 import type { AdminUserRecord } from './admin-user.repository';
 
 /**
@@ -18,12 +19,8 @@ export interface NewAdminSession {
 }
 
 /** Who is behind the current request, and which session says so. */
-export interface AuthenticatedAdmin {
-  readonly sessionId: string;
+export interface AuthenticatedAdmin extends ResolvedSession {
   readonly admin: AdminUserRecord;
-  readonly lastSeenAt: Date;
-  /** When the session lapses if it is not used again. */
-  readonly expiresAt: Date;
 }
 
 export interface AdminSessionRepository {

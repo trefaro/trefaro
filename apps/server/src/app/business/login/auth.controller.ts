@@ -19,8 +19,9 @@ import {
 } from '@nestjs/swagger';
 import { Throttle, minutes } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
+import { AllowAnonymous } from '../common/allow-anonymous';
+import { LOGIN_ATTEMPTS_PER_WINDOW } from '../common/login-throttle';
 import { AdminUserService, toAdminSummary } from './admin-user.service';
-import { AllowAnonymous } from './admin.guard';
 import { CurrentAdmin } from './current-admin.decorator';
 import { AdminSessionInfoDto, toAdminAccountDto } from './dto/admin.dto';
 import { AdminLoginDto } from './dto/login.dto';
@@ -35,15 +36,6 @@ import { ENV } from '../../core/config/env.module';
 
 /** Kept short so a stray value cannot fill the column. */
 const USER_AGENT_MAX_LENGTH = 512;
-
-/**
- * Login attempts allowed per address per five minutes.
- *
- * Exported because two things outside this file depend on the number:
- * `tools/spike-verification/verify-admin-access.mjs`, which proves the block
- * actually happens, and the end-to-end suites, which have to stay below it.
- */
-export const LOGIN_ATTEMPTS_PER_WINDOW = 20;
 
 /**
  * Administrative login (UC 01, FR 1.3).
@@ -64,13 +56,8 @@ export class AuthController {
   @Post('login')
   // No session exists yet — the one route below `admin/` that cannot require one.
   @AllowAnonymous()
-  // Twenty attempts per five minutes, then fifteen minutes of silence. The
-  // block is what makes guessing pointless — roughly 1 900 attempts a day
-  // against an argon2id hash of a passphrase of at least twelve characters is
-  // not an attack, it is a rounding error. A tighter count was tried first and
-  // rejected for a practical reason worth writing down: the whole test suite
-  // logs in from a single address, and a limit it cannot survive gets relaxed
-  // for tests, which is how a limit stops being tested at all.
+  // Twenty attempts per five minutes, then fifteen minutes of silence; the
+  // reasoning is with the constant, which the participant login shares.
   @Throttle({
     default: {
       limit: LOGIN_ATTEMPTS_PER_WINDOW,

@@ -106,7 +106,7 @@ describe('CoreModuleRegistryService', () => {
     await repository.setEnabled('push', true);
     await service.onApplicationBootstrap();
 
-    expect(service.enabledKeys()).toEqual(['media-links', 'push']);
+    expect(service.enabledKeys()).toEqual(['media-links', 'profiles', 'push']);
   });
 
   it('lists every optional module, enabled or not — and only modules that exist', async () => {
@@ -116,6 +116,7 @@ describe('CoreModuleRegistryService', () => {
     // nothing else: a key nothing reads would be a switch wired to nothing
     // (E21).
     expect(service.all().map((module) => module.key)).toEqual([
+      'profiles',
       'media-links',
       'push',
     ]);

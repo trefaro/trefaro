@@ -8,8 +8,11 @@ import {
 } from '@nestjs/common';
 import type { TrefaroEnv } from '../../core/config/env';
 import { ENV } from '../../core/config/env.module';
-import { PasswordHasher } from './password-hasher.service';
-import { describePasswordPolicy, isUsablePassword } from './password-policy';
+import { PasswordHasher } from '../common/password-hasher.service';
+import {
+  describePasswordPolicy,
+  isUsablePassword,
+} from '../common/password-policy';
 import {
   ADMIN_USER_REPOSITORY,
   AdminEmailTakenError,

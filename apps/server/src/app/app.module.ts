@@ -19,7 +19,7 @@ import {
   PluginManagerModule,
 } from './business/plugin-manager';
 import { ProfileSearchModule } from './business/profile-search/profile-search.module';
-import { ProfilesModule } from './business/profiles/profiles.module';
+import { ProfilesModule } from './business/profiles';
 import { ProgramModule } from './business/program';
 import { PushModule } from './business/push';
 import { RegistrationModule } from './business/registration';
@@ -100,6 +100,7 @@ import { DataAccessModule } from './data-access/data-access.module';
     MailModule,
 
     // Community features.
+    // Participant accounts first: everything else in this family needs one.
     ProfilesModule,
     ProfileSearchModule,
     ChatModule,

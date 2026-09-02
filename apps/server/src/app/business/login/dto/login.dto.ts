@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import type { AdminLoginRequest } from '@trefaro/shared-models';
 import { IsEmail, IsString, Length, MaxLength } from 'class-validator';
-import { MAX_ADMIN_PASSWORD_LENGTH } from '../password-policy';
+import { MAX_PASSWORD_LENGTH } from '../../common/password-policy';
 
 export class AdminLoginDto implements AdminLoginRequest {
   @ApiProperty({ example: 'organizer@example.org' })
@@ -15,6 +15,6 @@ export class AdminLoginDto implements AdminLoginRequest {
       'The upper bound keeps a request from making the server hash megabytes.',
   })
   @IsString()
-  @Length(1, MAX_ADMIN_PASSWORD_LENGTH)
+  @Length(1, MAX_PASSWORD_LENGTH)
   password!: string;
 }

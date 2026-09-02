@@ -14,4 +14,13 @@ dass das Werkzeug etwas anderes tut als erwartet.
   das Projektverzeichnis. Wer in einem Servertest eine Datei des Arbeitsbereichs
   liest, **sucht sie nach oben**, statt einen Pfad zu raten.
 
+- **Eine schon gelaufene Migration läuft nicht erneut.** Es gibt kein
+  Migrations-CLI in diesem Repository — der Server migriert beim Start. Wer eine
+  Migration des laufenden Arbeitspakets **nachträglich ergänzt**, sieht die
+  Ergänzung nie: der Name steht schon in `migrations`. Zurückrollen heißt hier,
+  das eigene `down` von Hand zu fahren
+  (`docker exec trefaro-postgres psql -U trefaro -d trefaro`) und die Zeile aus
+  `migrations` zu löschen. Das ist zugleich die einzige Stelle, an der `down`
+  wirklich geprüft wird — die Regel „einmal wirklich ausgeführt" meint genau das.
+
 Siehe auch: [Browsersuiten und E2E-Tests](e2e-tests.md), [Schichten und Ports im Server](server-layers.md).

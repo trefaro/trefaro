@@ -7,12 +7,13 @@ einmal schiefgegangen.**
 Das ist keine zweite Anforderungsanalyse. Die Begründung jeder Entscheidung steht
 ausführlich woanders und wird hier nur mit ihrer Nummer zitiert:
 
-- **F1–F112** — Entscheidungsprotokoll in
+- **F1–F117** — Entscheidungsprotokoll in
   [`docs/Anforderungsanalyse_und_Umsetzungsplan.md`](../Anforderungsanalyse_und_Umsetzungsplan.md)
   (F62 wurde nie vergeben; F70 beantwortet, was für sie geplant war).
 - **E1–E16** — Phase 1, [`docs/PHASE1.md`](../PHASE1.md).
 - **E17–E30** — Phase 2, [`docs/PHASE2.md`](../PHASE2.md) (die Zählung läuft über
   die Phasen weiter).
+- **E31–E45** — Phase 3, [`docs/PHASE3.md`](../PHASE3.md).
 - **NFR / FR** — nummeriert wie im Anforderungsdokument.
 
 ## Vor der Arbeit an … zuerst lesen

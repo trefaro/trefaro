@@ -7,6 +7,16 @@ Diese Formen sind mehrfach gegen Alternativen entschieden worden; die
 Alternativen waren jeweils ein offener Endpunkt, eine Sackgasse oder ein toter
 Link.
 
+- **Drei Präfixe, drei Zugangsstufen** (E33): `/api/user` ist der anonyme
+  Besucher, `/api/participant` der angemeldete Mensch, `/api/admin` der
+  Veranstalter. Jede Stufe hat ihren Guard am **deklarierten** Pfad und ihr
+  eigenes Cookie (E34) — `trefaro_admin_session` und `trefaro_user_session`
+  können gleichzeitig offen sein, und **kein** Guard akzeptiert das Cookie des
+  anderen. `/api/user` kann den Schutz nicht bekommen (Startseite, Landingpage,
+  Programm, Anmeldeformular, tokenbasierte Selbstbedienung), deshalb ein neuer
+  Präfix statt einer Ausnahmeliste. Konto **anlegen** und **bestätigen** bleiben
+  bei `/api/user` — dabei ist niemand angemeldet. `AllowAnonymous` liegt in
+  `business/common/`, weil zwei Guards es lesen (F100).
 - **Der Admin-Schutz hängt am URL-Präfix `/api/admin`** (E16), nicht an einem
   Dekorator — ein vergessenes `@UseGuards` in einem Plug-in wäre ein offener
   Endpunkt. `isAdminPath` liest jeden _deklarierten_ Pfad einzeln und
@@ -43,6 +53,16 @@ Link.
   Attrappe. Wer den Schalter zur Laufzeit umlegt, ruft `refresh()` — und die
   Modulverwaltung liest den Zustand aus den **Registries**, nie aus der Tabelle;
   ein unbekannter Schlüssel ist ein 404, keine neue Zeile.
+- **Ein zurückkehrender Modulschlüssel bringt eine Altlast mit.** Phase 2 zog
+  fünf Attrappen-Deskriptoren zurück und ließ ihre `module_config`-Zeilen liegen
+  („Abschalten löscht nie Daten"). Für eine `true`-Zeile ist das richtig — jemand
+  hat sie gewollt. Für eine **`false`**-Zeile nicht: sie ist der Vorgabewert einer
+  Zeit, in der der Schalter nichts tat, und sie überstimmt den Deskriptor
+  stillschweigend am Tag, an dem das Modul wirklich kommt — der Veranstalter
+  findet es aus, ohne es je ausgeschaltet zu haben. Deshalb löscht die Migration
+  des Arbeitspakets die `false`-Zeile des zurückkehrenden Schlüssels;
+  `ensureDefaults` schreibt sie beim nächsten Start aus dem Deskriptor neu. Gilt
+  noch für `chat` und `profile-search`.
 - **Das Selbstbedienungs-Token steht beim Lesen in der Query, beim Ändern im
   Rumpf** (F44): Lesen ist, was der Link in der Mail tut; ändern darf kein
   Linkvorschau-Dienst können. Nur eine **bestätigte** Anmeldung hat eine

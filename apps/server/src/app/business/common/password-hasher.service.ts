@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { argon2id, hash, verify } from 'argon2';
 
 /**
- * Password hashing for administrator accounts.
+ * Password hashing for every account this instance has — organizers (FR 1.2)
+ * and participants (FR 4.1).
  *
  * argon2id at the library's defaults: memory-hard, which is what makes an
  * offline attack on a stolen database expensive. The parameters are not
@@ -31,7 +32,7 @@ export class PasswordHasher {
    * Spends the time a real verification would take.
    *
    * Called when no account matched the address, so that response times do not
-   * tell an attacker which addresses have an administrator account.
+   * tell an attacker which addresses have an account here.
    */
   async equalizeTiming(password: string): Promise<void> {
     this.decoyHash ??= this.hash('trefaro-timing-equalizer');

@@ -20,6 +20,8 @@ export type {
   InvitationMailContext,
   MailEvent,
   MailTemplate,
+  ProfileConfirmationMailContext,
+  ProfileExistsMailContext,
   ReceiptMailContext,
   RegistrationMailContext,
   RenderedMail,

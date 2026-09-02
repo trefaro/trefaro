@@ -5,17 +5,14 @@ import {
   OnApplicationBootstrap,
   OnApplicationShutdown,
 } from '@nestjs/common';
-import { createHash, randomBytes } from 'node:crypto';
 import type { TrefaroEnv } from '../../core/config/env';
 import { ENV } from '../../core/config/env.module';
+import { hashSessionToken, newSessionToken } from '../common/session-token';
 import {
   ADMIN_SESSION_REPOSITORY,
   type AdminSessionRepository,
   type AuthenticatedAdmin,
 } from './ports/admin-session.repository';
-
-/** 256 bits of randomness — the token is the only thing standing in the door. */
-const SESSION_TOKEN_BYTES = 32;
 
 /**
  * How stale a session's last-seen stamp may get before a request refreshes it.
@@ -30,11 +27,6 @@ export interface IssuedSession {
   /** The value that travels in the cookie. Never stored, only its hash. */
   readonly token: string;
   readonly expiresAt: Date;
-}
-
-/** The stored form of a session token. */
-export function hashSessionToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
 }
 
 /**
@@ -75,7 +67,7 @@ export class SessionService
     adminUserId: string,
     userAgent: string | null,
   ): Promise<IssuedSession> {
-    const token = randomBytes(SESSION_TOKEN_BYTES).toString('base64url');
+    const token = newSessionToken();
     const expiresAt = this.expiryFrom(new Date());
 
     await this.sessions.create({

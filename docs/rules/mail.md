@@ -20,9 +20,17 @@ gröber als in der Oberfläche.
   diese Entscheidung an der Aufrufstelle sichtbar ist.
 - **Keine Schnittstelle nimmt eine E-Mail-Adresse an, um etwas hinzuschicken**
   (F55). Die Adresse kommt beim Verfassen über den Fremdschlüssel.
-- **Die Texte kommen aus demselben Katalog wie die Oberfläche** (21 Schlüssel
-  unter `mail.`). Je Mail **ein** `MailTemplate` aus Schlüsselliste **und**
-  Renderer (F87) — eine daneben geführte Liste driftet, und dann prüft E24 die
+- **Eine immer gleiche Antwort braucht eine Mail, die den Unterschied trägt**
+  (E32). Das Registrierungsformular für ein Konto antwortet identisch, ob die
+  Adresse unbekannt, unbestätigt oder längst in Benutzung ist — den Unterschied
+  erfährt nur das Postfach: entweder der Bestätigungslink oder „es gibt schon ein
+  Konto" (ohne Token, ohne Wirkung). Daraus folgt eine Regel, die man leicht
+  bricht: **auch der Fehlschlag muss gleich aussehen.** Ein 503 bei
+  unerreichbarem Mailserver für die eine und ein 200 für die andere Adresse wäre
+  genau die Auskunft, die das Formular nicht geben darf.
+- **Die Texte kommen aus demselben Katalog wie die Oberfläche** (30 Schlüssel
+  unter `mail.`, sechs Mails). Je Mail **ein** `MailTemplate` aus Schlüsselliste
+  **und** Renderer (F87) — eine daneben geführte Liste driftet, und dann prüft E24 die
   falsche Menge.
 - **Die Einheit des Rückfalls ist eine Mail** (E24, F87), nicht der Katalog und
   nicht ein Schlüssel: wer die drei Anmeldemails übersetzt hat und die Einladung

@@ -18,7 +18,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { SETUP_TOKEN_HEADER } from '@trefaro/shared-models';
-import { AllowAnonymous } from '../login';
+import { AllowAnonymous } from '../common/allow-anonymous';
 import {
   CompleteSetupDto,
   SetupResultDto,

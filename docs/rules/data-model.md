@@ -75,6 +75,22 @@ Entscheidungsprotokoll (`docs/Anforderungsanalyse_und_Umsetzungsplan.md`).
 - **Ein Widerspruch gehört dem Menschen, nicht der Zeile** (F57): `contact_opt_out`
   wird auf **allen** Anmeldungen einer Adresse in der ganzen Instanz gesetzt; nur
   die noch nicht widersprochenen werden gezählt.
+- **Die Adresse ist der Mensch** (E31): `user_profile.email` ist instanzweit
+  eindeutig (`lower(email)`) und **die** Identität eines Teilnehmerkontos.
+  `registration` bekommt **keine** `user_id` — die Anmeldungen einer Person
+  werden über Adressgleichheit gefunden, wie ein Widerspruch über alle
+  Anmeldungen einer Adresse gilt (F57). Kein Verknüpfungslauf für bestehende
+  Zeilen, keine zweite Wahrheit. Preis: die Adresse ist im Profil
+  **unveränderlich** — `UserProfileChanges` kennt sie nicht.
+- **Eine Teilnehmersitzung ist eine zweite Tabelle, keine Rollenspalte** (E34).
+  `user_session` neben `admin_session`, gleiche Form, gleicher Sweep, ohne
+  `user_agent` (nichts zeigt einem Teilnehmer seine Sitzungen). Eine gemeinsame
+  Tabelle mit Rolle hätte die Rechteprüfung ins Cookie verlegt.
+- **`confirmed_at` ist der Double-Opt-In, nicht ein Statusfeld** (E32): `NULL`
+  heißt „noch nicht bestätigt", und vor dem Datum wird **keine** Sitzung
+  ausgegeben. Ein erneuter Registrierungsversuch auf eine **unbestätigte**
+  Adresse darf Name und Passwort überschreiben (es gab noch keine Sitzung); auf
+  eine **bestätigte** darf er nichts anfassen — der Endpunkt ist öffentlich.
 - **Eine Übersetzung hängt an einem echten Fremdschlüssel** (F93): drei Tabellen
   mit `(elternteil_id, locale)` und `ON DELETE CASCADE`, keine polymorphe
   `(entity_type, entity_id)`-Tabelle. Jede Textspalte nullbar — `NULL` heißt „nimm

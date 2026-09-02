@@ -6,6 +6,8 @@ import type {
   ConfirmationMailContext,
   InvitationMailContext,
   MailTemplate,
+  ProfileConfirmationMailContext,
+  ProfileExistsMailContext,
   ReceiptMailContext,
   RegistrationMailContext,
 } from './templates';
@@ -89,6 +91,34 @@ export class MailService {
     context: InvitationMailContext,
   ): Promise<void> {
     await this.send(MAIL_TEMPLATES.invitation, to, context);
+  }
+
+  /**
+   * The double opt-in for a new participant account (FR 4.1, E32).
+   * @throws MailDeliveryError
+   */
+  async sendProfileConfirmation(
+    to: string,
+    context: ProfileConfirmationMailContext,
+  ): Promise<void> {
+    await this.send(MAIL_TEMPLATES.profileConfirmation, to, context);
+  }
+
+  /**
+   * Tells somebody that the address they registered already has an account.
+   *
+   * Transactional and harmless: it carries no token and changes nothing, which
+   * is what makes it safe to send on every repeated attempt. Not affected by
+   * `contact_opt_out` (F59) — it is not an invitation, it is the answer the
+   * registration form is not allowed to give (E32).
+   *
+   * @throws MailDeliveryError
+   */
+  async sendProfileExists(
+    to: string,
+    context: ProfileExistsMailContext,
+  ): Promise<void> {
+    await this.send(MAIL_TEMPLATES.profileExists, to, context);
   }
 
   private async send<Context>(

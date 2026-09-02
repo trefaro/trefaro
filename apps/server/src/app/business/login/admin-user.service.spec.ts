@@ -1,7 +1,7 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import type { TrefaroEnv } from '../../core/config/env';
 import { AdminUserService } from './admin-user.service';
-import type { PasswordHasher } from './password-hasher.service';
+import type { PasswordHasher } from '../common/password-hasher.service';
 import {
   AdminEmailTakenError,
   type AdminUserRecord,

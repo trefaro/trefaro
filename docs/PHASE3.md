@@ -1,8 +1,8 @@
 # Phase 3 — Profile, Kommunikation und Community-Kern
 
-**Status: geplant** (02.09.2026). Kein Arbeitspaket ist begonnen. Dieses
-Dokument ist der **Plan**; er wird ab AP 1 nicht mehr rückwirkend korrigiert,
-sondern unten unter _Fortschritt_ fortgeschrieben — wie in
+**Status: in Arbeit** (seit 02.09.2026, AP 1 erledigt). Der Teil oberhalb von
+_Fortschritt_ ist der **Plan** und wird nicht mehr rückwirkend korrigiert; was
+tatsächlich passierte, steht unten je Paket — wie in
 [`PHASE1.md`](PHASE1.md) und [`PHASE2.md`](PHASE2.md).
 
 Grundlage: Kapitel 6, Phase 3 in
@@ -50,21 +50,21 @@ der Usability-Test (Phase 5); Gamification (FR 4.9, bewusst nie).
 
 ### Drin
 
-| FR / Quelle       | Inhalt                                                             | Arbeitspaket |
-| ----------------- | ------------------------------------------------------------------ | ------------ |
-| 4.1 · 4.2         | Teilnehmerkonto, Double-Opt-In, Login, Sitzung, Passwort           | AP 1         |
-| 4.3               | Profil verwalten: Name, Bild, Sprache, Tätigkeitsbereich, Felder   | AP 2         |
-| 4.1–4.3           | Login, Registrierung und Profil im Nutzer-Client                   | AP 3         |
-| 3.3 · 4.7         | Die Anmeldung kennt den Menschen: Profilspalte, Selbstbedienung    | AP 4         |
-| 4.4               | Profilsuche mit Sichtbarkeits-Opt-in                               | AP 5         |
-| 4.5               | Gespräche, Nachrichten und Bilder — ohne Echtzeit                  | AP 6         |
-| 4.5 · F9          | Echtzeit: authentifizierter Handshake, Räume, Zustellung           | AP 7         |
-| 4.5               | Chat im Nutzer-Client                                              | AP 8         |
-| 3.4 · UC 14 · F11 | Organisator-Kontakt ohne Registrierung, Antwort per Mail           | AP 9         |
-| 3.4               | Nachrichtenübersicht im Veranstalter-Client                        | AP 10        |
-| 3.15              | Push wird echt: Versand bei Event-Änderungen, Zuordnung zum Konto  | AP 11        |
-| 4.7 · 4.8         | Eigene Anmeldung stornieren, Newsletter-Opt-In-Verwaltung (beide P3) | AP 12      |
-| —                 | Phasenabschluss                                                    | AP 13        |
+| FR / Quelle       | Inhalt                                                               | Arbeitspaket |
+| ----------------- | -------------------------------------------------------------------- | ------------ |
+| 4.1 · 4.2         | Teilnehmerkonto, Double-Opt-In, Login, Sitzung, Passwort             | AP 1         |
+| 4.3               | Profil verwalten: Name, Bild, Sprache, Tätigkeitsbereich, Felder     | AP 2         |
+| 4.1–4.3           | Login, Registrierung und Profil im Nutzer-Client                     | AP 3         |
+| 3.3 · 4.7         | Die Anmeldung kennt den Menschen: Profilspalte, Selbstbedienung      | AP 4         |
+| 4.4               | Profilsuche mit Sichtbarkeits-Opt-in                                 | AP 5         |
+| 4.5               | Gespräche, Nachrichten und Bilder — ohne Echtzeit                    | AP 6         |
+| 4.5 · F9          | Echtzeit: authentifizierter Handshake, Räume, Zustellung             | AP 7         |
+| 4.5               | Chat im Nutzer-Client                                                | AP 8         |
+| 3.4 · UC 14 · F11 | Organisator-Kontakt ohne Registrierung, Antwort per Mail             | AP 9         |
+| 3.4               | Nachrichtenübersicht im Veranstalter-Client                          | AP 10        |
+| 3.15              | Push wird echt: Versand bei Event-Änderungen, Zuordnung zum Konto    | AP 11        |
+| 4.7 · 4.8         | Eigene Anmeldung stornieren, Newsletter-Opt-In-Verwaltung (beide P3) | AP 12        |
+| —                 | Phasenabschluss                                                      | AP 13        |
 
 ### Bewusst draußen
 
@@ -390,35 +390,35 @@ Nachrichtenübersicht). Der Eintrag bleibt Entwurf, bis ihn etwas liest (Regel
 
 ## API-Oberfläche
 
-| Methode + Pfad                                    | Zweck                                                          | AP  |
-| ------------------------------------------------- | -------------------------------------------------------------- | --- |
-| `POST /api/user/profiles`                         | FR 4.1: Konto anlegen, antwortet immer gleich (E32)            | 1   |
-| `POST /api/user/profiles/confirm`                 | Double-Opt-In über den signierten Link (E32)                   | 1   |
-| `POST /api/participant/auth/login` · `logout`              | FR 4.2, `@AllowAnonymous()`, Drosselung wie beim Admin          | 1   |
-| `GET /api/participant/me`| Wer bin ich — die Antwort, die der Client beim Start braucht    | 1   |
-| `PATCH /api/participant/me`                       | FR 4.3: Name, Sprache, Tätigkeitsbereich, Felder, `searchable` | 2   |
-| `PUT /api/participant/me/password`                    | FR 4.3, mit dem alten Passwort                                  | 2   |
-| `PUT/DELETE /api/participant/me/avatar`               | Profilbild, Regeln wie beim Logo (F113, F38)                   | 2   |
-| `GET /api/media/profiles/:id/avatar`              | öffentlich, pfadfrei, ohne Statusfilter (F113, F115)           | 2   |
-| `GET/POST /api/admin/profile-fields`              | FR 4.3: der instanzweite Baukasten (E35)                       | 2   |
-| `PATCH/DELETE /api/admin/profile-fields/:id`      | wie beim Anmeldeformular, Reihenfolge als Ganzes               | 2   |
-| `GET /api/participant/registrations`                       | FR 4.7: meine Anmeldungen, über Adressgleichheit (E31)         | 4   |
-| `GET /api/participant/profiles`                            | FR 4.4: Profilsuche, nur `searchable` (E37, F126)              | 5   |
-| `GET /api/participant/profiles/:id`                        | ein fremdes Profil, soweit es sich zeigt                        | 5   |
-| `GET /api/participant/conversations`                       | FR 4.5: meine Gespräche, ungelesen gezählt (E38)               | 6   |
-| `POST /api/participant/conversations`                      | ein 1:1-Gespräch beginnen (E37)                                 | 6   |
-| `GET /api/participant/conversations/:id/messages`          | Verlauf, paginiert, ID als letztes Sortierkriterium            | 6   |
-| `POST /api/participant/conversations/:id/messages`         | Text und/oder Bild, `multipart/form-data` wie F39              | 6   |
-| `PUT /api/participant/conversations/:id/read`              | `last_read_at` setzen (E38)                                     | 6   |
-| `GET /api/media/messages/:id/attachment`          | das Bild einer Nachricht, nur für Mitglieder                    | 6   |
-| Socket `/socket.io`, Namensraum `chat`            | FR 4.5: Handshake am Cookie, Raum je Gespräch (E41)            | 7   |
-| `POST /api/user/series/:slug/events/:slug/contact`| FR 3.4, UC 14: Kontakt ohne Registrierung (F11, E39)           | 9   |
-| `GET /api/admin/conversations`                    | FR 3.4: Nachrichtenübersicht des Veranstalters                  | 10  |
-| `GET/POST /api/admin/conversations/:id/messages`  | lesen und antworten; bei Gästen geht die Antwort per Mail       | 10  |
-| `POST /api/admin/events/:id/conversations`        | eine Gruppe zusammenstellen (E39)                               | 10  |
-| `POST /api/user/newsletter` · `…/confirm`         | FR 4.8: Opt-In und Bestätigung (E45)                            | 12  |
-| `GET /api/admin/newsletter`                       | FR 4.8: die Übersicht über beide Quellen (E45)                  | 12  |
-| `DELETE /api/participant/registrations/:id`                | FR 4.7: eigene Anmeldung stornieren                             | 12  |
+| Methode + Pfad                                     | Zweck                                                          | AP  |
+| -------------------------------------------------- | -------------------------------------------------------------- | --- |
+| `POST /api/user/profiles`                          | FR 4.1: Konto anlegen, antwortet immer gleich (E32)            | 1   |
+| `POST /api/user/profiles/confirm`                  | Double-Opt-In über den signierten Link (E32)                   | 1   |
+| `POST /api/participant/auth/login` · `logout`      | FR 4.2, `@AllowAnonymous()`, Drosselung wie beim Admin         | 1   |
+| `GET /api/participant/me`                          | Wer bin ich — die Antwort, die der Client beim Start braucht   | 1   |
+| `PATCH /api/participant/me`                        | FR 4.3: Name, Sprache, Tätigkeitsbereich, Felder, `searchable` | 2   |
+| `PUT /api/participant/me/password`                 | FR 4.3, mit dem alten Passwort                                 | 2   |
+| `PUT/DELETE /api/participant/me/avatar`            | Profilbild, Regeln wie beim Logo (F113, F38)                   | 2   |
+| `GET /api/media/profiles/:id/avatar`               | öffentlich, pfadfrei, ohne Statusfilter (F113, F115)           | 2   |
+| `GET/POST /api/admin/profile-fields`               | FR 4.3: der instanzweite Baukasten (E35)                       | 2   |
+| `PATCH/DELETE /api/admin/profile-fields/:id`       | wie beim Anmeldeformular, Reihenfolge als Ganzes               | 2   |
+| `GET /api/participant/registrations`               | FR 4.7: meine Anmeldungen, über Adressgleichheit (E31)         | 4   |
+| `GET /api/participant/profiles`                    | FR 4.4: Profilsuche, nur `searchable` (E37, F126)              | 5   |
+| `GET /api/participant/profiles/:id`                | ein fremdes Profil, soweit es sich zeigt                       | 5   |
+| `GET /api/participant/conversations`               | FR 4.5: meine Gespräche, ungelesen gezählt (E38)               | 6   |
+| `POST /api/participant/conversations`              | ein 1:1-Gespräch beginnen (E37)                                | 6   |
+| `GET /api/participant/conversations/:id/messages`  | Verlauf, paginiert, ID als letztes Sortierkriterium            | 6   |
+| `POST /api/participant/conversations/:id/messages` | Text und/oder Bild, `multipart/form-data` wie F39              | 6   |
+| `PUT /api/participant/conversations/:id/read`      | `last_read_at` setzen (E38)                                    | 6   |
+| `GET /api/media/messages/:id/attachment`           | das Bild einer Nachricht, nur für Mitglieder                   | 6   |
+| Socket `/socket.io`, Namensraum `chat`             | FR 4.5: Handshake am Cookie, Raum je Gespräch (E41)            | 7   |
+| `POST /api/user/series/:slug/events/:slug/contact` | FR 3.4, UC 14: Kontakt ohne Registrierung (F11, E39)           | 9   |
+| `GET /api/admin/conversations`                     | FR 3.4: Nachrichtenübersicht des Veranstalters                 | 10  |
+| `GET/POST /api/admin/conversations/:id/messages`   | lesen und antworten; bei Gästen geht die Antwort per Mail      | 10  |
+| `POST /api/admin/events/:id/conversations`         | eine Gruppe zusammenstellen (E39)                              | 10  |
+| `POST /api/user/newsletter` · `…/confirm`          | FR 4.8: Opt-In und Bestätigung (E45)                           | 12  |
+| `GET /api/admin/newsletter`                        | FR 4.8: die Übersicht über beide Quellen (E45)                 | 12  |
+| `DELETE /api/participant/registrations/:id`        | FR 4.7: eigene Anmeldung stornieren                            | 12  |
 
 `GET /api/config` wächst um nichts Neues: die drei Modulschalter reisen im
 schon vorhandenen `modules`-Feld, ihre Voraussetzung (E42) steht im Deskriptor.
@@ -635,11 +635,11 @@ Socket-Prüfung, die in AP 7 umgebaut wurde.
 
 ## Meilensteine
 
-| Meilenstein | Nach  | Inhalt                                                                     |
-| ----------- | ----- | -------------------------------------------------------------------------- |
-| M6          | AP 3  | Die Instanz hat Teilnehmerkonten: registrieren, anmelden, Profil pflegen   |
-| M7          | AP 7  | Chat in Echtzeit, authentifiziert, mit Bildern — durch NGINX geprüft       |
-| M8          | AP 13 | Phase 3 abgeschlossen, Push auf echten Geräten belegt                     |
+| Meilenstein | Nach  | Inhalt                                                                   |
+| ----------- | ----- | ------------------------------------------------------------------------ |
+| M6          | AP 3  | Die Instanz hat Teilnehmerkonten: registrieren, anmelden, Profil pflegen |
+| M7          | AP 7  | Chat in Echtzeit, authentifiziert, mit Bildern — durch NGINX geprüft     |
+| M8          | AP 13 | Phase 3 abgeschlossen, Push auf echten Geräten belegt                    |
 
 **M6 ist der zweite sinnvolle Zeitpunkt für die Rückmeldungsrunde mit Democracy
 International**, die seit Phase 1 offen ist: ab hier kann der Pilotpartner die
@@ -668,46 +668,48 @@ keine Zusage — wann sie stattfindet, entscheidet Marius.
 
 ## Risiken
 
-| Risiko                                                                                                                                   | Gegenmaßnahme                                                                                                                                                                              |
-| ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Der Chat ist der größte Scope-Zuwachs der Phase** — F9 nennt Gruppen, CLAUDE.md Bilder, und beides in einem Paket                       | Drei Pakete statt einem: Fachlichkeit (AP 6), Echtzeit (AP 7), Oberfläche (AP 8). Die Bilder bleiben in AP 6, weil ein zweiter Durchgang durch Datenmodell und Gateway teurer wäre (E40)   |
-| **Eine zweite Authentifizierung ist eine zweite Angriffsfläche.** Registrierung, Login und Kontaktformular sind neue offene Endpunkte      | Alle drei antworten immer gleich (E10, E32), alle drei unter der globalen Drosselung, `/api/participant` deny by default am Pfad (E33), und ein Vertragstest je Endpunkt, der die Gleichheit hält   |
-| Der Socket-Handshake liest ein Cookie — und Cookies erreichen Gateways anders als HTTP-Handler                                            | AP 7 beginnt mit der kleinsten Prüfung, die das zeigt, **bevor** Räume oder Zustellung gebaut werden; Spike 4 hat den Weg durch NGINX schon belegt                                          |
-| `member_id` hat keinen Fremdschlüssel (zwei mögliche Elterntabellen)                                                                      | Bewusst (siehe Schema): die Zeile existiert nie ohne ihr Gespräch, und die Geschäftslogik prüft die Existenz beim Anlegen. Ein Test hält fest, dass eine unbekannte Id ein 400 ist          |
-| Ein Chatbild ist Inhalt, keine Marke — die Medienroute braucht eine Berechtigung, anders als alle bisherigen                              | Eigene Route mit eigenem Guard (AP 6), und `docs/rules/api-contracts.md` bekommt den Unterschied zu F115 als eigene Zeile, damit die nächste Medienroute nicht die falsche Vorlage nimmt    |
-| Push auf echten Geräten ist der eine Punkt, den keine Suite dieses Repositories prüfen kann — und F7 hängt davon ab                       | AP 11 hat die Matrix als Abnahmekriterium, nicht als Nachtrag; ein gescheiterter Fall wird mit Gerät und Datum protokolliert, nicht weggelassen                                             |
-| Die Phase ist mit 13 Paketen die längste bisher; FR 4.7 und 4.8 sind P3 und könnten sie überziehen                                        | AP 12 ist ausdrücklich streichbar, und AP 4 räumt die Phase-1-Zusagen früh weg, damit am Ende nicht Altlast und Neubau gleichzeitig offen sind                                              |
-| Ein Teilnehmerkonto ändert die Bedeutung von „meine Anmeldung", und Phase 1 hat dafür einen Link in Postfächern hinterlassen              | Der Link bleibt gültig — das war die Zusage (E11). `SelfServiceService.require` bekommt einen zweiten Weg, keinen anderen, und ein Test fährt den alten Weg nach dem Umbau noch einmal      |
+| Risiko                                                                                                                                | Gegenmaßnahme                                                                                                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Der Chat ist der größte Scope-Zuwachs der Phase** — F9 nennt Gruppen, CLAUDE.md Bilder, und beides in einem Paket                   | Drei Pakete statt einem: Fachlichkeit (AP 6), Echtzeit (AP 7), Oberfläche (AP 8). Die Bilder bleiben in AP 6, weil ein zweiter Durchgang durch Datenmodell und Gateway teurer wäre (E40)          |
+| **Eine zweite Authentifizierung ist eine zweite Angriffsfläche.** Registrierung, Login und Kontaktformular sind neue offene Endpunkte | Alle drei antworten immer gleich (E10, E32), alle drei unter der globalen Drosselung, `/api/participant` deny by default am Pfad (E33), und ein Vertragstest je Endpunkt, der die Gleichheit hält |
+| Der Socket-Handshake liest ein Cookie — und Cookies erreichen Gateways anders als HTTP-Handler                                        | AP 7 beginnt mit der kleinsten Prüfung, die das zeigt, **bevor** Räume oder Zustellung gebaut werden; Spike 4 hat den Weg durch NGINX schon belegt                                                |
+| `member_id` hat keinen Fremdschlüssel (zwei mögliche Elterntabellen)                                                                  | Bewusst (siehe Schema): die Zeile existiert nie ohne ihr Gespräch, und die Geschäftslogik prüft die Existenz beim Anlegen. Ein Test hält fest, dass eine unbekannte Id ein 400 ist                |
+| Ein Chatbild ist Inhalt, keine Marke — die Medienroute braucht eine Berechtigung, anders als alle bisherigen                          | Eigene Route mit eigenem Guard (AP 6), und `docs/rules/api-contracts.md` bekommt den Unterschied zu F115 als eigene Zeile, damit die nächste Medienroute nicht die falsche Vorlage nimmt          |
+| Push auf echten Geräten ist der eine Punkt, den keine Suite dieses Repositories prüfen kann — und F7 hängt davon ab                   | AP 11 hat die Matrix als Abnahmekriterium, nicht als Nachtrag; ein gescheiterter Fall wird mit Gerät und Datum protokolliert, nicht weggelassen                                                   |
+| Die Phase ist mit 13 Paketen die längste bisher; FR 4.7 und 4.8 sind P3 und könnten sie überziehen                                    | AP 12 ist ausdrücklich streichbar, und AP 4 räumt die Phase-1-Zusagen früh weg, damit am Ende nicht Altlast und Neubau gleichzeitig offen sind                                                    |
+| Ein Teilnehmerkonto ändert die Bedeutung von „meine Anmeldung", und Phase 1 hat dafür einen Link in Postfächern hinterlassen          | Der Link bleibt gültig — das war die Zusage (E11). `SelfServiceService.require` bekommt einen zweiten Weg, keinen anderen, und ein Test fährt den alten Weg nach dem Umbau noch einmal            |
 
 ## Nachträge am Referenzdokument — geplant
 
 Wird beim jeweiligen Paket eingetragen, nicht am Ende gesammelt:
 
-| Nr.  | Inhalt                                                                                                | AP  |
-| ---- | ----------------------------------------------------------------------------------------------------- | --- |
-| F118 | Die Adresse ist die Identität; `registration` bekommt keine `user_id` (E31, Bezug F57)                | 1   |
-| F119 | `/api/participant` ist der geschützte Präfix, `/api/user` bleibt öffentlich (E33, Bezug E16, F69)              | 1   |
-| F120 | Eine Teilnehmersitzung ist eine zweite Sitzung, keine Rollenspalte (E34, Bezug F22)                   | 1   |
-| F121 | Ein Konto entsteht mit Double-Opt-In und antwortet immer gleich (E32, Bezug E10)                      | 1   |
-| F122 | Der Feld-Baukasten der Profile ist instanzweit; Ergänzung zu Schema 5.3 (E35, Bezug F35, F101)        | 2   |
-| F123 | Der Tätigkeitsbereich ist eine Spalte, weil die Suche darauf filtert (E36)                            | 2   |
-| F124 | Ein Avatar liegt in `avatars/`, und die Datenbank hält das fest (Bezug F113, E9)                      | 2   |
-| F125 | Was eine Mail-Locale ist, wenn der Empfänger eine hat — und wenn nicht (E24 fortgeschrieben)          | 4   |
-| F126 | Die Profilsuche sucht wie die Teilnehmerübersicht: `ILIKE` je Wort, keine Volltextsuche (Bezug F32)   | 5   |
-| F127 | `searchable` ist das Opt-in für Suche **und** Kontakt (E37, Bezug F13)                                | 5   |
-| F128 | Ein Modulschalter darf eine Voraussetzung haben — und löst sie nicht still auf (E42, Bezug F63)       | 5   |
-| F129 | Gelesen gehört dem Mitglied: `conversation_member.last_read_at` statt `message.read_at` (E38)         | 6   |
-| F130 | Eine Nachricht ist Text, Bild oder beides — nie nichts (E40, Bezug F39, F38)                          | 6   |
-| F131 | Eine Medienroute mit Berechtigung: warum ein Chatbild anders ist als ein Logo (Bezug F115)            | 6   |
-| F132 | Der Handshake ist die Tür, nicht das Ereignis (E41, Bezug Spike 4)                                    | 7   |
-| F133 | Der Gast im Gespräch: `organizer_contact` ohne zweiten Account (E39, Bezug F11)                       | 9   |
-| F134 | Ein Abonnement ohne Konto bleibt möglich; `user_id` ist nullbar (E43, Bezug F7)                       | 11  |
-| F135 | Eine persönliche Benachrichtigung geht nur raus, wenn niemand zusieht (E44)                           | 11  |
-| F136 | Der Newsletter ist eine Adresse, keine Anmeldung — und `notification` wird nicht gebaut (E45, F8)     | 12  |
+| Nr.  | Inhalt                                                                                              | AP  |
+| ---- | --------------------------------------------------------------------------------------------------- | --- |
+| F118 | Die Adresse ist die Identität; `registration` bekommt keine `user_id` (E31, Bezug F57)              | 1   |
+| F119 | `/api/participant` ist der geschützte Präfix, `/api/user` bleibt öffentlich (E33, Bezug E16, F69)   | 1   |
+| F120 | Eine Teilnehmersitzung ist eine zweite Sitzung, keine Rollenspalte (E34, Bezug F22)                 | 1   |
+| F121 | Ein Konto entsteht mit Double-Opt-In und antwortet immer gleich (E32, Bezug E10)                    | 1   |
+| F122 | Der Feld-Baukasten der Profile ist instanzweit; Ergänzung zu Schema 5.3 (E35, Bezug F35, F101)      | 2   |
+| F123 | Der Tätigkeitsbereich ist eine Spalte, weil die Suche darauf filtert (E36)                          | 2   |
+| F124 | Ein Avatar liegt in `avatars/`, und die Datenbank hält das fest (Bezug F113, E9)                    | 2   |
+| F125 | Was eine Mail-Locale ist, wenn der Empfänger eine hat — und wenn nicht (E24 fortgeschrieben)        | 4   |
+| F126 | Die Profilsuche sucht wie die Teilnehmerübersicht: `ILIKE` je Wort, keine Volltextsuche (Bezug F32) | 5   |
+| F127 | `searchable` ist das Opt-in für Suche **und** Kontakt (E37, Bezug F13)                              | 5   |
+| F128 | Ein Modulschalter darf eine Voraussetzung haben — und löst sie nicht still auf (E42, Bezug F63)     | 5   |
+| F129 | Gelesen gehört dem Mitglied: `conversation_member.last_read_at` statt `message.read_at` (E38)       | 6   |
+| F130 | Eine Nachricht ist Text, Bild oder beides — nie nichts (E40, Bezug F39, F38)                        | 6   |
+| F131 | Eine Medienroute mit Berechtigung: warum ein Chatbild anders ist als ein Logo (Bezug F115)          | 6   |
+| F132 | Der Handshake ist die Tür, nicht das Ereignis (E41, Bezug Spike 4)                                  | 7   |
+| F133 | Der Gast im Gespräch: `organizer_contact` ohne zweiten Account (E39, Bezug F11)                     | 9   |
+| F134 | Ein Abonnement ohne Konto bleibt möglich; `user_id` ist nullbar (E43, Bezug F7)                     | 11  |
+| F135 | Eine persönliche Benachrichtigung geht nur raus, wenn niemand zusieht (E44)                         | 11  |
+| F136 | Der Newsletter ist eine Adresse, keine Anmeldung — und `notification` wird nicht gebaut (E45, F8)   | 12  |
+| F137 | Was mit der `module_config`-Zeile eines zurückkehrenden Schlüssels passiert (Bezug F63, F71)        | 1   |
 
 Die Nummern sind reserviert, nicht garantiert: was sich beim Bauen als dieselbe
 Entscheidung entpuppt, wird zusammengelegt, und die freigewordene Nummer bleibt
-unvergeben (wie F62).
+unvergeben (wie F62). **F137** war nicht geplant — die Zeile fiel in AP 1 auf und
+bekam ihre eigene Nummer, weil sie noch zweimal auftreten wird.
 
 ## Definition of Done für Phase 3
 
@@ -725,7 +727,7 @@ unvergeben (wie F62).
    und die vier Zeilen der Gerätematrix aus Spike 3 sind abgehakt oder mit Gerät
    und Datum als gescheitert protokolliert.
 5. **`todo.md` unter _Checkable after phase 3_ ist durchgearbeitet** und
-   F118–F136 stehen im Referenzdokument. Verschobene Einträge tragen eine
+   F118–F137 stehen im Referenzdokument. Verschobene Einträge tragen eine
    Begründung, gestrichene ebenfalls.
 6. **Dieses Dokument ist von Plan auf Protokoll korrigiert** und hat je Paket
    einen Abschnitt „erledigt" sowie am Ende ein phasenweites _Was anders lief_.
@@ -734,6 +736,83 @@ unvergeben (wie F62).
 
 ## Fortschritt
 
-Noch kein Arbeitspaket begonnen. Je Paket kommt hier ein Abschnitt „erledigt"
-mit dem, was tatsächlich passierte — Abweichungen vom Plan stehen hier, damit
-AP 13 sie nicht rekonstruieren muss.
+Je Paket ein Abschnitt „erledigt" mit dem, was tatsächlich passierte —
+Abweichungen vom Plan stehen hier, damit AP 13 sie nicht rekonstruieren muss.
+
+### AP 1 — Teilnehmerkonto und Login (erledigt, 02.09.2026)
+
+Umgesetzt:
+
+- **`business/common/`** — der Umzug aus AP 1: `password-policy.ts` (die
+  Konstanten heißen jetzt `MIN_PASSWORD_LENGTH`/`MAX_PASSWORD_LENGTH`, nicht mehr
+  `…ADMIN…`, weil zwei Modulfamilien sie lesen), `password-hasher.service.ts`,
+  `session-token.ts` (`newSessionToken`, `hashSessionToken`),
+  `allow-anonymous.ts` (Dekorator **und** `allowsAnonymous(reflector, context)`,
+  damit beide Guards dieselben drei Zeilen lesen), `login-throttle.ts` mit
+  `LOGIN_ATTEMPTS_PER_WINDOW`, `resolved-session.ts` und ein schmales
+  `CommonModule`, das nur den Hasher bereitstellt.
+- **`shared-models`** — `lib/profiles/` mit `PROFILES_MODULE_KEY`,
+  `PROFILE_CONFIRMATION_PATH`, `PROFILE_LOGIN_PATH`, `ParticipantAccount`,
+  `ParticipantLoginRequest`, `ParticipantSessionInfo`,
+  `ProfileRegistrationRequest`, `ProfileRegistrationAcknowledgement`,
+  `ProfileConfirmation`.
+- **Server** — Migration `UserAccounts` (`user_profile` mit
+  `UQ_user_profile_email` über `lower(email)`, `user_session` mit
+  `ON DELETE CASCADE` und Ablaufindex), zwei Entities, zwei Ports, zwei
+  TypeORM-Repositories, `ProfilesService` (anlegen, bestätigen,
+  `checkCredentials`), `UserSessionService`, `ParticipantGuard` +
+  `isParticipantPath`, `CurrentParticipant`, `user-session-cookie.ts`, drei
+  Controller (`POST /api/user/profiles`, `…/confirm`,
+  `POST /api/participant/auth/login`·`logout`, `GET /api/participant/me`), vier
+  DTO-Dateien. `profiles` steht wieder in `CORE_MODULES` (`enabledByDefault:
+true`), alle neuen Routen tragen `CoreModuleEnabledGuard`.
+- **Mail** — zwei Templates (`profileConfirmation`, `profileExists`), neun
+  Katalogschlüssel in Englisch und Deutsch, `modules.profiles.title` dazu:
+  Katalog **654 → 664**. Vierter Tokenzweck `profile-confirmation`.
+
+Nachweise: 47 neue Server-Unit-Tests (770 → **817**), 15 neue API-Vertragstests
+(381 → **396**), Browsersuiten unverändert grün (266 Veranstalter, 197 Nutzer).
+Das `down` der Migration einmal wirklich gefahren und wieder hochgezogen.
+**F118–F121** stehen im Referenzdokument, dazu **F137**, das der Plan nicht
+vorhergesehen hatte.
+
+Was anders lief:
+
+- **Der Präfix heißt `/api/participant`, nicht `/api/me`** — schon vor dem Bauen
+  im Spec-Review korrigiert (E33), weil `GET /api/me/profiles` „meine Profile"
+  gelesen hätte und die Suche nach anderen gemeint war.
+- **Eine zweite Mail war nötig, die der Plan nicht nannte.** E32 verlangt eine
+  immer gleiche Antwort; ohne eine Nachricht „für diese Adresse gibt es schon
+  ein Konto" bekommt derjenige, der schon eines hat, **gar nichts** und steht
+  vor einer Sackgasse. Daraus wurde zugleich eine Regel: auch der **Fehlschlag**
+  muss gleich aussehen — ein unerreichbarer Mailserver antwortet für die
+  bekannte wie für die unbekannte Adresse mit demselben 503.
+- **Ein Login vor der Bestätigung antwortet 403, nicht 401.** Nur bei
+  **richtigem** Passwort: wer es kennt, weiß bereits, dass das Konto existiert,
+  und „falsche Adresse oder Passwort" hätte ihn ohne Ausweg zurückgelassen.
+- **Der zurückkehrende Modulschalter brachte eine Altlast mit.** Jede Instanz,
+  die die Attrappenliste aus Phase 1/2 gesehen hat, trägt `profiles = false` in
+  `module_config` — ein Vorgabewert aus einer Zeit, in der der Schalter nichts
+  tat. Er hätte den Deskriptor stillschweigend überstimmt, und der Veranstalter
+  hätte Profile abgeschaltet gefunden, ohne sie abgeschaltet zu haben. Die
+  Migration löscht deshalb die **`false`**-Zeilen der drei zurückkehrenden
+  Schlüssel; `true` bleibt stehen, wie Phase 2 es zugesagt hat. Gilt noch für
+  `chat` (AP 6) und `profile-search` (AP 5) — die Regel steht in
+  `docs/rules/api-contracts.md`.
+- **`user_session` hat kein `user_agent`.** Anders als `admin_session`: die
+  Spalte dort existiert für eine Sitzungsliste, die es für Teilnehmer nicht gibt.
+- **Die gemeinsame Sitzungsform heißt `ResolvedSession`, nicht
+  `AuthenticatedPrincipal`.** Geteilt sind die drei Felder der Sitzung
+  (`sessionId`, `lastSeenAt`, `expiresAt`); wem sie gehört, hängt jede Seite
+  selbst an (`admin` bzw. `profile`). Ein gemeinsamer Kontotyp hätte einen Guard
+  ermöglicht, der beide lesen kann — genau das, was E34 verhindert.
+- **Zwei Testfallen kosteten je eine Runde** und stehen jetzt in
+  `docs/rules/`: eine nachträglich ergänzte Migration läuft nicht erneut
+  (`tooling-traps.md`), und ein Fehlerkörper trägt einen Zeitstempel, der zwei
+  identische Antworten ungleich macht (`e2e-tests.md`). Dazu ein Fund ohne
+  eigenen Fehler: die Entwicklungsdatenbank trug Demo-Seed-Farben, weshalb zwei
+  Browsertests nach einem Theming-Fehler aussahen.
+
+Offen aus diesem Paket: `AP 3` baut die Seiten zu
+`PROFILE_CONFIRMATION_PATH` und `PROFILE_LOGIN_PATH` — bis dahin zeigen die
+Links beider Mails auf Adressen, die der Nutzer-Client noch nicht bedient.

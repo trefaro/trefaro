@@ -13,6 +13,8 @@ export {
   type MailEvent,
   type MailStrings,
   type MailTemplate,
+  type ProfileConfirmationMailContext,
+  type ProfileExistsMailContext,
   type ReceiptMailContext,
   type RegistrationMailContext,
   type RenderedMail,

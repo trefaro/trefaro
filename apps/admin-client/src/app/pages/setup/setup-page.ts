@@ -18,7 +18,7 @@ import {
 import { ThemeService } from '@trefaro/shared-theming';
 import { SetupService } from '../../features/setup/setup.service';
 
-/** Mirrors MIN_ADMIN_PASSWORD_LENGTH on the server; the server is the authority. */
+/** Mirrors MIN_PASSWORD_LENGTH on the server; the server is the authority. */
 const MIN_PASSWORD_LENGTH = 12;
 
 /**

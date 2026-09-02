@@ -17,6 +17,8 @@ import { PushSubscriptionEntity } from './push-subscription.entity';
 import { RegistrationFieldEntity } from './registration-field.entity';
 import { RegistrationEntity } from './registration.entity';
 import { TranslationOverrideEntity } from './translation-override.entity';
+import { UserProfileEntity } from './user-profile.entity';
+import { UserSessionEntity } from './user-session.entity';
 
 export { AdminSessionEntity } from './admin-session.entity';
 export { AdminUserEntity } from './admin-user.entity';
@@ -40,6 +42,8 @@ export { PushSubscriptionEntity } from './push-subscription.entity';
 export { RegistrationFieldEntity } from './registration-field.entity';
 export { RegistrationEntity } from './registration.entity';
 export { TranslationOverrideEntity } from './translation-override.entity';
+export { UserProfileEntity } from './user-profile.entity';
+export { UserSessionEntity } from './user-session.entity';
 
 /**
  * Core entities. Plug-in entities are added separately by the plug-in data
@@ -65,4 +69,6 @@ export const CORE_ENTITIES = [
   RegistrationFieldEntity,
   AttachmentEntity,
   TranslationOverrideEntity,
+  UserProfileEntity,
+  UserSessionEntity,
 ];

@@ -2,27 +2,15 @@ import {
   CanActivate,
   ExecutionContext,
   Injectable,
-  SetMetadata,
   UnauthorizedException,
 } from '@nestjs/common';
 import { PATH_METADATA } from '@nestjs/common/constants';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
+import { allowsAnonymous } from '../common/allow-anonymous';
 import type { AuthenticatedAdmin } from './ports/admin-session.repository';
 import { SessionService } from './session.service';
 import { ADMIN_SESSION_COOKIE } from './session-cookie';
-
-const ALLOW_ANONYMOUS_METADATA = 'trefaro:allowAnonymous';
-
-/**
- * Marks a route below `admin/` as reachable without a session.
- *
- * There are exactly two: logging in, which has no session yet, and logging out,
- * which must not fail just because the session already expired. Every further
- * use of this decorator deserves a hard question in review.
- */
-export const AllowAnonymous = (): MethodDecorator & ClassDecorator =>
-  SetMetadata(ALLOW_ANONYMOUS_METADATA, true);
 
 /** Where the authenticated administrator is parked for the request. */
 export const CURRENT_ADMIN_PROPERTY = 'trefaroAdmin';
@@ -47,7 +35,7 @@ export function isAdminPath(...declaredPaths: readonly unknown[]): boolean {
 
 /**
  * Requires an administrative session for everything under `/api/admin`
- * (FR 1.3).
+ * (FR 1.3). Its counterpart for participants is `ParticipantGuard` (E33).
  *
  * Registered globally, and keyed on the route path rather than on a decorator:
  * plug-in controllers are written by plug-in authors, and a forgotten
@@ -56,7 +44,8 @@ export function isAdminPath(...declaredPaths: readonly unknown[]): boolean {
  *
  * `/api/config`, `/api/health` and everything under `/api/user` stay public —
  * the participant start page and the event landing page are reachable without a
- * login by design.
+ * login by design. `/api/participant` is guarded too, by its own guard and its
+ * own cookie: three prefixes, three levels of access (E33).
  */
 @Injectable()
 export class AdminGuard implements CanActivate {
@@ -76,14 +65,7 @@ export class AdminGuard implements CanActivate {
     );
     if (!guarded) return true;
 
-    if (
-      this.reflector.getAllAndOverride<boolean | undefined>(
-        ALLOW_ANONYMOUS_METADATA,
-        [context.getHandler(), context.getClass()],
-      )
-    ) {
-      return true;
-    }
+    if (allowsAnonymous(this.reflector, context)) return true;
 
     const request = context.switchToHttp().getRequest<RequestWithAdmin>();
     const token = request.cookies?.[ADMIN_SESSION_COOKIE];

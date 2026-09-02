@@ -1,5 +1,6 @@
 import {
   MEDIA_LINKS_MODULE_KEY,
+  PROFILES_MODULE_KEY,
   PUSH_MODULE_KEY,
 } from '@trefaro/shared-models';
 
@@ -20,8 +21,10 @@ import {
  * - `newsletter` is gone. There will be no newsletter module (F8), and inviting
  *   former participants is explicitly not one (F55). Should the opt-in
  *   administration of FR 4.8 arrive in phase 3, it gets a key of its own then.
- * - `chat`, `profiles` and `profile-search` are gone and come back in phase 3
- *   with their modules. A descriptor list is not a roadmap.
+ * - `chat` and `profile-search` are gone and come back with their modules; a
+ *   descriptor list is not a roadmap. `profiles` came back in AP 1 of phase 3,
+ *   the day it had endpoints to switch off — which is the shape of the rule:
+ *   a key appears here together with the code behind it, never before.
  * - `push` stays and is real: its subscription endpoints carry the guard, and
  *   `/api/config` withholds the VAPID key while the module is off, so a client
  *   does not offer a subscription nothing would store (NFR 7).
@@ -49,6 +52,17 @@ export interface CoreModuleDescriptor {
 }
 
 export const CORE_MODULES: readonly CoreModuleDescriptor[] = [
+  // Participant accounts, profiles and everything that needs one (FR 4.1–4.3).
+  // On by default and needing no configuration: an instance that keeps accounts
+  // works the moment it starts. An organization that only runs events switches
+  // it off, and then registering, logging in and every profile route answers
+  // 404 — which is what the switch has to mean (F53). Switching it off deletes
+  // nothing (E14): the accounts are still there when it comes back on.
+  {
+    key: PROFILES_MODULE_KEY,
+    titleKey: 'modules.profiles.title',
+    enabledByDefault: true,
+  },
   // Embedding external stream and media library links costs nothing when unused.
   {
     key: MEDIA_LINKS_MODULE_KEY,

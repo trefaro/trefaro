@@ -16,6 +16,7 @@ import { BrandingImages1787790100000 } from './1787790100000-BrandingImages';
 import { Translations1787790200000 } from './1787790200000-Translations';
 import { ContentTranslations1787790300000 } from './1787790300000-ContentTranslations';
 import { EntityLogos1787790400000 } from './1787790400000-EntityLogos';
+import { UserAccounts1787790500000 } from './1787790500000-UserAccounts';
 
 /**
  * Core migrations, in the order they must run.
@@ -42,4 +43,5 @@ export const CORE_MIGRATIONS = [
   Translations1787790200000,
   ContentTranslations1787790300000,
   EntityLogos1787790400000,
+  UserAccounts1787790500000,
 ];

@@ -112,17 +112,18 @@ test.describe('the module administration in the browser', () => {
   test('shows no module this version does not ship (E21)', async ({ page }) => {
     await openModules(page);
 
-    // Four keys were core modules until AP 4 and one of them read its flag. A
-    // switch wired to nothing is a prop, and it becomes visible the moment an
-    // organizer is shown the list.
-    for (const withdrawn of [
-      'newsletter',
-      'chat',
-      'profiles',
-      'profile-search',
-    ]) {
+    // Six keys were core modules until AP 4 of phase 2 and one of them read its
+    // flag. A switch wired to nothing is a prop, and it becomes visible the
+    // moment an organizer is shown the list — so a key is listed here together
+    // with the code behind it, never before. `profiles` earned its row back in
+    // AP 1 of phase 3; `chat` and `profile-search` have not yet.
+    for (const withdrawn of ['newsletter', 'chat', 'profile-search']) {
       await expect(row(page, withdrawn)).toHaveCount(0);
     }
+
+    await expect(row(page, 'profiles')).toContainText(
+      t('modules.profiles.title'),
+    );
   });
 
   test('switches a module on, and says what happens next', async ({

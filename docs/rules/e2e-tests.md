@@ -54,4 +54,15 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
 - **Playwright emuliert Offline in WebKit nicht** — `context.setOffline()` wirkt in
   Chromium und Firefox; dort mit Begründung überspringen.
 
+- **Ein Fehlerkörper trägt einen Zeitstempel.** Wer zwei Fehlerantworten auf
+  Gleichheit prüft — weil ein Endpunkt für zwei Zustände dasselbe sagen soll
+  (E10, E32) —, vergleicht `message` und `statusCode`, nie den ganzen Rumpf: die
+  Millisekunde dazwischen macht den Test rot und sagt nichts.
+- **Die Entwicklungsdatenbank ist nicht die Werksvorgabe.** Wer einmal
+  `tools/demo-seed/` laufen ließ, hat Organisationsname und Primärfarbe der
+  Demo in `app_config` — und die Browsersuiten erwarten `#1f6f5c` aus der ersten
+  Migration. Zwei Fehlschläge in `start-up.spec.ts`, die nach einem
+  Theming-Fehler aussehen, sind in Wahrheit der Seed. Zurücksetzen, nicht den
+  Test anpassen.
+
 Siehe auch: [Fallen in den Angular-Clients](angular-clients.md), [Deployment und Prüfung](deployment.md).

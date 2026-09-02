@@ -15,13 +15,15 @@ import type {
   InvitationMailContext,
   MailEvent,
   MailTemplate,
+  ProfileConfirmationMailContext,
+  ProfileExistsMailContext,
   ReceiptMailContext,
   RegistrationMailContext,
   RenderedMail,
 } from './types';
 
 /**
- * The four mails, written out of the catalogue (AP 10 of phase 2, E22, E24).
+ * The six mails, written out of the catalogue (AP 10 of phase 2, E22, E24).
  *
  * Two renderings of the same sentences, never two sets of sentences: the plain
  * text part and the HTML part read the same key and differ only in what they do
@@ -225,14 +227,107 @@ const invitation: MailTemplate<InvitationMailContext> = {
   },
 };
 
+/**
+ * "Confirm your account", the participant registration's double opt-in (FR 4.1).
+ *
+ * Deliberately close to the registration confirmation and deliberately not the
+ * same mail: the two arrive on different days, for different reasons, and one of
+ * them names an event while the other cannot. Its validity sentence reads the
+ * same constant (F85), because the two links have the same lifetime and would
+ * otherwise be able to disagree about it in prose.
+ */
+const profileConfirmation: MailTemplate<ProfileConfirmationMailContext> = {
+  name: 'account confirmation',
+  keys: [
+    ...COMMON_KEYS,
+    'mail.profileConfirm.subject',
+    'mail.profileConfirm.intro',
+    'mail.profileConfirm.step',
+    'mail.profileConfirm.action',
+    'mail.profileConfirm.validity',
+  ],
+
+  render(
+    s: MailStrings,
+    context: ProfileConfirmationMailContext,
+  ): RenderedMail {
+    const { firstName, confirmUrl } = context;
+    const label = s.text('mail.profileConfirm.action');
+
+    return {
+      subject: s.text('mail.profileConfirm.subject'),
+      text: textBody(
+        greeting(s, firstName),
+        s.text('mail.profileConfirm.intro'),
+        s.text('mail.profileConfirm.step'),
+        textAction(s, label, confirmUrl),
+        s.text('mail.profileConfirm.validity', {
+          days: CONFIRMATION_VALID_DAYS,
+        }),
+      ),
+      html: htmlBody(
+        htmlGreeting(s, firstName),
+        s.html('mail.profileConfirm.intro'),
+        s.html('mail.profileConfirm.step'),
+        htmlAction(confirmUrl, label),
+        s.html('mail.profileConfirm.validity', {
+          days: escapeHtml(String(CONFIRMATION_VALID_DAYS)),
+        }),
+      ),
+    };
+  },
+};
+
+/**
+ * "There is already an account for this address" (E32).
+ *
+ * The mail that makes an unvarying form answer survivable. Somebody who
+ * registers twice — or whose address somebody else typed — gets told what the
+ * form is not allowed to say, in the one place where saying it reveals nothing:
+ * their own inbox. It changes nothing and grants nothing.
+ */
+const profileExists: MailTemplate<ProfileExistsMailContext> = {
+  name: 'account already exists',
+  keys: [
+    ...COMMON_KEYS,
+    'mail.profileExists.subject',
+    'mail.profileExists.intro',
+    'mail.profileExists.unchanged',
+    'mail.profileExists.action',
+  ],
+
+  render(s: MailStrings, context: ProfileExistsMailContext): RenderedMail {
+    const { firstName, loginUrl } = context;
+    const label = s.text('mail.profileExists.action');
+
+    return {
+      subject: s.text('mail.profileExists.subject'),
+      text: textBody(
+        greeting(s, firstName),
+        s.text('mail.profileExists.intro'),
+        s.text('mail.profileExists.unchanged'),
+        textAction(s, label, loginUrl),
+      ),
+      html: htmlBody(
+        htmlGreeting(s, firstName),
+        s.html('mail.profileExists.intro'),
+        s.html('mail.profileExists.unchanged'),
+        htmlAction(loginUrl, label),
+      ),
+    };
+  },
+};
+
 export const MAIL_TEMPLATES = {
   registrationConfirmation,
   registrationConfirmed,
   registrationCancelled,
   invitation,
+  profileConfirmation,
+  profileExists,
 } as const;
 
-/** Every key the four mails between them can ask for — CI checks this list. */
+/** Every key the six mails between them can ask for — CI checks this list. */
 export const ALL_MAIL_KEYS: readonly string[] = [
   ...new Set(
     Object.values(MAIL_TEMPLATES).flatMap((template) => template.keys),

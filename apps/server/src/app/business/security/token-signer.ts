@@ -15,7 +15,9 @@ import { ENV } from '../../core/config/env.module';
 export type TokenPurpose =
   | 'registration-confirmation'
   | 'registration-self-service'
-  | 'invitation-opt-out';
+  | 'invitation-opt-out'
+  /** The double opt-in of a participant account (FR 4.1, E32). */
+  | 'profile-confirmation';
 
 /** Fourteen days, per E5: long enough for someone who registers before a holiday. */
 export const CONFIRMATION_TOKEN_TTL_MS = 14 * 24 * 60 * 60 * 1000;

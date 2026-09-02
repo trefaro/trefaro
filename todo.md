@@ -23,6 +23,16 @@ attached to the task.
 Not deferred verification — things that are genuinely missing and would matter if
 an instance were exposed today.
 
+- [ ] **The API contract suites leave rows behind, and the development database
+      has 94 event series to prove it.** `invitations.spec.ts` creates two
+      series per run and removes neither, so every run adds two. Nothing fails
+      because of it today, but it hides the failures that matter: a suite whose
+      fixture collides with a leftover row reports a wrong slug or a wrong count
+      and looks like a regression (AP 1 of phase 3 lost a round to exactly
+      that). Either every suite tears down what it created — `event-series.spec.ts`
+      does — or the run starts from a known state. Worth deciding before the
+      suites grow again in phase 3.
+
 - [x] **Nothing is authenticated.** ~~There is no login yet, so `/api/admin/**`
       has no guard.~~ Closed in phase 1, AP 1: every route below `/api/admin` —
       plug-in controllers included — needs an administrative session. The guard
@@ -546,6 +556,16 @@ answer, not an opinion.
       added to `EventDashboard` and to the tile grid.)
 
 ## Checkable after phase 5 — hardening and release
+
+- [ ] **Resetting a forgotten participant password.** Deliberately left out of
+      phase 3 (AP 1): FR 4.3 asks for changing the password _in_ the profile,
+      which needs the old one, and that is what exists. A reset is its own
+      route — a signed token with its own purpose and lifetime, a rate limit of
+      its own, and an answer that must not disclose whether the address has an
+      account (E10, E32). Until then the mail sent for a repeated registration
+      says an account exists and nothing about recovery, because there is none
+      to promise. This is the one dead end a participant can walk into, so it
+      belongs early in phase 5 rather than late.
 
 - [ ] **Decide whether the registration form and the media links are content
       too.** E25 lists what is translated, and the labels an organizer writes on

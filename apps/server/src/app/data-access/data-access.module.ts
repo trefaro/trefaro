@@ -23,6 +23,8 @@ import { PUSH_SUBSCRIPTION_REPOSITORY } from '../business/push/ports/push-subscr
 import { REGISTRATION_TALLY } from '../business/registration/ports/registration-tally';
 import { REGISTRATION_FIELD_REPOSITORY } from '../business/registration/ports/registration-field.repository';
 import { REGISTRATION_REPOSITORY } from '../business/registration/ports/registration.repository';
+import { USER_PROFILE_REPOSITORY } from '../business/profiles/ports/user-profile.repository';
+import { USER_SESSION_REPOSITORY } from '../business/profiles/ports/user-session.repository';
 import {
   PLUGIN_PERSISTENCE_REGISTRY,
   type PluginPersistenceContribution,
@@ -54,6 +56,8 @@ import { TypeormPushSubscriptionRepository } from './repositories/typeorm-push-s
 import { TypeormRegistrationFieldRepository } from './repositories/typeorm-registration-field.repository';
 import { TypeormRegistrationRepository } from './repositories/typeorm-registration.repository';
 import { TypeormTranslationOverrideRepository } from './repositories/typeorm-translation-override.repository';
+import { TypeormUserProfileRepository } from './repositories/typeorm-user-profile.repository';
+import { TypeormUserSessionRepository } from './repositories/typeorm-user-session.repository';
 
 /**
  * The data access layer — the only layer that talks to PostgreSQL.
@@ -105,6 +109,8 @@ export class DataAccessModule {
         TypeormRegistrationRepository,
         TypeormRegistrationFieldRepository,
         TypeormTranslationOverrideRepository,
+        TypeormUserProfileRepository,
+        TypeormUserSessionRepository,
         BundledCatalogueReader,
         {
           provide: ADMIN_USER_REPOSITORY,
@@ -198,6 +204,17 @@ export class DataAccessModule {
           provide: REGISTRATION_REPOSITORY,
           useExisting: TypeormRegistrationRepository,
         },
+        // Participant accounts and their sessions (E31, E34). Two ports beside
+        // the administrative pair rather than one shared pair: the two kinds of
+        // identity share a shape and nothing else.
+        {
+          provide: USER_PROFILE_REPOSITORY,
+          useExisting: TypeormUserProfileRepository,
+        },
+        {
+          provide: USER_SESSION_REPOSITORY,
+          useExisting: TypeormUserSessionRepository,
+        },
         {
           provide: REGISTRATION_FIELD_REPOSITORY,
           useExisting: TypeormRegistrationFieldRepository,
@@ -245,6 +262,8 @@ export class DataAccessModule {
         REGISTRATION_TALLY,
         SHIPPED_CATALOGUE_READER,
         TRANSLATION_OVERRIDE_REPOSITORY,
+        USER_PROFILE_REPOSITORY,
+        USER_SESSION_REPOSITORY,
         TypeOrmModule,
       ],
     };

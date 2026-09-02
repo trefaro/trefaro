@@ -5,7 +5,8 @@ import type {
   NewAdminSession,
 } from './ports/admin-session.repository';
 import type { AdminUserRecord } from './ports/admin-user.repository';
-import { SessionService, hashSessionToken } from './session.service';
+import { hashSessionToken } from '../common/session-token';
+import { SessionService } from './session.service';
 
 const owner: AdminUserRecord = {
   id: 'admin-1',

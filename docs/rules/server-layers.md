@@ -12,6 +12,17 @@ diese Eigenschaft.
   Verstoß **einen Port einziehen**, nicht die Regel lockern.
 - Die Datenzugriffsschicht darf nur auf `ports/` zugreifen. Ein von mehreren
   Modulen geteilter Port gehört deshalb nach `business/common/ports/` (F100).
+  Ebenso wandert alles, was zwei Module **wirklich** brauchen, nach
+  `business/common/` statt kopiert zu werden: Passwortregel und Hasher,
+  Sitzungstoken, `AllowAnonymous`, die Login-Drosselung — jedes Duplikat wäre
+  eines, das beim nächsten Verschärfen übersehen wird. `CommonModule` liefert
+  dabei nur die Injectables; Funktionen und Typen werden direkt importiert.
+- **Ein neuer Port muss in `exports` von `DataAccessModule`, nicht nur in
+  `providers`.** `@Global()` macht das Modul überall sichtbar, aber ein
+  Providertoken, das nicht exportiert ist, bleibt unauflösbar — mit einem
+  Startfehler, der nach einem falsch geschriebenen Modul klingt („Is XModule a
+  valid NestJS module?") und in Wahrheit eine fehlende Zeile in der
+  Exportliste ist.
 - **Dateien sind Datenzugriff.** `FileStore` ist ein Port wie ein Repository; die
   Geschäftslogik weiß, _dass_ eine Datei bleibt, nicht _wo_. Kein `fs`-Import in
   der Geschäftslogik.

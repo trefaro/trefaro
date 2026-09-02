@@ -13,7 +13,7 @@ import { formatInstant, localTimeZone } from '@trefaro/shared-models';
 import { AdminAccountsService } from '../../features/admins/admin-accounts.service';
 import { AuthService } from '../../features/auth/auth.service';
 
-/** Mirrors MIN_ADMIN_PASSWORD_LENGTH on the server; the server is the authority. */
+/** Mirrors MIN_PASSWORD_LENGTH on the server; the server is the authority. */
 const MIN_PASSWORD_LENGTH = 12;
 
 /**

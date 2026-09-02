@@ -156,13 +156,28 @@ describe('the module administration', () => {
   it('lists only modules that exist (E21)', async () => {
     const keys = (await list()).body.map((module) => module.key);
 
-    // Four keys named core modules until AP 4 and one of them read its flag.
-    // `chat`, `profiles` and `profile-search` come back in phase 3 with their
-    // modules; there will be no newsletter module at all (F8).
+    // Six keys named core modules until AP 4 of phase 2 and one of them read
+    // its flag. A key appears here together with the code behind it, never
+    // before: `profiles` came back with AP 1 of phase 3, `chat` and
+    // `profile-search` come back with theirs, and there will be no newsletter
+    // module at all (F8).
+    expect(keys).toContain('profiles');
     expect(keys).not.toContain('newsletter');
     expect(keys).not.toContain('chat');
-    expect(keys).not.toContain('profiles');
     expect(keys).not.toContain('profile-search');
+  });
+
+  it('starts the returning module on rather than off (E21, F63)', async () => {
+    // The retired descriptor left a `profiles` row behind on every instance
+    // that ever saw the placeholder list, and it said `false` — a default from
+    // a time when the switch did nothing, not a decision anybody made. The
+    // migration of AP 1 removes exactly those rows so the descriptor's default
+    // decides again. Without it, the module would come back switched off and no
+    // organizer would know why.
+    expect(await find('profiles')).toMatchObject({
+      enabled: true,
+      enabledByDefault: true,
+    });
   });
 
   it('carries version and bundle for a plug-in and neither for a core module', async () => {

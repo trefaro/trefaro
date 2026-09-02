@@ -108,8 +108,8 @@ check(
   json(seriesLogos),
 );
 check(
-  'only media-links is enabled by default',
-  json(config.body?.enabledModules) === json(['media-links']),
+  'media-links and profiles are enabled by default, push is not',
+  json(config.body?.enabledModules) === json(['media-links', 'profiles']),
   json(config.body?.enabledModules),
 );
 check(

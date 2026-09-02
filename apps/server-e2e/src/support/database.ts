@@ -211,6 +211,22 @@ export async function deleteRegistrations(eventId: string): Promise<void> {
   await pool.query('DELETE FROM registration WHERE event_id = $1', [eventId]);
 }
 
+/**
+ * Removes the participant accounts a suite created (FR 4.1).
+ *
+ * There is no endpoint for this, and deliberately so: deleting one's own
+ * account is erasure work for phase 5, and an organizer cannot delete a
+ * participant's account at all. The suite still has to clean up after itself,
+ * because the address is unique instance-wide (E31) — a leftover row would make
+ * the next run of this file register an address that already exists and assert
+ * the wrong branch. Sessions go with it through the cascade.
+ */
+export async function deleteProfiles(emailSuffix: string): Promise<void> {
+  await pool.query('DELETE FROM user_profile WHERE email LIKE $1', [
+    `%${emailSuffix}`,
+  ]);
+}
+
 export async function closeDatabase(): Promise<void> {
   await pool.end();
 }
