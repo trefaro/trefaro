@@ -105,6 +105,29 @@ export class UserSessionService
     await this.sessions.deleteByTokenHash(hashSessionToken(token));
   }
 
+  /**
+   * Ends every other session of one account (FR 4.3).
+   *
+   * Called after a password change, and that is the whole of its purpose:
+   * somebody who changes their password because a device is not theirs any more
+   * has said something about the other sessions too, and leaving them open
+   * would make the change half a measure. The session doing the changing stays,
+   * so the screen in front of the person does not log itself out.
+   */
+  async revokeOthers(userId: string, keepSessionId: string): Promise<void> {
+    const ended = await this.sessions.deleteForUserExcept(
+      userId,
+      keepSessionId,
+    );
+    if (ended > 0) {
+      // Counted for the operator, never shown: "you were logged out of two
+      // other places" is a sentence about devices this server cannot describe.
+      this.logger.log(
+        `Ended ${ended} other participant session(s) after a password change`,
+      );
+    }
+  }
+
   private expiryFrom(now: Date): Date {
     return new Date(
       now.getTime() + this.env.adminAuth.sessionTtlHours * 60 * 60_000,

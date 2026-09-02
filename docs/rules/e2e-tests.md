@@ -58,6 +58,19 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   Gleichheit prüft — weil ein Endpunkt für zwei Zustände dasselbe sagen soll
   (E10, E32) —, vergleicht `message` und `statusCode`, nie den ganzen Rumpf: die
   Millisekunde dazwischen macht den Test rot und sagt nichts.
+- **Der Teilnehmer-Login hat sein eigenes Drosselbudget** — 20 Versuche in fünf
+  Minuten, getrennt vom Admin-Login (der Zähler hängt an Route **und** Adresse).
+  Die drei Kontosuiten in `apps/server-e2e` verbrauchen davon zwölf; wer eine
+  vierte schreibt, zählt vorher nach. Ein 429 sieht dort aus wie ein
+  Anmeldefehler und ist keiner.
+- **Was instanzweit ist, muss eine Suite selbst wieder abräumen.** Der
+  Profil-Baukasten (`profile_field`) hat kein Event, an dem er hängt: eine
+  liegengebliebene **Pflichtfrage** lässt jedes `PATCH /api/participant/me`
+  anderer Suiten scheitern, und ein liegengebliebener Schlüssel schickt den
+  nächsten Lauf der eigenen Suite in den „nummeriere um die Kollision"-Zweig.
+  `deleteProfileFields(prefix)` in `support/database.ts`, und jede Frage
+  bekommt einen Schlüssel mit Lauf-Präfix. Dasselbe gilt für Konten: die Adresse
+  ist instanzweit eindeutig (E31), also `deleteProfiles(domain)` im `afterAll`.
 - **Die Entwicklungsdatenbank ist nicht die Werksvorgabe.** Wer einmal
   `tools/demo-seed/` laufen ließ, hat Organisationsname und Primärfarbe der
   Demo in `app_config` — und die Browsersuiten erwarten `#1f6f5c` aus der ersten

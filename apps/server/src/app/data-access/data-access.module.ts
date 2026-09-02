@@ -15,6 +15,7 @@ import { ADMIN_USER_REPOSITORY } from '../business/login/ports/admin-user.reposi
 import { MEDIA_LINK_TALLY } from '../business/media-links/ports/media-link-tally';
 import { MEDIA_LINK_REPOSITORY } from '../business/media-links/ports/media-link.repository';
 import { MODULE_CONFIG_REPOSITORY } from '../business/config/ports/module-config.repository';
+import { PROFILE_FIELD_REPOSITORY } from '../business/profiles/ports/profile-field.repository';
 import { PROGRAM_ITEM_SIGNUP_REPOSITORY } from '../business/program/ports/program-item-signup.repository';
 import { PROGRAM_ITEM_TRANSLATION_REPOSITORY } from '../business/program/ports/program-item-translation.repository';
 import { PROGRAM_ITEM_REPOSITORY } from '../business/program/ports/program-item.repository';
@@ -49,6 +50,7 @@ import { LOGO_PATHS_REPOSITORY } from '../business/logo-files/ports/logo-paths.r
 import { TypeormLogoPathsRepository } from './repositories/typeorm-logo-paths.repository';
 import { TypeormMediaLinkRepository } from './repositories/typeorm-media-link.repository';
 import { TypeormModuleConfigRepository } from './repositories/typeorm-module-config.repository';
+import { TypeormProfileFieldRepository } from './repositories/typeorm-profile-field.repository';
 import { TypeormProgramItemSignupRepository } from './repositories/typeorm-program-item-signup.repository';
 import { TypeormProgramItemTranslationRepository } from './repositories/typeorm-program-item-translation.repository';
 import { TypeormProgramItemRepository } from './repositories/typeorm-program-item.repository';
@@ -102,6 +104,7 @@ export class DataAccessModule {
         TypeormLogoPathsRepository,
         TypeormMediaLinkRepository,
         TypeormModuleConfigRepository,
+        TypeormProfileFieldRepository,
         TypeormProgramItemRepository,
         TypeormProgramItemTranslationRepository,
         TypeormProgramItemSignupRepository,
@@ -178,6 +181,12 @@ export class DataAccessModule {
           provide: MODULE_CONFIG_REPOSITORY,
           useExisting: TypeormModuleConfigRepository,
         },
+        // The profile field kit (FR 4.3, E35): instance-wide, so this port has
+        // nothing to filter by — the reason it is not the registration kit's.
+        {
+          provide: PROFILE_FIELD_REPOSITORY,
+          useExisting: TypeormProfileFieldRepository,
+        },
         {
           provide: PROGRAM_ITEM_REPOSITORY,
           useExisting: TypeormProgramItemRepository,
@@ -252,6 +261,7 @@ export class DataAccessModule {
         MEDIA_LINK_REPOSITORY,
         MEDIA_LINK_TALLY,
         MODULE_CONFIG_REPOSITORY,
+        PROFILE_FIELD_REPOSITORY,
         PROGRAM_ITEM_REPOSITORY,
         PROGRAM_ITEM_SIGNUP_REPOSITORY,
         PROGRAM_ITEM_TRANSLATION_REPOSITORY,

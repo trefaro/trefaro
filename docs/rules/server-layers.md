@@ -17,6 +17,15 @@ diese Eigenschaft.
   Sitzungstoken, `AllowAnonymous`, die Login-Drosselung — jedes Duplikat wäre
   eines, das beim nächsten Verschärfen übersehen wird. `CommonModule` liefert
   dabei nur die Injectables; Funktionen und Typen werden direkt importiert.
+- **Der dritte Aufrufer ist der, bei dem man auszieht** (F138). Zwei ähnliche
+  Dienste sind zwei Dienste; beim dritten wortgleichen Exemplar wird geteilt.
+  So entstand `ImageFileService` in `business/common/` (Branding, Zeilen-Logo,
+  Avatar: dieselben vier Uploadprüfungen, dasselbe Lesen je Teilbaum) und
+  `field-kit.ts` (Anmeldeformular und Profilfragen: dieselbe Antwortprüfung).
+  Geteilt wird dabei **die Regel, nie die Tabelle**: ein gemeinsamer Port für
+  zwei Feldtabellen hätte zwei Implementierungen und einen bedeutungslosen Typ
+  ergeben. Beim Ausziehen bleibt beim alten Dienst, was Zeilen kennt —
+  `LogoImageService` behält `purgeUnderSeries` und heißt weiter so.
 - **Ein neuer Port muss in `exports` von `DataAccessModule`, nicht nur in
   `providers`.** `@Global()` macht das Modul überall sichtbar, aber ein
   Providertoken, das nicht exportiert ist, bleibt unauflösbar — mit einem

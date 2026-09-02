@@ -10,6 +10,7 @@ import { InvitationRecipientEntity } from './invitation-recipient.entity';
 import { InvitationEntity } from './invitation.entity';
 import { MediaLinkEntity } from './media-link.entity';
 import { ModuleConfigEntity } from './module-config.entity';
+import { ProfileFieldEntity } from './profile-field.entity';
 import { ProgramItemSignupEntity } from './program-item-signup.entity';
 import { ProgramItemTranslationEntity } from './program-item-translation.entity';
 import { ProgramItemEntity } from './program-item.entity';
@@ -35,6 +36,7 @@ export {
 export { InvitationEntity } from './invitation.entity';
 export { MediaLinkEntity } from './media-link.entity';
 export { ModuleConfigEntity } from './module-config.entity';
+export { ProfileFieldEntity } from './profile-field.entity';
 export { ProgramItemSignupEntity } from './program-item-signup.entity';
 export { ProgramItemTranslationEntity } from './program-item-translation.entity';
 export { ProgramItemEntity } from './program-item.entity';
@@ -64,6 +66,7 @@ export const CORE_ENTITIES = [
   ProgramItemEntity,
   ProgramItemTranslationEntity,
   ProgramItemSignupEntity,
+  ProfileFieldEntity,
   PushSubscriptionEntity,
   RegistrationEntity,
   RegistrationFieldEntity,

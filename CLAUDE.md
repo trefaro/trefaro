@@ -21,14 +21,14 @@ Dieses Dokument ist die **Kurzfassung** — nur, was in jeder Sitzung gilt. Die
 Detailregeln stehen bewusst woanders, damit sie nicht bei jedem Start mitgelesen
 werden müssen:
 
-| Frage                                                     | Nachschlagen in                                                         |
-| --------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Anforderungen, Use Cases, Prioritäten, DB-Schema, F1–F112 | **`docs/Anforderungsanalyse_und_Umsetzungsplan.md`** (maßgeblich)       |
-| Was in einer Phase passierte, E1–E30, _Was anders lief_   | `docs/PHASE1.md`, `docs/PHASE2.md`, `docs/BOOTSTRAP.md`, `docs/spikes/` |
-| Installation, TLS, Betrieb                                | `docs/INSTALL.md`                                                       |
-| Offene Punkte, bekannte Lücken, Pilotpartner-Fragen       | `todo.md` (nach Phase gruppiert, nach jeder Phase durchgehen)           |
-| Diagramme der Thesis                                      | `docs/thesis/`                                                          |
-| **Regeln, die man beim Bauen braucht**                    | **`docs/rules/`** (Index in `docs/rules/README.md`)                     |
+| Frage                                                     | Nachschlagen in                                                                           |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Anforderungen, Use Cases, Prioritäten, DB-Schema, F1–F112 | **`docs/Anforderungsanalyse_und_Umsetzungsplan.md`** (maßgeblich)                         |
+| Was in einer Phase passierte, E1–E45, _Was anders lief_   | `docs/PHASE1.md`, `docs/PHASE2.md`, `docs/PHASE3.md`, `docs/BOOTSTRAP.md`, `docs/spikes/` |
+| Installation, TLS, Betrieb                                | `docs/INSTALL.md`                                                                         |
+| Offene Punkte, bekannte Lücken, Pilotpartner-Fragen       | `todo.md` (nach Phase gruppiert, nach jeder Phase durchgehen)                             |
+| Diagramme der Thesis                                      | `docs/thesis/`                                                                            |
+| **Regeln, die man beim Bauen braucht**                    | **`docs/rules/`** (Index in `docs/rules/README.md`)                                       |
 
 `docs/rules/` ist das Destillat: zwölf Dateien, je eine pro Bereich — Schichten
 und Ports, Verträge der Endpunkte, Datenmodell, Mail, i18n, Angular-Fallen,
@@ -147,7 +147,8 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    (offen geblieben: die Feedbackrunde mit Democracy International)
 2. **✅ 29.08.2026, M5** Whitelabel-Theming, Modul-Verwaltung, i18n, PWA,
    Installations-Story → `docs/PHASE2.md`
-3. Profile, Nachrichten, Echtzeit-/Gruppenchat, Push, Profilsuche
+3. **In Arbeit** (AP 1, AP 2 erledigt) Profile, Nachrichten,
+   Echtzeit-/Gruppenchat, Push, Profilsuche → `docs/PHASE3.md`
 4. Plug-ins: Programmvorschläge, Forum, Raumplanung, QR-Check-In
 5. Härtung, Usability-Test mit Democracy International (Pilotpartner), Doku,
    Release v1.0 — hier auch: konfigurierbare Drosselung, `CONTRIBUTING.md`
@@ -161,10 +162,14 @@ ihre 404-Regel, je Zeile eine pfadfreie Medienroute (`/api/media/series/:id/logo
 `…/events/:id/logo`), eigener Teilbaum `logos/` mit `CHECK` auf beiden Spalten,
 dieselben Uploadregeln wie das Branding. **Kein** Erben des Reihenlogos durch ein
 Event (F114) und **kein** Statusfilter auf der Medienroute (F115) — beides
-bewusst; die Begründungen stehen in `docs/rules/`. Katalog 646 → **654**.
+bewusst; die Begründungen stehen in `docs/rules/`. Katalog damals 646 → 654.
 
-**Damit ist der Weg zu Phase 3 frei** (Profile, Nachrichten, Chat, Push,
-Profilsuche). Sie hat noch keinen Plan — `docs/PHASE3.md` gibt es nicht.
+**Phase 3 läuft** (seit 02.09.2026): Plan in `docs/PHASE3.md`, dreizehn
+Arbeitspakete, Entscheidungen **E31–E45**, Nachträge ab **F118**.
+**AP 1 (Teilnehmerkonto und Login) und AP 2 (Profil und Feld-Baukasten) sind
+erledigt** — Protokoll je Paket unter _Fortschritt_. Als nächstes AP 3: Login,
+Registrierung und Profil im Nutzer-Client (Meilenstein M6). Katalog **664**
+Schlüssel.
 
 ## Betriebskontext
 

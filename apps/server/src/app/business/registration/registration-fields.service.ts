@@ -16,8 +16,6 @@ import type {
 } from '@trefaro/shared-models';
 import {
   DEFAULT_UPLOAD_MAX_BYTES,
-  MAX_CUSTOM_TEXT_LENGTH,
-  MAX_FIELD_OPTIONS,
   MAX_FILE_FIELDS,
   MAX_REGISTRATION_FIELDS,
   MAX_SUBMISSION_BYTES,
@@ -33,7 +31,16 @@ import {
   safeFileName,
   type UploadedFile,
 } from '../attachments';
-import { isSlug, slugify } from '../common/slug';
+import {
+  checkAnswer,
+  fieldLabel,
+  firstFreeFieldKey,
+  missingAnswer,
+  optionalHelpText,
+  requestedFieldKey,
+  selectOptions,
+  unknownFieldKeys,
+} from '../common/field-kit';
 import { EventsService } from '../events';
 import {
   REGISTRATION_FIELD_REPOSITORY,
@@ -54,12 +61,6 @@ export interface CheckedSubmission {
   /** Ready to be stored: type verified, size checked, file name made safe. */
   readonly uploads: readonly UploadedFile[];
 }
-
-/** Used when a label transliterates to nothing usable — see `slugify`. */
-const FALLBACK_KEY = 'field';
-
-/** How many numbered variants of a key to try before asking for one. */
-const MAX_KEY_ATTEMPTS = 50;
 
 /**
  * Keys the core registration already owns (F35).
@@ -156,10 +157,10 @@ export class RegistrationFieldsService {
       }
     }
 
-    const label = this.label(input.label);
-    const key = this.availableKey(
-      existing,
-      this.requestedKey(input.key, label),
+    const label = fieldLabel(input.label, 'participants');
+    const key = firstFreeFieldKey(
+      existing.map((field) => field.key),
+      requestedFieldKey(input.key, label, RESERVED_KEYS, 'the registration'),
     );
 
     try {
@@ -169,8 +170,8 @@ export class RegistrationFieldsService {
           key,
           label,
           type: input.type,
-          helpText: optional(input.helpText),
-          options: this.options(input.type, input.options),
+          helpText: optionalHelpText(input.helpText),
+          options: selectOptions(input.type === 'select', input.options),
           accept: this.accept(input.type, input.accept),
           maxSizeBytes: this.maxSize(input.type, input.maxSizeBytes),
           required: input.required ?? false,
@@ -200,13 +201,13 @@ export class RegistrationFieldsService {
     const updated = await this.fields.update(id, {
       ...(change.label === undefined
         ? {}
-        : { label: this.label(change.label) }),
+        : { label: fieldLabel(change.label, 'participants') }),
       ...(change.helpText === undefined
         ? {}
-        : { helpText: optional(change.helpText) }),
+        : { helpText: optionalHelpText(change.helpText) }),
       ...(change.options === undefined
         ? {}
-        : { options: this.options(field.type, change.options) }),
+        : { options: selectOptions(field.type === 'select', change.options) }),
       ...(change.accept === undefined
         ? {}
         : { accept: this.accept(field.type, change.accept) }),
@@ -292,7 +293,7 @@ export class RegistrationFieldsService {
     const given = answers ?? {};
 
     const known = new Map(definitions.map((field) => [field.key, field]));
-    const unknown = Object.keys(given).filter((key) => !known.has(key));
+    const unknown = unknownFieldKeys(given, new Set(known.keys()));
     if (unknown.length > 0) {
       throw new BadRequestException(
         `This registration form has no field called ${unknown
@@ -392,7 +393,7 @@ export class RegistrationFieldsService {
 
     const upload = parts[0];
     if (!upload) {
-      if (field.required) throw this.missing(field);
+      if (field.required) throw missingAnswer(field);
       return undefined;
     }
 
@@ -435,111 +436,39 @@ export class RegistrationFieldsService {
   /**
    * One answer, checked against one field.
    *
-   * `undefined` means "not answered" — which is only acceptable for a field that
-   * is not required.
+   * The rule itself lives in `business/common/field-kit.ts`, because the profile
+   * questions of FR 4.3 apply the same one (E35) and a second copy would be the
+   * copy that drifts. What stays here is the one thing the two kits do not
+   * share: a registration form may ask for a file, and a file is not a value.
    */
   private answer(
     field: RegistrationFieldRecord,
     value: CustomFieldValue | undefined,
   ): CustomFieldValue | undefined {
-    if (field.type === 'checkbox') {
-      if (value === undefined) {
-        // A required checkbox has to be ticked, not merely answered (F36): a
-        // consent box that accepts "no" is not a consent box.
-        if (field.required) throw this.missing(field);
-        return undefined;
-      }
-      if (typeof value !== 'boolean') {
-        throw new BadRequestException(
-          `"${field.label}" is a checkbox and takes true or false.`,
-        );
-      }
-      if (field.required && !value) throw this.missing(field);
-      return value;
-    }
-
-    if (value !== undefined && typeof value !== 'string') {
-      throw new BadRequestException(`"${field.label}" takes text.`);
-    }
-
-    // An empty string is no answer at all (F36): "answered with nothing" and
-    // "not answered" are the same thing for a text or a selection field.
-    const text = (value ?? '').trim();
-    if (text.length === 0) {
-      if (field.required) throw this.missing(field);
-      return undefined;
-    }
-
-    if (field.type === 'select') {
-      if (!field.options.includes(text)) {
-        throw new BadRequestException(
-          `"${text}" is not one of the choices for "${field.label}".`,
-        );
-      }
-      return text;
-    }
-
-    if (text.length > MAX_CUSTOM_TEXT_LENGTH) {
+    if (field.type === 'file') {
+      // Not reachable — the caller routes file fields to `upload` instead. It
+      // is written out so that the narrowing below belongs to the compiler
+      // rather than to a cast at a boundary.
       throw new BadRequestException(
-        `"${field.label}" takes at most ${MAX_CUSTOM_TEXT_LENGTH} characters.`,
+        `"${field.label}" is answered with a file, not with a value.`,
       );
     }
-    return text;
-  }
 
-  private missing(field: RegistrationFieldRecord): BadRequestException {
-    return new BadRequestException(`"${field.label}" is required.`);
+    return checkAnswer(
+      {
+        label: field.label,
+        type: field.type,
+        options: field.options,
+        required: field.required,
+      },
+      value,
+    );
   }
 
   private async require(id: string): Promise<RegistrationFieldRecord> {
     const found = await this.fields.findById(id);
     if (!found) throw new NotFoundException(GONE);
     return found;
-  }
-
-  private label(value: string): string {
-    const label = value.trim();
-    if (label.length === 0) {
-      throw new BadRequestException('A field needs a label participants read.');
-    }
-    return label;
-  }
-
-  /**
-   * The choices of a select field.
-   *
-   * Duplicates are dropped rather than refused — two identical entries in a
-   * dropdown are a slip of the paste buffer, not an intention. A select without
-   * any choice left is refused: an empty dropdown is a field nobody can fill in.
-   */
-  private options(
-    type: RegistrationFieldRecord['type'],
-    values: readonly string[] | undefined,
-  ): readonly string[] {
-    if (type !== 'select') {
-      if (values && values.length > 0) {
-        throw new BadRequestException(
-          'Only a selection field has choices to offer.',
-        );
-      }
-      return [];
-    }
-
-    const options = [
-      ...new Set((values ?? []).map((value) => value.trim()).filter(Boolean)),
-    ];
-    if (options.length === 0) {
-      throw new BadRequestException(
-        'A selection field needs at least one choice.',
-      );
-    }
-    if (options.length > MAX_FIELD_OPTIONS) {
-      throw new BadRequestException(
-        `A selection field offers at most ${MAX_FIELD_OPTIONS} choices — ` +
-          'beyond that a text field asks the question better.',
-      );
-    }
-    return options;
   }
 
   /**
@@ -623,55 +552,6 @@ export class RegistrationFieldsService {
     return bytes;
   }
 
-  /**
-   * An explicit key is taken literally; otherwise the label decides.
-   *
-   * Literally, and refused when it is not a key: a key is given precisely when
-   * it has to match something outside this application, and quietly rewriting it
-   * into something similar would defeat the only reason to send one.
-   */
-  private requestedKey(requested: string | undefined, label: string): string {
-    const cleaned =
-      requested === undefined ? slugify(label) : requested.trim().toLowerCase();
-    if (requested !== undefined && !isSlug(cleaned)) {
-      throw new BadRequestException(
-        'A field key is made of lower-case letters, digits and single hyphens.',
-      );
-    }
-    if (RESERVED_KEYS.includes(cleaned)) {
-      throw new ConflictException(
-        `"${cleaned}" is what the registration already calls one of its own ` +
-          'fields. Please phrase the question differently, or give the field ' +
-          'its own key.',
-      );
-    }
-    return cleaned;
-  }
-
-  /**
-   * First free variant within the event: `diet`, then `diet-2`, …
-   *
-   * The same treatment an event's public address gets: two questions that
-   * shorten to the same key are a normal thing to want, and refusing the second
-   * one would be a dead end an organizer cannot see the cause of.
-   */
-  private availableKey(
-    existing: readonly RegistrationFieldRecord[],
-    base: string,
-  ): string {
-    const root = base || FALLBACK_KEY;
-    const taken = new Set(existing.map((field) => field.key));
-
-    for (let attempt = 1; attempt <= MAX_KEY_ATTEMPTS; attempt += 1) {
-      const candidate = attempt === 1 ? root : `${root}-${attempt}`;
-      if (!taken.has(candidate)) return candidate;
-    }
-
-    throw new ConflictException(
-      `Could not derive a free key from "${root}" — please give the field one.`,
-    );
-  }
-
   private translate(error: unknown): unknown {
     return error instanceof RegistrationFieldKeyTakenError
       ? new ConflictException(`${error.message} — please give it another one.`)
@@ -681,13 +561,6 @@ export class RegistrationFieldsService {
 
 /** Said the same way wherever a field cannot be found any more. */
 const GONE = 'This registration field no longer exists.';
-
-/** An emptied help text means "no help text", not the empty string. */
-function optional(value: string | null | undefined): string | null {
-  if (value === undefined || value === null) return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
 
 function toField(record: RegistrationFieldRecord): RegistrationField {
   return {

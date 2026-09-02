@@ -21,7 +21,9 @@ Entscheidungsprotokoll (`docs/Anforderungsanalyse_und_Umsetzungsplan.md`).
   Schlüssel sind für den Kern reserviert.
 - **Eine gelöschte Formularfrage löscht keine Antworten** (F34). Die Werte bleiben
   in `custom_fields_json`, die Übersicht zeigt sie unter ihrem Schlüssel. Kein
-  409 — das wäre eine Sackgasse ohne Archiv-Flag.
+  409 — das wäre eine Sackgasse ohne Archiv-Flag. Gilt für **beide** Baukästen:
+  auch eine gelöschte Profilfrage lässt stehen, was Menschen über sich
+  geschrieben haben — die Definition war nur die Frage.
 - **Die Reihenfolge des Formulars wird als Ganzes geschrieben**, nie als „ein Feld
   nach unten": eine Liste aller Ids, `sort` in einer Transaktion neu vergeben.
   Deshalb ist `sort` bewusst nicht eindeutig.
@@ -106,6 +108,32 @@ Entscheidungsprotokoll (`docs/Anforderungsanalyse_und_Umsetzungsplan.md`).
   (E9). Geschrieben wird die Spalte **nur** über `setLogoPath`, nie über
   `EventSeriesChanges`/`EventChanges` — ein Formular, das eine Pfadspalte leeren
   kann, leert sie irgendwann versehentlich (F116).
+- **Der Profil-Baukasten ist instanzweit, das Anmeldeformular je Event** (F122,
+  E35). `profile_field` hat **kein** `event_id`, sein Schlüssel ist instanzweit
+  eindeutig, und die Routen sind eine flache Sammlung. Sonst gelten dieselben
+  Regeln wie bei `registration_field` — Schlüssel aus der Beschriftung und dann
+  unveränderlich, Typ fest, Reihenfolge als Ganzes, `sort` nicht eindeutig. **Kein
+  Datei-Typ:** eine Datei ist eine `attachment`-Zeile (F37), und ein Profil hat
+  keine Anmeldung, an der eine hängen könnte. `help_text` gibt es trotzdem —
+  ohne die Spalte wären die beiden Baukästen strukturell verschieden.
+- **Geteilt wird die Regel, nie die Tabelle** (F138). Was eine Antwort gültig
+  macht, wie ein Schlüssel aus einer Beschriftung entsteht und was die Auswahl
+  einer Auswahlliste ist, liegt einmal in `business/common/field-kit.ts`. Ein
+  gemeinsamer _Port_ für zwei Feldtabellen wäre dagegen ein Typ, der für sich
+  nichts bedeutet — die eine filtert nach Event, die andere nicht.
+- **Der Tätigkeitsbereich ist eine Spalte** (F123, E36), weil die Profilsuche
+  darauf filtert (FR 4.4). Geleert heißt `NULL`, nicht `''`: eine Bedingung statt
+  zwei, und kein Profil behauptet, sein Mensch arbeite an nichts.
+- **`searchable` ist aus, bis sein Mensch es einschaltet** (E37, F13) — und es
+  ist das Opt-in für Suche **und** Kontakt. Der Vorgabewert ist der Punkt: ein
+  Aktivistenprofil, das durch eine Migration auffindbar wird, ist genau der
+  Unfall, den dieses Projekt nicht haben darf.
+- **Ein Profilbild liegt in `avatars/`, und die Datenbank hält das fest** (F124):
+  `CHK_user_profile_avatar_path` lässt `NULL` oder `avatars/%` zu — dieselbe
+  Konstruktion wie bei den Logos (F113), und geschrieben wird die Spalte **nur**
+  über `setAvatarPath`, nie über `UserProfileChanges` (F116). Eigener Teilbaum
+  und nicht eine Ecke von `logos/`: ein Logo ist eine Marke, ein Avatar das Bild
+  eines Menschen, und ein Operator muss das mit `ls` unterscheiden können.
 - **Ein Event erbt das Logo seiner Reihe nicht** (F114). Jede Zeile zeigt ihr
   eigenes oder keines; der Rückfall ist die Kopfzeile, die das Organisationslogo
   ohnehin auf jeder Seite trägt. Eine Kette hätte dasselbe Bild zweimal auf eine

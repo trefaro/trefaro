@@ -26,11 +26,10 @@ import {
   brandingTypeSummary,
 } from '@trefaro/shared-models';
 import {
-  LOGO_UPLOAD_OPTIONS,
-  LogoImageDto,
-  LogoImageUploadDto,
-  type LogoMultipartFile,
-} from '../logo-files';
+  IMAGE_UPLOAD_OPTIONS,
+  type ImageMultipartFile,
+} from '../common/image-upload';
+import { LogoImageDto, LogoImageUploadDto } from '../logo-files';
 import { EventSeriesService } from './event-series.service';
 
 /**
@@ -54,7 +53,7 @@ export class AdminSeriesLogoController {
   constructor(private readonly series: EventSeriesService) {}
 
   @Put(':id/logo')
-  @UseInterceptors(FileInterceptor(BRANDING_IMAGE_PART, LOGO_UPLOAD_OPTIONS))
+  @UseInterceptors(FileInterceptor(BRANDING_IMAGE_PART, IMAGE_UPLOAD_OPTIONS))
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: LogoImageUploadDto })
   @ApiOperation({
@@ -79,7 +78,7 @@ export class AdminSeriesLogoController {
   @ApiUnauthorizedResponse({ description: 'No administrative session.' })
   async put(
     @Param('id', ParseUUIDPipe) id: string,
-    @UploadedFile() file: LogoMultipartFile | undefined,
+    @UploadedFile() file: ImageMultipartFile | undefined,
   ): Promise<LogoImageDto> {
     if (!file) {
       throw new BadRequestException(

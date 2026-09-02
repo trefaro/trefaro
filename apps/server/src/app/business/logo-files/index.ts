@@ -10,4 +10,3 @@ export {
   type LogoPathsRepository,
 } from './ports/logo-paths.repository';
 export { LogoImageDto, LogoImageUploadDto } from './dto/logo.dto';
-export { LOGO_UPLOAD_OPTIONS, type LogoMultipartFile } from './logo-upload';

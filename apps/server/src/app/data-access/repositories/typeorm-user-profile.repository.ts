@@ -23,7 +23,7 @@ export class TypeormUserProfileRepository implements UserProfileRepository {
 
   async findById(id: string): Promise<UserProfileRecord | null> {
     const row = await this.repository.findOneBy({ id });
-    return row ? toRecord(row) : null;
+    return row ? toUserProfileRecord(row) : null;
   }
 
   async findByEmail(email: string): Promise<UserProfileRecord | null> {
@@ -33,7 +33,7 @@ export class TypeormUserProfileRepository implements UserProfileRepository {
       .createQueryBuilder('profile')
       .where('lower(profile.email) = lower(:email)', { email })
       .getOne();
-    return row ? toRecord(row) : null;
+    return row ? toUserProfileRecord(row) : null;
   }
 
   async create(profile: NewUserProfile): Promise<UserProfileRecord> {
@@ -48,7 +48,7 @@ export class TypeormUserProfileRepository implements UserProfileRepository {
           confirmedAt: null,
         }),
       );
-      return toRecord(saved);
+      return toUserProfileRecord(saved);
     } catch (error: unknown) {
       // Checking first and inserting second would still lose a race; the
       // constraint is the authority, so the error is translated instead.
@@ -75,6 +75,15 @@ export class TypeormUserProfileRepository implements UserProfileRepository {
     if (changes.preferredLocale !== undefined) {
       patch.preferredLocale = changes.preferredLocale;
     }
+    if (changes.activityAreas !== undefined) {
+      patch.activityAreas = changes.activityAreas;
+    }
+    if (changes.customFields !== undefined) {
+      // Copied, because the port hands the answers over as `readonly` and
+      // TypeORM writes into the object it is given.
+      patch.customFields = { ...changes.customFields };
+    }
+    if (changes.searchable !== undefined) patch.searchable = changes.searchable;
     if (changes.confirmedAt !== undefined) {
       patch.confirmedAt = changes.confirmedAt;
     }
@@ -83,6 +92,25 @@ export class TypeormUserProfileRepository implements UserProfileRepository {
       const result = await this.repository.update({ id }, patch);
       if ((result.affected ?? 0) === 0) return null;
     }
+    return this.findById(id);
+  }
+
+  /**
+   * Points the profile at a stored picture, or at none (F124).
+   *
+   * Through `update`, which also moves `updated_at` — and the picture's `?v=`
+   * is built from that timestamp, so the URL changes exactly when the bytes do.
+   * That is what lets the media route serve them `immutable` for a year.
+   */
+  async setAvatarPath(
+    id: string,
+    storedPath: string | null,
+  ): Promise<UserProfileRecord | null> {
+    const result = await this.repository.update(
+      { id },
+      { avatarPath: storedPath },
+    );
+    if ((result.affected ?? 0) === 0) return null;
     return this.findById(id);
   }
 }
@@ -95,7 +123,14 @@ function isUniqueViolation(error: unknown): boolean {
   return driverError?.code === UNIQUE_VIOLATION;
 }
 
-function toRecord(row: UserProfileEntity): UserProfileRecord {
+/**
+ * One row as the business layer sees it.
+ *
+ * Exported because the session repository resolves a session and its owner in
+ * one query and has to map the same entity — and a second copy of this function
+ * is a copy that forgets the next column.
+ */
+export function toUserProfileRecord(row: UserProfileEntity): UserProfileRecord {
   return {
     id: row.id,
     email: row.email,
@@ -103,6 +138,10 @@ function toRecord(row: UserProfileEntity): UserProfileRecord {
     firstName: row.firstName,
     lastName: row.lastName,
     preferredLocale: row.preferredLocale,
+    avatarPath: row.avatarPath,
+    activityAreas: row.activityAreas,
+    customFields: row.customFields ?? {},
+    searchable: row.searchable,
     confirmedAt: row.confirmedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

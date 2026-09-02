@@ -1,3 +1,5 @@
+import type { CustomFieldValues } from '../registrations';
+
 /**
  * The participant's own account (FR 4.1, FR 4.2, FR 4.3).
  *
@@ -35,8 +37,73 @@ export interface ParticipantAccount {
   readonly lastName: string;
   /** BCP 47 tag: the language this person is written to and rendered in. */
   readonly preferredLocale: string;
+  /**
+   * Public URL of the profile picture, or `null` for a profile without one.
+   *
+   * Carries no stored path and a `?v=` that moves when the picture does — the
+   * same construction as a series or event logo (F113), for the same reason:
+   * the neighbours of a stored path are registration attachments (E9).
+   */
+  readonly avatarUrl: string | null;
+  /**
+   * What this person works on, as free text (E36, FR 4.3).
+   *
+   * Its own field rather than a question in the field kit, because FR 4.4
+   * filters the participant search on it — a search criterion buried in
+   * `custom_fields_json` is not one that can be compared reliably.
+   */
+  readonly activityAreas: string | null;
+  /** The answers to the instance's profile questions, by field key (E35). */
+  readonly customFields: CustomFieldValues;
+  /**
+   * Whether this profile may be found by other participants (F13, E37).
+   *
+   * Off unless the person switches it on, and it is the opt-in for **being
+   * contacted** as well: a one-to-one conversation can only start with a
+   * profile that is in the search. One switch, one meaning.
+   */
+  readonly searchable: boolean;
   /** ISO 8601 — when the address was confirmed. Never null here. */
   readonly confirmedAt: string;
+}
+
+/**
+ * What the profile form sends to `PATCH /api/participant/me` (FR 4.3).
+ *
+ * Partial at the top level: an absent property is one the form did not touch.
+ * `customFields`, though, is whole when it is there — the answers are checked
+ * against the definitions as a set, because "required" is a property of the
+ * form and can only be judged on a complete submission (E35).
+ *
+ * The address is deliberately not here. It is the identity (E31), the
+ * registrations of this person are found by it, and changing it would cut the
+ * history rather than carry it along.
+ */
+export interface ParticipantProfileUpdate {
+  readonly firstName?: string;
+  readonly lastName?: string;
+  readonly preferredLocale?: string;
+  /** An empty string means "no longer stated", not the empty answer. */
+  readonly activityAreas?: string | null;
+  readonly customFields?: CustomFieldValues;
+  readonly searchable?: boolean;
+}
+
+/**
+ * Changing the password from inside the profile (FR 4.3).
+ *
+ * With the current one, which is what makes this a change rather than a reset:
+ * a reset is its own route with its own token, its own lifetime and its own
+ * non-disclosing answer, and it is not part of FR 4.3.
+ */
+export interface ParticipantPasswordChange {
+  readonly currentPassword: string;
+  readonly newPassword: string;
+}
+
+/** What the avatar upload and removal endpoints answer with. */
+export interface AvatarImage {
+  readonly avatarUrl: string | null;
 }
 
 /** What the participant client posts to `POST /api/participant/auth/login`. */

@@ -5,6 +5,7 @@ import {
   type FileArea,
   type FileStore,
 } from '../attachments';
+import { ImageFileService } from '../common/image-file.service';
 import { LogoImageService } from './logo-image.service';
 import type { LogoPathsRepository } from './ports/logo-paths.repository';
 
@@ -60,7 +61,10 @@ describe('LogoImageService', () => {
   beforeEach(() => {
     files = new FakeFileStore();
     paths = new FakeLogoPaths();
-    service = new LogoImageService(files, paths);
+    // The real shared service on a fake volume: what this file asserts is that
+    // a logo goes into the logo area and comes back out of it, and delegating
+    // to a stub would assert only that a method was called.
+    service = new LogoImageService(new ImageFileService(files), paths);
   });
 
   describe('store', () => {

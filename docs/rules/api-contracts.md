@@ -72,13 +72,34 @@ Link.
   dafür da.
 - **Eine Medienroute nimmt nie einen Pfad, aber auch keinen Status** (F113, F115).
   `/api/media/branding/{logo,app-icon}` löst über `app_config` auf,
-  `/api/media/series/:id/logo` und `…/events/:id/logo` über die Zeile — mehr
-  Routen zu gespeicherten Bytes gibt es nicht, und keine davon nimmt einen
-  Dateinamen. Der **Status** wird dabei bewusst **nicht** geprüft: das Logo einer
-  unveröffentlichten Reihe wird ausgeliefert, weil die Adresse die uuid braucht,
-  die Bytes eine Marke sind und die Gegenrichtung die Vorschau des Veranstalters
-  genau im Entwurfszustand kaputt machen würde. Das 404 sagt nur „hier ist kein
-  Bild" und nie, ob die Zeile existiert.
+  `/api/media/series/:id/logo`, `…/events/:id/logo` und
+  `…/profiles/:id/avatar` über die Zeile — mehr Routen zu gespeicherten Bytes
+  gibt es nicht, und keine davon nimmt einen Dateinamen. Der **Status** wird
+  dabei bewusst **nicht** geprüft: das Logo einer unveröffentlichten Reihe wird
+  ausgeliefert, weil die Adresse die uuid braucht, die Bytes eine Marke sind und
+  die Gegenrichtung die Vorschau des Veranstalters genau im Entwurfszustand
+  kaputt machen würde. Das 404 sagt nur „hier ist kein Bild" und nie, ob die
+  Zeile existiert.
+- **Beim Avatar trägt dieselbe Regel eine andere Begründung** (F124). Zwei der
+  drei Argumente aus F115 greifen dort **nicht**: ein Profilbild _ist_ ein
+  Teilnehmerdatum, und es gibt keine Veranstalter-Vorschau, die eine strengere
+  Regel kaputt machen würde. Was trägt, ist die uuid — plus E34: ein
+  sitzungsgeschützter Avatar müsste **entweder** das Teilnehmer- **oder** das
+  Veranstalter-Cookie akzeptieren (der Guard, den E34 verbietet) oder es gäbe
+  zwei Routen zu denselben Bytes (was E19 verbietet). Folge, die man beim
+  nächsten Paket braucht: **wer eine Id herausgibt, gibt das Bild mit heraus** —
+  die Profilsuche darf die Id eines Profils, das sie nicht zeigt, nicht nennen.
+- **Der Profil-Baukasten ist eine flache Sammlung** (F122, E35):
+  `/api/admin/profile-fields`, ohne Elternteil im Pfad, weil die Fragen
+  instanzweit sind. Das Anmeldeformular liegt aus dem umgekehrten Grund unter
+  seinem Event. Lesen darf der Teilnehmer (`/api/participant/profile-fields`) —
+  er füllt das Formular aus —, schreiben nur der Veranstalter.
+- **`PATCH /api/participant/me` ist oben teilweise und unten ganz.** Ein nicht
+  gesendetes Feld ändert sich nicht; `customFields` ist, **wenn** es mitkommt,
+  die vollständige Antwortmenge. Sonst ließe sich „required" nicht beurteilen:
+  eine Pflichtfrage ist eine Eigenschaft des Formulars, nicht eines Fragments.
+  Wer nur den Namen korrigiert, darf deshalb nicht an einer Frage scheitern, die
+  vor drei Monaten gestellt wurde.
 - **`?locale=` hat drei Antworten, und nur eine ist ein Fehler** (F94): fehlt der
   Parameter, stehen die Originale (kostenlos); eine wohlgeformte Sprache, in die
   niemand übersetzt hat, ist **kein** Fehler; was kein Sprachtag ist, ist ein 400.

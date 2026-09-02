@@ -1,6 +1,6 @@
 # Phase 3 — Profile, Kommunikation und Community-Kern
 
-**Status: in Arbeit** (seit 02.09.2026, AP 1 erledigt). Der Teil oberhalb von
+**Status: in Arbeit** (seit 02.09.2026, AP 1 und AP 2 erledigt). Der Teil oberhalb von
 _Fortschritt_ ist der **Plan** und wird nicht mehr rückwirkend korrigiert; was
 tatsächlich passierte, steht unten je Paket — wie in
 [`PHASE1.md`](PHASE1.md) und [`PHASE2.md`](PHASE2.md).
@@ -709,7 +709,9 @@ Wird beim jeweiligen Paket eingetragen, nicht am Ende gesammelt:
 Die Nummern sind reserviert, nicht garantiert: was sich beim Bauen als dieselbe
 Entscheidung entpuppt, wird zusammengelegt, und die freigewordene Nummer bleibt
 unvergeben (wie F62). **F137** war nicht geplant — die Zeile fiel in AP 1 auf und
-bekam ihre eigene Nummer, weil sie noch zweimal auftreten wird.
+bekam ihre eigene Nummer, weil sie noch zweimal auftreten wird. **F138** und
+**F139** kamen in AP 2 dazu: was zwei Baukästen wirklich teilen (die Regel, nicht
+den Port) und was ein Passwortwechsel mit den anderen Sitzungen macht.
 
 ## Definition of Done für Phase 3
 
@@ -727,7 +729,7 @@ bekam ihre eigene Nummer, weil sie noch zweimal auftreten wird.
    und die vier Zeilen der Gerätematrix aus Spike 3 sind abgehakt oder mit Gerät
    und Datum als gescheitert protokolliert.
 5. **`todo.md` unter _Checkable after phase 3_ ist durchgearbeitet** und
-   F118–F137 stehen im Referenzdokument. Verschobene Einträge tragen eine
+   F118–F139 stehen im Referenzdokument. Verschobene Einträge tragen eine
    Begründung, gestrichene ebenfalls.
 6. **Dieses Dokument ist von Plan auf Protokoll korrigiert** und hat je Paket
    einen Abschnitt „erledigt" sowie am Ende ein phasenweites _Was anders lief_.
@@ -816,3 +818,93 @@ Was anders lief:
 Offen aus diesem Paket: `AP 3` baut die Seiten zu
 `PROFILE_CONFIRMATION_PATH` und `PROFILE_LOGIN_PATH` — bis dahin zeigen die
 Links beider Mails auf Adressen, die der Nutzer-Client noch nicht bedient.
+
+### AP 2 — Profil verwalten und der Baukasten dafür (erledigt, 02.09.2026)
+
+Umgesetzt:
+
+- **Migration `ProfileFields`** — `user_profile` bekommt `avatar_path` (mit
+  `CHK_user_profile_avatar_path`: `NULL` oder `avatars/%`), `activity_areas`,
+  `custom_fields_json` (`NOT NULL DEFAULT '{}'`) und `searchable`
+  (`NOT NULL DEFAULT false`); dazu die Tabelle `profile_field` mit
+  `UQ_profile_field_key` — **instanzweit**, ohne `event_id`.
+- **`business/common/` wächst um zwei geteilte Stücke** (F138): `field-kit.ts`
+  (Antwortprüfung, Schlüsselableitung, Beschriftung, Auswahllisten — jetzt von
+  **beiden** Baukästen benutzt, `RegistrationFieldsService` inbegriffen) und
+  `ImageFileService` samt `image-upload.ts` (die vier Uploadprüfungen, Schreiben
+  und Lesen je Teilbaum). `LogoImageService` delegiert und behält nur, was Zeilen
+  kennt; `logo-upload.ts` ist weg, die beiden Logo-Controller lesen
+  `IMAGE_UPLOAD_OPTIONS`. `FileArea` hat einen vierten Wert: `avatars`.
+- **`business/profiles/`** — `ProfileFieldsService` (Definitionen **und** Prüfung
+  der Antworten), `ProfilesService` um `updateProfile`, `changePassword`,
+  `setAvatar`, `removeAvatar` und `readAvatar` erweitert, `avatar-url.ts`,
+  `UserSessionService.revokeOthers`, ein neuer Port
+  (`PROFILE_FIELD_REPOSITORY`), `setAvatarPath` und `deleteForUserExcept` an den
+  zwei bestehenden, drei neue Controller.
+- **Endpunkte** — `PATCH /api/participant/me`, `PUT /api/participant/me/password`,
+  `PUT`/`DELETE /api/participant/me/avatar`,
+  `GET /api/participant/profile-fields`, `GET`/`POST /api/admin/profile-fields`,
+  `PUT /api/admin/profile-fields/order`,
+  `PATCH`/`DELETE /api/admin/profile-fields/:id`,
+  `GET /api/media/profiles/:id/avatar`. Alle tragen `CoreModuleEnabledGuard`.
+- **`shared-models`** — `lib/profiles/profile-field.ts` (`ProfileFieldType`,
+  `PROFILE_FIELD_TYPES`, `MAX_PROFILE_FIELDS`, `MAX_ACTIVITY_AREAS_LENGTH`,
+  `ProfileField`, `…Public`, `…Input`, `…Change`, `…Order`); `ParticipantAccount`
+  um `avatarUrl`, `activityAreas`, `customFields` und `searchable` erweitert,
+  dazu `ParticipantProfileUpdate`, `ParticipantPasswordChange`, `AvatarImage`.
+
+Nachweise: 62 neue Server-Unit-Tests (817 → **879**), 32 neue API-Vertragstests
+(396 → **428**), Browsersuiten unverändert grün (266 Veranstalter, 197 Nutzer),
+`nx run-many -t lint test build` über alle 13 Projekte fehlerfrei. Das `down` der
+Migration einmal wirklich gefahren — Tabelle weg, Constraint weg, vier Spalten
+weg, `user_profile` genau wieder in dem Zustand, den `UserAccounts` hinterlässt —
+und danach mit dem vollen Vertragslauf wieder hochgezogen. **F122–F124** stehen
+im Referenzdokument, dazu **F138** und **F139**, die der Plan nicht vorhergesehen
+hatte. Der Katalog bleibt bei **664** Schlüsseln: dieses Paket hat keinen
+Bildschirm und keine Mail.
+
+Was anders lief:
+
+- **E35 verspricht mehr, als sich einlösen ließ.** „Derselbe generische Port,
+  dasselbe Repository" ist für zwei Feldtabellen nicht machbar: die eine filtert
+  nach `event_id` und ist je Event eindeutig, die andere hat keins und ist
+  instanzweit eindeutig, und die eine kennt einen Datei-Typ, den die andere nicht
+  haben darf. Geteilt wird deshalb **die Regel** (`business/common/field-kit.ts`,
+  von beiden Diensten benutzt), nicht der Port — **F138**. Dieselbe Frage stellte
+  das Bild ein zweites Mal, und dort war die Antwort umgekehrt: beim **dritten**
+  wortgleichen Exemplar derselben vier Uploadprüfungen ist Teilen richtig, also
+  gibt es jetzt `ImageFileService`.
+- **`profile_field` hat ein `help_text`, das im Plan nicht stand.** Ohne die
+  Spalte wären die beiden Baukästen strukturell verschieden — und dann hätte das
+  eine Formularbauteil, das E35 gemeinsam benutzen will, in AP 3 zwei Fassungen
+  gebraucht.
+- **Die Öffentlichkeit der Avatarroute brauchte eine eigene Begründung.** Der
+  Plan sagte „wie F115"; zwei der drei Argumente dort greifen aber nicht (ein
+  Avatar _ist_ ein Teilnehmerdatum, und eine Veranstalter-Vorschau gibt es
+  nicht). Getragen wird die Entscheidung von der uuid **und** von E34: ein
+  sitzungsgeschützter Avatar bräuchte einen Guard, der beide Cookies akzeptiert,
+  oder zwei Routen zu denselben Bytes. Steht als **F124** samt der Auflage für
+  AP 5, die Id eines nicht gezeigten Profils auch nicht herauszugeben.
+- **Ein Passwortwechsel beendet die anderen Sitzungen** (**F139**). Nicht im Plan,
+  aber ohne diesen Teil wäre die Funktion eine halbe Maßnahme — wer sein Passwort
+  ändert, weil ein Gerät nicht mehr sein eigenes ist, hat etwas über das Gerät
+  gesagt. Die eigene Sitzung bleibt.
+- **`PATCH` ist oben teilweise und unten ganz.** `customFields` ist, wenn es
+  mitkommt, die vollständige Antwortmenge — sonst ließe sich „Pflichtfrage" nicht
+  beurteilen. Wer nur seinen Namen korrigiert, scheitert deshalb **nicht** an
+  einer Frage, die nach seiner letzten Bearbeitung gestellt wurde; die Prüfung
+  gilt dem Formular, nicht dem gespeicherten Profil.
+- **`GET /api/participant/profile-fields` steht nicht in der API-Tabelle des
+  Plans.** Der Client braucht die Definitionen, um das Formular zu zeichnen, und
+  sie in `GET /api/participant/me` mitzuliefern hätte die Zusage dieses
+  Endpunkts gebrochen, keine Abfrage zu kosten — er läuft bei jedem Start.
+- **Ein Vorgabewert war die eigentliche Arbeit.** `searchable NOT NULL DEFAULT
+false` ist eine Zeile SQL und die wichtigste dieser Migration: ein
+  Aktivistenprofil, das durch eine Migration auffindbar wird, ist der Unfall,
+  den E37 verhindert.
+
+Offen aus diesem Paket: **der Veranstalter-Client hat keine Seite für den
+Profil-Baukasten.** Die Endpunkte stehen, die Fragen lassen sich nur über die API
+anlegen — der Plan nennt für AP 2 ausdrücklich nur den Server und gibt die
+Oberfläche keinem Paket. Eingetragen in `todo.md`; der naheliegende Ort ist AP 3
+(dort entsteht ohnehin das Formularbauteil) oder ein eigenes kleines Paket.

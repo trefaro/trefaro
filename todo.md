@@ -490,6 +490,21 @@ answer, not an opinion.
 - [ ] **Wire `PushService.broadcast()` to actual event changes** (FR 3.15). There
       is deliberately no test-send endpoint — an unauthenticated one would be a
       spam vector.
+- [ ] **The organizer has no screen for the profile field kit.** AP 2 built
+      `GET/POST /api/admin/profile-fields`, `PUT …/order` and
+      `PATCH/DELETE …/:id`, and they work — but the plan assigns the _interface_
+      for them to no work package: AP 2 is explicitly server-side, AP 3 is the
+      participant client, AP 10 is the organizer's message overview. So an
+      organization can only define its profile questions with `curl`, which for
+      the audience of this application means it cannot define them at all. The
+      obvious home is AP 3, where the shared form component is built anyway, or a
+      small package of its own. Noted 2026-09-02 in AP 2, not silently deferred.
+- [ ] **A `select` profile question whose choices shrink leaves answers behind
+      that are no longer offered.** The same situation as a deleted question
+      (F34) and deliberately not refused — but nothing tells the organizer that
+      four people answered "Bonn" before "Bonn" was removed from the list. The
+      participant overview shows unasked-for answers under their key; the profile
+      view of AP 5 should do the same. Cheap to add there, pointless before it.
 
 ## Checkable after phase 4 — plug-ins
 

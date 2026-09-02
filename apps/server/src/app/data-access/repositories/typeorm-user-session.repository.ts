@@ -7,6 +7,7 @@ import type {
   UserSessionRepository,
 } from '../../business/profiles/ports/user-session.repository';
 import { UserSessionEntity } from '../entities';
+import { toUserProfileRecord } from './typeorm-user-profile.repository';
 
 /** PostgreSQL implementation of {@link UserSessionRepository}. */
 @Injectable()
@@ -41,17 +42,7 @@ export class TypeormUserSessionRepository implements UserSessionRepository {
       sessionId: row.id,
       lastSeenAt: row.lastSeenAt,
       expiresAt: row.expiresAt,
-      profile: {
-        id: row.user.id,
-        email: row.user.email,
-        passwordHash: row.user.passwordHash,
-        firstName: row.user.firstName,
-        lastName: row.user.lastName,
-        preferredLocale: row.user.preferredLocale,
-        confirmedAt: row.user.confirmedAt,
-        createdAt: row.user.createdAt,
-        updatedAt: row.user.updatedAt,
-      },
+      profile: toUserProfileRecord(row.user),
     };
   }
 
@@ -64,6 +55,19 @@ export class TypeormUserSessionRepository implements UserSessionRepository {
 
   async deleteByTokenHash(tokenHash: string): Promise<void> {
     await this.repository.delete({ tokenHash });
+  }
+
+  async deleteForUserExcept(
+    userId: string,
+    keepSessionId: string,
+  ): Promise<number> {
+    const result = await this.repository
+      .createQueryBuilder()
+      .delete()
+      .where('user_id = :userId', { userId })
+      .andWhere('id <> :keepSessionId', { keepSessionId })
+      .execute();
+    return result.affected ?? 0;
   }
 
   async deleteExpired(now: Date): Promise<number> {

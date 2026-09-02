@@ -1,10 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
 import type {
+  AvatarImage,
+  CustomFieldValues,
   ParticipantAccount,
   ParticipantSessionInfo,
   ProfileConfirmation,
   ProfileRegistrationAcknowledgement,
 } from '@trefaro/shared-models';
+import { avatarUrl } from '../avatar-url';
 import type { UserProfileRecord } from '../ports/user-profile.repository';
 
 /**
@@ -33,8 +36,57 @@ export class ParticipantAccountDto implements ParticipantAccount {
   @ApiProperty({ example: 'de', description: 'BCP 47 tag.' })
   preferredLocale!: string;
 
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    example: '/api/media/profiles/6f1c…/avatar?v=1787790600000',
+    description:
+      'Public URL of the profile picture, or `null`. It carries no stored ' +
+      'path — the route resolves the file through the account (F124) — and a ' +
+      'new upload produces a new `?v=`.',
+  })
+  avatarUrl!: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    example: 'Citizens’ assemblies, election observation',
+    description:
+      'Free text. Its own field rather than a profile question, because the ' +
+      'participant search filters on it (E36).',
+  })
+  activityAreas!: string | null;
+
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: { oneOf: [{ type: 'string' }, { type: 'boolean' }] },
+    example: { 'local-group': 'Cologne', newsletter: true },
+    description:
+      'The answers to this instance’s profile questions, by field key. Only ' +
+      'answered questions appear (F36).',
+  })
+  customFields!: CustomFieldValues;
+
+  @ApiProperty({
+    description:
+      'Whether this profile may be found by other participants — and written ' +
+      'to. One switch, one meaning (E37, F13). Off unless its owner says so.',
+  })
+  searchable!: boolean;
+
   @ApiProperty({ format: 'date-time' })
   confirmedAt!: string;
+}
+
+/** What the avatar upload and removal endpoints answer with (FR 4.3). */
+export class AvatarImageDto implements AvatarImage {
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    example: '/api/media/profiles/6f1c…/avatar?v=1787790600000',
+    description: 'The new URL of the picture, or `null` after it was removed.',
+  })
+  avatarUrl!: string | null;
 }
 
 export class ParticipantSessionInfoDto implements ParticipantSessionInfo {
@@ -83,6 +135,12 @@ export function toParticipantAccountDto(
     firstName: profile.firstName,
     lastName: profile.lastName,
     preferredLocale: profile.preferredLocale,
+    // The stored path never leaves the server; what a client gets is the route
+    // that resolves it, versioned by the row's own timestamp (F124).
+    avatarUrl: avatarUrl(profile.id, profile.avatarPath, profile.updatedAt),
+    activityAreas: profile.activityAreas,
+    customFields: profile.customFields,
+    searchable: profile.searchable,
     confirmedAt: (profile.confirmedAt ?? profile.createdAt).toISOString(),
   };
 }

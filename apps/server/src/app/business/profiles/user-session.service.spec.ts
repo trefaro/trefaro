@@ -15,6 +15,10 @@ const owner: UserProfileRecord = {
   firstName: 'Amina',
   lastName: 'Okonkwo',
   preferredLocale: 'de',
+  avatarPath: null,
+  activityAreas: null,
+  customFields: {},
+  searchable: false,
   confirmedAt: new Date('2026-09-01T10:00:00Z'),
   createdAt: new Date('2026-09-01T09:00:00Z'),
   updatedAt: new Date('2026-09-01T10:00:00Z'),
@@ -29,6 +33,7 @@ class FakeUserSessionRepository implements UserSessionRepository {
   stored: StoredSession | null = null;
   readonly touched: { sessionId: string; seenAt: Date; expiresAt: Date }[] = [];
   readonly revokedHashes: string[] = [];
+  readonly revokedOthers: { userId: string; keepSessionId: string }[] = [];
   readonly sweptAt: Date[] = [];
 
   async create(session: NewUserSession): Promise<void> {
@@ -58,6 +63,14 @@ class FakeUserSessionRepository implements UserSessionRepository {
   async deleteByTokenHash(tokenHash: string): Promise<void> {
     this.revokedHashes.push(tokenHash);
     if (this.stored?.tokenHash === tokenHash) this.stored = null;
+  }
+
+  async deleteForUserExcept(
+    userId: string,
+    keepSessionId: string,
+  ): Promise<number> {
+    this.revokedOthers.push({ userId, keepSessionId });
+    return 2;
   }
 
   async deleteExpired(now: Date): Promise<number> {

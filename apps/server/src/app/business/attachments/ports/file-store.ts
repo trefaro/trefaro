@@ -32,8 +32,14 @@
  * make both directories unreadable to an operator, and the check constraints
  * (`CHK_event_series_logo_path`, `CHK_event_logo_path`) would have to allow a
  * prefix that says nothing.
+ *
+ * `avatars` is the fourth, for the profile pictures of FR 4.3. Not a corner of
+ * `logos` either, and here the distinction carries more than tidiness: a logo is
+ * a brand and an avatar is a picture of a person. An operator has to be able to
+ * see, and a `CHECK` has to be able to say, which of the two a stored path is —
+ * `CHK_user_profile_avatar_path` allows nothing but this prefix.
  */
-export type FileArea = 'attachments' | 'branding' | 'logos';
+export type FileArea = 'attachments' | 'branding' | 'logos' | 'avatars';
 
 export interface FileStore {
   /**

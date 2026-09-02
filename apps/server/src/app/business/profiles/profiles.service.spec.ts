@@ -2,18 +2,30 @@ import {
   BadRequestException,
   NotFoundException,
   ServiceUnavailableException,
+  UnauthorizedException,
 } from '@nestjs/common';
+import type { FileArea, FileStore } from '../attachments';
+import { ImageFileService } from '../common/image-file.service';
 import type { PasswordHasher } from '../common/password-hasher.service';
 import type { ConfigurationService } from '../config';
 import { MailDeliveryError, type MailService, type PublicLinks } from '../mail';
 import type { TokenSigner } from '../security';
+import type {
+  NewProfileField,
+  ProfileFieldChanges,
+  ProfileFieldRecord,
+  ProfileFieldRepository,
+} from './ports/profile-field.repository';
+import type { AuthenticatedParticipant } from './ports/user-session.repository';
 import type {
   NewUserProfile,
   UserProfileChanges,
   UserProfileRecord,
   UserProfileRepository,
 } from './ports/user-profile.repository';
+import { ProfileFieldsService } from './profile-fields.service';
 import { ProfilesService } from './profiles.service';
+import type { UserSessionService } from './user-session.service';
 
 const PASSWORD = 'a-long-enough-passphrase';
 
@@ -35,6 +47,10 @@ class FakeProfileRepository implements UserProfileRepository {
     const row: UserProfileRecord = {
       id: `profile-${this.next++}`,
       ...profile,
+      avatarPath: null,
+      activityAreas: null,
+      customFields: {},
+      searchable: false,
       confirmedAt: null,
       createdAt: new Date('2026-09-02T09:00:00Z'),
       updatedAt: new Date('2026-09-02T09:00:00Z'),
@@ -53,10 +69,115 @@ class FakeProfileRepository implements UserProfileRepository {
     this.rows[index] = updated;
     return updated;
   }
+
+  /**
+   * Its own method for the same reason the port declares one (F116): the path
+   * column is not something a form can write, so the fake cannot let it be
+   * either. It moves `updatedAt`, because the real one does — that timestamp is
+   * the picture's `?v=`.
+   */
+  async setAvatarPath(
+    id: string,
+    storedPath: string | null,
+  ): Promise<UserProfileRecord | null> {
+    const index = this.rows.findIndex((row) => row.id === id);
+    if (index < 0) return null;
+    const updated = {
+      ...this.rows[index],
+      avatarPath: storedPath,
+      updatedAt: new Date('2026-09-02T11:00:00Z'),
+    };
+    this.rows[index] = updated;
+    return updated;
+  }
 }
+
+/** The profile questions this instance asks, in memory (E35). */
+class FakeProfileFieldRepository implements ProfileFieldRepository {
+  rows: ProfileFieldRecord[] = [];
+
+  async findAll(): Promise<readonly ProfileFieldRecord[]> {
+    return [...this.rows].sort((a, b) => a.sort - b.sort);
+  }
+
+  async findById(id: string): Promise<ProfileFieldRecord | null> {
+    return this.rows.find((row) => row.id === id) ?? null;
+  }
+
+  async create(field: NewProfileField): Promise<ProfileFieldRecord> {
+    const row = { id: `field-${this.rows.length + 1}`, ...field };
+    this.rows.push(row);
+    return row;
+  }
+
+  async update(
+    id: string,
+    changes: ProfileFieldChanges,
+  ): Promise<ProfileFieldRecord | null> {
+    const index = this.rows.findIndex((row) => row.id === id);
+    if (index < 0) return null;
+    this.rows[index] = { ...this.rows[index], ...changes };
+    return this.rows[index];
+  }
+
+  async delete(id: string): Promise<boolean> {
+    const before = this.rows.length;
+    this.rows = this.rows.filter((row) => row.id !== id);
+    return this.rows.length < before;
+  }
+
+  async reorder(
+    orderedIds: readonly string[],
+  ): Promise<readonly ProfileFieldRecord[]> {
+    this.rows = this.rows.map((row) => ({
+      ...row,
+      sort: orderedIds.indexOf(row.id),
+    }));
+    return this.findAll();
+  }
+}
+
+/** The upload volume as a map, with the layout the real store produces. */
+class FakeFileStore implements FileStore {
+  readonly files = new Map<string, Buffer>();
+  readonly removed: string[] = [];
+  readonly areas: FileArea[] = [];
+  private next = 1;
+
+  async save(area: FileArea, bytes: Buffer): Promise<string> {
+    this.areas.push(area);
+    const path = `${area}/file-${this.next++}`;
+    this.files.set(path, bytes);
+    return path;
+  }
+
+  async read(path: string): Promise<Buffer | null> {
+    return this.files.get(path) ?? null;
+  }
+
+  async remove(paths: readonly string[]): Promise<void> {
+    for (const path of paths) {
+      this.removed.push(path);
+      this.files.delete(path);
+    }
+  }
+}
+
+/** Real headers, so the signature check decides as it does in production. */
+const png = (padding = 16): Buffer =>
+  Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    Buffer.alloc(padding),
+  ]);
+
+const zip = (): Buffer =>
+  Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.alloc(16)]);
 
 describe('ProfilesService', () => {
   let profiles: FakeProfileRepository;
+  let fields: FakeProfileFieldRepository;
+  let files: FakeFileStore;
+  let revokedOthers: { userId: string; keepSessionId: string }[];
   let service: ProfilesService;
   let sent: { kind: string; to: string; context: unknown }[];
   let failMail: boolean;
@@ -90,6 +211,9 @@ describe('ProfilesService', () => {
 
   beforeEach(() => {
     profiles = new FakeProfileRepository();
+    fields = new FakeProfileFieldRepository();
+    files = new FakeFileStore();
+    revokedOthers = [];
     secrets.clear();
     sent = [];
     failMail = false;
@@ -130,6 +254,13 @@ describe('ProfilesService', () => {
         Promise.resolve({ defaultLocale: 'en', activeLocales: ['en', 'de'] }),
     } as unknown as ConfigurationService;
 
+    const sessions = {
+      revokeOthers: (userId: string, keepSessionId: string) => {
+        revokedOthers.push({ userId, keepSessionId });
+        return Promise.resolve();
+      },
+    } as unknown as UserSessionService;
+
     service = new ProfilesService(
       profiles,
       hasher,
@@ -137,6 +268,12 @@ describe('ProfilesService', () => {
       tokens,
       links,
       configuration,
+      // The real field service on a fake repository, and the real image service
+      // on a fake volume: both of them are the rule under test here, and a stub
+      // would only assert that a method was called.
+      new ProfileFieldsService(fields),
+      new ImageFileService(files),
+      sessions,
     );
   });
 
@@ -322,6 +459,276 @@ describe('ProfilesService', () => {
       );
 
       expect(check).toMatchObject({ outcome: 'authenticated' });
+    });
+  });
+
+  describe('updateProfile', () => {
+    /** A confirmed account to edit, which is the only state that can be. */
+    const signedUp = async (): Promise<string> => {
+      await service.register(registration);
+      await service.confirm('token-for-profile-1');
+      return 'profile-1';
+    };
+
+    it('changes only what the form sent', async () => {
+      const id = await signedUp();
+
+      const updated = await service.updateProfile(id, { lastName: 'Okoro' });
+
+      expect(updated).toMatchObject({
+        firstName: 'Amina',
+        lastName: 'Okoro',
+        preferredLocale: 'de',
+      });
+    });
+
+    it('trims a name and refuses an emptied one', async () => {
+      const id = await signedUp();
+
+      await expect(
+        service.updateProfile(id, { firstName: '  Amina  ' }),
+      ).resolves.toMatchObject({ firstName: 'Amina' });
+
+      await expect(
+        service.updateProfile(id, { firstName: '   ' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('stores an emptied field of activity as nothing at all (E36)', async () => {
+      const id = await signedUp();
+
+      await expect(
+        service.updateProfile(id, { activityAreas: '  Election observation ' }),
+      ).resolves.toMatchObject({ activityAreas: 'Election observation' });
+
+      // Not the empty string: the search has one thing to test rather than two,
+      // and nobody's profile says they work on nothing.
+      await expect(
+        service.updateProfile(id, { activityAreas: '' }),
+      ).resolves.toMatchObject({ activityAreas: null });
+    });
+
+    it('writes `searchable`, which nothing reads yet (E37)', async () => {
+      const id = await signedUp();
+
+      await expect(
+        service.updateProfile(id, { searchable: true }),
+      ).resolves.toMatchObject({ searchable: true });
+    });
+
+    it('checks the answers against the definitions, not against a DTO (E35)', async () => {
+      const id = await signedUp();
+      await fields.create({
+        key: 'local-group',
+        label: 'Local group',
+        type: 'select',
+        helpText: null,
+        options: ['Cologne', 'Nairobi'],
+        required: true,
+        sort: 0,
+      });
+
+      await expect(
+        service.updateProfile(id, {
+          customFields: { 'local-group': 'Cologne' },
+        }),
+      ).resolves.toMatchObject({ customFields: { 'local-group': 'Cologne' } });
+
+      // A value the definition does not offer, a key nothing asked for, and a
+      // required question left blank — three different mistakes, all 400.
+      await expect(
+        service.updateProfile(id, { customFields: { 'local-group': 'Bonn' } }),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.updateProfile(id, {
+          customFields: { 'favourite-colour': 'red' },
+        }),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.updateProfile(id, { customFields: {} }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('leaves the answers alone when the form did not send them', async () => {
+      const id = await signedUp();
+      await fields.create({
+        key: 'local-group',
+        label: 'Local group',
+        type: 'text',
+        helpText: null,
+        options: [],
+        required: true,
+        sort: 0,
+      });
+      await service.updateProfile(id, {
+        customFields: { 'local-group': 'Cologne' },
+      });
+
+      // The required question is not re-checked, and that is the point: a name
+      // correction must not fail because a question was answered last month.
+      const updated = await service.updateProfile(id, { lastName: 'Okoro' });
+
+      expect(updated.customFields).toEqual({ 'local-group': 'Cologne' });
+    });
+
+    it('keeps the answers of a question that was removed (F34)', async () => {
+      const id = await signedUp();
+      const field = await fields.create({
+        key: 'local-group',
+        label: 'Local group',
+        type: 'text',
+        helpText: null,
+        options: [],
+        required: false,
+        sort: 0,
+      });
+      await service.updateProfile(id, {
+        customFields: { 'local-group': 'Cologne' },
+      });
+
+      await fields.delete(field.id);
+
+      // What somebody wrote about themselves is theirs; the definition was
+      // only the question. Nothing renders it any more.
+      expect(profiles.rows[0].customFields).toEqual({
+        'local-group': 'Cologne',
+      });
+    });
+  });
+
+  describe('changePassword', () => {
+    const current = async (): Promise<AuthenticatedParticipant> => {
+      await service.register(registration);
+      await service.confirm('token-for-profile-1');
+      return {
+        sessionId: 'session-1',
+        lastSeenAt: new Date(),
+        expiresAt: new Date(Date.now() + 3_600_000),
+        profile: profiles.rows[0],
+      };
+    };
+
+    it('refuses a wrong current password, and changes nothing', async () => {
+      const session = await current();
+      const before = profiles.rows[0].passwordHash;
+
+      await expect(
+        service.changePassword(session, {
+          currentPassword: 'not-the-passphrase',
+          newPassword: 'another-long-passphrase',
+        }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(profiles.rows[0].passwordHash).toBe(before);
+      expect(revokedOthers).toEqual([]);
+    });
+
+    it('refuses a new password the policy rejects', async () => {
+      const session = await current();
+
+      await expect(
+        service.changePassword(session, {
+          currentPassword: PASSWORD,
+          newPassword: 'short',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('changes it, and ends every other session of the account', async () => {
+      const session = await current();
+
+      await service.changePassword(session, {
+        currentPassword: PASSWORD,
+        newPassword: 'another-long-passphrase',
+      });
+
+      const check = await service.checkCredentials(
+        registration.email,
+        'another-long-passphrase',
+      );
+      expect(check).toMatchObject({ outcome: 'authenticated' });
+      // The session doing the changing survives: the screen in front of the
+      // person must not log itself out.
+      expect(revokedOthers).toEqual([
+        { userId: 'profile-1', keepSessionId: 'session-1' },
+      ]);
+    });
+  });
+
+  describe('the profile picture', () => {
+    const signedUp = async (): Promise<string> => {
+      await service.register(registration);
+      await service.confirm('token-for-profile-1');
+      return 'profile-1';
+    };
+
+    it('writes into the avatar area and answers a path-free URL (F124)', async () => {
+      const id = await signedUp();
+
+      const url = await service.setAvatar(id, {
+        mimeType: 'image/png',
+        bytes: png(),
+      });
+
+      expect(files.areas).toEqual(['avatars']);
+      expect(profiles.rows[0].avatarPath).toMatch(/^avatars\//);
+      // The URL names the account and carries the row's timestamp, never the
+      // stored path — the neighbours of a stored path are attachments (E9).
+      expect(url).toBe(
+        `/api/media/profiles/${id}/avatar?v=${profiles.rows[0].updatedAt.getTime()}`,
+      );
+      expect(url).not.toContain(profiles.rows[0].avatarPath);
+    });
+
+    it('refuses bytes that disagree with the declared type, and writes nothing (F38)', async () => {
+      const id = await signedUp();
+
+      await expect(
+        service.setAvatar(id, { mimeType: 'image/png', bytes: zip() }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(files.files.size).toBe(0);
+      expect(profiles.rows[0].avatarPath).toBeNull();
+    });
+
+    it('unlinks the previous picture once nothing names it', async () => {
+      const id = await signedUp();
+      await service.setAvatar(id, { mimeType: 'image/png', bytes: png() });
+      const first = profiles.rows[0].avatarPath;
+
+      await service.setAvatar(id, { mimeType: 'image/png', bytes: png(32) });
+
+      expect(files.removed).toEqual([first]);
+      expect(profiles.rows[0].avatarPath).not.toBe(first);
+    });
+
+    it('removes the picture, column first and file second', async () => {
+      const id = await signedUp();
+      await service.setAvatar(id, { mimeType: 'image/png', bytes: png() });
+      const stored = profiles.rows[0].avatarPath;
+
+      await expect(service.removeAvatar(id)).resolves.toBeNull();
+
+      expect(profiles.rows[0].avatarPath).toBeNull();
+      expect(files.removed).toEqual([stored]);
+    });
+
+    it('answers the type the bytes say, and nothing for a profile without one', async () => {
+      const id = await signedUp();
+
+      expect(await service.readAvatar(id)).toBeNull();
+
+      await service.setAvatar(id, { mimeType: 'image/png', bytes: png() });
+
+      expect(await service.readAvatar(id)).toMatchObject({
+        mimeType: 'image/png',
+      });
+    });
+
+    it('answers nothing for an account that does not exist', async () => {
+      // The same answer as "no picture", deliberately: from outside, the two
+      // must look the same (F115 applied to a person).
+      expect(await service.readAvatar('profile-404')).toBeNull();
     });
   });
 });

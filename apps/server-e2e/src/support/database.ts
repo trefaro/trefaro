@@ -227,6 +227,22 @@ export async function deleteProfiles(emailSuffix: string): Promise<void> {
   ]);
 }
 
+/**
+ * Removes the profile questions a suite defined (FR 4.3, E35).
+ *
+ * The field kit is instance-wide, which is what makes this necessary rather
+ * than tidy: a **required** question left behind would make every other suite's
+ * profile update fail, and a leftover key would make the next run of the
+ * defining suite take the "numbered around a collision" branch instead of the
+ * one it asserts. There is an endpoint for this — but only for an organizer,
+ * and only one id at a time; the prefix is what makes the cleanup complete.
+ */
+export async function deleteProfileFields(keyPrefix: string): Promise<void> {
+  await pool.query('DELETE FROM profile_field WHERE key LIKE $1', [
+    `${keyPrefix}%`,
+  ]);
+}
+
 export async function closeDatabase(): Promise<void> {
   await pool.end();
 }

@@ -1,6 +1,16 @@
 export { CurrentParticipant } from './current-participant.decorator';
 export { ParticipantGuard, isParticipantPath } from './participant.guard';
 export type { RequestWithParticipant } from './participant.guard';
+export { avatarUrl } from './avatar-url';
+export { ProfileFieldsService } from './profile-fields.service';
+export {
+  PROFILE_FIELD_REPOSITORY,
+  ProfileFieldKeyTakenError,
+  type NewProfileField,
+  type ProfileFieldChanges,
+  type ProfileFieldRecord,
+  type ProfileFieldRepository,
+} from './ports/profile-field.repository';
 export { ProfilesModule } from './profiles.module';
 export {
   ProfilesService,

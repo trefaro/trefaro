@@ -37,6 +37,47 @@ export class UserProfileEntity {
   @Column({ name: 'preferred_locale', type: 'varchar', length: 16 })
   preferredLocale!: string;
 
+  /**
+   * Where the profile picture is, relative to the upload volume (F124).
+   *
+   * `NULL` or a path below `avatars/`, and the database holds that line
+   * (`CHK_user_profile_avatar_path`): the neighbours of a stored path are
+   * registration attachments (E9). Written only through `setAvatarPath`, never
+   * as part of a profile form — a form that can empty a path column empties it
+   * by accident eventually (F116).
+   */
+  @Column({ name: 'avatar_path', type: 'varchar', length: 512, nullable: true })
+  avatarPath!: string | null;
+
+  /**
+   * What this person works on, as free text (E36).
+   *
+   * Its own column rather than a question in the field kit, because the
+   * participant search filters on it (FR 4.4) — and a criterion inside
+   * `custom_fields_json` is not one that can be compared reliably.
+   */
+  @Column({
+    name: 'activity_areas',
+    type: 'varchar',
+    length: 200,
+    nullable: true,
+  })
+  activityAreas!: string | null;
+
+  /** The answers to this instance's profile questions, by field key (E35). */
+  @Column({ name: 'custom_fields_json', type: 'jsonb', default: () => "'{}'" })
+  customFields!: Record<string, string | boolean>;
+
+  /**
+   * Whether this profile may be found — and written to (E37, F13).
+   *
+   * One switch with one meaning: a one-to-one conversation can only start with
+   * a profile that is in the search, so withdrawing it takes the person out of
+   * both. Off by default, because being findable is a decision its owner makes.
+   */
+  @Column({ type: 'boolean', default: false })
+  searchable!: boolean;
+
   /** `null` until the double opt-in was answered (E32) — no session before it. */
   @Column({ name: 'confirmed_at', type: 'timestamptz', nullable: true })
   confirmedAt!: Date | null;
