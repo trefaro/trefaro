@@ -32,6 +32,7 @@ import {
   seatsLeft,
 } from '@trefaro/shared-models';
 import { PluginSlot } from '@trefaro/shared-plugins';
+import { EventContactForm } from './event-contact-form';
 import { EventDetailTiles } from './event-detail-tiles';
 import { PublicEventsService } from '../../features/events/public-events.service';
 import { PublicMediaLinksService } from '../../features/media-links/public-media-links.service';
@@ -76,6 +77,11 @@ import { PublicProgramService } from '../../features/program/public-program.serv
  * Carries the second plug-in hook point: the programme, the room plan and the
  * forum mount here as web components once their modules are enabled.
  *
+ * Since AP 9 of phase 3 it also carries the contact form (FR 3.4, UC 14): a
+ * reader with a question reaches the organizers without an account, and the
+ * answer comes by e-mail (F11). It is placed after the call to action and
+ * stays there once the event is over — registering closes, asking does not.
+ *
  * Since AP 4 of phase 2 it also carries the tiles the mockups draw
  * ({@link EventDetailTiles}) — one per part of this page that actually has
  * something in it, including one per mounted plug-in. They are jump links: this
@@ -85,7 +91,13 @@ import { PublicProgramService } from '../../features/program/public-program.serv
 @Component({
   selector: 'trefaro-event-landing-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, PluginSlot, EventDetailTiles, TranslocoPipe],
+  imports: [
+    RouterLink,
+    PluginSlot,
+    EventDetailTiles,
+    EventContactForm,
+    TranslocoPipe,
+  ],
   template: `
     @if (error(); as problem) {
       <p class="notice" role="alert">
@@ -259,6 +271,15 @@ import { PublicProgramService } from '../../features/program/public-program.serv
             <small>{{ 'event.registerHint' | transloco }}</small>
           </p>
         }
+
+        <!-- Reaching the organizers without an account (FR 3.4, UC 14, F11) —
+             after the call to action, because registering is what most readers
+             came for, and shown for a past event too: a question about
+             something that has happened is still a question. -->
+        <trefaro-event-contact-form
+          [seriesSlug]="seriesSlug()"
+          [eventSlug]="eventSlug()"
+        />
 
         <!-- Plug-in hook point two: the event detail view. Each plug-in gets the
              event as element properties. -->

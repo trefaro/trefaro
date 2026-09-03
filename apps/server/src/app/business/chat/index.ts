@@ -12,6 +12,7 @@ export {
 } from './conversations.service';
 export { messageImageUrl } from './message-image-url';
 export { MessagesService, type MessageImageUpload } from './messages.service';
+export { OrganizerContactService } from './organizer-contact.service';
 export {
   CONVERSATION_REPOSITORY,
   type ConversationCounterpartRecord,
@@ -21,6 +22,7 @@ export {
   type ConversationRecord,
   type ConversationRepository,
   type ConversationSlice,
+  type NewOrganizerContact,
 } from './ports/conversation.repository';
 export {
   MESSAGE_REPOSITORY,

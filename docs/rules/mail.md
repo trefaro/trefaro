@@ -19,7 +19,11 @@ gröber als in der Oberfläche.
   deshalb hat `setStatus` einen `actor`, nicht als Berechtigung, sondern damit
   diese Entscheidung an der Aufrufstelle sichtbar ist.
 - **Keine Schnittstelle nimmt eine E-Mail-Adresse an, um etwas hinzuschicken**
-  (F55). Die Adresse kommt beim Verfassen über den Fremdschlüssel.
+  (F55). Die Adresse kommt beim Verfassen über den Fremdschlüssel. **Das
+  Kontaktformular ist keine Ausnahme:** die Adresse, die ein Gast tippt, wird
+  auf dem Gespräch gespeichert und in die Benachrichtigung an die Organisation
+  **geschrieben**, damit ein Mensch sie liest — geschickt wird an sie nichts
+  (F172). Erst AP 10 antwortet dorthin, und dann über die Zeile des Gesprächs.
 - **Eine immer gleiche Antwort braucht eine Mail, die den Unterschied trägt**
   (E32). Das Registrierungsformular für ein Konto antwortet identisch, ob die
   Adresse unbekannt, unbestätigt oder längst in Benutzung ist — den Unterschied
@@ -28,8 +32,8 @@ gröber als in der Oberfläche.
   bricht: **auch der Fehlschlag muss gleich aussehen.** Ein 503 bei
   unerreichbarem Mailserver für die eine und ein 200 für die andere Adresse wäre
   genau die Auskunft, die das Formular nicht geben darf.
-- **Die Texte kommen aus demselben Katalog wie die Oberfläche** (30 Schlüssel
-  unter `mail.`, sechs Mails). Je Mail **ein** `MailTemplate` aus Schlüsselliste
+- **Die Texte kommen aus demselben Katalog wie die Oberfläche** (35 Schlüssel
+  unter `mail.`, sieben Mails). Je Mail **ein** `MailTemplate` aus Schlüsselliste
   **und** Renderer (F87) — eine daneben geführte Liste driftet, und dann prüft E24 die
   falsche Menge.
 - **Die Einheit des Rückfalls ist eine Mail** (E24, F87), nicht der Katalog und
@@ -51,6 +55,27 @@ gröber als in der Oberfläche.
   sonst steht der deutsche Titel im englischen Brief. Ein Stapelversand löst **je
   Sprache** einmal auf, nicht je Empfänger; die Worte des Veranstalters bleiben
   unübersetzt.
+- **Eine Mail an die Organisation ist die siebte, und sie ist anders** (F172).
+  Die Benachrichtigung über eine Kontaktanfrage (FR 3.4, UC 14) geht an die
+  **Kontaktadresse der Reihe** — die Adresse, die die Reihenseite schon
+  öffentlich zeigt —, sonst an die Mailbox aus `SMTP_FROM` (ohne Anzeigenamen),
+  und dann sagt eine Logzeile, dass die Reihe keine hat. **Nicht** an die
+  Adressen der Administratorkonten: ein Login ist kein gemeinsam gelesenes
+  Postfach. Ihre Sprache ist die **Vorgabe der Instanz**, weil der Empfänger
+  kein Konto hat (F125). Sie **grüßt niemanden** — die einzige Mail ohne
+  `mail.greeting`, denn ein geteiltes Postfach hat keinen Vornamen. Und der
+  Text darin ist der einzige in diesem Verzeichnis, den ein **Fremder**
+  geschrieben hat: er wird maskiert wie die Absätze einer Einladung.
+- **Eine Benachrichtigung, die nicht Teil des Vorgangs ist, lässt den Vorgang
+  nicht scheitern** (F172, E10). Beim Double-Opt-In ist die Mail der Vorgang,
+  also ist ein unerreichbarer Mailserver dort ein **503**. Bei der
+  Kontaktanfrage ist die Mail eine Abkürzung — der Datensatz ist das Gespräch
+  und schon geschrieben —, also wird der `MailDeliveryError` protokolliert und
+  die Antwort bleibt **202**. Zwei Gründe, und beide zählen: ein 503 wäre eine
+  Auskunft, die dieses Formular nicht geben darf, und ein zweiter Versuch wäre
+  eine zweite Anfrage. **An den Gast selbst geht keine Mail** — damit landet der
+  einzige Brief, den ein anonymer Aufrufer auslösen kann, im eigenen Postfach
+  der Organisation.
 - **In den Katalog wandern Sätze, nie die Auszeichnung um sie herum** (F86).
   `<div>`, `<p>`, `<strong>` und der Link bleiben Code. Daraus die Reihenfolge:
   **erst den Katalogtext maskieren, dann interpolieren** — Platzhalter überstehen

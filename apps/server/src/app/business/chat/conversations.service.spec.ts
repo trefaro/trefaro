@@ -132,6 +132,13 @@ function harness(
       created.push([first, second]);
       return conversation();
     },
+    // Not this service's method: a contact request has no viewer, so it is
+    // `OrganizerContactService` that calls it (AP 9). Present because the port
+    // is one interface, and left throwing so a call from here is a failure
+    // rather than a silent success.
+    async createOrganizerContact() {
+      throw new Error('A conversation of a guest is not opened from here.');
+    },
     async listFor(member, offset, limit) {
       listed.push({ member, offset, limit });
       return options.slice ?? { rows: overviews, total: overviews.length };

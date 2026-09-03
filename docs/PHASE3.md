@@ -1,6 +1,6 @@
 # Phase 3 — Profile, Kommunikation und Community-Kern
 
-**Status: in Arbeit** (seit 02.09.2026, AP 1 bis AP 8 erledigt, **M7 erreicht**). Der Teil oberhalb von
+**Status: in Arbeit** (seit 02.09.2026, AP 1 bis AP 9 erledigt, **M7 erreicht**). Der Teil oberhalb von
 _Fortschritt_ ist der **Plan** und wird nicht mehr rückwirkend korrigiert; was
 tatsächlich passierte, steht unten je Paket — wie in
 [`PHASE1.md`](PHASE1.md) und [`PHASE2.md`](PHASE2.md). Was Marius **vor** einem
@@ -759,7 +759,9 @@ seine drei reservierten Nummern **nicht** gebraucht: `last_read_at` als
 Mitgliedszustand ist F56, „Text, Bild oder beides“ ist E40 selbst, und die
 Medienroute mit Berechtigung wurde F156 — F129, F130 und F131 bleiben deshalb
 unvergeben, wie F62. AP 7 hat die für ihn reservierte **F132** vergeben und fünf
-neue dazugelegt (**F160–F164**).
+neue dazugelegt (**F160–F164**); AP 8 sechs neue (**F165–F170**); AP 9 seine
+reservierte **F133** und zwei neue (**F171**, **F172**). Von den reservierten
+Nummern sind damit nur noch **F134–F136** offen (AP 11 und AP 12).
 
 ## Definition of Done für Phase 3
 
@@ -1701,3 +1703,155 @@ Voraussetzung). Ein Zähler in der Leiste bräuchte die Summe ohne die Seite,
 also eine Anfrage bei jedem Anmelden; die Entscheidung gehört zum Pilotpartner
 und steht in `todo.md`. **Gruppen** sieht diese Oberfläche schon (Titel,
 mehrere Gegenüber), **angelegt** werden sie in AP 10.
+
+### AP 9 — Organisator-Kontakt ohne Registrierung (erledigt, 03.09.2026)
+
+Umgesetzt:
+
+- **Ein Formular auf der Landingpage, ohne Konto und ohne Login** (FR 3.4,
+  UC 14). `trefaro-event-contact-form` steht hinter dem Anmeldeknopf: erst der
+  Weg, den die meisten Leser suchen, dann der für die, die eine Frage haben.
+  Ein eigenes Bauteil und kein weiterer Block in der Landingpage — die hat
+  schon 648 Zeilen, und hier hängen ein Formular, eine Anfrage, drei Zustände
+  und eine eigene Spezifikation dran. Drei Felder (Name, Adresse, Nachricht),
+  die Grenzen als `maxlength` **aus `shared-models`**, damit niemand fünf
+  Minuten tippt und ein 400 bekommt; `<fieldset [disabled]>`, solange die
+  Anfrage läuft (sonst verlöre der Weitertippende sein Getipptes beim Reset);
+  und danach **ein Zustand statt einer Meldung**: „die Antwort kommt an
+  ⟨Adresse⟩" plus der Knopf für die nächste Frage. Der Satz ist das
+  eigentliche Ergebnis — F11 verspricht die Antwort per Mail, und ein „danke"
+  ohne Adresse verspricht nichts.
+- **Sichtbar auch für ein Event, das vorbei ist** — anders als der
+  Anmeldeknopf. „Wo ist die Aufzeichnung" ist eine Frage zu etwas, das
+  stattgefunden hat; der Server prüft dieselbe Sichtbarkeit wie die
+  Landingpage (`getPublic`, also 404 für einen Entwurf, F26) und **nicht** das
+  Datum.
+- **Ein Endpunkt, immer dieselbe Antwort** (E10).
+  `POST /api/user/series/:seriesSlug/events/:eventSlug/contact` antwortet
+  **202** mit der Adresse, die der Aufrufer selbst geschickt hat. Es gibt hier
+  keinen Zweig, der eine bekannte von einer unbekannten Adresse unterscheiden
+  **könnte**: nichts wird gegen die Konten oder die Anmeldungen nachgesehen.
+  Eigene Drosselung (30 je 5 min), weil `/api/user/**` für jeden erreichbar ist
+  (E4) — enger als die 60 des Anmeldeformulars, denn eine angenommene Anfrage
+  schreibt in die Übersicht der Organisation **und** schickt ihr eine Mail.
+- **Das Gespräch einer Kontaktanfrage** (**F133**): `organizer_contact`, die
+  Adresse auf dem Gespräch statt auf einer erfundenen Kontozeile (E39), die
+  erste Zeile mit `sender_type = 'guest'` ohne `sender_id`, das **Event** ja
+  und ein **Betreff** nein — worum es geht, ist das Event —, und **je Anfrage
+  ein eigenes Gespräch**, weil nichts die Adresse authentifiziert.
+  `createOrganizerContact` schreibt beides in **einer** Transaktion: eine
+  `organizer_contact`-Zeile ohne Nachricht sagt nur, dass jemand einen Knopf
+  gedrückt hat.
+- **Und keine Mitgliedszeile für die Veranstalterseite** (auch F133). Die
+  Organisation ist keine Person: `member_type = 'admin'` müsste eine
+  Administratorzeile nennen, und beim Kontaktformular ist niemand angemeldet.
+  Die **Art** des Gesprächs sagt, wessen es ist. Nebenwirkung, die AP 10 kennen
+  muss: für die Veranstalterseite gibt es damit kein `last_read_at` und keine
+  gerechnete Ungelesen-Zahl — sein Abnahmekriterium braucht sie nicht, und wenn
+  sie kommt, ist sie eine Zeile mehr und keine andere Entscheidung. Ein
+  Teilnehmer sieht diese Gespräche nicht: seine Liste kommt aus der
+  Mitgliedschaft, und die gibt es hier nicht.
+- **Das Kontaktformular hängt nicht am `chat`-Schalter** (**F171**). FR 3.4 ist
+  P1, der Chat ein abschaltbares P2-Modul, und `chat` setzt `profiles` voraus
+  (E42): eine Instanz ohne Teilnehmerkonten wäre mit dem Schalter davor **nicht
+  erreichbar**. Der Schalter entscheidet, ob die Menschen **in** einer Instanz
+  einander schreiben dürfen — nicht, ob die Organisation angeschrieben werden
+  kann. Der Code liegt trotzdem in `business/chat/`, weil dieses Modul die
+  Gespräche besitzt; ein zweites Modul mit demselben Port hätte den Port nach
+  F100 nach `business/common/ports/` verschoben, ohne dass etwas daran richtiger
+  geworden wäre. Deshalb trägt dieser eine Controller kein
+  `@CoreModuleController(CHAT_MODULE_KEY)` — und das steht als Absatz in seinem
+  Kopf, damit es niemand „nachträgt".
+- **Kein Bild.** Der einzige Endpunkt des Chats, der keines nimmt: E40 gilt für
+  Nachrichten mit einem Konto dahinter, und ein öffentlicher Endpunkt, der
+  Bytes von Unbekannten annimmt, wäre eine zweite Uploadfläche für nichts. Aus
+  demselben Grund ist er JSON und nicht `multipart` — eine unbekannte
+  Eigenschaft im Rumpf ist ein 400 (`forbidNonWhitelisted`), was der
+  Vertragstest ausnutzt.
+- **Die siebte Mail** (**F172**). Sie geht an die **Kontaktadresse der Reihe** —
+  die Adresse, die die Reihenseite schon öffentlich als `mailto:` zeigt —, sonst
+  an die Mailbox aus `SMTP_FROM` (ohne Anzeigenamen), und dann steht im Log,
+  dass die Reihe keine hat. Sprache: die **Vorgabe der Instanz**, weil der
+  Empfänger kein Konto hat (F125); Inhalt in derselben Sprache, weil er in der
+  Rückruffunktion geholt wird. Sie **grüßt niemanden** — das einzige `mail.`
+  ohne `mail.greeting`, denn ein geteiltes Postfach hat keinen Vornamen. Der
+  Text des Gasts wird maskiert wie die Absätze einer Einladung: das ist die
+  einzige Mail, deren Inhalt ein **Fremder** geschrieben hat. Und **an den Gast
+  geht keine Mail** — der einzige Brief dieses offenen Endpunkts landet im
+  eigenen Postfach der Organisation, er taugt also nicht dazu, Fremden Mail zu
+  schicken. Scheitert er, bleibt die Anfrage gespeichert und die Antwort 202
+  (ein 503 wäre die Auskunft, die E10 verbietet).
+- **`PublicLinks` kennt jetzt zwei Ursprünge.** `adminUrl(path)` für die eine
+  Mail, die an die Organisation geht — gebaut über dasselbe `publicUrl`, weil
+  genau eine der beiden konfigurierten Adressen auf einen Schrägstrich enden
+  wird.
+- **Katalog: 17 Schlüssel mehr**, Englisch und Deutsch (fünf `mail.contactRequest.*`,
+  zwölf `contact.*`), 817 → **834**. Damit sind es sieben Mails und 35
+  `mail.`-Schlüssel.
+- **Migration: keine.** Das dritte Paket der Phase ohne Schemaänderung, und
+  dieses ohne jeden Zweifel: `CHK_conversation_shape` hat die Gestalt, die AP 9
+  gewählt hat, schon in AP 6 erlaubt — Event und Betreff waren dort ausdrücklich
+  offen gelassen, und `guest_email`/`guest_name` sind seit derselben Migration
+  da.
+
+Nachweise: Server-Units **1017** (+18: elf für den Dienst, sieben für die Mail),
+Vertragstests **520** (+8, `api/organizer-contact.spec.ts`), Nutzer-Client
+**217** (+9), Browsersuite des Nutzer-Clients **218** (+9 — drei Tests × drei
+Engines, ein übersprungener), Browsersuite des Veranstalter-Clients unverändert
+**280** (26 übersprungene, diesmal ohne den unbestimmten Flake aus AP 8),
+Veranstalter-Client-Units und die übrigen Bibliotheken unverändert.
+`nx run-many -t lint test build` über alle 13 Projekte fehlerfrei. Neue
+Entscheidungen: **F133**, **F171**, **F172**.
+
+**Der Vertragstest entscheidet den Teil, der eine Regel ist**, nicht eine
+Runde: dass eine bekannte Adresse (ein geseedetes Konto) und eine unbekannte
+dieselbe Antwort bekommen; dass die Antwort auch dieselbe bleibt, wenn die
+Benachrichtigung nirgends hingehen kann; dass ein Entwurf 404 ist und **nichts**
+speichert; dass die Zeile die Gestalt aus F133 hat, Mitgliederzahl **0**
+inklusive; und dass das Formular arbeitet, **während `chat` aus ist** — samt der
+Gegenprobe mit einer geseedeten Sitzung, dass `/api/participant/conversations`
+in demselben Moment 404 antwortet (ohne Cookie wäre es 401, und das bewiese
+nichts, weil der Teilnehmer-Guard global vor dem Controller-Guard läuft).
+Die Browsersuite fährt den Gang: Landingpage → Formular ausfüllen → abschicken
+→ der Satz mit der Adresse → **die Mail in Mailpit**, mit dem Betreff des
+Events, dem Namen und dem Text des Gasts.
+
+Was anders lief:
+
+- **„Das Gespräch taucht in der Übersicht auf" ist nur zur Hälfte prüfbar** —
+  die Übersicht **ist** AP 10. Geprüft ist deshalb die Zeile in der Gestalt, die
+  AP 10 lesen wird (Art, Event, Adresse, Gastnachricht, keine Mitgliedszeile),
+  plus die Benachrichtigungsmail, die genau dafür da ist, dass niemand auf einen
+  Bildschirm warten muss. Der Bildschirm selbst ist AP 10s Abnahmekriterium, und
+  dessen Suite muss ihn zeigen. Nicht als erfüllt gebucht, sondern hier benannt.
+- **Die längste Entscheidung war die Mitgliedszeile**, nicht das Formular. Die
+  Alternative wäre gewesen, beim Anlegen für **jeden** Administrator eine
+  `conversation_member`-Zeile zu schreiben; sie scheitert an beidem, was Zeit
+  hat: wer morgen dazukommt, sähe die Anfrage von heute nicht, und `member_id`
+  hat keinen Fremdschlüssel (E39), also bliebe die Zeile eines gelöschten Kontos
+  stehen. Die Art des Gesprächs kostet nichts und altert nicht.
+- **Der Handlungsknopf der Mail zeigt auf den Client, nicht auf das Gespräch.**
+  Ein Deep-Link in eine Übersicht, die es noch nicht gibt, wäre ein Versprechen
+  über einen Bildschirm — also `ANSWER_PATH = '/'`, eine Konstante mit dem
+  Grund darüber, und ein Eintrag in `todo.md` für AP 10.
+- **`waitForMailTo` musste den Rumpf lesen können.** Drei Browserengines, ein
+  Postfach, ein Betreff: die Empfängerin dieser Mail ist die Organisation und
+  nicht die Person, die der Test spielt — die Kopfzeilen unterscheiden die drei
+  Nachrichten also gar nicht. Der Helfer nimmt jetzt zusätzlich ein `text`-Muster
+  und holt die Rümpfe nur für die Nachrichten, die Adresse und Betreff schon
+  gefiltert haben. Steht in `docs/rules/e2e-tests.md`.
+- **Die Fixtur-Reihe der Browsersuite hat jetzt eine Kontaktadresse.** Ohne sie
+  ginge die Benachrichtigung an die Absenderadresse der Instanz, und die könnte
+  die Suite nur aus der Konfiguration erraten. Aufräumen muss die Suite nichts:
+  eine Kontaktanfrage hängt an ihrem Event (`FK_conversation_event ON DELETE
+CASCADE`), und der globale Teardown entfernt die geseedete Reihe mit allem
+  darunter — Anmeldungen legt diese Datei keine an, also pinnt sie die Reihe
+  nicht (E14).
+- **Punkt 3 der Definition of Done ist damit halb erledigt:** „Ein Interessent
+  ohne Konto erreicht den Veranstalter" steht, am laufenden Stack mit Mailpit
+  durchgespielt. „Und die Antwort kommt bei ihm per E-Mail an" ist AP 10.
+
+Offen aus diesem Paket: nichts außer dem Deep-Link der Mail (AP 10). Die
+Adresse eines Gasts bleibt **unbestätigt** — das ist die Eigenschaft jedes
+Kontaktformulars, gedrosselt und vom Veranstalter gelesen, bevor er antwortet;
+ein Double-Opt-In davor hätte die niedrigste Schwelle der Thesis verdoppelt.

@@ -1,13 +1,18 @@
 import { Module } from '@nestjs/common';
 import { CommonModule } from '../common/common.module';
 import { ConfigurationModule } from '../config';
+import { EventSeriesModule } from '../event-series';
+import { EventsModule } from '../events';
+import { MailModule } from '../mail';
 import { ProfilesModule } from '../profiles';
 import { ChatRealtimeService } from './chat-realtime.service';
 import { ChatGateway } from './chat.gateway';
 import { ConversationsService } from './conversations.service';
 import { MessageImageMediaController } from './message-image-media.controller';
 import { MessagesService } from './messages.service';
+import { OrganizerContactService } from './organizer-contact.service';
 import { ParticipantConversationsController } from './participant-conversations.controller';
+import { PublicContactController } from './public-contact.controller';
 
 /**
  * Conversations, messages and the pictures in them (FR 4.5) — AP 6 of phase 3.
@@ -49,19 +54,39 @@ import { ParticipantConversationsController } from './participant-conversations.
  * `CommonModule` for `ImageFileService`, which checks and stores the pictures;
  * `ConfigurationModule` for the module guard and for the registry the
  * handshake asks about the `chat` flag.
+ *
+ * **AP 9 adds a controller that the switch does not cover** — the contact form
+ * of an event landing page (FR 3.4, UC 14, F11). That is the reason this
+ * module reaches for three more: `EventsModule` and `EventSeriesModule`,
+ * because a contact request names the event it is about and lands in the
+ * mailbox that series advertises, and `MailModule`, because the organization
+ * has to learn about it without watching a screen. The switch stays where it
+ * belongs — on the controllers a *participant* uses. FR 3.4 is P1 and `chat`
+ * is an optional P2 module that requires `profiles` (E42): an instance with no
+ * participant accounts must still be reachable, and a switch that could turn
+ * off the organization's own inbox would say more than it means.
  */
 @Module({
-  imports: [CommonModule, ConfigurationModule, ProfilesModule],
+  imports: [
+    CommonModule,
+    ConfigurationModule,
+    ProfilesModule,
+    EventsModule,
+    EventSeriesModule,
+    MailModule,
+  ],
   controllers: [
     ParticipantConversationsController,
     MessageImageMediaController,
+    PublicContactController,
   ],
   providers: [
     ChatRealtimeService,
     ConversationsService,
     MessagesService,
+    OrganizerContactService,
     ChatGateway,
   ],
-  exports: [ConversationsService, MessagesService],
+  exports: [ConversationsService, MessagesService, OrganizerContactService],
 })
 export class ChatModule {}

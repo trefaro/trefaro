@@ -150,7 +150,7 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    (offen geblieben: die Feedbackrunde mit Democracy International)
 2. **✅ 29.08.2026, M5** Whitelabel-Theming, Modul-Verwaltung, i18n, PWA,
    Installations-Story → `docs/PHASE2.md`
-3. **In Arbeit** (AP 1–AP 8 erledigt, M7 erreicht) Profile, Nachrichten,
+3. **In Arbeit** (AP 1–AP 9 erledigt, M7 erreicht) Profile, Nachrichten,
    Echtzeit-/Gruppenchat, Push, Profilsuche → `docs/PHASE3.md`
 4. Plug-ins: Programmvorschläge, Forum, Raumplanung, QR-Check-In
 5. Härtung, Usability-Test mit Democracy International (Pilotpartner), Doku,
@@ -169,15 +169,16 @@ bewusst; die Begründungen stehen in `docs/rules/`. Katalog damals 646 → 654.
 
 **Phase 3 läuft** (seit 02.09.2026): Plan in `docs/PHASE3.md`, dreizehn
 Arbeitspakete, Entscheidungen **E31–E45**, Nachträge ab **F118** (vergeben:
-F118–F128, F132, F137–F164; F129–F131 und F133–F136 bleiben unvergeben bzw.
-reserviert). **AP 1 (Teilnehmerkonto und Login), AP 2 (Profil und
+F118–F128, F132, F133, F137–F172; F129–F131 und F134–F136 bleiben unvergeben
+bzw. reserviert). **AP 1 (Teilnehmerkonto und Login), AP 2 (Profil und
 Feld-Baukasten), AP 3 (Login, Registrierung und Profil in beiden Clients,
 **Meilenstein M6**), AP 4 (die Anmeldung kennt den Menschen), AP 5
 (Profilsuche), AP 6 (Gespräche, Nachrichten und Bilder), AP 7 (Echtzeit,
-**Meilenstein M7**) und AP 8 (Chat im Nutzer-Client) sind erledigt** —
-Protokoll je Paket unter _Fortschritt_. Als nächstes AP 9:
-Organisator-Kontakt ohne Registrierung (FR 3.4, UC 14, F11). Katalog **817**
-Schlüssel.
+**Meilenstein M7**), AP 8 (Chat im Nutzer-Client) und AP 9 (Organisator-Kontakt
+ohne Registrierung) sind erledigt** — Protokoll je Paket unter _Fortschritt_.
+Als nächstes AP 10: Nachrichtenübersicht im Veranstalter-Client (FR 3.4) —
+Antworten an einen Gast gehen per Mail hinaus (F11) und bleiben im Verlauf,
+Gruppen werden dort zusammengestellt (E39). Katalog **834** Schlüssel.
 
 Aus AP 4: die Selbstbedienung kennt zwei Ansprüche — das signierte Token aus der
 Mail und die Sitzung, aufgelöst über die Adresse (F148) —, die
@@ -239,12 +240,30 @@ Sekunden auf). Neu am Server: **eine** Route, `GET
 mit wem sie ist — der Port konnte die Frage schon (F165). `initialsOf` ist als
 vierte Kopie ausgezogen (F138).
 
-Fünf Punkte warten auf ein anderes Paket bzw. auf Marius: das **Storno über die
+Aus AP 9: ein Kontaktformular auf der Event-Landingpage, ohne Konto und ohne
+Login — `POST /api/user/series/:reihe/events/:event/contact`, immer **202** mit
+der geschickten Adresse (E10), eigene Drosselung, 404 nur für ein
+unveröffentlichtes Event und **kein** Riegel gegen ein Event, das vorbei ist.
+Die Anfrage wird ein `organizer_contact`-Gespräch mit der Adresse auf dem
+Gespräch, `sender_type = 'guest'`, Event ohne Betreff, **je Anfrage ein neues**
+und **ohne Mitgliedszeile für die Veranstalterseite** (F133 — die Organisation
+ist kein Konto; die Art des Gesprächs sagt, wessen es ist, und AP 10 liest
+danach). Das Formular hängt **nicht** am `chat`-Schalter (F171): FR 3.4 ist P1,
+der Chat ein abschaltbares P2-Modul mit `profiles` als Voraussetzung — eine
+Instanz ohne Teilnehmerkonten muss erreichbar bleiben. Die **siebte Mail** geht
+an die Kontaktadresse der Reihe (sonst an die Absenderadresse der Instanz), in
+der Vorgabesprache der Instanz, grüßt niemanden, und ihr Fehlschlag ändert die
+Antwort des Formulars nicht (F172) — **an den Gast geht keine Mail**, damit
+dieser offene Endpunkt niemandem Fremdes Mail schicken kann. Kein Bild, also
+JSON statt `multipart`. Migration: keine.
+
+Sechs Punkte warten auf ein anderes Paket bzw. auf Marius: das **Storno über die
 Sitzung** gehört zu AP 12 (F148), der **Purge der Bilder eines Gesprächs** zu
-AP 10 (F158 nennt die Reihenfolge), die **Drosselung des Handshakes** zu
+AP 10 (F158 nennt die Reihenfolge), der **Deep-Link der Benachrichtigungsmail**
+ebenfalls zu AP 10 (F172, `ANSWER_PATH`), die **Drosselung des Handshakes** zu
 Phase 5; ob es eine geteilte Bibliothek für Oberflächenbauteile geben soll, ist
 eine Stack-Entscheidung (F145), und ob die Navigationsleiste einen
-**Ungelesen-Zähler** tragen soll, eine Produktfrage aus AP 8. Alles fünf in
+**Ungelesen-Zähler** tragen soll, eine Produktfrage aus AP 8. Alles sechs in
 `todo.md`.
 
 ## Betriebskontext

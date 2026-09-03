@@ -9,8 +9,13 @@ import type {
   ConversationRecord,
   ConversationRepository,
   ConversationSlice,
+  NewOrganizerContact,
 } from '../../business/chat/ports/conversation.repository';
-import { ConversationEntity, ConversationMemberEntity } from '../entities';
+import {
+  ConversationEntity,
+  ConversationMemberEntity,
+  MessageEntity,
+} from '../entities';
 
 /**
  * The overview's one statement per page (FR 4.5 — E38).
@@ -136,6 +141,52 @@ export class TypeormConversationRepository implements ConversationRepository {
       return toRecord(
         await manager.findOneByOrFail(ConversationEntity, { directKey: key }),
       );
+    });
+  }
+
+  async createOrganizerContact(
+    contact: NewOrganizerContact,
+  ): Promise<ConversationRecord> {
+    return this.conversations.manager.transaction(async (manager) => {
+      const conversation = await manager.save(
+        manager.create(ConversationEntity, {
+          type: 'organizer_contact',
+          // The event whose page carried the form, and no topic: what the
+          // request is about is the event, and a second field holding its name
+          // would be the same fact stored twice (CHK_conversation_shape allows
+          // both, and AP 9 chose).
+          eventId: contact.eventId,
+          topic: null,
+          guestEmail: contact.guestEmail,
+          guestName: contact.guestName,
+          // Forbidden for anything but a direct conversation, which is what
+          // makes the unique index over it mean what it says.
+          directKey: null,
+        }),
+      );
+
+      const message = await manager.save(
+        manager.create(MessageEntity, {
+          conversationId: conversation.id,
+          // The one sender with no id: a guest is identified by the address on
+          // the conversation (E39, CHK_message_sender_id).
+          senderType: 'guest',
+          senderId: null,
+          body: contact.body,
+          attachmentId: null,
+        }),
+      );
+
+      // The overview sorts by this, so it is set with the line that justifies
+      // it — the same rule the message repository follows, in the transaction
+      // that also created the conversation.
+      await manager.update(
+        ConversationEntity,
+        { id: conversation.id },
+        { lastMessageAt: message.createdAt },
+      );
+
+      return toRecord({ ...conversation, lastMessageAt: message.createdAt });
     });
   }
 

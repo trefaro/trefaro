@@ -601,6 +601,18 @@ Bonn` is diagnostics rather than a fact about anybody.
       whether a chat that only notifies by push and by its own screen is the
       one an activist community wants.
 
+- [ ] **The contact notification links to the organizer client, not to the
+      request** (F172, AP 9). The mail that tells the organization about a
+      question from somebody without an account carries `ANSWER_PATH = '/'`,
+      because the message overview it should point at arrives with **AP 10** and
+      a deep link into a screen that does not exist yet would be a promise
+      rather than a shortcut. One constant, in
+      `business/chat/organizer-contact.service.ts`, with the reason above it:
+      whoever builds that overview turns it into the address of the request and
+      the mail is right again. Nothing else about the notification changes —
+      recipient, language and the fact that its failure never changes the form's
+      answer are all decided (F172).
+
 - [ ] **`formatAnswer` answers in English, and the organizer client shows it.**
       The helper in `shared-models` turns a tick into `yes` / `no` — words from a
       library that knows no catalogue — and the participant overview's detail

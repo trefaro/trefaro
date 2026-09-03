@@ -5,6 +5,7 @@ import { ALL_MAIL_KEYS, MAIL_TEMPLATES } from './mails';
 import { mailStrings } from './strings';
 import type {
   ConfirmationMailContext,
+  ContactRequestMailContext,
   InvitationMailContext,
   MailTemplate,
   ReceiptMailContext,
@@ -101,8 +102,23 @@ const INVITATION: InvitationMailContext = {
   optOutUrl: 'https://events.example.org/invitations/unsubscribe?token=mno.pqr',
 };
 
+/**
+ * A question from somebody without an account (FR 3.4, UC 14, F11) — AP 9.
+ *
+ * The one context whose text a **stranger** typed, which is why the escaping
+ * assertion below matters more here than anywhere else: an organizer's
+ * invitation at least comes from somebody with a login.
+ */
+const CONTACT_REQUEST: ContactRequestMailContext = {
+  event: CONTEXT.event,
+  guestName: 'Amina Okonkwo',
+  guestEmail: 'amina@example.org',
+  paragraphs: ['is the venue accessible by wheelchair?', 'Thanks in advance.'],
+  answerUrl: 'https://admin.events.example.org/',
+};
+
 describe('the shipped catalogues, as mail text (E24)', () => {
-  it('cover every key the four mails ask for', () => {
+  it('cover every key any of the mails asks for', () => {
     // The successor to the compile-time guarantee E24 gave up: English is the
     // key list, so a key missing here is a mail this image cannot write at all,
     // in any language.
@@ -133,6 +149,7 @@ describe('the shipped catalogues, as mail text (E24)', () => {
         render(locale, MAIL_TEMPLATES.registrationConfirmed, RECEIPT),
         render(locale, MAIL_TEMPLATES.registrationCancelled, CONTEXT),
         render(locale, MAIL_TEMPLATES.invitation, INVITATION),
+        render(locale, MAIL_TEMPLATES.contactRequest, CONTACT_REQUEST),
       ];
       for (const mail of mails) {
         expect(`${mail.subject}\n${mail.text}\n${mail.html}`).not.toMatch(/{{/);
@@ -347,5 +364,87 @@ describe('the cancellation notice (F59)', () => {
     // does not make.
     expect(mail.text).not.toContain('/invitations/unsubscribe');
     expect(mail.html).not.toContain('/invitations/unsubscribe');
+  });
+});
+
+describe('the contact notification (FR 3.4, UC 14, F11)', () => {
+  it('names the event in the subject, in both languages', () => {
+    for (const locale of LOCALES) {
+      const mail = render(
+        locale,
+        MAIL_TEMPLATES.contactRequest,
+        CONTACT_REQUEST,
+      );
+
+      expect(mail.subject).toContain('Kickoff in Köln');
+      expect(mail.text).toContain('Amina Okonkwo');
+    }
+  });
+
+  it('carries the address the answer goes to (F11)', () => {
+    for (const locale of LOCALES) {
+      const mail = render(
+        locale,
+        MAIL_TEMPLATES.contactRequest,
+        CONTACT_REQUEST,
+      );
+
+      // The whole point of this letter: the organization can answer without
+      // opening anything, because the person has no inbox in this application.
+      expect(mail.text).toContain('amina@example.org');
+      expect(mail.html).toContain('amina@example.org');
+    }
+  });
+
+  it('greets nobody', () => {
+    // The one mail with no addressee: it arrives in a shared mailbox, and
+    // "Hello Democracy International" is a robot addressing an organization by
+    // its own name. Asserted as "the first thing said is the news".
+    for (const locale of LOCALES) {
+      const mail = render(
+        locale,
+        MAIL_TEMPLATES.contactRequest,
+        CONTACT_REQUEST,
+      );
+
+      expect(mail.text.startsWith('Amina Okonkwo')).toBe(true);
+      expect(mail.text).not.toMatch(/Hello|Hallo/);
+    }
+  });
+
+  it('keeps the paragraphs a stranger wrote apart', () => {
+    const mail = render('en', MAIL_TEMPLATES.contactRequest, CONTACT_REQUEST);
+
+    expect(mail.text).toContain(
+      'is the venue accessible by wheelchair?\n\nThanks in advance.',
+    );
+  });
+
+  it('escapes what a stranger typed rather than sending it as markup', () => {
+    const mail = render('en', MAIL_TEMPLATES.contactRequest, {
+      ...CONTACT_REQUEST,
+      guestName: '<script>alert(1)</script>',
+      paragraphs: ['<img src=x onerror=alert(1)>'],
+    });
+
+    expect(mail.html).not.toContain('<script>');
+    expect(mail.html).not.toContain('<img');
+    expect(mail.html).toContain('&lt;script&gt;');
+    expect(mail.html).toContain('&lt;img');
+  });
+
+  it('leads to the organizer client and nowhere else', () => {
+    const mail = render('de', MAIL_TEMPLATES.contactRequest, CONTACT_REQUEST);
+
+    expect(mail.text).toContain(CONTACT_REQUEST.answerUrl);
+    // Not a reply link to the guest: an answer written from the application
+    // stays with the request (F11), and a mail client's reply would not.
+    expect(mail.html).not.toContain('mailto:');
+  });
+
+  it('loads nothing from anywhere when opened', () => {
+    const mail = render('en', MAIL_TEMPLATES.contactRequest, CONTACT_REQUEST);
+
+    expect(mail.html).not.toMatch(/<img|<link|@import|url\(/i);
   });
 });

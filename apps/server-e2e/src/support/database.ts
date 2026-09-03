@@ -342,6 +342,55 @@ export async function deleteConversations(
 }
 
 /**
+ * One line of a contact request, as it was stored (FR 3.4, AP 9).
+ *
+ * Read from the database and not from an endpoint, because until AP 10 there
+ * is none: the organizer's message overview is that package. What can be
+ * asserted today is the shape the overview will read — which is also what E39
+ * decided, so it is worth holding on to now rather than later.
+ */
+export interface StoredContactRequest {
+  readonly conversationId: string;
+  readonly type: string;
+  readonly eventId: string | null;
+  readonly topic: string | null;
+  readonly guestEmail: string | null;
+  readonly guestName: string | null;
+  readonly lastMessageAt: Date | null;
+  readonly senderType: string | null;
+  readonly senderId: string | null;
+  readonly body: string | null;
+  /** How many members the conversation has — none, for a contact request. */
+  readonly members: number;
+}
+
+/** Every contact request of one address, newest first, with its first line. */
+export async function contactRequestsOf(
+  guestEmail: string,
+): Promise<readonly StoredContactRequest[]> {
+  const result = await pool.query<StoredContactRequest>(
+    `SELECT c."id"              AS "conversationId",
+            c."type"            AS "type",
+            c."event_id"        AS "eventId",
+            c."topic"           AS "topic",
+            c."guest_email"     AS "guestEmail",
+            c."guest_name"      AS "guestName",
+            c."last_message_at" AS "lastMessageAt",
+            m."sender_type"     AS "senderType",
+            m."sender_id"       AS "senderId",
+            m."body"            AS "body",
+            (SELECT COUNT(*)::int FROM "conversation_member" cm
+              WHERE cm."conversation_id" = c."id") AS "members"
+       FROM "conversation" c
+       LEFT JOIN "message" m ON m."conversation_id" = c."id"
+      WHERE c."guest_email" = $1
+      ORDER BY c."created_at" DESC, m."created_at" ASC`,
+    [guestEmail.toLowerCase()],
+  );
+  return result.rows;
+}
+
+/**
  * A live participant session for a seeded account, without a login (E34, E4).
  *
  * The login budget is twenty attempts per five minutes for the whole instance

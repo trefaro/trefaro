@@ -96,6 +96,25 @@ export interface ConversationMembershipRecord {
   readonly lastReadAt: Date | null;
 }
 
+/**
+ * A question from somebody without an account, and who asked it (E39, F11).
+ *
+ * Carries the guest's first line, because the conversation is written **with**
+ * it: an `organizer_contact` row without a message says that a stranger
+ * pressed a button, which is nothing the organizer's overview could act on.
+ * A `direct` conversation may be empty — two accounts have exactly one and it
+ * exists from the moment either of them opens it — but this kind is created by
+ * the act of writing, so both rows belong to one transaction.
+ */
+export interface NewOrganizerContact {
+  /** The event whose landing page carried the form. */
+  readonly eventId: string;
+  readonly guestEmail: string;
+  readonly guestName: string;
+  /** What they wrote. Never empty — the caller has already refused that. */
+  readonly body: string;
+}
+
 export interface ConversationRepository {
   /**
    * The one direct conversation of two accounts, created if there is none.
@@ -107,6 +126,25 @@ export interface ConversationRepository {
   findOrCreateDirect(
     firstProfileId: string,
     secondProfileId: string,
+  ): Promise<ConversationRecord>;
+
+  /**
+   * Opens a contact request and writes its first line (FR 3.4, E39).
+   *
+   * Always a new conversation, never a lookup by address: nothing
+   * authenticates `guest_email`, so folding two requests into one thread would
+   * assert that the same person sent both — and would let anybody who knows an
+   * address write into a thread the organizer has already answered.
+   *
+   * **No membership row is written.** The organizer's side of a contact
+   * request is the organization, and the organization is not an account: an
+   * `admin` membership would name whichever person happened to be logged in
+   * when the guest wrote, which is nobody, and an admin added tomorrow would
+   * be blind to what arrived today. The kind of the conversation is what says
+   * whose it is.
+   */
+  createOrganizerContact(
+    contact: NewOrganizerContact,
   ): Promise<ConversationRecord>;
 
   /** One page of "my conversations", newest activity first. */

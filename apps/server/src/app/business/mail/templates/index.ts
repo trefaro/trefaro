@@ -17,6 +17,7 @@ export {
 } from './strings';
 export type {
   ConfirmationMailContext,
+  ContactRequestMailContext,
   InvitationMailContext,
   MailEvent,
   MailTemplate,

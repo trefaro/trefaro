@@ -4,6 +4,7 @@ import { MAILER, type Mailer } from './ports/mailer';
 import { MAIL_TEMPLATES } from './templates';
 import type {
   ConfirmationMailContext,
+  ContactRequestMailContext,
   InvitationMailContext,
   MailTemplate,
   ProfileConfirmationMailContext,
@@ -135,6 +136,32 @@ export class MailService {
     content: MailContent<ProfileExistsMailContext>,
   ): Promise<void> {
     await this.send(MAIL_TEMPLATES.profileExists, to, content);
+  }
+
+  /**
+   * Tells the organization that somebody without an account wrote (F11).
+   *
+   * The only sender here whose recipient is the organization itself, which is
+   * why the address is a parameter like everywhere else and yet means
+   * something different: it is the mailbox the instance was configured with,
+   * never an address a request supplied. F55 is untouched — the guest's own
+   * address travels **inside** the letter, to be read by the organizer, and
+   * nothing is sent to it.
+   *
+   * Its language is therefore the organization's default: the recipient has no
+   * account, so {@link MailCatalogue} falls through to the instance's setting
+   * (F125), which is the right answer for a letter to the organization about
+   * its own event.
+   *
+   * @throws MailDeliveryError — and the caller answers 202 all the same: the
+   * request is already stored, and a failure here must not turn into a form
+   * that answers differently depending on the mail server (E10).
+   */
+  async sendContactRequest(
+    to: string,
+    content: MailContent<ContactRequestMailContext>,
+  ): Promise<void> {
+    await this.send(MAIL_TEMPLATES.contactRequest, to, content);
   }
 
   private async send<Context>(

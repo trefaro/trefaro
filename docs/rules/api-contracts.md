@@ -67,6 +67,24 @@ Link.
   ausdrücklich nicht `profile-search`** — ohne Verzeichnis lässt sich kein neues
   Gespräch beginnen, die bestehenden bleiben lesbar (E14, E37), und eine
   Voraussetzung hätte behauptet, Nachrichten seien ohne Verzeichnis sinnlos.
+- **Ein Modulschalter deckt keine P1-Anforderung** (F171). Das Kontaktformular
+  `POST /api/user/series/:reihe/events/:event/contact` liegt in
+  `business/chat/`, weil dieses Modul die Gespräche besitzt — und trägt als
+  einziger Controller dort **kein** `@CoreModuleController(CHAT_MODULE_KEY)`.
+  FR 3.4 ist P1, der Chat aus FR 4.5 ein abschaltbares P2-Modul, und `chat`
+  setzt `profiles` voraus (E42): mit dem Schalter davor wäre eine Instanz **ohne
+  Teilnehmerkonten nicht erreichbar**, und genau für die ist UC 14 da. Der
+  Schalter entscheidet, ob die Menschen **in** einer Instanz einander schreiben
+  dürfen, nicht ob die Organisation angeschrieben werden kann. Wer hier einen
+  Dekorator „nachträgt", nimmt einer Instanz ihr Postfach — deshalb steht die
+  Begründung im Kopf des Controllers und nicht nur hier. Antwort ist immer
+  **202** mit der geschickten Adresse (E10), eigene Drosselung (30 je 5 min,
+  enger als die 60 des Anmeldeformulars, weil jede Anfrage eine Mail auslöst),
+  404 nur für „kein veröffentlichtes Event an dieser Adresse" (F26) — und
+  **kein** `hasEnded`-Riegel wie bei der Anmeldung: eine Frage zu einem Event,
+  das vorbei ist, ist eine Frage. **Kein Bild**, also JSON statt `multipart`:
+  ein öffentlicher Endpunkt, der Bytes von Unbekannten annimmt, wäre eine
+  zweite Uploadfläche für nichts.
 - **Ein zurückkehrender Modulschlüssel bringt eine Altlast mit.** Phase 2 zog
   fünf Attrappen-Deskriptoren zurück und ließ ihre `module_config`-Zeilen liegen
   („Abschalten löscht nie Daten"). Für eine `true`-Zeile ist das richtig — jemand

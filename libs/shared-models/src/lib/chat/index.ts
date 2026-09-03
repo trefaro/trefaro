@@ -1,4 +1,10 @@
 export {
+  MAX_GUEST_EMAIL_LENGTH,
+  MAX_GUEST_NAME_LENGTH,
+  type ContactRequestAcknowledgement,
+  type ContactRequestInput,
+} from './contact-requests';
+export {
   CHAT_MODULE_KEY,
   CONVERSATION_MEMBER_TYPES,
   CONVERSATION_TYPES,

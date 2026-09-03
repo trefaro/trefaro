@@ -4,7 +4,7 @@ import type { TrefaroEnv } from '../../core/config/env';
 import { ENV } from '../../core/config/env.module';
 
 /**
- * Absolute links into the participant client, for mail.
+ * Absolute links into the clients, for mail.
  *
  * Every address in a message has to be absolute — it is read in a mail client,
  * not in the app — and every one of them is built from the same configured
@@ -19,13 +19,28 @@ import { ENV } from '../../core/config/env.module';
 @Injectable()
 export class PublicLinks {
   private readonly origin: string;
+  private readonly adminOrigin: string;
 
   constructor(@Inject(ENV) env: TrefaroEnv) {
     this.origin = env.publicUserClientUrl;
+    this.adminOrigin = env.publicAdminClientUrl;
   }
 
   url(path: string): string {
     return publicUrl(this.origin, path);
+  }
+
+  /**
+   * A page of the **organizer** client (FR 3.4).
+   *
+   * The second origin, and the only mail that needs it is the one that goes to
+   * the organization rather than to a participant: a contact request is read
+   * and answered where the organization works. Built through the same
+   * `publicUrl` for the same reason the other one is — the two settings are
+   * configured by hand, and exactly one of them will end with a slash.
+   */
+  adminUrl(path: string): string {
+    return publicUrl(this.adminOrigin, path);
   }
 
   /** The public landing page of an event (E7, F28). */

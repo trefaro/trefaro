@@ -110,6 +110,37 @@ export interface InvitationMailContext {
 }
 
 /**
+ * A question from somebody without an account, on its way to the organization
+ * (FR 3.4, UC 14 — E39, F11).
+ *
+ * The only mail of this application whose recipient is the organization rather
+ * than a participant, and the only one that carries words a **stranger** wrote.
+ * Both facts shape it:
+ *
+ * - `paragraphs` are the guest's own text, escaped here like an organizer's
+ *   invitation is — nothing anybody types becomes markup in a mail client.
+ * - `guestEmail` is in the letter because that is where the answer goes (F11).
+ *   It is also the reason this mail exists at all: without it the organization
+ *   would have to poll the message overview to notice a question.
+ *
+ * There is no `firstName` and no greeting. Every other mail is addressed to a
+ * person who can be greeted by name; this one arrives in a shared mailbox, and
+ * "Hello Democracy International" is a robot addressing an organization by its
+ * own name.
+ */
+export interface ContactRequestMailContext {
+  /** The event whose landing page carried the form. */
+  readonly event: MailEvent;
+  readonly guestName: string;
+  /** Where the answer goes — the address the guest typed, unverified. */
+  readonly guestEmail: string;
+  /** What they wrote, already split into paragraphs. */
+  readonly paragraphs: readonly string[];
+  /** Where the organization reads and answers it — the organizer client. */
+  readonly answerUrl: string;
+}
+
+/**
  * One mail: the words it needs, and how it puts them together.
  *
  * The two travel as one value because E24 asks a question about a *mail* — "does

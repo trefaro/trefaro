@@ -12,6 +12,7 @@ import {
 import type { MailStrings } from './strings';
 import type {
   ConfirmationMailContext,
+  ContactRequestMailContext,
   InvitationMailContext,
   MailEvent,
   MailTemplate,
@@ -23,7 +24,7 @@ import type {
 } from './types';
 
 /**
- * The six mails, written out of the catalogue (AP 10 of phase 2, E22, E24).
+ * The seven mails, written out of the catalogue (AP 10 of phase 2, E22, E24).
  *
  * Two renderings of the same sentences, never two sets of sentences: the plain
  * text part and the HTML part read the same key and differ only in what they do
@@ -44,7 +45,13 @@ const ACTION_LINE = 'mail.actionLine';
 const EVENT_WHEN = 'mail.event.when';
 const EVENT_DETAILS = 'mail.event.details';
 
-/** Every mail greets somebody and ends with something to click. */
+/**
+ * Every mail to a person greets them and ends with something to click.
+ *
+ * The seventh mail is the exception and proves the rule: the contact
+ * notification goes to a mailbox rather than to somebody, so it takes
+ * {@link ACTION_LINE} alone.
+ */
 const COMMON_KEYS = [GREETING, ACTION_LINE] as const;
 /** The block that says when and where — the receipt and the invitation carry it. */
 const EVENT_KEYS = [EVENT_WHEN, EVENT_DETAILS] as const;
@@ -318,6 +325,69 @@ const profileExists: MailTemplate<ProfileExistsMailContext> = {
   },
 };
 
+/**
+ * "Somebody asked a question about your event" (FR 3.4, UC 14, F11).
+ *
+ * The one mail that goes to the organization rather than to a participant, and
+ * the reason a contact request does not have to be discovered by looking: the
+ * question is stored as a conversation, and this is what makes the organization
+ * aware of it.
+ *
+ * Two departures from the other six, both deliberate:
+ *
+ * 1. **No greeting.** A shared mailbox has no first name, and inventing one
+ *    out of the organization's own name reads like a form letter to oneself.
+ * 2. **The call to action leads to the organizer client, not to the request.**
+ *    A deep link into the message overview would be a promise about a screen
+ *    that arrives with AP 10; the address of the client is true today and will
+ *    stay true. Noted in `todo.md` so the overview can claim it.
+ *
+ * The guest's words go through `escapeHtml` exactly like an organizer's
+ * invitation paragraphs: this is the one mail whose content a stranger wrote.
+ */
+const contactRequest: MailTemplate<ContactRequestMailContext> = {
+  name: 'contact request',
+  keys: [
+    ACTION_LINE,
+    'mail.contactRequest.subject',
+    'mail.contactRequest.intro',
+    'mail.contactRequest.wrote',
+    'mail.contactRequest.answerTo',
+    'mail.contactRequest.action',
+  ],
+
+  render(s: MailStrings, context: ContactRequestMailContext): RenderedMail {
+    const { event, guestName, guestEmail, paragraphs, answerUrl } = context;
+    const label = s.text('mail.contactRequest.action');
+
+    return {
+      subject: s.text('mail.contactRequest.subject', { event: event.name }),
+      text: textBody(
+        s.text('mail.contactRequest.intro', {
+          name: guestName,
+          event: event.name,
+        }),
+        s.text('mail.contactRequest.wrote'),
+        ...paragraphs,
+        s.text('mail.contactRequest.answerTo', { email: guestEmail }),
+        textAction(s, label, answerUrl),
+      ),
+      html: htmlBody(
+        s.html('mail.contactRequest.intro', {
+          name: escapeHtml(guestName),
+          event: htmlStrong(escapeHtml(event.name)),
+        }),
+        s.html('mail.contactRequest.wrote'),
+        ...paragraphs.map((paragraph) => escapeHtml(paragraph)),
+        s.html('mail.contactRequest.answerTo', {
+          email: escapeHtml(guestEmail),
+        }),
+        htmlAction(answerUrl, label),
+      ),
+    };
+  },
+};
+
 export const MAIL_TEMPLATES = {
   registrationConfirmation,
   registrationConfirmed,
@@ -325,9 +395,10 @@ export const MAIL_TEMPLATES = {
   invitation,
   profileConfirmation,
   profileExists,
+  contactRequest,
 } as const;
 
-/** Every key the six mails between them can ask for — CI checks this list. */
+/** Every key the seven mails between them can ask for — CI checks this list. */
 export const ALL_MAIL_KEYS: readonly string[] = [
   ...new Set(
     Object.values(MAIL_TEMPLATES).flatMap((template) => template.keys),

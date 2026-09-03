@@ -16,6 +16,14 @@ export const PUBLISHED_SERIES = {
   slug: 'e2e-published-series',
   name: 'E2E Published Series',
   description: 'Visible to participants because it is published.',
+  /**
+   * Where a contact request about this series lands (FR 3.4, AP 9).
+   *
+   * Part of the fixture because it is what the notification's recipient is
+   * decided from: without it the mail would go to the instance's own sender
+   * address, which the suite would have to know the configuration to find.
+   */
+  contactEmail: 'e2e-organizer@contact.example.org',
   status: 'published',
 } as const;
 

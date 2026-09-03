@@ -157,6 +157,23 @@ Entscheidungsprotokoll (`docs/Anforderungsanalyse_und_Umsetzungsplan.md`).
   gelöschtes Profil nimmt seine Gespräche **nicht** mit (es gibt bis Phase 5
   keinen Weg, ein Profil zu löschen), und wer per SQL aufräumt, nennt die
   Gespräche ausdrücklich.
+- **Das Gespräch einer Kontaktanfrage hat keine Mitgliedszeile** (F133, E39).
+  `type = 'organizer_contact'`, `guest_email` (und `guest_name`) auf dem
+  **Gespräch** statt auf einer erfundenen Kontozeile, `event_id` gesetzt,
+  `topic` leer, die erste Nachricht mit `sender_type = 'guest'` ohne
+  `sender_id` (`CHK_message_sender_id`) — und in `conversation_member`
+  **nichts**. Die Veranstalterseite ist die Organisation, und die ist kein
+  Konto: `member_type = 'admin'` müsste eine Administratorzeile nennen, wo
+  niemand angemeldet ist, und wer morgen dazukommt, wäre für die Anfrage von
+  heute blind. Die **Art** des Gesprächs sagt, wessen es ist; die Übersicht des
+  Veranstalters liest danach, nie über eine Mitgliedschaft. Zwei Folgen: für
+  die Veranstalterseite gibt es kein `last_read_at` (also keine gerechnete
+  Ungelesen-Zahl — wer sie will, legt eine Zeile an und entscheidet nichts neu),
+  und ein Teilnehmer sieht diese Gespräche nie, weil seine Liste aus der
+  Mitgliedschaft kommt. Gespräch und erste Zeile entstehen in **einer**
+  Transaktion, und je Anfrage ein neues Gespräch: nichts authentifiziert
+  `guest_email`, also hieße Zusammenfassen zu behaupten, zwei Anfragen kämen
+  von derselben Person.
 - **Eine Nachricht ist Text, Bild oder beides — nie nichts** (E40).
   `CHK_message_content`, dazu `CHK_message_body` gegen einen Rumpf aus
   Leerzeichen. Kein `updated_at`, kein Lösch-Flag: eine Nachricht, die nach dem

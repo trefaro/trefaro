@@ -30,10 +30,18 @@ export interface CapturedMail {
  * opt-in, and it arrives *later* than the request that triggered it, because the
  * sending happens in the background (F56). Without the pattern the wait would
  * end immediately on the receipt that is already there.
+ *
+ * `text` narrows it further, and for a different reason: three browser engines
+ * run against one instance, so a mailbox that receives one message **per
+ * engine** with the same subject cannot be told apart by its headers at all.
+ * The contact notification (AP 9) is that case — its recipient is the
+ * organization, not the person the test plays — so the body is what identifies
+ * it. Bodies are fetched only for messages the two cheaper filters already
+ * matched.
  */
 export async function waitForMailTo(
   address: string,
-  options: { timeoutMs?: number; subject?: RegExp } = {},
+  options: { timeoutMs?: number; subject?: RegExp; text?: RegExp } = {},
 ): Promise<CapturedMail> {
   const timeoutMs = options.timeoutMs ?? 15_000;
   const deadline = Date.now() + timeoutMs;
@@ -57,7 +65,7 @@ export async function waitForMailTo(
     const { messages = [] } = (await response.json()) as {
       messages?: MailpitSummary[];
     };
-    const summary = messages.find(
+    const candidates = messages.filter(
       (mail) =>
         mail.To.some(
           (recipient) =>
@@ -66,11 +74,14 @@ export async function waitForMailTo(
         (!options.subject || options.subject.test(mail.Subject)),
     );
 
-    if (summary) {
+    for (const summary of candidates) {
       const body = (await (
         await fetch(`${MAILPIT_URL}/api/v1/message/${summary.ID}`)
       ).json()) as { Text?: string };
-      return { subject: summary.Subject, text: body.Text ?? '' };
+      const text = body.Text ?? '';
+      if (!options.text || options.text.test(text)) {
+        return { subject: summary.Subject, text };
+      }
     }
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
@@ -78,7 +89,9 @@ export async function waitForMailTo(
   throw new Error(
     `No mail for ${address}${
       options.subject ? ` matching ${options.subject}` : ''
-    } arrived within ${timeoutMs / 1000}s` +
+    }${options.text ? ` containing ${options.text}` : ''} arrived within ${
+      timeoutMs / 1000
+    }s` +
       (lastError
         ? `. Mailpit at ${MAILPIT_URL} was not reachable (${lastError}) — start it with ` +
           '`docker compose -f infra/docker-compose.dev.yml up -d mailpit`.'

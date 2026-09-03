@@ -174,6 +174,18 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   390 × 844 und fährt den ganzen Gang dort, samt einer Zusicherung, dass
   `scrollWidth` die Breite nicht übersteigt. Ein Bauteil, das seitlich
   heraussteht, ist auf dem Desktop unsichtbar kaputt.
+- **Eine Mail, die drei Engines an dasselbe Postfach schicken, wird am Rumpf
+  erkannt** (AP 9). Sonst gilt: Adresse plus Betreffmuster genügen, weil jede
+  Mail an _die Person_ geht, die der Test spielt. Die Benachrichtigung über eine
+  Kontaktanfrage geht an die **Organisation** — also liegen nach einem Lauf drei
+  Nachrichten mit identischem Empfänger und identischem Betreff im Postfach, und
+  die Kopfzeilen unterscheiden sie nicht. `waitForMailTo` nimmt deshalb ein
+  drittes Muster (`text`) und holt die Rümpfe nur für die Nachrichten, die
+  Adresse und Betreff schon gefiltert haben; das Unterscheidungsmerkmal ist die
+  Adresse, die der Test getippt hat. Und: was den Empfänger entscheidet, gehört
+  ins Fixture — die geseedete Reihe trägt seit AP 9 eine `contactEmail`, weil
+  die Suite die Absenderadresse der Instanz nur aus deren Konfiguration erraten
+  könnte.
 - **Ein Node-Client muss das Cookie selbst setzen.** Ein Browser hängt es an,
   ein `socket.io-client` in Node nicht: `extraHeaders: { cookie }`. Gilt für die
   Vertragssuite und für `tools/spike-verification/verify-chat.mjs` — und es ist
