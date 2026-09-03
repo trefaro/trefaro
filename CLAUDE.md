@@ -47,8 +47,11 @@ landet nur, was jede Sitzung braucht. Die Aufnahmebedingung steht in
 
 ## Kommunikation & Konventionen
 
-- Mit Marius auf **Deutsch** kommunizieren. Code, Bezeichner, Kommentare und
-  Commit-Messages auf **Englisch**.
+- **Mit Marius auf Englisch kommunizieren** (so von ihm festgelegt am
+  03.09.2026 — vorher war es Deutsch). Code, Bezeichner, Kommentare und
+  Commit-Messages waren und bleiben **Englisch**; die Dokumentation dieses
+  Repositories bleibt **Deutsch**, denn sie gehört zur Thesis
+  (`docs/`, `todo.md` und dieses Dokument).
 - **Conventional Commits** (`feat:`, `fix:`, `docs:`, `chore:`, …).
 - Jedes Feature mit Unit-Tests; E2E mit Playwright.
 - Lizenz: **AGPL-3.0-or-later**. Keine Abhängigkeiten mit inkompatiblen Lizenzen.
