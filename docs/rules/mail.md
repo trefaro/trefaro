@@ -23,7 +23,7 @@ gröber als in der Oberfläche.
   Kontaktformular ist keine Ausnahme:** die Adresse, die ein Gast tippt, wird
   auf dem Gespräch gespeichert und in die Benachrichtigung an die Organisation
   **geschrieben**, damit ein Mensch sie liest — geschickt wird an sie nichts
-  (F172). Erst AP 10 antwortet dorthin, und dann über die Zeile des Gesprächs.
+  (F172). **AP 10 antwortet dorthin, und zwar über die Zeile des Gesprächs** — siehe die achte Mail unten.
 - **Eine immer gleiche Antwort braucht eine Mail, die den Unterschied trägt**
   (E32). Das Registrierungsformular für ein Konto antwortet identisch, ob die
   Adresse unbekannt, unbestätigt oder längst in Benutzung ist — den Unterschied
@@ -32,8 +32,8 @@ gröber als in der Oberfläche.
   bricht: **auch der Fehlschlag muss gleich aussehen.** Ein 503 bei
   unerreichbarem Mailserver für die eine und ein 200 für die andere Adresse wäre
   genau die Auskunft, die das Formular nicht geben darf.
-- **Die Texte kommen aus demselben Katalog wie die Oberfläche** (35 Schlüssel
-  unter `mail.`, sieben Mails). Je Mail **ein** `MailTemplate` aus Schlüsselliste
+- **Die Texte kommen aus demselben Katalog wie die Oberfläche** (38 Schlüssel
+  unter `mail.`, acht Mails). Je Mail **ein** `MailTemplate` aus Schlüsselliste
   **und** Renderer (F87) — eine daneben geführte Liste driftet, und dann prüft E24 die
   falsche Menge.
 - **Die Einheit des Rückfalls ist eine Mail** (E24, F87), nicht der Katalog und
@@ -76,6 +76,23 @@ gröber als in der Oberfläche.
   eine zweite Anfrage. **An den Gast selbst geht keine Mail** — damit landet der
   einzige Brief, den ein anonymer Aufrufer auslösen kann, im eigenen Postfach
   der Organisation.
+- **Die achte Mail ist die Antwort auf die siebte, und sie ist die einzige, die
+  ein Veranstalter schreibt** (F11, F174). Sie geht an `guest_email` — die
+  Adresse **von der Zeile des Gesprächs**, nie eine, die ein Aufrufer mitgibt
+  (F55) —, grüßt mit dem Namen, den der Gast getippt hat, trägt den Event-Block
+  und **keinen Handlungsknopf**: die einzige sinnvolle Adresse ist die
+  Veranstaltungsseite, und die verlinkt der Block schon. Die Worte des
+  Veranstalters werden maskiert wie die einer Einladung. Ihre Sprache ist die
+  Vorgabe der Instanz, weil der Empfänger kein Konto hat — es sei denn, die
+  Adresse hat doch eines, dann bekommt sie die gewählte (F125 ist die Regel,
+  nicht ihre Ausnahme).
+- **Hier muss ein Fehlschlag sichtbar sein** (F174), und das ist die Umkehrung
+  der Regel eine Zeile höher. Bei der Benachrichtigung darf man ihn nicht sehen,
+  weil das Formular keine Auskunft geben darf (E10); bei der Antwort **muss**
+  man ihn sehen, sonst glaubt der Veranstalter, er habe jemandem geantwortet,
+  der nie etwas gehört hat. Deshalb: **erst speichern, dann senden**, und
+  `delivery` (`none` | `sent` | `failed`) reist in der Antwort des Endpunkts
+  mit. Ein zweiter Versuch ist eine zweite Zeile.
 - **In den Katalog wandern Sätze, nie die Auszeichnung um sie herum** (F86).
   `<div>`, `<p>`, `<strong>` und der Link bleiben Code. Daraus die Reihenfolge:
   **erst den Katalogtext maskieren, dann interpolieren** — Platzhalter überstehen

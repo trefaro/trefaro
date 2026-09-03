@@ -150,7 +150,7 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    (offen geblieben: die Feedbackrunde mit Democracy International)
 2. **✅ 29.08.2026, M5** Whitelabel-Theming, Modul-Verwaltung, i18n, PWA,
    Installations-Story → `docs/PHASE2.md`
-3. **In Arbeit** (AP 1–AP 9 erledigt, M7 erreicht) Profile, Nachrichten,
+3. **In Arbeit** (AP 1–AP 10 erledigt, M7 erreicht) Profile, Nachrichten,
    Echtzeit-/Gruppenchat, Push, Profilsuche → `docs/PHASE3.md`
 4. Plug-ins: Programmvorschläge, Forum, Raumplanung, QR-Check-In
 5. Härtung, Usability-Test mit Democracy International (Pilotpartner), Doku,
@@ -174,11 +174,14 @@ bzw. reserviert). **AP 1 (Teilnehmerkonto und Login), AP 2 (Profil und
 Feld-Baukasten), AP 3 (Login, Registrierung und Profil in beiden Clients,
 **Meilenstein M6**), AP 4 (die Anmeldung kennt den Menschen), AP 5
 (Profilsuche), AP 6 (Gespräche, Nachrichten und Bilder), AP 7 (Echtzeit,
-**Meilenstein M7**), AP 8 (Chat im Nutzer-Client) und AP 9 (Organisator-Kontakt
-ohne Registrierung) sind erledigt** — Protokoll je Paket unter _Fortschritt_.
-Als nächstes AP 10: Nachrichtenübersicht im Veranstalter-Client (FR 3.4) —
-Antworten an einen Gast gehen per Mail hinaus (F11) und bleiben im Verlauf,
-Gruppen werden dort zusammengestellt (E39). Katalog **834** Schlüssel.
+**Meilenstein M7**), AP 8 (Chat im Nutzer-Client), AP 9 (Organisator-Kontakt
+ohne Registrierung) und AP 10 (Nachrichtenübersicht im Veranstalter-Client)
+sind erledigt** — Protokoll je Paket unter _Fortschritt_. Als nächstes AP 11:
+Push wird echt (FR 3.15) — `PushService.broadcast()` bekommt seine Aufrufer,
+`push_subscription.user_id` wird nullbar (E43), der Client erklärt die
+Berechtigung **vor** dem Browserdialog, und die Gerätematrix aus Spike 3 wird
+von Hand abgehakt (samt iOS Safari mit installierter PWA, wovon F7 abhängt).
+Katalog **890** Schlüssel.
 
 Aus AP 4: die Selbstbedienung kennt zwei Ansprüche — das signierte Token aus der
 Mail und die Sitzung, aufgelöst über die Adresse (F148) —, die
@@ -257,14 +260,40 @@ Antwort des Formulars nicht (F172) — **an den Gast geht keine Mail**, damit
 dieser offene Endpunkt niemandem Fremdes Mail schicken kann. Kein Bild, also
 JSON statt `multipart`. Migration: keine.
 
-Sechs Punkte warten auf ein anderes Paket bzw. auf Marius: das **Storno über die
-Sitzung** gehört zu AP 12 (F148), der **Purge der Bilder eines Gesprächs** zu
-AP 10 (F158 nennt die Reihenfolge), der **Deep-Link der Benachrichtigungsmail**
-ebenfalls zu AP 10 (F172, `ANSWER_PATH`), die **Drosselung des Handshakes** zu
-Phase 5; ob es eine geteilte Bibliothek für Oberflächenbauteile geben soll, ist
-eine Stack-Entscheidung (F145), und ob die Navigationsleiste einen
-**Ungelesen-Zähler** tragen soll, eine Produktfrage aus AP 8. Alles sechs in
-`todo.md`.
+Aus AP 10: `business/chat/` hat eine zweite Seite. Die Organisation liest ihre
+Gespräche über einen **zweiten Port**, dessen jede Anweisung
+`type IN ('group', 'organizer_contact')` trägt — ein `direct`-Gespräch kommt
+dort nicht heraus, und das ist eine Zusage der SQL statt einer Prüfung darüber
+(F173, wie F152). Sie hat keine Mitgliedszeile (F133), also auch keine
+Ungelesen-Zahl; an deren Stelle steht **wer zuletzt geschrieben hat**
+(`awaitsAnswer`). Eine Antwort an einen Gast wird **erst gespeichert, dann
+gesendet**, und was aus der Mail wurde, reist in der Antwort mit
+(`delivery: none | sent | failed`, F174) — das Gegenteil von F172, aus dem
+entgegengesetzten Grund: dort darf ein Fehlschlag nicht sichtbar sein (E10),
+hier muss er es sein. Die **achte Mail** grüßt mit dem getippten Namen und
+trägt keinen Handlungsknopf. Gruppen entstehen aus den **bestätigten
+Anmeldungen mit Konto** einer Veranstaltung, und wer hineindarf, entscheidet
+das `INSERT … SELECT`; ist einer nicht dabei, entsteht **nichts**. Der
+`chat`-Schalter hängt an **zwei Routen** statt an der Klasse (F175): Lesen und
+Antworten sind P1, eine Gruppe anzulegen ist FR 4.5. Das Bild einer Nachricht
+hat für den Veranstalter eine **eigene** Route, weil die Medienroute über
+Mitgliedschaft entscheidet (F156). Dazu erledigt: der **Purge der Bilder eines
+Gesprächs** (F158 — über einen eigenen Port, nicht über
+`AttachmentsService.purgeForEvent`) und der **Deep-Link der
+Benachrichtigungsmail** (F172, jetzt `organizerConversationPath`). Migration:
+keine. **Nichts daran ist live** — der Handshake authentifiziert eine
+Teilnehmersitzung, und die Mail ist der Ersatz.
+
+Neun Punkte warten auf ein anderes Paket bzw. auf Marius: das **Storno über die
+Sitzung** gehört zu AP 12 (F148), die **Drosselung des Handshakes** zu Phase 5;
+ob es eine geteilte Bibliothek für Oberflächenbauteile geben soll, ist eine
+Stack-Entscheidung (F145). Produktfragen sind der **Ungelesen-Zähler** in der
+Navigationsleiste (AP 8), die **Nachrichten-Kachel** des Event-Dashboards (sie
+bräuchte eine Ungelesen-Zahl, die es für die Organisation nicht gibt) und ob die
+Übersicht sich **selbst auffrischen** soll. Benannte Grenzen: der **Name der
+antwortenden Person** ist gespeichert, aber nicht gezeigt; die **Antwort eines
+Gasts** kommt als gewöhnliche Mail außerhalb der Anwendung an; und der
+Veranstalter kann **kein Bild senden**. Alles neun in `todo.md`.
 
 ## Betriebskontext
 

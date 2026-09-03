@@ -440,6 +440,31 @@ export async function messageAttachmentId(
   return result.rows[0]?.attachment_id ?? null;
 }
 
+/**
+ * The conversations bound to one event (F158).
+ *
+ * For the purge: an event's deletion cascades through `conversation`, and the
+ * only way to see that it happened *before* the cascade — with the files
+ * removed rather than orphaned — is to look at both tables afterwards.
+ */
+export async function conversationIdsForEvent(
+  eventId: string,
+): Promise<readonly string[]> {
+  const result = await pool.query<{ id: string }>(
+    'SELECT id FROM conversation WHERE event_id = $1',
+    [eventId],
+  );
+  return result.rows.map((row) => row.id);
+}
+
+/** Whether an `attachment` row is still there — the other half of the purge. */
+export async function attachmentExists(id: string): Promise<boolean> {
+  const result = await pool.query('SELECT 1 FROM attachment WHERE id = $1', [
+    id,
+  ]);
+  return result.rowCount === 1;
+}
+
 export async function closeDatabase(): Promise<void> {
   await pool.end();
 }

@@ -1,3 +1,4 @@
+export { AdminConversationsController } from './admin-conversations.controller';
 export {
   ChatRealtimeService,
   conversationRoom,
@@ -14,6 +15,10 @@ export { messageImageUrl } from './message-image-url';
 export { MessagesService, type MessageImageUpload } from './messages.service';
 export { OrganizerContactService } from './organizer-contact.service';
 export {
+  NOT_THE_ORGANIZATION_S,
+  OrganizerConversationsService,
+} from './organizer-conversations.service';
+export {
   CONVERSATION_REPOSITORY,
   type ConversationCounterpartRecord,
   type ConversationMemberRef,
@@ -24,6 +29,15 @@ export {
   type ConversationSlice,
   type NewOrganizerContact,
 } from './ports/conversation.repository';
+export {
+  ORGANIZER_CONVERSATION_REPOSITORY,
+  type GroupCandidateRecord,
+  type MessagePreviewRecord,
+  type NewGroup,
+  type OrganizerConversationRecord,
+  type OrganizerConversationRepository,
+  type OrganizerConversationSlice,
+} from './ports/organizer-conversation.repository';
 export {
   MESSAGE_REPOSITORY,
   type AppendedMessage,

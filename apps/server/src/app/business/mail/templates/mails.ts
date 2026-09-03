@@ -12,6 +12,7 @@ import {
 import type { MailStrings } from './strings';
 import type {
   ConfirmationMailContext,
+  ContactAnswerMailContext,
   ContactRequestMailContext,
   InvitationMailContext,
   MailEvent,
@@ -24,7 +25,7 @@ import type {
 } from './types';
 
 /**
- * The seven mails, written out of the catalogue (AP 10 of phase 2, E22, E24).
+ * The eight mails, written out of the catalogue (AP 10 of phase 2, E22, E24).
  *
  * Two renderings of the same sentences, never two sets of sentences: the plain
  * text part and the HTML part read the same key and differ only in what they do
@@ -48,9 +49,11 @@ const EVENT_DETAILS = 'mail.event.details';
 /**
  * Every mail to a person greets them and ends with something to click.
  *
- * The seventh mail is the exception and proves the rule: the contact
- * notification goes to a mailbox rather than to somebody, so it takes
- * {@link ACTION_LINE} alone.
+ * Two of the eight are exceptions, and they prove the rule from both ends: the
+ * contact notification goes to a mailbox rather than to somebody, so it takes
+ * {@link ACTION_LINE} without a greeting; the answer to a guest greets them by
+ * the name they typed and has nothing to click, because the only address it
+ * could offer is the event page its own block already links (F174).
  */
 const COMMON_KEYS = [GREETING, ACTION_LINE] as const;
 /** The block that says when and where — the receipt and the invitation carry it. */
@@ -388,6 +391,56 @@ const contactRequest: MailTemplate<ContactRequestMailContext> = {
   },
 };
 
+/**
+ * The organizer's answer to somebody without an account (FR 3.4, F11, F174).
+ *
+ * The eighth mail, and the only one that carries an **organizer's** words to a
+ * person outside the instance. Three things follow from that:
+ *
+ * - It **greets by name**, unlike the notification it answers: the recipient
+ *   is a person who typed their name into a form, not a shared mailbox.
+ * - It carries **no call to action**. Every other mail to a person ends with
+ *   something to click; here the only address worth offering is the event's
+ *   own page, which the event block already links — a second button to the
+ *   same place would be decoration.
+ * - The organizer's paragraphs are escaped like an invitation's. Their words
+ *   go out unchanged; the markup around them is not theirs to write (F86).
+ */
+const contactAnswer: MailTemplate<ContactAnswerMailContext> = {
+  name: 'contact answer',
+  keys: [
+    GREETING,
+    ...EVENT_KEYS,
+    'mail.contactAnswer.subject',
+    'mail.contactAnswer.intro',
+    'mail.contactAnswer.again',
+  ],
+
+  render(s: MailStrings, context: ContactAnswerMailContext): RenderedMail {
+    const { guestName, event, paragraphs } = context;
+
+    return {
+      subject: s.text('mail.contactAnswer.subject', { event: event.name }),
+      text: textBody(
+        greeting(s, guestName),
+        s.text('mail.contactAnswer.intro', { event: event.name }),
+        ...paragraphs,
+        s.text('mail.contactAnswer.again'),
+        ...textEventBlock(s, event),
+      ),
+      html: htmlBody(
+        htmlGreeting(s, guestName),
+        s.html('mail.contactAnswer.intro', {
+          event: htmlStrong(escapeHtml(event.name)),
+        }),
+        ...paragraphs.map((paragraph) => escapeHtml(paragraph)),
+        s.html('mail.contactAnswer.again'),
+        htmlEventBlock(s, event, false),
+      ),
+    };
+  },
+};
+
 export const MAIL_TEMPLATES = {
   registrationConfirmation,
   registrationConfirmed,
@@ -396,9 +449,10 @@ export const MAIL_TEMPLATES = {
   profileConfirmation,
   profileExists,
   contactRequest,
+  contactAnswer,
 } as const;
 
-/** Every key the seven mails between them can ask for — CI checks this list. */
+/** Every key the eight mails between them can ask for — CI checks this list. */
 export const ALL_MAIL_KEYS: readonly string[] = [
   ...new Set(
     Object.values(MAIL_TEMPLATES).flatMap((template) => template.keys),

@@ -1,8 +1,10 @@
 import { DynamicModule, Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ATTACHMENT_REPOSITORY } from '../business/attachments/ports/attachment.repository';
+import { CONVERSATION_PURGE_REPOSITORY } from '../business/attachments/ports/conversation-purge.repository';
 import { FILE_STORE } from '../business/attachments/ports/file-store';
 import { CONVERSATION_REPOSITORY } from '../business/chat/ports/conversation.repository';
+import { ORGANIZER_CONVERSATION_REPOSITORY } from '../business/chat/ports/organizer-conversation.repository';
 import { MESSAGE_REPOSITORY } from '../business/chat/ports/message.repository';
 import { PROFILE_DIRECTORY } from '../business/common/ports/profile-directory.port';
 import { APP_CONFIG_REPOSITORY } from '../business/config/ports/app-config.repository';
@@ -45,7 +47,9 @@ import { TypeormAdminSessionRepository } from './repositories/typeorm-admin-sess
 import { TypeormAdminUserRepository } from './repositories/typeorm-admin-user.repository';
 import { TypeormAppConfigRepository } from './repositories/typeorm-app-config.repository';
 import { TypeormAttachmentRepository } from './repositories/typeorm-attachment.repository';
+import { TypeormConversationPurgeRepository } from './repositories/typeorm-conversation-purge.repository';
 import { TypeormConversationRepository } from './repositories/typeorm-conversation.repository';
+import { TypeormOrganizerConversationRepository } from './repositories/typeorm-organizer-conversation.repository';
 import { TypeormMessageRepository } from './repositories/typeorm-message.repository';
 import { TypeormEventSeriesTranslationRepository } from './repositories/typeorm-event-series-translation.repository';
 import { TypeormEventSeriesRepository } from './repositories/typeorm-event-series.repository';
@@ -102,6 +106,8 @@ export class DataAccessModule {
         TypeormAdminUserRepository,
         TypeormAttachmentRepository,
         TypeormConversationRepository,
+        TypeormConversationPurgeRepository,
+        TypeormOrganizerConversationRepository,
         TypeormMessageRepository,
         LocalDiskFileStore,
         TypeormAdminSessionRepository,
@@ -143,6 +149,14 @@ export class DataAccessModule {
           provide: ATTACHMENT_REPOSITORY,
           useExisting: TypeormAttachmentRepository,
         },
+        // The other half of "a file whose owner is gone" (F158): the deletes of
+        // the port above cannot touch a conversation's picture, on purpose, so
+        // the pictures of a deleted event's conversations have their own
+        // statement — and their own order, which a constraint dictates.
+        {
+          provide: CONVERSATION_PURGE_REPOSITORY,
+          useExisting: TypeormConversationPurgeRepository,
+        },
         // The upload volume behind a port, for the same reason the tables are:
         // the business layer knows that a file is kept, not where (E9).
         {
@@ -156,6 +170,15 @@ export class DataAccessModule {
         {
           provide: CONVERSATION_REPOSITORY,
           useExisting: TypeormConversationRepository,
+        },
+        // A third port over the same two tables, and the reason is the access
+        // rule rather than the data: the organization has no membership row
+        // (F133), so the overview cannot be served by a port whose every
+        // statement is scoped to the asking member. Its own statements are
+        // scoped to the two kinds it may read instead (F173).
+        {
+          provide: ORGANIZER_CONVERSATION_REPOSITORY,
+          useExisting: TypeormOrganizerConversationRepository,
         },
         {
           provide: MESSAGE_REPOSITORY,
@@ -289,7 +312,9 @@ export class DataAccessModule {
         ADMIN_SESSION_REPOSITORY,
         APP_CONFIG_REPOSITORY,
         ATTACHMENT_REPOSITORY,
+        CONVERSATION_PURGE_REPOSITORY,
         CONVERSATION_REPOSITORY,
+        ORGANIZER_CONVERSATION_REPOSITORY,
         MESSAGE_REPOSITORY,
         FILE_STORE,
         EVENT_SERIES_REPOSITORY,

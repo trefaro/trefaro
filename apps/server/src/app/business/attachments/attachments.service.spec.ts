@@ -5,6 +5,10 @@ import type {
   AttachmentRepository,
   NewAttachment,
 } from './ports/attachment.repository';
+import type {
+  ConversationPurgeRepository,
+  UnownedFile,
+} from './ports/conversation-purge.repository';
 import type { FileArea, FileStore } from './ports/file-store';
 import type { UploadedFile } from './uploaded-file';
 
@@ -77,6 +81,32 @@ class FakeAttachmentRepository implements AttachmentRepository {
   }
 }
 
+/**
+ * The pictures inside conversations (F158).
+ *
+ * A port of its own because its deletes are a different arc through the schema
+ * and, above all, a different **order**: the conversations go first and the
+ * `attachment` rows after, or a `CHECK` refuses it. What the service does with
+ * the answer is the only thing under test here — the order is the repository's
+ * and is proven against a real database in the contract suite.
+ */
+class FakeConversationPurgeRepository implements ConversationPurgeRepository {
+  events = new Map<string, readonly UnownedFile[]>();
+  series = new Map<string, readonly UnownedFile[]>();
+  readonly askedForEvents: string[] = [];
+  readonly askedForSeries: string[] = [];
+
+  async purgeForEvent(eventId: string): Promise<readonly UnownedFile[]> {
+    this.askedForEvents.push(eventId);
+    return this.events.get(eventId) ?? [];
+  }
+
+  async purgeForSeries(seriesId: string): Promise<readonly UnownedFile[]> {
+    this.askedForSeries.push(seriesId);
+    return this.series.get(seriesId) ?? [];
+  }
+}
+
 /** The upload volume as a map, which is all the service needs it to be. */
 class FakeFileStore implements FileStore {
   readonly files = new Map<string, Buffer>();
@@ -117,13 +147,53 @@ const upload = (
 
 describe('AttachmentsService', () => {
   let repository: FakeAttachmentRepository;
+  let conversations: FakeConversationPurgeRepository;
   let store: FakeFileStore;
   let service: AttachmentsService;
 
   beforeEach(() => {
     repository = new FakeAttachmentRepository();
+    conversations = new FakeConversationPurgeRepository();
     store = new FakeFileStore();
-    service = new AttachmentsService(repository, store);
+    service = new AttachmentsService(repository, conversations, store);
+  });
+
+  describe('purging a conversation’s pictures (E40, F158)', () => {
+    it('removes the files an event’s conversations leave behind', async () => {
+      store.files.set('messages/aa/photo-1', Buffer.from('one'));
+      store.files.set('messages/bb/photo-2', Buffer.from('two'));
+      conversations.events.set('event-1', [
+        { id: 'attachment-1', path: 'messages/aa/photo-1' },
+        { id: 'attachment-2', path: 'messages/bb/photo-2' },
+      ]);
+
+      await service.purgeConversationsForEvent('event-1');
+
+      expect(conversations.askedForEvents).toEqual(['event-1']);
+      expect(store.removed).toEqual([
+        'messages/aa/photo-1',
+        'messages/bb/photo-2',
+      ]);
+    });
+
+    it('touches nothing for an event whose conversations held no picture', async () => {
+      await service.purgeConversationsForEvent('event-2');
+
+      expect(conversations.askedForEvents).toEqual(['event-2']);
+      expect(store.removed).toEqual([]);
+    });
+
+    it('does the same for a series, whose deletion cascades through its events', async () => {
+      store.files.set('messages/cc/photo-3', Buffer.from('three'));
+      conversations.series.set('series-1', [
+        { id: 'attachment-3', path: 'messages/cc/photo-3' },
+      ]);
+
+      await service.purgeConversationsForSeries('series-1');
+
+      expect(conversations.askedForSeries).toEqual(['series-1']);
+      expect(store.removed).toEqual(['messages/cc/photo-3']);
+    });
   });
 
   describe('store', () => {

@@ -14,6 +14,12 @@ import {
   MAX_MESSAGE_PAGE_SIZE,
 } from './messages';
 import {
+  ORGANIZER_CONVERSATION_TYPES,
+  ORGANIZER_MESSAGES_PATH,
+  awaitsAnswer,
+  organizerConversationPath,
+} from './organizer-conversations';
+import {
   CHAT_CONVERSATION,
   CHAT_JOIN,
   CHAT_LEAVE,
@@ -82,6 +88,71 @@ describe('the chat’s limits and sets', () => {
     // E41 cannot hold. If this ever fails, the reverse proxy and both clients
     // are already wrong too.
     expect(REALTIME_PATH.startsWith('/api/')).toBe(true);
+  });
+
+  it('lets the organization read two kinds and not the third (F173)', () => {
+    // The subset is the access rule of the overview, written as a subset so it
+    // cannot grow the one kind it must never contain: what two participants
+    // write to each other is not the organization's to read.
+    expect([...ORGANIZER_CONVERSATION_TYPES]).toEqual(
+      CONVERSATION_TYPES.filter((kind) => kind !== 'direct'),
+    );
+  });
+
+  it('reads "waiting for an answer" from who wrote last (F133)', () => {
+    const row = {
+      id: 'c1',
+      type: 'organizer_contact' as const,
+      topic: null,
+      event: null,
+      guest: { name: null, email: 'amina@example.org' },
+      memberCount: 0,
+      lastMessageAt: '2026-09-03T09:00:00.000Z',
+      preview: null,
+    };
+
+    // Nobody has written: not waiting for anything. A group is created empty,
+    // and an empty group in a "waiting" state would put a badge on every one
+    // of them the moment it exists.
+    expect(awaitsAnswer(row)).toBe(false);
+    // Somebody else wrote last: nobody here has answered.
+    expect(
+      awaitsAnswer({
+        ...row,
+        preview: {
+          senderType: 'guest',
+          text: 'Is it accessible?',
+          hasImage: false,
+        },
+      }),
+    ).toBe(true);
+    expect(
+      awaitsAnswer({
+        ...row,
+        preview: {
+          senderType: 'user',
+          text: 'When is the bus?',
+          hasImage: false,
+        },
+      }),
+    ).toBe(true);
+    // The organization wrote last, so it is answered — which is the question
+    // that replaces the unread count it has nowhere to keep.
+    expect(
+      awaitsAnswer({
+        ...row,
+        preview: { senderType: 'admin', text: 'Yes, it is.', hasImage: false },
+      }),
+    ).toBe(false);
+  });
+
+  it('spells the organizer client’s conversation address once (F172)', () => {
+    // The mail about a contact request links this path, and the organizer
+    // client routes it. Two spellings would mean a notification pointing at
+    // nothing the day the route is renamed.
+    expect(organizerConversationPath('conversation-1')).toBe(
+      `${ORGANIZER_MESSAGES_PATH}/conversation-1`,
+    );
   });
 
   it('names every event once, and all of them in one family', () => {

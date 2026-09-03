@@ -263,6 +263,7 @@ export class EventSeriesService {
     // behind are removed here first (E9). Both kinds: the attachments of every
     // registration, and the logo of the series and of each of its events.
     await this.attachments.purgeForSeries(id);
+    await this.attachments.purgeConversationsForSeries(id);
     await this.logos.purgeUnderSeries(id);
     if (!(await this.series.delete(id))) {
       throw new NotFoundException(`No event series with id "${id}"`);

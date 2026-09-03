@@ -5,6 +5,10 @@ import {
   type AttachmentRecord,
   type AttachmentRepository,
 } from './ports/attachment.repository';
+import {
+  CONVERSATION_PURGE_REPOSITORY,
+  type ConversationPurgeRepository,
+} from './ports/conversation-purge.repository';
 import { FILE_STORE, type FileStore } from './ports/file-store';
 import type { UploadedFile } from './uploaded-file';
 
@@ -46,6 +50,10 @@ export class AttachmentsService {
   constructor(
     @Inject(ATTACHMENT_REPOSITORY)
     private readonly attachments: AttachmentRepository,
+    // The pictures inside conversations, which the port above cannot reach on
+    // purpose (F158). Since AP 10 there are conversations bound to an event.
+    @Inject(CONVERSATION_PURGE_REPOSITORY)
+    private readonly conversations: ConversationPurgeRepository,
     @Inject(FILE_STORE) private readonly files: FileStore,
   ) {}
 
@@ -162,9 +170,42 @@ export class AttachmentsService {
     await this.unlink(await this.attachments.deleteBySeries(seriesId));
   }
 
+  /**
+   * The pictures inside an event's conversations (E40, F158).
+   *
+   * Its own method rather than part of {@link purgeForEvent}, because it is a
+   * different arc through the schema and a different order: a registration's
+   * file is deleted with its row, whereas a conversation's picture has to
+   * outlive nothing — the conversation goes first, and the file after, or a
+   * `CHECK` refuses the write (the port says why).
+   *
+   * Reachable rather than theoretical, and narrowly so: an event with
+   * confirmed registrations cannot be deleted at all (E14), and a group is
+   * assembled from confirmed registrations — so this runs for an event whose
+   * registrations were all cancelled again, and for the contact requests of an
+   * event nobody ever confirmed a place at. Both leave files behind without
+   * it.
+   */
+  async purgeConversationsForEvent(eventId: string): Promise<void> {
+    await this.unlinkPaths(await this.conversations.purgeForEvent(eventId));
+  }
+
+  /** The same for a series, whose deletion cascades through its events. */
+  async purgeConversationsForSeries(seriesId: string): Promise<void> {
+    await this.unlinkPaths(await this.conversations.purgeForSeries(seriesId));
+  }
+
   private async unlink(records: readonly AttachmentRecord[]): Promise<void> {
     if (records.length === 0) return;
     await this.files.remove(records.map((record) => record.path));
+  }
+
+  /** The same, for rows that are already gone and left only their paths. */
+  private async unlinkPaths(
+    files: readonly { readonly path: string }[],
+  ): Promise<void> {
+    if (files.length === 0) return;
+    await this.files.remove(files.map((file) => file.path));
   }
 
   private orphaned(

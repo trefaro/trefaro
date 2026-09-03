@@ -149,10 +149,18 @@ class FakeLogoImages {
   }
 }
 
-/** Records the purge the delete paths owe the upload volume (E9). */
+/**
+ * Records the purge the delete paths owe the upload volume (E9, F158).
+ *
+ * Two purges per parent since AP 10 of phase 3, and they are not the same
+ * arc: a registration's files hang off its own row, a conversation's pictures
+ * off a conversation bound to the event.
+ */
 class FakeAttachmentsService {
   readonly purgedEvents: string[] = [];
   readonly purgedSeries: string[] = [];
+  readonly purgedEventConversations: string[] = [];
+  readonly purgedSeriesConversations: string[] = [];
 
   async purgeForEvent(eventId: string): Promise<void> {
     this.purgedEvents.push(eventId);
@@ -160,6 +168,14 @@ class FakeAttachmentsService {
 
   async purgeForSeries(seriesId: string): Promise<void> {
     this.purgedSeries.push(seriesId);
+  }
+
+  async purgeConversationsForEvent(eventId: string): Promise<void> {
+    this.purgedEventConversations.push(eventId);
+  }
+
+  async purgeConversationsForSeries(seriesId: string): Promise<void> {
+    this.purgedSeriesConversations.push(seriesId);
   }
 }
 
@@ -508,8 +524,10 @@ describe('EventSeriesService', () => {
 
       expect(repository.rows).toHaveLength(0);
       // The cascade reaches the registrations of every event; their files are
-      // only reachable from here (E9).
+      // only reachable from here (E9) — and so are the pictures inside the
+      // conversations of those events (F158).
       expect(attachments.purgedSeries).toEqual([created.id]);
+      expect(attachments.purgedSeriesConversations).toEqual([created.id]);
     });
 
     it('answers 404 for a series that is already gone, removing nothing', async () => {
@@ -518,6 +536,7 @@ describe('EventSeriesService', () => {
       );
 
       expect(attachments.purgedSeries).toEqual([]);
+      expect(attachments.purgedSeriesConversations).toEqual([]);
     });
 
     it('refuses a series whose events carry confirmed registrations', async () => {

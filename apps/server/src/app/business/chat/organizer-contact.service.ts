@@ -12,6 +12,7 @@ import type {
 import {
   MAX_MESSAGE_LENGTH,
   invitationParagraphs,
+  organizerConversationPath,
 } from '@trefaro/shared-models';
 import type { TrefaroEnv } from '../../core/config/env';
 import { ENV } from '../../core/config/env.module';
@@ -23,16 +24,6 @@ import {
   CONVERSATION_REPOSITORY,
   type ConversationRepository,
 } from './ports/conversation.repository';
-
-/**
- * Where the notification's call to action leads.
- *
- * The organizer client itself, not the message overview: that screen arrives
- * with AP 10, and a link into it would be a promise this package cannot keep.
- * A constant so the package that builds the overview finds the one line to
- * change (noted in `todo.md`).
- */
-const ANSWER_PATH = '/';
 
 /**
  * Reaching the organizer without an account (FR 3.4, UC 14 — E39, F11).
@@ -126,14 +117,18 @@ export class OrganizerContactService {
     // The conversation and its first line in one transaction: an
     // `organizer_contact` row without a message says that somebody pressed a
     // button, which is nothing anybody could act on.
-    await this.conversations.createOrganizerContact({
+    const conversation = await this.conversations.createOrganizerContact({
       eventId: event.id,
       guestEmail: email,
       guestName: name,
       body,
     });
 
-    await this.notify(seriesSlug, eventSlug, event, { name, email, body });
+    await this.notify(seriesSlug, eventSlug, event, conversation.id, {
+      name,
+      email,
+      body,
+    });
     return { email };
   }
 
@@ -151,6 +146,7 @@ export class OrganizerContactService {
     seriesSlug: string,
     eventSlug: string,
     event: PublicEvent,
+    conversationId: string,
     guest: { name: string; email: string; body: string },
   ): Promise<void> {
     const recipient = await this.recipient(seriesSlug);
@@ -169,7 +165,12 @@ export class OrganizerContactService {
           // question came up first; a second definition of it is how two
           // renderings of one text start disagreeing.
           paragraphs: invitationParagraphs(guest.body),
-          answerUrl: this.links.adminUrl(ANSWER_PATH),
+          // The question itself, not the organizer client's front door: since
+          // AP 10 there is a screen for one conversation, and the address of
+          // it is spelled once, in `shared-models` (F172).
+          answerUrl: this.links.adminUrl(
+            organizerConversationPath(conversationId),
+          ),
         }),
       );
     } catch (error: unknown) {

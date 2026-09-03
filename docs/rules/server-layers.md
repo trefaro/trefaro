@@ -99,6 +99,16 @@ diese Eigenschaft.
   Chatbild nicht ausliefern (F155), und `ConversationRepository` hat keine
   Methode ohne den Mitgliedschafts-Join — „nicht deins" und „gibt es nicht"
   werden dadurch dieselbe Antwort, ohne dass ein Aufrufer daran denken muss.
+  **In AP 10 hat diese Regel zum ersten Mal einen zweiten Port erzwungen**
+  (F173): die Organisation hat keine Mitgliedschaft (F133), also hätte sie den
+  Port nur mit genau der Methode lesen können, ohne die er entworfen wurde. Der
+  neue trägt die Regel wieder in der Anweisung — `type IN ('group',
+'organizer_contact')` in **jedem** Lesezugriff, damit ein `direct`-Gespräch
+  dort nicht herauskommen kann. Zwei Ports über zwei Tabellen sind kein
+  Duplikat, wenn der **Unterschied die Zugangsregel** ist; und wenn eine Zusage
+  „nichts geschrieben" lautet, gehört sie in die Transaktion — bei TypeORM
+  **geworfen**, denn ein `return` committet (siehe
+  [Werkzeug-Fallen](tooling-traps.md)).
 - **Eine Liste darf nicht eine Abfrage je Zeile werden** (F49) — und das gilt
   auch, wenn die Zeilen aus einem anderen Modul kommen: `EventsService.locate`
   ist drei Abfragen, also hat „meine Anmeldungen" `locateMany(ids, locale)`

@@ -141,6 +141,31 @@ export interface ContactRequestMailContext {
 }
 
 /**
+ * The organizer's answer to a question from somebody without an account
+ * (FR 3.4, F11, F174).
+ *
+ * The other half of {@link ContactRequestMailContext}, and the mail that makes
+ * F11 true: an interested person with no account is answered **by mail**, and
+ * the same words stay in the conversation the organizer answered from.
+ *
+ * `guestName` is the name they typed into the form, which is why this mail
+ * greets and the notification does not: it goes to a person, not to a shared
+ * mailbox. `paragraphs` are the organizer's own text, already split the way
+ * an invitation's are, and escaped here for the same reason.
+ *
+ * No URL of its own. The event block links the page the question was asked on,
+ * and that page is also where the next one can be asked — a second address
+ * would be a promise about a mailbox somebody has to read.
+ */
+export interface ContactAnswerMailContext {
+  readonly guestName: string;
+  /** The event the question was about. */
+  readonly event: MailEvent;
+  /** What the organizer wrote, already split into paragraphs. */
+  readonly paragraphs: readonly string[];
+}
+
+/**
  * One mail: the words it needs, and how it puts them together.
  *
  * The two travel as one value because E24 asks a question about a *mail* — "does

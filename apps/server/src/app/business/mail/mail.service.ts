@@ -4,6 +4,7 @@ import { MAILER, type Mailer } from './ports/mailer';
 import { MAIL_TEMPLATES } from './templates';
 import type {
   ConfirmationMailContext,
+  ContactAnswerMailContext,
   ContactRequestMailContext,
   InvitationMailContext,
   MailTemplate,
@@ -162,6 +163,32 @@ export class MailService {
     content: MailContent<ContactRequestMailContext>,
   ): Promise<void> {
     await this.send(MAIL_TEMPLATES.contactRequest, to, content);
+  }
+
+  /**
+   * The organizer's answer to somebody without an account (F11, F174).
+   *
+   * The address is a parameter like everywhere else and comes from the
+   * **conversation's own row** — `guest_email`, stored when the question was
+   * asked. F55 holds: nothing here looked an address up in order to write to
+   * it, and no caller may pass one in. This is the one mail of the application
+   * whose recipient has no account, which is exactly why it exists.
+   *
+   * Its language is therefore usually the instance's default (F125) — unless
+   * that address happens to have an account, in which case the person behind
+   * it has chosen one and gets it, which is the rule working rather than an
+   * exception to it.
+   *
+   * @throws MailDeliveryError — and unlike the notification of a contact
+   * request, the caller reports this rather than swallowing it: the message is
+   * stored either way, but an organizer who is not told believes they have
+   * answered somebody who never heard from them.
+   */
+  async sendContactAnswer(
+    to: string,
+    content: MailContent<ContactAnswerMailContext>,
+  ): Promise<void> {
+    await this.send(MAIL_TEMPLATES.contactAnswer, to, content);
   }
 
   private async send<Context>(

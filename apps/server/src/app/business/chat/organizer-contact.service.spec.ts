@@ -217,9 +217,12 @@ describe('OrganizerContactService', () => {
     // Split where the blank line was, by the one function that decides what a
     // blank line means.
     expect(context.paragraphs).toEqual(['is the venue accessible?', 'Thanks.']);
-    // The organizer client, not a deep link into a screen that arrives with
-    // AP 10.
-    expect(context.answerUrl).toBe('https://admin.events.example.org/');
+    // The question itself, since AP 10 built the screen for one conversation
+    // — spelled by `organizerConversationPath`, so a renamed route cannot
+    // leave this mail pointing at nothing (F172).
+    expect(context.answerUrl).toBe(
+      'https://admin.events.example.org/messages/conversation-1',
+    );
     expect(context.event.url).toBe(
       'https://events.example.org/series/buergerraete/events/kickoff',
     );

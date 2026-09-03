@@ -184,7 +184,28 @@ Entscheidungsprotokoll (`docs/Anforderungsanalyse_und_Umsetzungsplan.md`).
   keine Nachricht), und `CHK_message_content` verlangt Text oder Bild. Also
   darf ein Bild von einer Nachricht **mit** Worten weg, und eine Nachricht kann
   nicht geleert werden. Wer aufräumt, hält die Reihenfolge: Anhangs-Ids merken,
-  Gespräch löschen (kaskadiert die Nachrichten), dann die Anhänge.
+  Gespräch löschen (kaskadiert die Nachrichten), dann die Anhänge. **Seit AP 10
+  tut das jemand:** `AttachmentsService.purgeConversationsForEvent` (und
+  `…ForSeries`), aufgerufen dort, wo die Anmeldungsdateien schon aufgeräumt
+  werden — aber über einen **eigenen** Port
+  (`ConversationPurgeRepository`), denn die Löschmethoden des Attachment-Ports
+  sind absichtlich auf Zeilen **mit** Anmeldung eingeschränkt, damit von dort
+  niemand an ein Bild in einem Gespräch kommt. Erreichbar ist das eng, aber
+  echt: eine Veranstaltung mit bestätigten Anmeldungen lässt sich nicht löschen
+  (E14), also trifft es die, deren Anmeldungen wieder storniert wurden.
+- **Die Organisation liest ihre Gespräche über einen zweiten Port** (F173).
+  `ConversationRepository` kennt Mitgliedschaft als einzigen Ausweis — jede
+  Methode nimmt das fragende Mitglied (F152) —, und die Organisation hat keine
+  (F133). Also nicht dort eine „lies irgendein Gespräch"-Methode nachrüsten,
+  sondern `OrganizerConversationRepository` daneben, dessen **jede Anweisung**
+  `type IN ('group', 'organizer_contact')` trägt: ein `direct`-Gespräch kommt
+  dort nicht heraus. Zwei Ports über zwei Tabellen sind kein Duplikat, wenn die
+  Zugangsregel der Unterschied ist. Dieselbe Bauweise entscheidet, **wer in eine
+  Gruppe darf**: das `INSERT … SELECT` leitet die berechtigten Personen aus den
+  bestätigten Anmeldungen der Veranstaltung ab, statt eine geprüfte Liste zu
+  bekommen. **Vorsicht bei TypeORM:** ein `return null` im
+  Transaktions-Callback **committet** — der Rückzieher muss geworfen werden
+  (siehe [Werkzeug-Fallen](tooling-traps.md)).
 - **Das Bild einer Nachricht ist ein `attachment` in `messages/`** (F155, E40):
   `registration_id` und `field_key` sind **gemeinsam** nullbar
   (`CHK_attachment_owner`) — ein Chatbild beantwortet keine Formularfrage —, und

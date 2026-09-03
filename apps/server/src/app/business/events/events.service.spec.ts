@@ -176,10 +176,18 @@ class FakeEventSeriesService {
   }
 }
 
-/** Records the purge the delete paths owe the upload volume (E9). */
+/**
+ * Records the purge the delete paths owe the upload volume (E9, F158).
+ *
+ * Two purges per parent since AP 10 of phase 3, and they are not the same
+ * arc: a registration's files hang off its own row, a conversation's pictures
+ * off a conversation bound to the event.
+ */
 class FakeAttachmentsService {
   readonly purgedEvents: string[] = [];
   readonly purgedSeries: string[] = [];
+  readonly purgedEventConversations: string[] = [];
+  readonly purgedSeriesConversations: string[] = [];
 
   async purgeForEvent(eventId: string): Promise<void> {
     this.purgedEvents.push(eventId);
@@ -187,6 +195,14 @@ class FakeAttachmentsService {
 
   async purgeForSeries(seriesId: string): Promise<void> {
     this.purgedSeries.push(seriesId);
+  }
+
+  async purgeConversationsForEvent(eventId: string): Promise<void> {
+    this.purgedEventConversations.push(eventId);
+  }
+
+  async purgeConversationsForSeries(seriesId: string): Promise<void> {
+    this.purgedSeriesConversations.push(seriesId);
   }
 }
 
@@ -729,6 +745,10 @@ describe('EventsService', () => {
       // The database cascade takes the registrations and their attachment rows;
       // only this call takes the bytes (E9).
       expect(attachments.purgedEvents).toEqual([created.id]);
+      // And the pictures inside the event's conversations, which are a
+      // different arc through the schema and have to go before the cascade
+      // does (F158).
+      expect(attachments.purgedEventConversations).toEqual([created.id]);
     });
 
     it('refuses an unknown event, removing nothing', async () => {
@@ -737,6 +757,7 @@ describe('EventsService', () => {
       );
 
       expect(attachments.purgedEvents).toEqual([]);
+      expect(attachments.purgedEventConversations).toEqual([]);
     });
 
     it('refuses an event people have confirmed they are coming to', async () => {

@@ -252,6 +252,39 @@ Link.
   **Reihenfolge beachten:** der Teilnehmer-Guard ist global und läuft **vor**
   einem Controller-Guard, also antwortet eine Route ohne Cookie 401, auch wenn
   ihr Modul aus ist.
+- **Die Nachrichten der Organisation liegen unter `admin/conversations`** (F173,
+  AP 10): die Übersicht, ein Gespräch, sein Verlauf, die Antwort, die
+  Kandidaten einer Gruppe (`?eventId=`), die Gruppe selbst (`POST` auf die
+  Sammlung — eine Gruppe ist die einzige Art, die ein Veranstalter anlegt) und
+  das Bild einer Nachricht. Zwei Eigenschaften sind der Vertrag: **es gibt keine
+  Ungelesen-Zahl** (die Organisation hat kein `last_read_at`, F133 — die Zeile
+  sagt stattdessen, **wer zuletzt geschrieben hat**, und `awaitsAnswer` in
+  `shared-models` liest das), und **ein `direct`-Gespräch ist hier kein 403,
+  sondern derselbe 404 wie eine unbekannte Id** — was zwei Teilnehmende
+  einander schreiben, darf ein Veranstalter nicht einmal bestätigen können.
+- **Ein Modulschalter darf an einer einzelnen Route hängen** (F175). `admin/
+conversations` ist der Fall: Lesen und Antworten sind FR 3.4 und damit **P1**,
+  müssen also auch bei ausgeschaltetem `chat` antworten — sonst kämen die
+  Kontaktanfragen aus AP 9 nirgends an; eine Gruppe anzulegen ist FR 4.5 und
+  fragt deshalb nach dem Schalter. Dafür `@CoreModuleRoute(<Schlüssel>)` **plus
+  `@UseGuards(CoreModuleEnabledGuard)` an der Methode**: auf der Klasse würde
+  der Guard jede unmarkierte Route ablehnen. Wer das prüft, prüft beide Hälften
+  — die eine Route antwortet, die andere 404.
+- **Die Antwort einer Antwort sagt, was aus ihrer Mail wurde** (F174).
+  `POST /api/admin/conversations/:id/messages` gibt die Zeile **und**
+  `delivery`: `none` (eine Gruppe liest in der App), `sent`, `failed`. Drei
+  Werte statt eines `boolean`, weil „nichts zu senden" und „senden
+  fehlgeschlagen" verschiedene Tatsachen sind — und ein Feld auf einer
+  erfolgreichen Antwort statt eines Fehlers, weil die Nachricht in jedem Fall
+  gespeichert ist. Ein Bild nimmt diese Route **nicht**: eine Antwort muss auch
+  als Mail funktionieren.
+- **Für das Bild einer Nachricht gibt es zwei Routen, weil es zwei Fragen
+  sind** (F133, F156). Die Medienroute unter `/api/media` entscheidet über
+  **Mitgliedschaft**; die Organisation hat keine, also liest sie über
+  `GET /api/admin/conversations/:id/messages/:messageId/image` hinter dem
+  Admin-Guard — und der Client **holt** die Bytes und zeigt sie aus einem Blob,
+  wie bei der Datei einer Anmeldung (E9). Ein Guard, der beide Cookies
+  akzeptiert, wäre genau das, was E34 verbietet.
 - **Query-Parameter kommen als `undefined` an**, auch wenn ein Angular-`input()`
   einen Standardwert hat. `ApiClient.put/delete/post` nehmen ebenfalls
   Query-Parameter — auch ein `PUT` muss die Sprache tragen können.

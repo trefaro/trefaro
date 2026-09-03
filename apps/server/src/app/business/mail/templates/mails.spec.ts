@@ -5,6 +5,7 @@ import { ALL_MAIL_KEYS, MAIL_TEMPLATES } from './mails';
 import { mailStrings } from './strings';
 import type {
   ConfirmationMailContext,
+  ContactAnswerMailContext,
   ContactRequestMailContext,
   InvitationMailContext,
   MailTemplate,
@@ -114,7 +115,19 @@ const CONTACT_REQUEST: ContactRequestMailContext = {
   guestName: 'Amina Okonkwo',
   guestEmail: 'amina@example.org',
   paragraphs: ['is the venue accessible by wheelchair?', 'Thanks in advance.'],
-  answerUrl: 'https://admin.events.example.org/',
+  answerUrl: 'https://admin.events.example.org/messages/conversation-1',
+};
+
+/**
+ * The organizer's answer to that question (F11, F174) — AP 10.
+ *
+ * The other half of the letter above, and the one that makes F11 true: the
+ * person has no inbox in this application, so the answer leaves it.
+ */
+const CONTACT_ANSWER: ContactAnswerMailContext = {
+  guestName: 'Amina Okonkwo',
+  event: CONTEXT.event,
+  paragraphs: ['yes, the whole ground floor is level.', 'See you there.'],
 };
 
 describe('the shipped catalogues, as mail text (E24)', () => {
@@ -150,6 +163,7 @@ describe('the shipped catalogues, as mail text (E24)', () => {
         render(locale, MAIL_TEMPLATES.registrationCancelled, CONTEXT),
         render(locale, MAIL_TEMPLATES.invitation, INVITATION),
         render(locale, MAIL_TEMPLATES.contactRequest, CONTACT_REQUEST),
+        render(locale, MAIL_TEMPLATES.contactAnswer, CONTACT_ANSWER),
       ];
       for (const mail of mails) {
         expect(`${mail.subject}\n${mail.text}\n${mail.html}`).not.toMatch(/{{/);
@@ -444,6 +458,64 @@ describe('the contact notification (FR 3.4, UC 14, F11)', () => {
 
   it('loads nothing from anywhere when opened', () => {
     const mail = render('en', MAIL_TEMPLATES.contactRequest, CONTACT_REQUEST);
+
+    expect(mail.html).not.toMatch(/<img|<link|@import|url\(/i);
+  });
+});
+
+describe('the answer to somebody without an account (FR 3.4, F11, F174)', () => {
+  it('greets the person by the name they typed', () => {
+    // The opposite of the notification it answers, and for the reason that one
+    // greets nobody: this letter goes to a person, not to a shared mailbox.
+    for (const locale of LOCALES) {
+      const mail = render(locale, MAIL_TEMPLATES.contactAnswer, CONTACT_ANSWER);
+
+      expect(mail.text).toMatch(/^(Hello|Hallo) Amina Okonkwo,/);
+    }
+  });
+
+  it('names the event in the subject and says when it is', () => {
+    for (const locale of LOCALES) {
+      const mail = render(locale, MAIL_TEMPLATES.contactAnswer, CONTACT_ANSWER);
+
+      expect(mail.subject).toContain('Kickoff in Köln');
+      // In the event's zone, like every other mail that names a time (E8).
+      expect(mail.text).toContain('10:00');
+      expect(mail.text).toContain(CONTEXT.event.url);
+    }
+  });
+
+  it('keeps the organizer’s paragraphs apart', () => {
+    const mail = render('en', MAIL_TEMPLATES.contactAnswer, CONTACT_ANSWER);
+
+    expect(mail.text).toContain(
+      'yes, the whole ground floor is level.\n\nSee you there.',
+    );
+  });
+
+  it('escapes what the organizer typed rather than sending it as markup', () => {
+    const mail = render('en', MAIL_TEMPLATES.contactAnswer, {
+      ...CONTACT_ANSWER,
+      guestName: '<b>Amina</b>',
+      paragraphs: ['<script>alert(1)</script>'],
+    });
+
+    expect(mail.html).not.toContain('<script>');
+    expect(mail.html).toContain('&lt;script&gt;');
+    expect(mail.html).toContain('&lt;b&gt;Amina');
+  });
+
+  it('offers no button of its own', () => {
+    // The only address worth offering is the event page, which the event block
+    // already links — and the recipient has nothing here to log in to.
+    const mail = render('en', MAIL_TEMPLATES.contactAnswer, CONTACT_ANSWER);
+
+    expect(mail.text).not.toContain('/messages');
+    expect(mail.html).not.toContain('mailto:');
+  });
+
+  it('loads nothing from anywhere when opened', () => {
+    const mail = render('en', MAIL_TEMPLATES.contactAnswer, CONTACT_ANSWER);
 
     expect(mail.html).not.toMatch(/<img|<link|@import|url\(/i);
   });

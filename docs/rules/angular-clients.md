@@ -109,6 +109,23 @@ besteht. Jede Zeile hier hat einmal einen halben Tag gekostet.
   — das ist eine zweite Frage mit einer zweiten Antwort (ein abgelehnter `join`).
   Ein Chat, der still nichts mehr empfängt, sieht wie ein Chat aus, in dem
   niemand schreibt.
+- **`[maxlength]` gibt es nicht — es heißt `[attr.maxlength]`.** Auf `<input>`
+  und `<textarea>` ist die Länge ein Attribut, kein Property, und Angular lehnt
+  das Binding mit `NG8002` ab. Der Fehler kommt erst im `build`: `tsc --noEmit`
+  liest keine Templates.
+- **Der Veranstalter-Client hat keinen Socket** (AP 10, F132/F133). Seine
+  Nachrichtenübersicht lädt beim Öffnen und sonst auf Zuruf; live ist nur der
+  Teilnehmer-Client. Der Grund ist nicht Sparsamkeit: der Handshake
+  authentifiziert eine **Teilnehmer**-Sitzung, und die Organisation hat keine
+  Mitgliedschaft, an die zugestellt würde. Was an ihre Stelle tritt, ist die
+  Benachrichtigungsmail (F172) — deshalb darf ein Bildschirm hier auch nicht
+  behaupten, er sei aktuell.
+- **Ein Bild, das nur mit Sitzung lesbar ist, wird geholt und aus einem Blob
+  gezeigt** (E9, F133). Der Veranstalter-Client folgt der `imageUrl` einer
+  Nachricht **nicht** — die gehört Mitgliedern —, sondern lädt über
+  `ApiClient.file(...)`, macht eine Object-URL daraus und gibt sie beim
+  Zerstören wieder frei. Erst wenn die Zeilen stehen, nie davor: ein Gespräch
+  liest sich auch ohne Bilder.
 - **Ein Client-Test, der Dateien liest, braucht `"node"` in
   `tsconfig.spec.json`** (Iconliste gegen `public/`, Manifest-Adresse gegen
   `index.html`).

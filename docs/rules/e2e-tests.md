@@ -216,6 +216,26 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   `seedSearchableProfile` in der Browsersuite. Der Passwort-Hash ist dort
   Unsinn: nach so einer Zeile wird **gesucht**, mit ihr wird nie angemeldet, und
   ein Login würde ein Budget verbrauchen (E4).
+- **Ein Modulschalter wird über die API umgelegt, nicht in der Tabelle.** Der
+  Server hält die Flags in einem Cache; eine Zeile hinter seinem Rücken ändert
+  erst mal nichts. `PATCH /api/admin/modules/:key` — und die Suite stellt ihn
+  im eigenen Teardown wieder her, weil alle Vertragssuiten mit **einem** Worker
+  gegen **eine** Instanz laufen.
+- **Wer eine Zusicherung über „nichts geschrieben" schreibt, zählt danach
+  nach.** Ein Test, der nur den 400 prüft, hätte in AP 10 nicht gefunden, dass
+  eine abgelehnte Gruppe trotzdem als Zeile in der Tabelle lag (ein `return`
+  im TypeORM-Transaktions-Callback committet). Die zweite Zählung ist der Test.
+- **Was in einer Suite geprüft wird, entscheidet, was nur sie kann.** Die
+  Browsersuite des Veranstalters liest **kein** Postfach: dass die Antwort an
+  einen Gast wirklich in Mailpit landet, entscheidet `apps/server-e2e` gegen den
+  Mailserver; was nur ein Browser entscheiden kann, ist, ob der Bildschirm es
+  sagt — und der Satz dort kommt aus dem `delivery` des Servers, ist also nicht
+  zu haben, wenn nichts rausging (F174).
+- **Ein Fixture, das drei Engines teilen, braucht auch unterscheidbare
+  **Namen**, nicht nur Adressen.** Drei Browser gegen eine Instanz heißt drei
+  Zeilen in derselben Übersicht: ein Locator „die Zeile der Person, die gefragt
+  hat" fand alle drei. Der Name des Gasts trägt deshalb das Engine-Label — er
+  ist, wie die Zeile **heißt**.
 - **Die Entwicklungsdatenbank ist nicht die Werksvorgabe.** Wer einmal
   `tools/demo-seed/` laufen ließ, hat Organisationsname und Primärfarbe der
   Demo in `app_config` — und die Browsersuiten erwarten `#1f6f5c` aus der ersten

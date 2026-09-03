@@ -511,15 +511,22 @@ answer, not an opinion.
       throttling phase 5 already owes (E4); until then the cheapest mitigation
       is that a refused handshake does no database work beyond one indexed
       lookup on `token_hash`.
-- [ ] **Purge a conversation's pictures when the conversation goes — belongs to
+- [x] **Purge a conversation's pictures when the conversation goes — belongs to
       AP 10.** Deleting an **event** cascades through `conversation` to
-      `message`, and a cascade removes rows but no files (E9). AP 6 built the
-      schema that makes it possible and creates no row it could hit: only a
-      `group` conversation hangs off an event, and nothing creates one until AP
-      10 assembles groups. That package extends
-      `AttachmentsService.purgeForEvent` — and holds the order F158 spells out:
-      remember the attachment ids, delete the conversation, then the
-      attachments. The reverse fails on `CHK_message_content`.
+      `message`, and a cascade removes rows but no files (E9). ~~That package
+      extends `AttachmentsService.purgeForEvent`~~ — done in AP 10 of phase 3,
+      but **not** by extending that method: the deletes of the attachment port
+      are deliberately scoped to rows that _have_ a registration, so that
+      nobody there can reach a picture inside a conversation. So a narrow port
+      of its own (`ConversationPurgeRepository`, owned by the attachments
+      module, which depends on nothing and is already called before both
+      deletions) plus `purgeConversationsForEvent` / `…ForSeries`. The order
+      F158 spells out holds: remember the ids, delete the conversations
+      (cascading their messages), then the `attachment` rows, then the files.
+      The reverse fails on `CHK_message_content`. Reachable narrowly but for
+      real: an event with confirmed registrations cannot be deleted (E14), so
+      this catches the one whose registrations were cancelled again — asserted
+      against a real database in the contract suite.
 - [ ] **A deleted profile leaves its conversations standing** —
       `conversation_member.member_id` carries no foreign key (E39), on purpose.
       Nothing can delete a profile today (there is no endpoint, by design), so
@@ -601,17 +608,59 @@ Bonn` is diagnostics rather than a fact about anybody.
       whether a chat that only notifies by push and by its own screen is the
       one an activist community wants.
 
-- [ ] **The contact notification links to the organizer client, not to the
-      request** (F172, AP 9). The mail that tells the organization about a
-      question from somebody without an account carries `ANSWER_PATH = '/'`,
-      because the message overview it should point at arrives with **AP 10** and
-      a deep link into a screen that does not exist yet would be a promise
-      rather than a shortcut. One constant, in
-      `business/chat/organizer-contact.service.ts`, with the reason above it:
-      whoever builds that overview turns it into the address of the request and
-      the mail is right again. Nothing else about the notification changes —
-      recipient, language and the fact that its failure never changes the form's
-      answer are all decided (F172).
+- [ ] **Who from the organization answered is stored, and not shown.** A reply
+      carries the administrator's own account in `sender_id` (E39, precisely so
+      that the history says which _person_ answered), but the organizer client
+      only recognises the reader's **own** lines — by the id of their session —
+      and calls everything else "your organization". Showing a colleague's name
+      needs a fourth read of `admin_user` through a port of its own; it was not
+      in AP 10's acceptance criterion, and for a two-person organization the
+      difference is invisible. Worth doing when an instance has more
+      administrators than it has people who remember who wrote what.
+
+- [ ] **The event dashboard has no messages tile** (the parenthesis in the
+      plug-in hook entry below said phase 3 would add one). It cannot be the
+      tile the mockup draws: that one counts **new** messages, and the
+      organization has no read marker to count them against (F133). What is
+      available is "N conversations about this event", which is a different
+      tile — so this is a **product question for Marius / the pilot partner**,
+      not an implementation gap. Whatever it says, it is a field on
+      `EventDashboard` plus a tile, and the endpoint that would answer it
+      already exists.
+
+- [ ] **The organizer's message overview does not refresh itself.** It loads
+      when it is opened, and that is a decision rather than an omission: the
+      socket handshake authenticates a **participant** session (F132), the
+      organization has no membership to deliver to (F133), and the notification
+      mail exists precisely so that nobody has to watch a screen (F172). Making
+      it live would mean admitting administrative sessions to the gateway and
+      inventing an "organization" room — AP 7-sized work for a screen that a
+      mail already points at. **Marius decides / a question for the pilot
+      partner**: whether an inbox that answers when you open it is enough.
+
+- [ ] **A guest's answer to the answer arrives outside the application**, as
+      ordinary mail in the mailbox the instance sends from — not in the
+      overview. Receiving mail is not a goal of this application (F8 keeps even
+      the sending small), and the alternative for somebody who wants to stay in
+      the app is an account. Worth naming to the pilot partner, because it is
+      the one place where a conversation started in Trefaro can continue
+      somewhere else.
+
+- [ ] **The organizer can see a picture in a conversation but not send one.**
+      A participant may (E40), and the organizer's own route serves theirs
+      (F133) — but an answer has to work as a **mail** too, and an attachment
+      there would be a second delivery mechanism for something FR 3.4 does not
+      ask for. If it ever comes, it comes for `group` conversations only, and
+      the asymmetry has to be visible on the screen rather than in a 400.
+
+- [x] **The contact notification links to the organizer client, not to the
+      request** (F172, AP 9). ~~`ANSWER_PATH = '/'`, because the overview
+      arrives with AP 10 and a deep link into a screen that does not exist yet
+      would be a promise rather than a shortcut.~~ Closed in AP 10: the mail
+      leads to the request itself, and the address is spelled once —
+      `organizerConversationPath` in `shared-models`, read by the organizer
+      client's route and by the mail, so a rename cannot leave the letter
+      pointing at nothing. Nothing else about the notification changed.
 
 - [ ] **`formatAnswer` answers in English, and the organizer client shows it.**
       The helper in `shared-models` turns a tick into `yes` / `no` — words from a

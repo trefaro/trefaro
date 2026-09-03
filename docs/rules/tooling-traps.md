@@ -34,6 +34,13 @@ dass das Werkzeug etwas anderes tut als erwartet.
   `nx format:check`** — vor dem Commit laufen lassen, und was es nennt, mit
   `npx nx format:write --files <pfad>` (oder `npx prettier --write <pfad>`)
   richten; nur diese beiden haben die Datei tatsächlich angefasst.
+- **Und `--base/--head` sieht nur, was **committet** ist.** Bei uncommitteter
+  Arbeit prüft `nx format:check --base=<sha> --head=HEAD` die Dateien, die
+  zwischen den beiden **Commits** geändert wurden — also nichts, und der Lauf
+  ist grün, während `prettier --check` auf denselben Dateien vier Verstöße
+  nennt. Reproduziert am 03.09.2026 in AP 10. Für die Arbeit im Arbeitsbaum
+  also: `npx prettier --check <dateien>` (oder `nx format:check --files …`);
+  `--base/--head` ist das Tor **nach** dem Commit, so wie CI es fährt.
 - **Eine schon gelaufene Migration läuft nicht erneut.** Es gibt kein
   Migrations-CLI in diesem Repository — der Server migriert beim Start. Wer eine
   Migration des laufenden Arbeitspakets **nachträglich ergänzt**, sieht die
@@ -42,5 +49,26 @@ dass das Werkzeug etwas anderes tut als erwartet.
   (`docker exec trefaro-postgres psql -U trefaro -d trefaro`) und die Zeile aus
   `migrations` zu löschen. Das ist zugleich die einzige Stelle, an der `down`
   wirklich geprüft wird — die Regel „einmal wirklich ausgeführt" meint genau das.
+
+- **Ein `return` im Transaktions-Callback von TypeORM committet.**
+  `manager.transaction(async (m) => { … return null })` schreibt alles, was der
+  Callback getan hat — der Rückgabewert ist der Rückgabewert, nicht das Urteil.
+  Wer zurückrollen will, **wirft**; die Ausnahme wird eine Ebene höher gefangen
+  und in das übersetzt, was der Port versprochen hat. Gefunden in AP 10 der
+  Phase 3: eine Gruppe, deren Mitglieder nicht alle berechtigt waren, sollte
+  „nichts geschrieben" bedeuten, und lag hinterher als Gespräch ohne Mitglieder
+  in der Tabelle. Gefunden hat es die Vertragssuite, weil sie **nach** dem 400
+  noch einmal gezählt hat — ein Test, der nur den Statuscode prüft, hätte das
+  nie gesehen.
+- **Ein Modulschalter, den ein Test in der Tabelle umlegt, wirkt nicht.** Der
+  Server hält die Flags in `ModuleFlagCache`; eine Zeile hinter seinem Rücken
+  bedeutet nichts, bis der Cache nachlädt — der Test ist also erst eine Weile
+  grün aus dem falschen Grund und dann rot aus dem richtigen. In Tests wird über
+  `PATCH /api/admin/modules/:key` geschaltet (`setModuleEnabled` aus dem
+  Datenbank-Helfer ist für Zustände, die kein Endpunkt herstellt).
+- **`[maxlength]` ist kein Angular-Binding.** Auf `<input>` und `<textarea>` ist
+  es ein **Attribut**: `[attr.maxlength]`. Der Fehler ist ein
+  Kompilierfehler (`NG8002`), fällt aber erst im `build` auf — `tsc --noEmit`
+  sieht Templates nicht.
 
 Siehe auch: [Browsersuiten und E2E-Tests](e2e-tests.md), [Schichten und Ports im Server](server-layers.md).

@@ -20,6 +20,25 @@ export const CoreModuleController = (moduleKey: string): ClassDecorator =>
   SetMetadata(CORE_MODULE_KEY_METADATA, moduleKey);
 
 /**
+ * The same for a single route (FR 1.5, F175).
+ *
+ * For a controller whose routes do **not** all belong to the same module — of
+ * which there is one: the organization's message overview (FR 3.4) is a P1
+ * requirement and must answer whether or not the optional chat is switched on,
+ * while assembling a group in it is FR 4.5 and must not create a conversation
+ * whose readers have no endpoints (F171 made the same distinction one level
+ * up, at the controller). The guard has always read the handler before the
+ * class ({@link Reflector.getAllAndOverride}), so this needs no change to it —
+ * only a decorator that may sit on a method.
+ *
+ * `@UseGuards(CoreModuleEnabledGuard)` then belongs on the **method** too: on
+ * the class it would deny every unmarked route, which is the safe reading of a
+ * wiring mistake and would here be a wiring mistake of its own.
+ */
+export const CoreModuleRoute = (moduleKey: string): MethodDecorator =>
+  SetMetadata(CORE_MODULE_KEY_METADATA, moduleKey);
+
+/**
  * Blocks requests to core modules the organization has switched off.
  *
  * The same answer a disabled plug-in gives, and for the same reasons: 404, not

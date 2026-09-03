@@ -5,12 +5,14 @@ import { EventSeriesModule } from '../event-series';
 import { EventsModule } from '../events';
 import { MailModule } from '../mail';
 import { ProfilesModule } from '../profiles';
+import { AdminConversationsController } from './admin-conversations.controller';
 import { ChatRealtimeService } from './chat-realtime.service';
 import { ChatGateway } from './chat.gateway';
 import { ConversationsService } from './conversations.service';
 import { MessageImageMediaController } from './message-image-media.controller';
 import { MessagesService } from './messages.service';
 import { OrganizerContactService } from './organizer-contact.service';
+import { OrganizerConversationsService } from './organizer-conversations.service';
 import { ParticipantConversationsController } from './participant-conversations.controller';
 import { PublicContactController } from './public-contact.controller';
 
@@ -55,6 +57,16 @@ import { PublicContactController } from './public-contact.controller';
  * `ConfigurationModule` for the module guard and for the registry the
  * handshake asks about the `chat` flag.
  *
+ * **AP 10 adds the organization's own side of all of this** (FR 3.4): the
+ * message overview, its history, the answer that goes out as mail (F11), and
+ * the groups an organizer assembles around an event (E39). It reads through a
+ * port of its own, because the organization has no membership row to be
+ * identified by (F133) and the participants' port is built so that membership
+ * is the only credential it knows (F152, F173). Its controller carries the
+ * `chat` switch on **two routes** rather than on the class (F175) — reading
+ * and answering are P1 and must work with the chat switched off, assembling a
+ * group is not.
+ *
  * **AP 9 adds a controller that the switch does not cover** — the contact form
  * of an event landing page (FR 3.4, UC 14, F11). That is the reason this
  * module reaches for three more: `EventsModule` and `EventSeriesModule`,
@@ -79,14 +91,21 @@ import { PublicContactController } from './public-contact.controller';
     ParticipantConversationsController,
     MessageImageMediaController,
     PublicContactController,
+    AdminConversationsController,
   ],
   providers: [
     ChatRealtimeService,
     ConversationsService,
     MessagesService,
     OrganizerContactService,
+    OrganizerConversationsService,
     ChatGateway,
   ],
-  exports: [ConversationsService, MessagesService, OrganizerContactService],
+  exports: [
+    ConversationsService,
+    MessagesService,
+    OrganizerContactService,
+    OrganizerConversationsService,
+  ],
 })
 export class ChatModule {}

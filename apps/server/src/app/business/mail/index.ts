@@ -13,6 +13,7 @@ export {
   MissingMailTextError,
   mailStrings,
   type ConfirmationMailContext,
+  type ContactAnswerMailContext,
   type ContactRequestMailContext,
   type InvitationMailContext,
   type MailEvent,

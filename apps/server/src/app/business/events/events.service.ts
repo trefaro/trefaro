@@ -371,6 +371,11 @@ export class EventsService {
     }
     const existing = await this.require(id);
     await this.attachments.purgeForEvent(id);
+    // And the pictures inside its conversations, which are a different arc
+    // through the schema and have to go before the cascade does (F158): only
+    // this call knows the order, which is why it is not folded into the one
+    // above.
+    await this.attachments.purgeConversationsForEvent(id);
     // Its logo too, while the row that names it is still there (E9).
     await this.logos.discard([existing.logoPath]);
     if (!(await this.events.delete(id))) {

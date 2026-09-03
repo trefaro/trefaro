@@ -1,6 +1,6 @@
 # Phase 3 — Profile, Kommunikation und Community-Kern
 
-**Status: in Arbeit** (seit 02.09.2026, AP 1 bis AP 9 erledigt, **M7 erreicht**). Der Teil oberhalb von
+**Status: in Arbeit** (seit 02.09.2026, AP 1 bis AP 10 erledigt, **M7 erreicht**). Der Teil oberhalb von
 _Fortschritt_ ist der **Plan** und wird nicht mehr rückwirkend korrigiert; was
 tatsächlich passierte, steht unten je Paket — wie in
 [`PHASE1.md`](PHASE1.md) und [`PHASE2.md`](PHASE2.md). Was Marius **vor** einem
@@ -17,10 +17,10 @@ phase 3_ — dreizehn Einträge, jeder ist unten einem Arbeitspaket zugeordnet.
 
 Die Entscheidungen zählen bei **E31** weiter (Phase 1: E1–E16, Phase 2:
 E17–E30); Ergänzungen am Referenzdokument bekommen **F118** und folgende
-(F1–F117 sind vergeben, F62 nie). Vergeben sind inzwischen F118–F128, F132 sowie
-F137–F164; **F129–F131 und F133–F136 bleiben reserviert** für die Pakete, die
-noch kommen — beziehungsweise bleiben unvergeben, wo sich eine reservierte
-Nummer als schon getroffene Entscheidung entpuppt hat.
+(F1–F117 sind vergeben, F62 nie). Vergeben sind inzwischen F118–F128, F132,
+F133 sowie F137–F175; **F129–F131 und F134–F136 bleiben reserviert** für die
+Pakete, die noch kommen — beziehungsweise bleiben unvergeben, wo sich eine
+reservierte Nummer als schon getroffene Entscheidung entpuppt hat.
 
 **Vier Entscheidungen hat Marius am 02.09.2026 vorab getroffen**, bevor dieser
 Plan geschrieben wurde — sie sind der Rahmen, nicht Vorschläge: die Adresse ist
@@ -1855,3 +1855,168 @@ Offen aus diesem Paket: nichts außer dem Deep-Link der Mail (AP 10). Die
 Adresse eines Gasts bleibt **unbestätigt** — das ist die Eigenschaft jedes
 Kontaktformulars, gedrosselt und vom Veranstalter gelesen, bevor er antwortet;
 ein Double-Opt-In davor hätte die niedrigste Schwelle der Thesis verdoppelt.
+
+### AP 10 — Nachrichtenübersicht im Veranstalter-Client (erledigt, 03.09.2026)
+
+Umgesetzt:
+
+- **Eine Übersicht über alles, woran die Organisation beteiligt ist** (FR 3.4):
+  `/messages` im Veranstalter-Client, Kontaktanfragen und Gruppen in **einer**
+  Liste, neueste Bewegung oben, je Zeile wer geschrieben hat, wann, worum es
+  geht und die letzte Zeile als Vorschau. Ein Bildschirm und nicht zwei, weil
+  ein Veranstalter „seine Nachrichten" öffnet und keinen Filter. Die Vorschau
+  wird **im Server** auf 160 Zeichen geschnitten (`MESSAGE_PREVIEW_LENGTH`) —
+  sonst trüge eine Seite mit zwanzig Zeilen zwanzig ganze Nachrichten, um
+  zwanzig erste Zeilen zu zeigen. Dazu `/messages/:id` mit Verlauf,
+  Mitgliedern und Antwortfeld.
+- **Ein zweiter Port statt einer neuen Methode am ersten** (F173). Der Port der
+  Teilnehmenden ist so gebaut, dass Mitgliedschaft der einzige Ausweis ist, den
+  er kennt (F152) — und die Organisation hat keine (F133). Ihn zu benutzen hieße
+  also, genau die „lies irgendein Gespräch"-Methode nachzurüsten, ohne die er
+  entworfen wurde. `OrganizerConversationRepository` trägt die Regel stattdessen
+  in jeder Anweisung: `type IN ('group', 'organizer_contact')`. Ein
+  `direct`-Gespräch **kommt dort nicht heraus** — nicht aus der Liste, nicht
+  über die Id, nicht als Mitgliederliste. Die Vertragssuite prüft beides: es
+  fehlt in der Liste, und seine Id antwortet 404 wie eine unbekannte.
+- **Statt einer Ungelesen-Zahl steht dort „wartet auf Antwort"** (F133, F173).
+  Die Organisation hat kein `last_read_at` und keinen Ort dafür. `awaitsAnswer`
+  liest, **wer zuletzt geschrieben hat** — eine Funktion in `shared-models`, aus
+  der Zeile gerechnet, damit die zwei Angaben nicht auseinanderlaufen können. Für
+  ein Postfach, das mehrere Menschen lesen, ist das ohnehin die nützlichere
+  Frage: „hat hier jemand geantwortet" statt „habe ich es angesehen". Eine
+  Gruppe, in die noch niemand geschrieben hat, wartet auf nichts.
+- **Die Antwort an einen Gast geht per Mail hinaus und bleibt stehen** (F11,
+  F174) — beides, denn jedes allein hält das Versprechen nur zur Hälfte: die
+  Mail ist, wie ein Mensch ohne Konto etwas erfährt, die Zeile ist, woran der
+  nächste Veranstalter sieht, dass es beantwortet wurde. **Erst speichern, dann
+  senden**, und das Schicksal der Mail steht in der Antwort: `delivery` ist
+  `none` (eine Gruppe liest in der App), `sent` oder `failed`. Der Bildschirm
+  sagt den Unterschied — vorher, wohin die Antwort gehen wird, hinterher, ob sie
+  ging. Das ist **das Gegenteil von F172, aus dem entgegengesetzten Grund**: dort
+  darf ein Fehlschlag nicht sichtbar sein (E10), hier muss er es sein, sonst
+  glaubt der Veranstalter, er habe jemandem geantwortet, der nie etwas gehört
+  hat.
+- **Die achte Mail.** Sie grüßt mit dem Namen, den der Gast getippt hat (die
+  siebte grüßt niemanden — beide Ausnahmen zusammen sind die Regel), trägt den
+  Event-Block mit Zeit und Link, **keinen** Handlungsknopf (die einzige
+  sinnvolle Adresse ist die Veranstaltungsseite, die der Block schon verlinkt)
+  und die Worte des Veranstalters maskiert wie die einer Einladung. Ihre Sprache
+  ist die Vorgabe der Instanz, weil der Empfänger kein Konto hat — es sei denn,
+  die Adresse hat doch eines, dann bekommt sie die gewählte (F125, die Regel und
+  nicht ihre Ausnahme). Katalog: 834 → **890** Schlüssel.
+- **Gruppen werden hier zusammengestellt** (E39): Reihe → Veranstaltung →
+  Betreff → Mitglieder, in der Reihenfolge, die die Daten verlangen. Angeboten
+  werden die **bestätigten** Anmeldungen der Veranstaltung, die ein
+  **bestätigtes** Konto haben, über die Adresse verbunden (E31) — eine Anmeldung
+  trägt keine Profil-Id. Wer kein Konto hat, fehlt, und der Bildschirm sagt
+  warum: eine Mitgliedschaft zeigt auf ein Profil, und alle anderen erreicht die
+  Einladung (FR 2.4). Getippt werden kann **niemand**.
+- **Wer in eine Gruppe darf, entscheidet der `INSERT`** und nicht sein Aufrufer:
+  `INSERT … SELECT` über dieselbe Menge, eingeschränkt auf die gewählten Ids.
+  Eine Id von woanders wählt nichts aus, fügt also niemanden hinzu — und dann
+  entsteht die Gruppe **gar nicht**, denn eine Gruppe ohne die Leute, für die sie
+  zusammengestellt wurde, ist schlechter als keine. Dabei ist ein Fehler
+  aufgefallen, den erst die Vertragssuite fand: ein `return null` **im**
+  Transaktions-Callback von TypeORM committet — es muss geworfen werden. Steht
+  als Warnung in `docs/rules/tooling-traps.md`.
+- **Der Modulschalter hängt an zwei Routen statt an der Klasse** (F175). Lesen
+  und Antworten sind P1 und müssen auch auf einer Instanz **ohne** Chat
+  funktionieren, sonst kommen die Kontaktanfragen aus AP 9 nirgends an; eine
+  Gruppe anzulegen ist FR 4.5, und eine Gruppe, deren Mitglieder keine
+  Endpunkte zum Lesen haben, wäre totgeboren. Der Guard konnte das immer (er
+  liest den Handler vor der Klasse), dazu kam `CoreModuleRoute` als
+  Methoden-Dekorator. Die Vertragssuite schaltet `chat` aus und prüft **beide**
+  Hälften — die Übersicht antwortet weiter, die Gruppe nicht, und die
+  Teilnehmenden bekommen ihren 404 (mit Sitzung, damit es der des Moduls ist und
+  nicht der des Guards).
+- **Das Bild einer Nachricht hat für den Veranstalter eine eigene Route**, und
+  das ist keine Bequemlichkeit: `/api/media/messages/:id/attachment` entscheidet
+  über **Mitgliedschaft** (F156), die die Organisation nicht hat. Also
+  `GET /api/admin/conversations/:id/messages/:messageId/image`, hinter dem
+  Admin-Guard, mit der Zugangsregel dieses Pakets — und der Client **holt** die
+  Bytes und zeigt sie aus einem Blob, wie er es mit der Datei einer Anmeldung
+  schon tut (E9). Die Kommentare in `message-image-media.controller.ts` hatten
+  das in AP 6 so vorhergesagt.
+- **Der Purge der Bilder eines Gesprächs** (F158, der `todo.md`-Eintrag für
+  dieses Paket). Anders als dort vermutet konnte es **nicht**
+  `AttachmentsService.purgeForEvent` erweitern: die Löschmethoden des
+  Attachment-Ports sind absichtlich auf Zeilen **mit** Anmeldung eingeschränkt,
+  damit von dort niemand an ein Bild in einem Gespräch kommt. Also ein eigener
+  schmaler Port (`ConversationPurgeRepository`, im Attachment-Modul, weil dessen
+  Aufgabe „eine Datei, deren Besitzer weg ist" ist und weil es von nichts
+  abhängt — der Chat importiert die Events, umgekehrt wäre ein Kreis). Die
+  **Reihenfolge** ist die Operation: Ids merken, Gespräche löschen (der Cascade
+  nimmt die Nachrichten), dann die `attachment`-Zeilen, dann die Dateien.
+  Umgekehrt scheitert es an `CHK_message_content`, weil
+  `FK_message_attachment ON DELETE SET NULL` eine Nachricht ohne Text und ohne
+  Bild hinterlassen würde. Erreichbar ist der Fall eng, aber echt: eine
+  Veranstaltung mit bestätigten Anmeldungen lässt sich nicht löschen (E14), also
+  trifft es die, deren Anmeldungen wieder storniert wurden.
+- **Die Benachrichtigung zeigt jetzt auf die Anfrage** (F172, der zweite
+  `todo.md`-Eintrag): `organizerConversationPath` in `shared-models` ist die
+  eine Schreibweise für die Route des Clients und den Link der Mail.
+- **Nichts daran ist live**, und das ist entschieden, nicht vergessen: der
+  Handshake authentifiziert eine **Teilnehmer**-Sitzung (F132), die Organisation
+  hat keine Mitgliedschaft, an die zugestellt würde (F133), und die
+  Benachrichtigungsmail ist genau dafür da, dass niemand einen Bildschirm
+  beobachten muss (F172). Eine Antwort in eine Gruppe erreicht deren Mitglieder
+  dagegen sofort — über den Weg, der seit AP 7 steht.
+
+Belegt (Beweise, nicht Absichten):
+
+- Server-Units **1051** (+34): `organizer-conversations.service.spec.ts` mit 25
+  Tests — der eine 404, „gespeichert und gemeldet", `none` für eine Gruppe, der
+  Rückzieher bei einer nicht berechtigten Person, die vier Zustände der
+  Bildroute —, dazu sechs für die achte Mail und drei für den Purge. In
+  `shared-models` **98** (+3): die Teilmenge der zwei Arten als Teilmenge
+  geprüft, die vier Antworten von `awaitsAnswer` und die eine Schreibweise der
+  Gesprächsadresse.
+- Vertragssuite **545** (+25): `organizer-conversations.spec.ts`. Darin die drei
+  Teile des Abnahmekriteriums — die Antwort **in Mailpit** und im Verlauf, die
+  Gruppe aus drei Angemeldeten, und **ihre Mitglieder sehen sie** über
+  `/api/participant/conversations` mit echter Sitzung — plus das
+  `direct`-Gespräch, das nicht auftaucht, der Schalter in beiden Hälften und der
+  Purge gegen eine echte Datenbank.
+- Veranstalter-Client **207** Unit-Tests (+27) über vier Dateien;
+  Browsersuite **289** (+9, also drei Tests in drei Engines): die Frage finden,
+  beantworten, den Satz über die Mail lesen, die Gruppe zu dritt anlegen und in
+  ihrem Verlauf landen.
+  Die Suite liest **kein** Postfach — dass die Mail wirklich ankommt, entscheidet
+  die Vertragssuite gegen Mailpit; was nur ein Browser entscheiden kann, ist, ob
+  der Bildschirm es sagt.
+- Migration: **keine**. `conversation`, `conversation_member` und `message`
+  stehen seit AP 6, `CHK_conversation_shape` erlaubt eine Gruppe mit Event und
+  Betreff, und `IDX_conversation_event` wurde damals ausdrücklich „für die
+  Übersicht des Veranstalters (AP 10)" angelegt.
+
+Drei Fallen, die Zeit gekostet haben und jetzt in `docs/rules/` stehen: ein
+`return` im Transaktions-Callback von TypeORM **committet** (oben schon
+genannt); `[maxlength]` ist kein Angular-Binding, sondern `[attr.maxlength]`,
+und der Fehler fällt erst im `build` auf, weil `tsc --noEmit` keine Templates
+liest; und ein Modulschalter, den ein Test in der Tabelle umlegt, wirkt nicht —
+der Server hält die Flags in einem Cache, also wird in Tests über
+`PATCH /api/admin/modules/:key` geschaltet. Dazu eine vierte, die nur ein
+Fixture betraf: PostgreSQL leitet **einen** Typ je Platzhalter ab, und dasselbe
+`$5` als Wert einer `varchar(16)`-Spalte **und** im Vergleich mit einem
+Textliteral ist „inconsistent types deduced for parameter $5".
+
+Offen aus diesem Paket, alles in `todo.md`:
+
+- **Wer aus der Organisation geantwortet hat, steht in der Zeile, aber nicht auf
+  dem Bildschirm.** `sender_id` trägt das Administratorkonto; der Client
+  erkennt nur die **eigenen** Zeilen (über die Id der Sitzung) und nennt alles
+  andere „deine Organisation". Den Namen einer Kollegin zu zeigen wäre ein
+  vierter Lesezugriff auf `admin_user` durch einen neuen Port — machbar, aber
+  nicht in diesem Abnahmekriterium.
+- **Die Kachel „neue Nachrichten" auf dem Event-Dashboard** (der Klammerzusatz
+  im Plug-in-Eintrag von `todo.md`) ist **nicht** gebaut: sie bräuchte eine
+  Ungelesen-Zahl, die es für die Organisation nicht gibt (F133). Was ginge, wäre
+  „N Gespräche zu dieser Veranstaltung" — eine andere Kachel als die im Mockup,
+  also eine Produktfrage und keine Implementierungslücke.
+- **Ein Bild kann der Veranstalter nicht senden**, nur sehen. Eine Antwort muss
+  auch als Mail funktionieren, und ein Anhang wäre ein zweiter Zustellweg für
+  etwas, das FR 3.4 nicht verlangt.
+- **Die Antwort eines Gasts auf die Antwort** kommt als gewöhnliche Mail im
+  Postfach der Organisation an, nicht in der Übersicht. Mail zu **empfangen**
+  ist kein Ziel dieser Anwendung (F8 hält den Versand schon klein); wer weiter
+  in der App bleiben will, braucht ein Konto.

@@ -162,6 +162,26 @@ export const appRoutes: Route[] = [
         title: 'admin.series.title',
       },
       {
+        // Before `messages/:id`, and the overview of everything the
+        // organization is part of (FR 3.4). Not nested under an event,
+        // although a conversation names one: an organizer opens their
+        // messages, not one event's.
+        path: 'messages',
+        loadComponent: () =>
+          import('./pages/messages/messages-page').then((m) => m.MessagesPage),
+        title: 'admin.messages.title',
+      },
+      {
+        // The parameter is `id` because `withComponentInputBinding()` binds by
+        // name, and that is what the page's input is called.
+        path: 'messages/:id',
+        loadComponent: () =>
+          import('./pages/messages/conversation-page').then(
+            (m) => m.AdminConversationPage,
+          ),
+        title: 'admin.messages.title',
+      },
+      {
         path: 'administrators',
         loadComponent: () =>
           import('./pages/admins/admins-page').then((m) => m.AdminsPage),
