@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import type { ConversationMemberRef } from '../../business/chat/ports/conversation.repository';
 import type {
+  AppendedMessage,
   MessageImageRecord,
   MessageRecord,
   MessageRepository,
@@ -10,6 +12,7 @@ import type {
 import {
   AttachmentEntity,
   ConversationEntity,
+  ConversationMemberEntity,
   MessageEntity,
 } from '../entities';
 
@@ -52,7 +55,9 @@ const HISTORY = `
  * can say that a message points at it — so the transaction is what rules out
  * an attachment row nobody references. It also moves the conversation's
  * `last_message_at`, because a message that did not reorder the overview would
- * be a message somebody has to scroll to find.
+ * be a message somebody has to scroll to find — and it reads the memberships,
+ * so that delivery reaches whoever was in the conversation when the line was
+ * written (E41).
  */
 @Injectable()
 export class TypeormMessageRepository implements MessageRepository {
@@ -61,7 +66,7 @@ export class TypeormMessageRepository implements MessageRepository {
     private readonly messages: Repository<MessageEntity>,
   ) {}
 
-  async append(message: NewMessage): Promise<MessageRecord> {
+  async append(message: NewMessage): Promise<AppendedMessage> {
     return this.messages.manager.transaction(async (manager) => {
       let attachmentId: string | null = null;
 
@@ -99,14 +104,27 @@ export class TypeormMessageRepository implements MessageRepository {
         { lastMessageAt: saved.createdAt },
       );
 
+      // In the same transaction, and after the write rather than before it:
+      // whoever is a member when the line lands is who the line is for.
+      const members = await manager.find(ConversationMemberEntity, {
+        where: { conversationId: message.conversationId },
+        select: { memberType: true, memberId: true },
+      });
+
       return {
-        id: saved.id,
-        conversationId: saved.conversationId,
-        senderType: saved.senderType,
-        senderId: saved.senderId,
-        body: saved.body,
-        hasImage: attachmentId !== null,
-        createdAt: saved.createdAt,
+        record: {
+          id: saved.id,
+          conversationId: saved.conversationId,
+          senderType: saved.senderType,
+          senderId: saved.senderId,
+          body: saved.body,
+          hasImage: attachmentId !== null,
+          createdAt: saved.createdAt,
+        },
+        members: members.map((row): ConversationMemberRef => ({
+          memberType: row.memberType,
+          memberId: row.memberId,
+        })),
       };
     });
   }

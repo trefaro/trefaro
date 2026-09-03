@@ -1,6 +1,6 @@
 # Phase 3 — Profile, Kommunikation und Community-Kern
 
-**Status: in Arbeit** (seit 02.09.2026, AP 1 bis AP 6 erledigt, **M6 erreicht**). Der Teil oberhalb von
+**Status: in Arbeit** (seit 02.09.2026, AP 1 bis AP 7 erledigt, **M7 erreicht**). Der Teil oberhalb von
 _Fortschritt_ ist der **Plan** und wird nicht mehr rückwirkend korrigiert; was
 tatsächlich passierte, steht unten je Paket — wie in
 [`PHASE1.md`](PHASE1.md) und [`PHASE2.md`](PHASE2.md). Was Marius **vor** einem
@@ -17,8 +17,10 @@ phase 3_ — dreizehn Einträge, jeder ist unten einem Arbeitspaket zugeordnet.
 
 Die Entscheidungen zählen bei **E31** weiter (Phase 1: E1–E16, Phase 2:
 E17–E30); Ergänzungen am Referenzdokument bekommen **F118** und folgende
-(F1–F117 sind vergeben, F62 nie). Vergeben sind inzwischen F118–F128 sowie
-F137–F159; **F129–F136 bleiben reserviert** für die Pakete, die noch kommen.
+(F1–F117 sind vergeben, F62 nie). Vergeben sind inzwischen F118–F128, F132 sowie
+F137–F164; **F129–F131 und F133–F136 bleiben reserviert** für die Pakete, die
+noch kommen — beziehungsweise bleiben unvergeben, wo sich eine reservierte
+Nummer als schon getroffene Entscheidung entpuppt hat.
 
 **Vier Entscheidungen hat Marius am 02.09.2026 vorab getroffen**, bevor dieser
 Plan geschrieben wurde — sie sind der Rahmen, nicht Vorschläge: die Adresse ist
@@ -747,7 +749,12 @@ eine Anmeldung beansprucht und was die Profilspalte behauptet; F125 war für
 dieses Paket reserviert und ist vergeben. In AP 5 sind die drei reservierten
 Nummern **F126–F128** vergeben und drei neue dazugekommen (**F150–F152**): was
 ein fremdes Profil trägt, wo das Opt-in steht — und wer dafür sorgt, dass ein
-nicht auffindbares Profil nirgends auftaucht.
+nicht auffindbares Profil nirgends auftaucht. AP 6 hat **F153–F159** vergeben und
+seine drei reservierten Nummern **nicht** gebraucht: `last_read_at` als
+Mitgliedszustand ist F56, „Text, Bild oder beides“ ist E40 selbst, und die
+Medienroute mit Berechtigung wurde F156 — F129, F130 und F131 bleiben deshalb
+unvergeben, wie F62. AP 7 hat die für ihn reservierte **F132** vergeben und fünf
+neue dazugelegt (**F160–F164**).
 
 ## Definition of Done für Phase 3
 
@@ -1357,3 +1364,168 @@ löscht Zeilen, keine Dateien (E9). Gruppengespräche entstehen erst in **AP 10*
 also kann heute keine solche Zeile existieren; der Purge gehört dorthin, wo er
 gegen eine echte Gruppe geprüft werden kann. Steht in `todo.md`, und die
 Reihenfolge, die er braucht, steht in F158.
+
+### AP 7 — Echtzeit (erledigt, 03.09.2026) → **Meilenstein M7**
+
+Umgesetzt:
+
+- **Der Handshake ist die Tür** (**F132**, E41). Die Prüfung hängt in einer
+  socket.io-Namensraum-Middleware und läuft damit _während_ der Handshake
+  stattfindet: eine Verbindung ohne gültige Sitzung entsteht nicht, sie kommt
+  beim Client als `connect_error` mit dem Satz des Servers an. Gefragt werden
+  Sitzung **und** `chat`-Schalter, in der Reihenfolge der HTTP-Seite — dieselbe
+  Reihenfolge, aus der dort ein 401 vor einem 404 kommt. Die Sitzung löst
+  `UserSessionService` auf, derselbe Dienst wie im globalen Teilnehmer-Guard;
+  dafür importiert `ChatModule` seit diesem Paket `ProfilesModule`, und **nur**
+  dafür. Ein Nest-`@UseGuards` auf einem Gateway wäre die späte Prüfung
+  gewesen, die E41 ausschließt: es läuft je Nachricht.
+- **Der Socket ist unter `/api` umgezogen** (**F160**). Das Sitzungscookie
+  trägt `Path=/api`, also hängt ein Browser es an einen Handshake nur innerhalb
+  dieses Pfades — die Entscheidung aus Spike 4, den Standardpfad zu behalten,
+  war nach E41 nicht mehr haltbar. `REALTIME_PATH` in `shared-models` ist die
+  eine Schreibweise für Server, beide Clients, den Proxy und das Prüfskript;
+  im Reverse Proxy steht dafür `location /api/socket.io/`, das nach der
+  Längster-Präfix-Regel vor `/api/` gewinnt, und in beiden Dev-Proxys eine
+  Regel **vor** `/api` (die Reihenfolge entscheidet dort).
+- **Zwei Räume, zwei Fragen** (**F161**). `conversation:<id>` trägt die Zeile
+  und wird nur auf `chat:join` betreten, nur von einem Mitglied — entschieden
+  von demselben Dienst, der es für den REST-Verlauf entscheidet, über seinen
+  nicht werfenden Zwilling, sodass „nicht deins“, „gibt es nicht“ und „ist
+  keine Id“ ein `{ joined: false }` sind (F157). `member:user:<id>` wird am
+  Handshake betreten, ohne Prüfung: ein Socket muss nicht fragen, um über sich
+  selbst informiert zu werden. Daher zwei Ereignisse — `chat:message` für einen
+  offenen Verlauf, `chat:conversation` für die Liste, die auch von einem
+  Gespräch erfahren muss, das niemand offen hat. Beide Raumnamen tragen ein
+  Präfix, weil in socket.io jeder Socket ein Raum mit seiner Id ist.
+- **Zugestellt wird von einem eigenen Dienst** (**F162**). `ChatRealtimeService`
+  weiß nichts über Mitgliedschaft und hängt an nichts, weshalb der Kreis
+  „Gateway braucht Gespräche, Gespräche brauchen Zustellung“ gar nicht entsteht
+  und kein `forwardRef` nötig ist. Er nimmt vom Gateway einen schmalen
+  Ausschnitt des Namensraums (`to(room).emit(…)`) statt des ganzen Objekts.
+  Speichern ist verbindlich, Zustellen ist bestes Bemühen: ein Fehler beim
+  Senden wird protokolliert, nicht zur Antwort — und zugestellt wird **außerhalb**
+  der Kompensation, weil das Bild verworfen wird, wenn die Zeile scheiterte,
+  und eine Zustellung eine geschriebene Zeile nicht zurücknehmen kann.
+- **Die Empfänger kommen aus dem Schreiben** (**F163**). `append` antwortet mit
+  der Zeile **und** den Mitgliedern, gelesen in derselben Transaktion. Ein
+  `membersOf(conversationId)` am Port hätte genau die Fähigkeit hinzugefügt,
+  die dieser Port bewusst nicht hat (F152): „wer schreibt mit wem“, für jede
+  Id, für jeden Aufrufer. Lesebestätigungen brauchen sie nicht — dort ist der
+  Leser der Fragende.
+- **`chat:echo` kommt nirgends mehr vor.** Der Handler, `ChatEchoReply`,
+  `RealtimeClient.echo`, der Knopf auf der Diagnoseseite und `verify-socket.mjs`
+  sind weg. Der Client hat stattdessen die Oberfläche, die AP 8 braucht:
+  `join`/`leave`, drei Ströme und ein Verbindungszustand — dazu ein Gedächtnis,
+  das nach einem Reconnect wieder betritt, was gefolgt wurde, denn ein neuer
+  Socket ist in keinem Raum. Abschnitt 4 der Diagnoseseite sagt jetzt, was eine
+  Verbindung voraussetzt, statt eine Antwort zu messen, die es nicht mehr gibt.
+- **`verify-chat.mjs` prüft den Satz des Abnahmekriteriums.** Zwei Konten über
+  die API und Mailpit, zwei Sockets, eine Nachricht über REST — und die Frage,
+  ob sie bei beiden ohne Neuladen ankommt, gestellt **durch den Proxy**. Es
+  räumt hinterher auf (Gespräch, dann Konten — die Reihenfolge aus F158) und
+  braucht dafür `docker exec`, weil es für ein Teilnehmerkonto bewusst keinen
+  Löschendpunkt gibt. `verify-proxy.mjs` behält seine Socket-Prüfung und hat
+  dafür jetzt das bessere Sondierungsmittel: die **Ablehnung** ohne Cookie ist
+  der Satz des Servers, angekommen über den Socket — also derselbe Beweis, den
+  das Echo geliefert hat, ohne einen Handler, der nur für den Test existiert.
+- **Migration: keine.** Das Paket hat kein Schema angefasst — die einzige
+  Ausnahme unter den bisher sieben, und die Erklärung steht in AP 6: die
+  Tabellen des Chats sind von der ersten Migration an vollständig, damit für
+  Echtzeit kein zweiter Durchgang durchs Datenmodell nötig wird (E40).
+
+Nachweise: Server-Units **996** (+30), Vertragstests **508** (+13, alle in der
+neuen Suite `api/chat-realtime.spec.ts`), `shared-models` **95** (+3),
+`shared-http` **30** (+13 — `RealtimeClient` hatte keinen Test), Nutzer-Client
+141, Veranstalter-Client 169. Browsersuiten grün: **203** (+1 übersprungen) und
+**280** (+26 übersprungen). Katalog **780** — zum ersten Mal **kleiner**: zwei
+Schlüssel des Echos sind weg, einer für die Voraussetzung einer Verbindung ist
+dazugekommen. `nx run-many -t lint test build` über alle 13 Projekte fehlerfrei.
+Neue Entscheidungen: **F132**, **F160**–**F164**.
+
+**Und am laufenden Stack, weil der wichtigste Satz des Abnahmekriteriums es
+verlangt.** Fünf Container gebaut und gestartet
+(`docker compose -f infra/docker-compose.yml -p trefaro-ap7 up -d --build`,
+Mailpit an dessen Netz gehängt), dann durch NGINX:
+`verify-chat.mjs` **14 von 14 grün** — Handshake ohne Cookie abgewiesen mit dem
+Satz des Servers, beide Sitzungen verbunden auf `websocket`, ein fremder Raum
+verweigert, die Nachricht bei **beiden** ohne Neuladen, beide über die Bewegung
+ihrer Liste informiert, die Lesebestätigung bei der anderen Seite; danach hat
+das Skript seine zwei Konten und das Gespräch wieder gelöscht.
+`verify-proxy.mjs` vollständig grün, inklusive der drei neuen Socketzeilen.
+Dabei fiel eine Kleinigkeit auf, die zum Umzug gehört: `ngsw-config.json` schloss
+`/socket.io/**` von den Navigationsadressen aus — eine Adresse, die es nicht mehr
+gibt. Der neue Pfad liegt unter dem `!/api/**`, das schon dort steht; die alte
+Zeile ist weg und `verify-proxy.mjs` prüft jetzt `/api/socket.io/`. (Ein Service
+Worker fängt ohnehin keine WebSocket-Verbindung ab, es war also nie ein Risiko,
+sondern eine falsche Behauptung in einer Datei, die man beim nächsten Umzug
+liest.) **Und im Entwicklungsmodus von Hand:** `nx serve server` plus
+`nx serve user-client`, ein Socket-Client gegen `http://localhost:4200` mit
+`path: /api/socket.io` — die Ablehnung kommt über `websocket` zurück, also
+leitet auch der Dev-Proxy das Upgrade an der neuen Adresse weiter. Das war die
+eine Stelle, die keine Suite dieses Repositories anfasst: die Regel steht in
+den Dev-Proxys **vor** `/api`, und wäre sie es nicht, hätte AP 8 einen Chat
+gebaut, der nur im Container funktioniert.
+
+Was anders lief:
+
+- **Der Plan nannte den Pfad, das Cookie widersprach.** Die API-Tabelle oben
+  sagt „Socket `/socket.io`“, und das kann mit E41 nicht funktionieren: das
+  Sitzungscookie gilt für `/api`, also reist es an einen Handshake auf
+  `/socket.io` nicht mit. Aufgefallen, bevor eine Zeile Gateway geschrieben war,
+  und beantwortet mit F160 — die Tür muss dort stehen, wo der Schlüssel passt.
+  Die Alternativen wären gewesen, das Cookie auf `Path=/` zu erweitern (die
+  Sitzung reist dann mit jedem Bild) oder das Token in die Query zu geben (dann
+  ist es für JavaScript lesbar, also nicht mehr `HttpOnly`).
+- **Der Kreis war vor dem ersten Test da.** Gateway → Gespräche → Zustellung →
+  Gateway; Nest hätte ein `forwardRef` verlangt, und die Regel dagegen steht
+  seit F103 im Repository. Die Auflösung war nicht ein Ausweg, sondern eine
+  Frage: was ist das Geteilte? „Emit in einen Raum“, und das kennt keine
+  Mitgliedschaft (F162).
+- **AP 6 hatte eine Kopie stehen gelassen — in dem Paket, das die Regel
+  ausgelöst hat.** `pageWindow` zog aus, weil der Chat der sechste Aufrufer war
+  (F159), und `conversations.service.ts` behielt trotzdem seine eigenen
+  `positive`/`clamp`. Beobachtbar war nichts, die Zahlen waren gleich — aber es
+  war die siebte Kopie, und sie stand ausgerechnet dort. Jetzt benutzt der Chat
+  den Helfer, den er verursacht hat.
+- **Eine Zusicherung, die auf der Seitenleiste grün wurde.** Die
+  Teilnehmerübersicht der Veranstalter-Suite prüfte
+  `getByRole('complementary')` **ohne Namen** — und auf dieser Seite gibt es
+  zwei Landmarken dieser Rolle: die Seitenleiste der Arbeitsfläche und das
+  Detailfeld. Solange das Feld noch nicht offen war, traf der Locator nur die
+  Seitenleiste, und die enthält den Navigationseintrag „Profilformular“, in dem
+  das gesuchte Wort „Profil“ steckt. War es offen, war es eine
+  Strict-Mode-Verletzung. Also mal grün aus dem falschen Grund, mal rot — genau
+  die Klasse, die F149 schon einmal getroffen hat („eine Zusicherung über eine
+  Tabellenzelle muss eine Zelle sein“). Der Nachbartest in derselben Datei
+  wusste die Antwort bereits und benennt seine Landmarke; diese Zeile tut es
+  jetzt auch.
+- **Drei Sitzungen und keine Anmeldung** (**F164**). Die Echtzeit-Suite braucht
+  beide Seiten eines Gesprächs und eine dritte Person, die außen steht — bei
+  sechzehn vergebenen Anmeldungen von zwanzig je fünf Minuten (E4) wären das
+  neunzehn gewesen. Eine Sitzung ist eine Zeile mit dem SHA-256 des
+  Cookie-Werts, also schreibt die Suite sie: `seedSession` neben `seedProfile`.
+  Was das aufgibt, führt `chat.spec.ts` mit echten Anmeldungen schon.
+- **`extraHeaders` trägt das Cookie nur außerhalb des Browsers.** Beide
+  Prüfwege — Vertragssuite und Skript — sind Node-Clients und müssen das Cookie
+  selbst setzen; im Browser hängt es der Browser an, und genau deshalb steht
+  F160 dort, wo es steht. Hätte der Weg nicht funktioniert, wäre das Paket ohne
+  automatisierten Nachweis für den wichtigsten Satz seines
+  Abnahmekriteriums geblieben.
+
+- **Die CI des AP-6-Pushes war rot, und beide Gründe gehören hierher.** Der
+  eine ist die Landmarke von oben: dieselbe Zeile, dieselbe
+  Strict-Mode-Verletzung, und Playwrights Fehlermeldung nennt die Lösung sogar
+  selbst (`getByRole('complementary', { name: 'Amina Okonkwo' })`). Der andere
+  ist der `quality`-Job: `nx format:check` beanstandete `todo.md` — obwohl
+  `nx format:write --uncommitted` vor dem Commit gelaufen war und die Datei
+  **aufgelistet** hatte. Nachgestellt: `--uncommitted` schreibt sie nicht,
+  gestaged wie ungestaged; `--files todo.md` und `prettier --write` schon. Das
+  Tor ist also `nx format:check`, und das steht jetzt in
+  `docs/rules/tooling-traps.md`.
+
+Offen aus diesem Paket: **der Handshake trägt keine Drosselung.**
+`@nestjs/throttler` sieht HTTP-Routen, und ein socket.io-Handshake wird von
+engine.io bedient, bevor Nests Router ihn sieht — die eine Anfrage, die jetzt
+eine Sitzungsauflösung kostet, ist damit die eine, die nichts zählt. Gehört zur
+konfigurierbaren Drosselung, die Phase 5 ohnehin owed; steht in `todo.md` und
+in den offenen Punkten von Spike 4.

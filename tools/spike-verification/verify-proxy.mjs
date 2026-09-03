@@ -221,7 +221,7 @@ for (const path of [
   '/admin/series/new',
   '/api/config',
   MANIFEST_PATH,
-  '/socket.io/',
+  '/api/socket.io/',
 ]) {
   check(
     `the service worker leaves ${path} to the network`,
@@ -279,8 +279,21 @@ check(
 );
 
 // --- the actual spike: a WebSocket upgrade through the proxy ------------
+//
+// Without a session cookie this handshake is *supposed* to fail (E41) — and
+// the failure is the better probe. What arrives is the server's own refusal,
+// which means the upgrade reached the application and a frame came back: the
+// same thing the old `chat:echo` proved, without a handler that had to exist
+// for the sake of the test. What the proxy has to get right is the address:
+// the socket lives at /api/socket.io since AP 7 of phase 3, because that is
+// the path the session cookie is issued for.
+//
+// A message that actually reaches two people is a different check and needs
+// two accounts — `verify-chat.mjs`, which is meant to be pointed at this same
+// BASE.
 console.log('--- socket.io through the proxy ---');
-const socket = io(BASE, {
+const socket = io(`${BASE}/chat`, {
+  path: '/api/socket.io',
   transports: ['websocket'],
   reconnection: false,
   timeout: 8000,
@@ -291,44 +304,30 @@ const socket = io(BASE, {
   rejectUnauthorized: process.env.NODE_TLS_REJECT_UNAUTHORIZED !== '0',
 });
 
-const connected = await new Promise((resolve) => {
-  socket.once('connect', () => resolve(true));
-  socket.once('connect_error', (error) => {
-    console.log(`      connect_error: ${error.message}`);
-    resolve(false);
-  });
-  setTimeout(() => resolve(false), 9000);
+const handshake = await new Promise((resolve) => {
+  socket.once('connect', () => resolve({ connected: true }));
+  socket.once('connect_error', (error) =>
+    resolve({ connected: false, message: error.message }),
+  );
+  setTimeout(() => resolve({ connected: false, message: 'timeout' }), 9000);
 });
 
-check('the WebSocket handshake survives the reverse proxy', connected);
-
-if (connected) {
-  check(
-    'it is a real upgrade, not long-polling',
-    socket.io.engine.transport.name === 'websocket',
-    socket.io.engine.transport.name,
-  );
-
-  const reply = await new Promise((resolve) => {
-    const timer = setTimeout(() => resolve(null), 8000);
-    socket.emit('chat:echo', 'hello through nginx', (answer) => {
-      clearTimeout(timer);
-      resolve(answer);
-    });
-  });
-
-  check(
-    'frames travel both ways through the proxy',
-    reply !== null,
-    reply ? JSON.stringify(reply) : 'no reply within 8s',
-  );
-  check('the text comes back unchanged', reply?.text === 'hello through nginx');
-  check(
-    'the server also sees a websocket transport',
-    reply?.transport === 'websocket',
-    reply?.transport,
-  );
-}
+check(
+  'the WebSocket handshake reaches the application through the proxy',
+  /session|switched off/i.test(handshake.message ?? ''),
+  handshake.connected
+    ? 'it connected without a session, which it must not'
+    : handshake.message,
+);
+check(
+  'the socket is refused without a session, not accepted (E41)',
+  !handshake.connected,
+);
+check(
+  'it is a real upgrade, not long-polling',
+  socket.io?.engine?.transport?.name === 'websocket',
+  socket.io?.engine?.transport?.name ?? 'no transport at all',
+);
 socket.disconnect();
 
 // --- TLS, when the overlay is running (E29) -----------------------------

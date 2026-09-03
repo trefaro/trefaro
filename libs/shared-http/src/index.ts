@@ -19,6 +19,5 @@ export {
 } from './lib/api-error';
 export {
   RealtimeClient,
-  type RealtimeEchoReply,
   type RealtimeStatus,
 } from './lib/realtime/realtime-client.service';

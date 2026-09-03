@@ -65,7 +65,8 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   in AP 5 mit einer — dort braucht nur der **Suchende** eine Sitzung, die
   Gefundenen sind geseedet; `chat.spec.ts` in AP 6 mit **zwei**: ein Gespräch hat
   zwei Seiten, und die dritte Person der Suite ist wieder geseedet, weil zu ihr
-  nur **geschrieben** wird), die Browsersuite des
+  nur **geschrieben** wird; `chat-realtime.spec.ts` in AP 7 mit **keiner** — dort
+  sind auch die Sitzungen geseedet, F164), die Browsersuite des
   Nutzer-Clients drei (einer je Engine, `profile.spec.ts` meldet sich genau
   einmal an und beweist das neue Passwort in `server-e2e`); wer eine weitere
   schreibt, zählt vorher nach. Ein 429 sieht dort aus wie ein Anmeldefehler und
@@ -137,6 +138,36 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   welches Gespräch ein **früherer** Test zuletzt geschrieben hatte — grün, aber
   aus dem falschen Grund, und beim nächsten neuen Test rot. Wer eine Reihenfolge
   behauptet, schreibt vorher die Zeile, die sie beweist.
+- **Eine Sitzung darf geseedet werden, wenn die Suite die Sitzung braucht und
+  nicht das Anmelden** (F164). Eine Sitzung _ist_ eine Zeile mit dem SHA-256 des
+  Cookie-Werts; Guard und Socket-Handshake lösen sie gleich auf und können nicht
+  erkennen, wie sie entstand. `seedSession(profileId)` in `support/database.ts`,
+  und der Grund ist derselbe wie bei `seedProfile`: die Echtzeit-Suite braucht
+  **drei** Sitzungen (beide Seiten eines Gesprächs und eine Person, die außen
+  steht) und hätte das Budget auf neunzehn von zwanzig gebracht. Was das
+  aufgibt — der Beweis, dass eine Anmeldung ein brauchbares Cookie ausstellt —
+  führt `chat.spec.ts` mit echten Anmeldungen.
+- **Ein Node-Client muss das Cookie selbst setzen.** Ein Browser hängt es an,
+  ein `socket.io-client` in Node nicht: `extraHeaders: { cookie }`. Gilt für die
+  Vertragssuite und für `tools/spike-verification/verify-chat.mjs` — und es ist
+  der Grund, warum der Socket unter `/api` wohnt (F160): im Browser entscheidet
+  der **Pfad** des Cookies, ob der Handshake überhaupt eine Sitzung mitbringt.
+- **Ein Socket-Test muss auf das Ankommen warten.** Nichts an einem Ereignis
+  ist eine Zusicherung, die Playwright oder Jest von sich aus wiederholt: erst
+  auf den Zustand warten (`settle(() => …)`), dann prüfen. Und wer zwei Zähler
+  leert, um das nächste Ereignis zu messen, wartet vorher auf **beide** — ein
+  Nachzügler aus der Zeile davor sieht sonst wie die Antwort auf die nächste
+  aus. Jeder geöffnete Socket wird im `afterAll` getrennt, sonst hält Jest den
+  Prozess offen.
+- **Eine Landmarke ohne Namen trifft die falsche.** `getByRole('complementary')`
+  auf einer Seite des Veranstalter-Clients trifft **zwei** Dinge: die
+  Seitenleiste der Arbeitsfläche und ein offenes Detailfeld. Eine Zusicherung
+  darüber war deshalb mal grün aus dem falschen Grund — solange das Feld zu war,
+  traf sie die Seitenleiste, und deren Navigationseintrag „Profilformular"
+  enthält das Wort „Profil", nach dem gesucht wurde — und mal rot mit einer
+  Strict-Mode-Verletzung, sobald das Feld offen war. Also **immer** mit `name`,
+  wie der Nachbartest in derselben Datei es längst tat. Dieselbe Klasse wie
+  F149: eine Zusicherung muss das prüfen, worüber sie redet.
 - **Ein Fixture, das die API nicht herstellen kann, wird geseedet — mit
   Begründung.** „Auffindbar, aber unbestätigt" hat keinen Weg durch die
   Endpunkte: `searchable` ist nur hinter einer Sitzung schreibbar, und eine

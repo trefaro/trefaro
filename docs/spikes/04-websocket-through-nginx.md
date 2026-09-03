@@ -16,9 +16,14 @@ routing hold up?
 | Proxy configuration | `infra/nginx/trefaro.conf`                                     |
 | Production stack    | `infra/docker-compose.yml`                                     |
 
-The gateway carries only what the spike needs: the connection lifecycle and a
-`chat:echo` probe. Conversations, groups and image exchange are phase 3 and
-replace the echo handler.
+The gateway carried only what the spike needed: the connection lifecycle and a
+`chat:echo` probe. **AP 7 of phase 3 replaced all of it** — the handshake
+authenticates against the session cookie, the `chat` module flag is asked at the
+same moment, and there is a room per conversation (E41). The echo handler and
+the `verify-socket.mjs` that used it are gone; `verify-chat.mjs` checks the
+thing the echo stood in for, which is a message arriving at two people through
+the proxy. What survives from here unchanged is the proxy configuration and the
+reason it exists.
 
 ## Verified behaviour
 
@@ -43,6 +48,12 @@ PASS  it is a real upgrade, not long-polling — websocket
 PASS  frames travel both ways through the proxy
 PASS  the server also sees a websocket transport — websocket
 ```
+
+The last two lines read differently since AP 7 of phase 3, because there is
+nothing to echo any more: the handshake without a cookie is now _supposed_ to
+fail, and the server's own refusal coming back over the socket proves the same
+two things the echo did — the upgrade reached the application, and a frame
+travelled the other way.
 
 The verification client connects with `transports: ['websocket']` on purpose. The
 failure this spike is really about is a proxy that drops the upgrade and lets
@@ -86,7 +97,14 @@ still anonymous.
 ## Decisions taken here
 
 - **The default socket.io path `/socket.io` is kept.** It is what the proxy
-  configuration forwards, and changing it buys nothing.
+  configuration forwards, and changing it buys nothing. — **Revised in AP 7 of
+  phase 3:** it buys one thing, and it turned out to be the decisive one. The
+  participant session cookie is issued with `Path=/api`, so a browser does not
+  attach it to a handshake anywhere else, and a socket that authenticates on
+  that cookie (E41) has to be reachable inside that path. The endpoint is
+  `/api/socket.io` now, `REALTIME_PATH` in `libs/shared-models` is the single
+  spelling of it, and the proxy has a `location /api/socket.io/` that wins over
+  `/api/` by longest prefix.
 - **Plug-in bundles are served by the server under `/api/plugins`.** One URL then
   works in development through the dev-server proxy and in production through
   NGINX, with no extra routing and no bundle duplicated into both client images.
@@ -99,13 +117,20 @@ still anonymous.
 Tracked in [`todo.md`](../../todo.md), which records the phase that makes each
 of them checkable.
 
-- **Sockets are unauthenticated.** The gateway accepts any connection from an
-  allowed origin. Phase 3 has to tie a socket to a logged-in participant before
-  chat carries anything real.
+- ~~**Sockets are unauthenticated.**~~ Closed by AP 7 of phase 3: the handshake
+  resolves the participant session cookie through the same service the HTTP
+  guard uses, and refuses without one. The `chat` module flag is asked there
+  too.
+- **The handshake carries no rate limit.** `@nestjs/throttler` sees HTTP routes,
+  and a socket.io handshake is handled by engine.io before Nest's router — so
+  the one request that now costs a session lookup is the one request nothing
+  counts. Hardening work (phase 5), together with the configurable throttling
+  that phase already owns.
 - **Horizontal scaling needs a socket.io adapter.** More than one server
   container requires a shared adapter (Redis or Postgres) for rooms to work
   across instances. Not needed for the target audience — one instance per
   organization, under twenty staff — but it is the thing to reach for if
   scaling ever comes up.
-- The echo handler is a spike artifact. Phase 3 replaces it; it should not
-  survive into a release.
+- ~~The echo handler is a spike artifact.~~ Removed in AP 7 of phase 3, together
+  with `RealtimeClient.echo`, the button on the diagnostics page and the script
+  that used it.

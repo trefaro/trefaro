@@ -13,11 +13,13 @@ import {
   type ConversationQuery,
   type ConversationSummary,
 } from '@trefaro/shared-models';
+import { pageWindow } from '../common/page-window';
 import {
   SEARCHABLE_PROFILE_REPOSITORY,
   type SearchableProfileRepository,
 } from '../common/ports/searchable-profile.repository';
 import { avatarUrl } from '../profiles';
+import { ChatRealtimeService } from './chat-realtime.service';
 import {
   CONVERSATION_REPOSITORY,
   type ConversationMemberRef,
@@ -80,6 +82,7 @@ export class ConversationsService {
     private readonly conversations: ConversationRepository,
     @Inject(SEARCHABLE_PROFILE_REPOSITORY)
     private readonly profiles: SearchableProfileRepository,
+    private readonly realtime: ChatRealtimeService,
   ) {}
 
   /**
@@ -133,16 +136,15 @@ export class ConversationsService {
     viewerId: string,
     query: ConversationQuery,
   ): Promise<ConversationPage> {
-    const pageSize = clamp(
-      positive(query.pageSize, DEFAULT_CONVERSATION_PAGE_SIZE),
-      1,
+    const { page, pageSize, offset } = pageWindow(
+      query,
+      DEFAULT_CONVERSATION_PAGE_SIZE,
       MAX_CONVERSATION_PAGE_SIZE,
     );
-    const page = positive(query.page, 1);
 
     const slice = await this.conversations.listFor(
       member(viewerId),
-      (page - 1) * pageSize,
+      offset,
       pageSize,
     );
 
@@ -197,12 +199,18 @@ export class ConversationsService {
    * operation — there is nothing per message to write.
    */
   async markRead(viewerId: string, conversationId: string): Promise<void> {
+    const at = new Date();
+    const reader = member(viewerId);
     const marked = await this.conversations.markRead(
       conversationId,
-      member(viewerId),
-      new Date(),
+      reader,
+      at,
     );
     if (!marked) throw new NotFoundException(NO_SUCH_CONVERSATION);
+
+    // After the write, never instead of it: a receipt for a timestamp that was
+    // not stored would be a badge that comes back on the next reload (E41).
+    this.realtime.publishRead(conversationId, reader, at);
   }
 }
 
@@ -239,21 +247,4 @@ function toCounterpart(
       counterpart.updatedAt,
     ),
   };
-}
-
-/**
- * A page number that is not one falls back to the default.
- *
- * The same reading the search and the contact list take: a zeroth page is not
- * a smaller request but no request. The DTO refuses it with a 400 first; this
- * is what keeps the service honest when it is called from anywhere else.
- */
-function positive(value: number | undefined, fallback: number): number {
-  return Number.isInteger(value) && (value as number) > 0
-    ? (value as number)
-    : fallback;
-}
-
-function clamp(value: number, low: number, high: number): number {
-  return Math.min(Math.max(value, low), high);
 }

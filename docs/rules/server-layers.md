@@ -62,6 +62,14 @@ diese Eigenschaft.
   Modul, dem die Konten gehören (E33). Der Weg über einen Port ist hier nicht
   Geschmack — `MailModule` kann `ProfilesModule` nicht importieren, weil dieses
   Mail verschickt.
+- **Ein Modul, das eine Authentifizierung braucht, importiert sie** — es baut
+  keine zweite. `ChatModule` importiert seit AP 7 `ProfilesModule`, und **nur**
+  für `UserSessionService`: der Handshake des Sockets prüft dasselbe Cookie wie
+  der globale Teilnehmer-Guard (E34, E41), und zwei Implementierungen von „löse
+  dieses Cookie auf“ sind der Weg, auf dem eine von beiden eine widerrufene
+  Sitzung überlebt. Was es weiterhin **nicht** nimmt, ist
+  `UserProfileRepository`: der kann ein ganzes Konto lesen und schreiben, und
+  das darf das Modul, dem die Konten gehören (E33).
 - **Ein Port, den zwei Module lesen, zieht nach `business/common/ports/`**
   (F100) — und `SearchableProfileRepository` ist der Fall, an dem das mehr als
   Ordnung ist: die Suche zeigt diese Profile, der Chat darf genau mit ihnen ein
@@ -99,6 +107,26 @@ diese Eigenschaft.
   Regeln der Einzelfassung: dieselbe 404-Regel, derselbe Statusverzicht — und
   eine Id, die nichts trifft, fehlt in der Antwort, statt sie scheitern zu
   lassen.
+- **Wer zustellt, hängt an nichts** (F162). Das Chat-Gateway braucht
+  `ConversationsService` (darf dieser Socket den Raum betreten?), und
+  „gelesen“ muss zugestellt werden — der Kreis wäre da, `forwardRef` die
+  naheliegende Antwort und schon die zweite dieser Art. Die Auflösung ist die
+  Frage aus F103: was ist das **Geteilte**? „Emit in einen Raum“, und das kennt
+  keine Mitgliedschaft. `ChatRealtimeService` hängt deshalb an nichts und
+  bekommt vom Gateway einen absichtlich schmalen Ausschnitt des Namensraums
+  (`to(room).emit(…)`) — nicht das ganze Objekt, das auch Verbindungen annehmen
+  und Handshakes lesen könnte. Dazu zwei Regeln: **Speichern ist verbindlich,
+  Zustellen ist bestes Bemühen** (ein Sendefehler ist eine Logzeile, keine
+  Antwort), und **zugestellt wird außerhalb der Kompensation** — die Datei wird
+  verworfen, wenn die **Zeile** scheiterte, und eine Zustellung nimmt keine
+  geschriebene Zeile zurück.
+- **Wer etwas zustellen muss, fragt beim Schreiben, wen** (F163).
+  `MessageRepository.append` antwortet mit der Zeile **und** den Mitgliedern,
+  in derselben Transaktion. Ein `membersOf(conversationId)` wäre bequemer und
+  genau die Methode, die dieser Port nicht haben darf (F152): „wer schreibt mit
+  wem“, für jede Id, für jeden Aufrufer. Als Teil des Schreibens ist die Frage
+  ohne bewiesene Mitgliedschaft unerreichbar — dasselbe Muster wie bei der
+  Platzgrenze (F43): was nicht schiefgehen darf, wird unten unmöglich gemacht.
 - **Eine Zusammensetzung gehört über ihre Teile.** `business/dashboard`,
   `business/content-translations` und `business/manifest` importieren ihre
   Quellen; im Elternmodul hätte derselbe Service den Kreis geschlossen und einen

@@ -56,6 +56,19 @@ export const MESSAGE_SENDER_TYPES = ['admin', 'user', 'guest'] as const;
 export type MessageSenderType = (typeof MESSAGE_SENDER_TYPES)[number];
 
 /**
+ * Who can be a **member** of a conversation — and `guest` is not among them.
+ *
+ * A guest is identified by the conversation's `guest_email` and has no row to
+ * point a membership at (E39), so the two lists differ by exactly that entry.
+ * Kept beside {@link MESSAGE_SENDER_TYPES} rather than derived from it,
+ * because the difference is the decision: the one sender who cannot be a
+ * member is the one who has no account.
+ */
+export const CONVERSATION_MEMBER_TYPES = ['admin', 'user'] as const;
+
+export type ConversationMemberType = (typeof CONVERSATION_MEMBER_TYPES)[number];
+
+/**
  * The other side of a conversation, as a reader sees it.
  *
  * Name and picture, and — for an account — the id, so a row can link to the

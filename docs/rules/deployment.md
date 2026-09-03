@@ -69,6 +69,25 @@ Beispiele haben je eine frische Produktionsinstanz unbenutzbar gemacht.
   `verify-api.mjs` prüft Hex-Form (E17) und dass eine Logo-URL fehlt oder die
   pfadfreie Route ist (E19) — nicht zwei gesäte Farben. Eine gebrandete Instanz
   ist der Normalfall.
+- **Der Socket braucht eine eigene `location`, und sie liegt in `/api/`**
+  (F160). `location /api/socket.io/` mit `proxy_http_version 1.1`, `Upgrade`
+  und `Connection "upgrade"` — nginx nimmt das längste Präfix, also gewinnt sie
+  über `/api/` und kollidiert nicht mit ihr. Unter `/api` **muss** sie liegen,
+  weil das Sitzungscookie `Path=/api` trägt und der Handshake sich damit
+  authentifiziert (E41); der Pfad steht als `REALTIME_PATH` in `shared-models`,
+  und wer ihn ändert, ändert vier Stellen: Adapter, Proxy, beide Dev-Proxys.
+  In den Dev-Proxys entscheidet die **Reihenfolge** — `/api/socket.io` mit
+  `"ws": true` muss **vor** `/api` stehen, sonst nimmt die allgemeinere Regel
+  den Handshake und lässt das Upgrade fallen.
+- **`verify-chat.mjs` ist die einzige Prüfung, die das Abnahmekriterium von
+  AP 7 wirklich stellt:** zwei Konten, zwei Sockets, eine Nachricht, die bei
+  beiden ankommt — **durch den Proxy**. Es braucht Mailpit (der Double-Opt-In
+  eines Kontos) und `docker exec` (für ein Teilnehmerkonto gibt es bewusst
+  keinen Löschendpunkt) und räumt in der Reihenfolge aus F158 auf. Das
+  Gegenstück in `verify-proxy.mjs` prüft nur noch, dass die **Ablehnung** ohne
+  Cookie ankommt: der Satz des Servers, angekommen über den Socket, ist derselbe
+  Beweis für Upgrade und Rückweg, den vorher das Echo geliefert hat — nur ohne
+  einen Handler, der allein für den Test existiert.
 - **`verify-proxy.mjs` läuft über HTTPS, wenn `PROXY_BASE` https ist** (dazu
   `PROXY_PLAIN_BASE` für Umleitung und `Secure`-Cookie-Login). Gegen ein selbst
   ausgestelltes Zertifikat braucht auch der socket.io-Client die Ausnahme, sonst

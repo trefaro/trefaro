@@ -32,6 +32,12 @@ Datenschutzbruch, bei der Plug-in-Aktivierung Datenverlust.
   `shared-plugins` (Client-Plug-in-Manager + Einhängepunkt-Komponente, seit
   Phase 0) und `shared-i18n` (mitgelieferte Kataloge + Transloco-Verkabelung +
   Sprachumschalter + `TrefaroTitleStrategy`, seit AP 6 der Phase 2).
+- **Ein zweiter Server-Container braucht einen socket.io-Adapter.** Räume
+  leben im Speicher **eines** Prozesses, also erreicht eine Nachricht bei zwei
+  Containern nur die Hälfte der Sockets. Für die Zielgruppe (eine Instanz je
+  Organisation) kein Thema; wer je horizontal skaliert, holt einen geteilten
+  Adapter (Redis oder Postgres) — und das ist die einzige Stelle, an der die
+  Echtzeit von AP 7 eine Annahme über den Betrieb macht.
 - Alle vier Spikes der Phase 0 sind verifiziert: `docs/spikes/01-client-plugin`,
   `02-server-plugin`, `03-web-push`, `04-websocket-through-nginx`.
 

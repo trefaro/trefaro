@@ -1,12 +1,7 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  inject,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AppConfigService } from '@trefaro/shared-config';
-import { RealtimeClient, type RealtimeEchoReply } from '@trefaro/shared-http';
+import { RealtimeClient } from '@trefaro/shared-http';
 import { PluginLoaderService } from '@trefaro/shared-plugins';
 import { ThemeService } from '@trefaro/shared-theming';
 import { PushSubscriptionService } from '../../features/push/push-subscription.service';
@@ -27,6 +22,14 @@ import { PushSubscriptionService } from '../../features/push/push-subscription.s
  * everything that is an identifier rather than a sentence: a module key, a
  * variable name, a command to run, and the raw state words of the push and
  * socket clients, which are values to report rather than words to read.
+ *
+ * The socket section lost its echo button in AP 7 of phase 3, together with
+ * the handler behind it: the socket now authenticates on the session cookie
+ * and refuses a handshake without one (E41), so what this section can show is
+ * whether **this** browser gets a connection — which is the question an
+ * operator has, and it is answered by connecting rather than by a probe
+ * message. On an instance without a login, or with messaging switched off, the
+ * server's own refusal appears here; that is not a fault of the page.
  */
 @Component({
   selector: 'trefaro-spike-console-page',
@@ -146,33 +149,10 @@ import { PushSubscriptionService } from '../../features/push/push-subscription.s
       <button type="button" (click)="realtime.connect()">
         {{ 'diagnostics.socket.connect' | transloco }}
       </button>
-      <button
-        type="button"
-        [disabled]="!realtime.isConnected()"
-        (click)="sendEcho()"
-      >
-        {{ 'diagnostics.socket.echo' | transloco }}
-      </button>
       <button type="button" (click)="realtime.disconnect()">
         {{ 'diagnostics.socket.disconnect' | transloco }}
       </button>
-      @if (echoReply(); as reply) {
-        <p>
-          {{
-            'diagnostics.socket.reply'
-              | transloco
-                : {
-                    text: reply.text,
-                    time: reply.serverTime,
-                    transport: reply.transport,
-                    socket: reply.socketId,
-                  }
-          }}
-        </p>
-      }
-      @if (echoError(); as error) {
-        <p class="warn">{{ error }}</p>
-      }
+      <p>{{ 'diagnostics.socket.needsSession' | transloco }}</p>
       @if (realtime.error(); as error) {
         <p class="warn">{{ error }}</p>
       }
@@ -248,28 +228,11 @@ export class SpikeConsolePage {
   protected readonly push = inject(PushSubscriptionService);
   protected readonly realtime = inject(RealtimeClient);
 
-  protected readonly echoReply = signal<RealtimeEchoReply | null>(null);
-  protected readonly echoError = signal<string | null>(null);
-
   protected subscribe(): void {
     void this.push.subscribe();
   }
 
   protected unsubscribe(): void {
     void this.push.unsubscribe();
-  }
-
-  protected async sendEcho(): Promise<void> {
-    this.echoError.set(null);
-    try {
-      this.echoReply.set(
-        await this.realtime.echo('hello from the participant client'),
-      );
-    } catch (error) {
-      this.echoReply.set(null);
-      this.echoError.set(
-        error instanceof Error ? error.message : String(error),
-      );
-    }
   }
 }

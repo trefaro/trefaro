@@ -6,8 +6,10 @@ import type {
   ImageFileService,
   ImageUpload,
 } from '../common/image-file.service';
+import { ChatRealtimeService } from './chat-realtime.service';
 import type { ConversationsService } from './conversations.service';
 import { MessagesService, type MessageImageUpload } from './messages.service';
+import type { ConversationMemberRef } from './ports/conversation.repository';
 import type {
   MessageImageRecord,
   MessageRecord,
@@ -32,9 +34,18 @@ import type {
  *   "is there anything older" into an answer without a second query.
  * - **The picture is addressed by the message**, and a message without one has
  *   no address at all.
+ * - **A stored line is delivered** (E41), to the members the write itself
+ *   named — and a delivery that fails cannot unwrite the line.
  */
 const CREATED = new Date('2026-09-02T10:15:00.000Z');
 const ME = 'me-0000';
+const OTHER = 'other-111';
+
+/** Who the write itself said to tell (E41). */
+const MEMBERS: readonly ConversationMemberRef[] = [
+  { memberType: 'user', memberId: ME },
+  { memberType: 'user', memberId: OTHER },
+];
 
 function record(overrides: Partial<MessageRecord> = {}): MessageRecord {
   return {
@@ -61,6 +72,7 @@ interface Harness {
   stored: { area: ImageArea; upload: ImageUpload }[];
   discarded: readonly (string | null)[][];
   asked: { conversationId: string; before: string | null; limit: number }[];
+  delivered: { message: MessageRecord['id']; members: readonly string[] }[];
 }
 
 function harness(
@@ -71,6 +83,7 @@ function harness(
     image?: MessageImageRecord | null;
     bytes?: ImageBytes | null;
     appendFails?: boolean;
+    members?: readonly ConversationMemberRef[];
   } = {},
 ): Harness {
   const appended: NewMessage[] = [];
@@ -111,10 +124,13 @@ function harness(
     async append(message) {
       appended.push(message);
       if (options.appendFails) throw new Error('the conversation is gone');
-      return record({
-        body: message.body,
-        hasImage: message.image !== null,
-      });
+      return {
+        record: record({
+          body: message.body,
+          hasImage: message.image !== null,
+        }),
+        members: options.members ?? MEMBERS,
+      };
     },
     async history(conversationId, before, limit) {
       asked.push({ conversationId, before, limit });
@@ -127,12 +143,26 @@ function harness(
     },
   };
 
+  const delivered: Harness['delivered'] = [];
+  const realtime = {
+    publishMessage(
+      message: { id: string },
+      members: readonly ConversationMemberRef[],
+    ) {
+      delivered.push({
+        message: message.id,
+        members: members.map((member) => member.memberId),
+      });
+    },
+  } as unknown as ChatRealtimeService;
+
   return {
-    service: new MessagesService(conversations, images, messages),
+    service: new MessagesService(conversations, images, messages, realtime),
     appended,
     stored,
     discarded,
     asked,
+    delivered,
   };
 }
 
@@ -218,6 +248,27 @@ describe('MessagesService', () => {
       expect(appended).toEqual([]);
     });
 
+    it('delivers the stored line to the members the write named', async () => {
+      const { service, delivered } = harness();
+
+      const message = await service.send(ME, 'c1', { body: 'Hello' }, null);
+
+      // The same object the endpoint answers with, and the members that came
+      // back from the transaction — not a list this service asked for
+      // separately, which would be a second question with a different answer.
+      expect(delivered).toEqual([
+        { message: message.id, members: [ME, OTHER] },
+      ]);
+    });
+
+    it('delivers nothing when there was nothing to store', async () => {
+      const { service, delivered } = harness();
+
+      await expect(service.send(ME, 'c1', {}, null)).rejects.toThrow();
+
+      expect(delivered).toEqual([]);
+    });
+
     it('removes the stored bytes when the row fails', async () => {
       const { service, discarded } = harness({ appendFails: true });
 
@@ -227,6 +278,16 @@ describe('MessagesService', () => {
 
       // Compensation, not a rollback: what this request wrote goes away again.
       expect(discarded).toEqual([['messages/ab/stored-file']]);
+    });
+
+    it('does not deliver a message the database refused', async () => {
+      const { service, delivered } = harness({ appendFails: true });
+
+      await expect(
+        service.send(ME, 'c1', { body: 'Hello' }, null),
+      ).rejects.toThrow();
+
+      expect(delivered).toEqual([]);
     });
   });
 

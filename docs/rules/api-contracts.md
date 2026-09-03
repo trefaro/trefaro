@@ -118,6 +118,21 @@ Link.
   sie wächst am Ende, während sie gelesen wird, also bedeutet „Seite 2" eine
   Sekunde später etwas anderes. Eine Id aus einem fremden Gespräch ergibt ein
   **leeres** Fenster, keinen Fehler.
+- **Der Socket ist ein Vertrag wie ein Endpunkt, und er steht unter `/api`**
+  (F160, F132, E41). `REALTIME_PATH` = `/api/socket.io`, Namensraum `/chat`,
+  Ereignisnamen und Nutzlasten in `shared-models` — Server, beide Clients, der
+  Reverse Proxy und das Prüfskript haben eine Schreibweise. Der Pfad ist nicht
+  der socket.io-Standard, weil das Sitzungscookie `Path=/api` trägt: ein
+  Handshake außerhalb kommt ohne Sitzung an, und **der Handshake ist die
+  Authentifizierung**. Gefragt werden dort Sitzung und `chat`-Schalter, in
+  derselben Reihenfolge wie auf der HTTP-Seite; abgelehnt wird als
+  `connect_error` mit dem Satz des Servers, nie als Socket, der verbunden
+  aussieht. Ein `@UseGuards` auf einem Gateway ist dafür das falsche Werkzeug
+  — es läuft je **Nachricht**, also nach dem Handshake. Zwei Räume: der eines
+  Gesprächs wird nur auf `chat:join` und nur von einem Mitglied betreten (drei
+  Fehlschläge, ein `{ joined: false }`, F157), der eines Mitglieds am Handshake
+  und ohne Prüfung (F161). Wer einen zweiten Gateway anlegt, gibt ihm einen
+  eigenen Namensraum und **wiederholt die Türprüfung nicht** — er ruft sie auf.
 - **Eine Medienroute nimmt nie einen Pfad, aber auch keinen Status** (F113, F115).
   `/api/media/branding/{logo,app-icon}` löst über `app_config` auf,
   `/api/media/series/:id/logo`, `…/events/:id/logo` und

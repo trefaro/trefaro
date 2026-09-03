@@ -3,12 +3,25 @@ import {
   MAX_BRANDING_BYTES,
   MAX_UPLOAD_BYTES,
 } from '../..';
-import { CONVERSATION_TYPES, MESSAGE_SENDER_TYPES } from './conversations';
+import {
+  CONVERSATION_MEMBER_TYPES,
+  CONVERSATION_TYPES,
+  MESSAGE_SENDER_TYPES,
+} from './conversations';
 import {
   DEFAULT_MESSAGE_PAGE_SIZE,
   MAX_MESSAGE_IMAGE_BYTES,
   MAX_MESSAGE_PAGE_SIZE,
 } from './messages';
+import {
+  CHAT_CONVERSATION,
+  CHAT_JOIN,
+  CHAT_LEAVE,
+  CHAT_MESSAGE,
+  CHAT_NAMESPACE,
+  CHAT_READ,
+  REALTIME_PATH,
+} from './realtime';
 
 /**
  * The numbers and sets of the chat (FR 4.5 — E39, E40).
@@ -53,5 +66,37 @@ describe('the chat’s limits and sets', () => {
     expect(DEFAULT_MESSAGE_PAGE_SIZE).toBeLessThanOrEqual(
       MAX_MESSAGE_PAGE_SIZE,
     );
+  });
+
+  it('lets everybody but a guest be a member', () => {
+    // The difference between the two lists is the decision, so it is asserted
+    // as a difference rather than as a second literal (E39).
+    expect([...CONVERSATION_MEMBER_TYPES]).toEqual(
+      MESSAGE_SENDER_TYPES.filter((sender) => sender !== 'guest'),
+    );
+  });
+
+  it('puts the socket inside the path the session cookie is issued for', () => {
+    // The whole argument of the address in one assertion: the cookie carries
+    // `Path=/api`, so a handshake outside it arrives without a session and
+    // E41 cannot hold. If this ever fails, the reverse proxy and both clients
+    // are already wrong too.
+    expect(REALTIME_PATH.startsWith('/api/')).toBe(true);
+  });
+
+  it('names every event once, and all of them in one family', () => {
+    const events = [
+      CHAT_JOIN,
+      CHAT_LEAVE,
+      CHAT_MESSAGE,
+      CHAT_READ,
+      CHAT_CONVERSATION,
+    ];
+
+    expect(new Set(events).size).toBe(events.length);
+    // A prefix rather than a namespace's worth of bare words: a socket carries
+    // more than one feature's traffic the moment a second gateway exists.
+    expect(events.every((event) => event.startsWith('chat:'))).toBe(true);
+    expect(CHAT_NAMESPACE).toBe('/chat');
   });
 });

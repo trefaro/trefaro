@@ -18,10 +18,12 @@ import {
   type ImageBytes,
 } from '../common/image-file.service';
 import { pageWindow } from '../common/page-window';
+import { ChatRealtimeService } from './chat-realtime.service';
 import { ConversationsService } from './conversations.service';
 import { messageImageUrl } from './message-image-url';
 import {
   MESSAGE_REPOSITORY,
+  type AppendedMessage,
   type MessageRecord,
   type MessageRepository,
 } from './ports/message.repository';
@@ -80,6 +82,7 @@ export class MessagesService {
     private readonly images: ImageFileService,
     @Inject(MESSAGE_REPOSITORY)
     private readonly messages: MessageRepository,
+    private readonly realtime: ChatRealtimeService,
   ) {}
 
   /**
@@ -155,8 +158,9 @@ export class MessagesService {
         })
       : null;
 
+    let appended: AppendedMessage;
     try {
-      const record = await this.messages.append({
+      appended = await this.messages.append({
         conversationId,
         senderType: 'user',
         senderId: viewerId,
@@ -173,12 +177,19 @@ export class MessagesService {
               }
             : null,
       });
-      return toMessage(record);
     } catch (error: unknown) {
       // Compensation, not a rollback: what this request wrote goes away again.
       await this.images.discard([path]);
       throw error;
     }
+
+    // Stored first, delivered second, and outside the compensation on purpose:
+    // the picture is discarded when the **row** failed, and a delivery cannot
+    // undo a message that is already written (E41). Nothing is awaited — the
+    // members were read in the same transaction as the line.
+    const message = toMessage(appended.record);
+    this.realtime.publishMessage(message, appended.members);
+    return message;
   }
 
   /**

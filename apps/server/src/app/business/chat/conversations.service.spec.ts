@@ -7,6 +7,7 @@ import type {
   SearchableProfileRecord,
   SearchableProfileRepository,
 } from '../common/ports/searchable-profile.repository';
+import { ChatRealtimeService } from './chat-realtime.service';
 import { ConversationsService } from './conversations.service';
 import type {
   ConversationMemberRef,
@@ -37,6 +38,9 @@ import type {
  * - **Unread is a number that arrives, not one that is computed here** (E38):
  *   what this level can assert is that the service passes it through and never
  *   invents a zero.
+ * - **A read receipt goes out after the write and carries the same instant**
+ *   (E41). A receipt for a timestamp the database refused would clear a badge
+ *   that comes back on the next reload.
  */
 const LAST = new Date('2026-09-02T09:00:00.000Z');
 const UPDATED = new Date('2026-09-01T08:00:00.000Z');
@@ -99,6 +103,8 @@ interface Harness {
   created: readonly [string, string][];
   listed: { member: ConversationMemberRef; offset: number; limit: number }[];
   marked: { conversationId: string; at: Date }[];
+  /** Every read receipt that went out (E41). */
+  published: { conversationId: string; memberId: string; at: Date }[];
 }
 
 function harness(
@@ -151,11 +157,23 @@ function harness(
     },
   };
 
+  const published: Harness['published'] = [];
+  const realtime = {
+    publishRead(
+      conversationId: string,
+      member: ConversationMemberRef,
+      at: Date,
+    ) {
+      published.push({ conversationId, memberId: member.memberId, at });
+    },
+  } as unknown as ChatRealtimeService;
+
   return {
-    service: new ConversationsService(conversations, profiles),
+    service: new ConversationsService(conversations, profiles, realtime),
     created,
     listed,
     marked,
+    published,
   };
 }
 
@@ -329,6 +347,26 @@ describe('ConversationsService', () => {
       await expect(service.markRead(ME, 'c1')).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+
+    it('tells the conversation about it, with the timestamp it wrote', async () => {
+      const { service, marked, published } = harness();
+
+      await service.markRead(ME, 'c1');
+
+      // The same instant, not a second `new Date()`: a receipt for a moment
+      // that was not stored would put the badge back on the next reload (E41).
+      expect(published).toEqual([
+        { conversationId: 'c1', memberId: ME, at: marked[0].at },
+      ]);
+    });
+
+    it('says nothing when there was nothing to move', async () => {
+      const { service, published } = harness({ marks: false });
+
+      await expect(service.markRead(ME, 'c1')).rejects.toThrow();
+
+      expect(published).toEqual([]);
     });
   });
 });

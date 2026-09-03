@@ -143,15 +143,20 @@ test.describe('participant overview', () => {
     expect(await profileCell(/Adeyemi, Bruno/)).toBe('—');
 
     // The detail panel names it too, so an organizer who opened one row does
-    // not have to go back to the table for it.
+    // not have to go back to the table for it. **Named**, like the panel test
+    // further down: there are two complementary landmarks on this page, and an
+    // unnamed locator either hits both — a strict-mode violation the moment
+    // the panel is open — or hits the workspace sidebar alone and passes on
+    // its "Profilformular" navigation entry, which contains the word this line
+    // is looking for and says nothing about the panel.
     await page
       .getByRole('row', { name: /Okonkwo, Amina/ })
       .getByRole('link')
       .first()
       .click();
-    await expect(page.getByRole('complementary')).toContainText(
-      t('admin.participants.colProfile'),
-    );
+    await expect(
+      page.getByRole('complementary', { name: 'Amina Okonkwo' }),
+    ).toContainText(t('admin.participants.colProfile'));
     await expectNoRawKeys(page);
   });
 

@@ -7,6 +7,10 @@
  *   transaction: `last_message_at` is what the overview sorts by, and a
  *   service that wrote the message and then the timestamp would leave a
  *   conversation out of order whenever the second write failed.
+ * - **Appending also says who to tell.** Delivery needs the members of the
+ *   conversation (E41), and asking for them as part of the write is what keeps
+ *   this port from growing a method that answers who talks to whom for any id
+ *   — see {@link AppendedMessage}.
  * - **The attachment id never leaves this layer.** A message says *whether* it
  *   has a picture; the address of that picture is built from the **message**
  *   id, because that is what membership can be decided from. An attachment id
@@ -18,6 +22,7 @@
  */
 
 import type { MessageSenderType } from '@trefaro/shared-models';
+import type { ConversationMemberRef } from './conversation.repository';
 
 /** A message on its way into a conversation. */
 export interface NewMessage {
@@ -75,9 +80,33 @@ export interface MessageImageRecord {
   readonly path: string;
 }
 
+/**
+ * What appending a message answers: the line, and who has to hear about it.
+ *
+ * The members come back **with the write** rather than from a second call, and
+ * that is a deliberate shape rather than a saved round trip. This port's rule
+ * is that membership is the only credential it knows — every method takes the
+ * asking member, and there is no "read any conversation" method to forget it
+ * on (F152). A `membersOf(conversationId)` would have been exactly that
+ * method: it answers who talks to whom, for any id, to any caller who has one.
+ * Asked as part of writing a message, the question is unreachable without a
+ * membership that has already been proven, and it is answered inside the same
+ * transaction — so delivery goes to the people who were in the conversation
+ * when the line was written, not to whoever is in it by the time the socket is
+ * reached.
+ */
+export interface AppendedMessage {
+  readonly record: MessageRecord;
+  /** Everybody in the conversation, the sender included (E41). */
+  readonly members: readonly ConversationMemberRef[];
+}
+
 export interface MessageRepository {
-  /** Appends a message and moves its conversation's `last_message_at`. */
-  append(message: NewMessage): Promise<MessageRecord>;
+  /**
+   * Appends a message, moves its conversation's `last_message_at`, and says
+   * who is in that conversation.
+   */
+  append(message: NewMessage): Promise<AppendedMessage>;
 
   /**
    * One window of a conversation's history, newest first.

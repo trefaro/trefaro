@@ -32,3 +32,42 @@ export function userSessionCookieOptions(
     ...(expiresAt ? { expires: expiresAt } : {}),
   };
 }
+
+/**
+ * The session token out of a raw `Cookie:` header, or `null`.
+ *
+ * Beside the cookie's name rather than in the gateway that needs it, for the
+ * reason the name is a constant at all: there is one participant cookie, and
+ * anything that reads it has to read the same one.
+ *
+ * Why a second reader exists is the WebSocket handshake (E41). Express hands
+ * an HTTP route a parsed `request.cookies`, because `cookie-parser` ran; a
+ * socket.io handshake carries the header unparsed, so the one thing this has
+ * to do is find one name in it without pulling in a parser for a job of five
+ * lines. `decodeURIComponent` because that is what Express does on the way
+ * out; the token is base64url, so it changes nothing today and would matter
+ * the day the token's alphabet does.
+ */
+export function participantSessionFromHeader(
+  header: string | undefined,
+): string | null {
+  if (!header) return null;
+
+  for (const part of header.split(';')) {
+    const separator = part.indexOf('=');
+    if (separator === -1) continue;
+    if (part.slice(0, separator).trim() !== USER_SESSION_COOKIE) continue;
+
+    const value = part.slice(separator + 1).trim();
+    if (value.length === 0) return null;
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      // A malformed escape is a malformed cookie, and a malformed cookie is
+      // no session — not a reason to fail the request with a stack trace.
+      return null;
+    }
+  }
+
+  return null;
+}

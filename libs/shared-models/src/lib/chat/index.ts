@@ -1,10 +1,12 @@
 export {
   CHAT_MODULE_KEY,
+  CONVERSATION_MEMBER_TYPES,
   CONVERSATION_TYPES,
   DEFAULT_CONVERSATION_PAGE_SIZE,
   MAX_CONVERSATION_PAGE_SIZE,
   MESSAGE_SENDER_TYPES,
   type ConversationCounterpart,
+  type ConversationMemberType,
   type ConversationPage,
   type ConversationQuery,
   type ConversationSummary,
@@ -23,3 +25,15 @@ export {
   type MessageHistoryQuery,
   type SendMessageInput,
 } from './messages';
+export {
+  CHAT_CONVERSATION,
+  CHAT_JOIN,
+  CHAT_LEAVE,
+  CHAT_MESSAGE,
+  CHAT_NAMESPACE,
+  CHAT_READ,
+  REALTIME_PATH,
+  type ChatConversationEvent,
+  type ChatJoinAck,
+  type ChatReadEvent,
+} from './realtime';

@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from 'node:crypto';
 import { Pool } from 'pg';
 
 /**
@@ -338,6 +339,37 @@ export async function deleteConversations(
       attachments,
     ]);
   }
+}
+
+/**
+ * A live participant session for a seeded account, without a login (E34, E4).
+ *
+ * The login budget is twenty attempts per five minutes for the whole instance
+ * and the account suites already use sixteen, so a suite that needs a session
+ * and nothing else about logging in does not spend one. What a session *is* is
+ * a row whose `token_hash` is the SHA-256 of the value in the cookie — the
+ * handshake and the guard both resolve it that way and neither can tell how
+ * the row got there.
+ *
+ * Written rather than asked for, and worth the exception for the same reason
+ * `seedProfile` is: the real-time suite needs **two** sessions to prove that a
+ * message reaches both sides, and two logins would take the instance to
+ * eighteen of twenty — where the next suite anybody writes turns green tests
+ * into a 429 that reads like a broken login.
+ *
+ * @returns the cookie value, ready to be sent as `trefaro_user_session=…`.
+ */
+export async function seedSession(profileId: string): Promise<string> {
+  const token = randomBytes(32).toString('base64url');
+  const expiresAt = new Date(Date.now() + 12 * 60 * 60_000);
+
+  await pool.query(
+    `INSERT INTO user_session (user_id, token_hash, last_seen_at, expires_at)
+     VALUES ($1, $2, now(), $3)`,
+    [profileId, createHash('sha256').update(token).digest('hex'), expiresAt],
+  );
+
+  return token;
 }
 
 /**

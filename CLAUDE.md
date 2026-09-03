@@ -147,7 +147,7 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    (offen geblieben: die Feedbackrunde mit Democracy International)
 2. **✅ 29.08.2026, M5** Whitelabel-Theming, Modul-Verwaltung, i18n, PWA,
    Installations-Story → `docs/PHASE2.md`
-3. **In Arbeit** (AP 1–AP 6 erledigt, M6 erreicht) Profile, Nachrichten,
+3. **In Arbeit** (AP 1–AP 7 erledigt, M7 erreicht) Profile, Nachrichten,
    Echtzeit-/Gruppenchat, Push, Profilsuche → `docs/PHASE3.md`
 4. Plug-ins: Programmvorschläge, Forum, Raumplanung, QR-Check-In
 5. Härtung, Usability-Test mit Democracy International (Pilotpartner), Doku,
@@ -166,12 +166,13 @@ bewusst; die Begründungen stehen in `docs/rules/`. Katalog damals 646 → 654.
 
 **Phase 3 läuft** (seit 02.09.2026): Plan in `docs/PHASE3.md`, dreizehn
 Arbeitspakete, Entscheidungen **E31–E45**, Nachträge ab **F118** (vergeben:
-F118–F128, F137–F159; F129–F136 bleiben reserviert). **AP 1 (Teilnehmerkonto und
-Login), AP 2 (Profil und Feld-Baukasten), AP 3 (Login, Registrierung und Profil
-in beiden Clients, **Meilenstein M6**), AP 4 (die Anmeldung kennt den Menschen),
-AP 5 (Profilsuche) und AP 6 (Gespräche, Nachrichten und Bilder) sind erledigt** —
-Protokoll je Paket unter _Fortschritt_. Als nächstes AP 7: Echtzeit (FR 4.5,
-Teil 2) — Meilenstein M7. Katalog **781** Schlüssel.
+F118–F128, F132, F137–F164; F129–F131 und F133–F136 bleiben unvergeben bzw.
+reserviert). **AP 1 (Teilnehmerkonto und Login), AP 2 (Profil und
+Feld-Baukasten), AP 3 (Login, Registrierung und Profil in beiden Clients,
+**Meilenstein M6**), AP 4 (die Anmeldung kennt den Menschen), AP 5
+(Profilsuche), AP 6 (Gespräche, Nachrichten und Bilder) und AP 7 (Echtzeit,
+**Meilenstein M7**) sind erledigt** — Protokoll je Paket unter _Fortschritt_.
+Als nächstes AP 8: Chat im Nutzer-Client (FR 4.5). Katalog **780** Schlüssel.
 
 Aus AP 4: die Selbstbedienung kennt zwei Ansprüche — das signierte Token aus der
 Mail und die Sitzung, aufgelöst über die Adresse (F148) —, die
@@ -200,9 +201,26 @@ der nur verschärfen kann (F156). `chat` ist als Modul zurück, mit `profiles` a
 Voraussetzung — womit die zweite Hälfte des Abnahmekriteriums von AP 5 geprüft
 ist.
 
-Drei Punkte warten auf ein anderes Paket bzw. auf Marius: das **Storno über die
+Aus AP 7: **der Handshake ist die Tür** (F132) — die Prüfung hängt in einer
+socket.io-Namensraum-Middleware, fragt Sitzung **und** `chat`-Schalter, und eine
+Verbindung ohne Sitzung entsteht nicht. Dafür ist der Socket nach
+**`/api/socket.io`** umgezogen (F160): das Sitzungscookie trägt `Path=/api`, also
+reist es nirgends anders mit — `REALTIME_PATH` in `shared-models` ist die eine
+Schreibweise für Server, beide Clients, Proxy und Prüfskript. Zwei Räume, zwei
+Fragen (F161): der eines Gesprächs wird nur auf `chat:join` und nur von einem
+Mitglied betreten, der eines Mitglieds am Handshake — daher `chat:message` für
+den offenen Verlauf und `chat:conversation` für die Liste. Zugestellt wird von
+einem **eigenen** Dienst, weil Gateway und Gespräche sonst einen Kreis bilden
+(F162), und die Empfänger kommen **aus dem Schreiben** statt aus einer
+Port-Methode, die „wer schreibt mit wem" für jede Id beantworten würde (F163).
+`chat:echo` ist überall weg; `verify-chat.mjs` prüft stattdessen den Satz des
+Abnahmekriteriums durch den Proxy. Offen daraus: **der Handshake trägt keine
+Drosselung** (engine.io bedient ihn vor Nests Router) — Phase 5.
+
+Vier Punkte warten auf ein anderes Paket bzw. auf Marius: das **Storno über die
 Sitzung** gehört zu AP 12 (F148), der **Purge der Bilder eines Gesprächs** zu
-AP 10 (F158 nennt die Reihenfolge), und ob es eine geteilte Bibliothek für
+AP 10 (F158 nennt die Reihenfolge), die **Drosselung des Handshakes** zu Phase 5,
+und ob es eine geteilte Bibliothek für
 Oberflächenbauteile geben soll, ist eine Stack-Entscheidung (F145). Alles drei in
 `todo.md`.
 

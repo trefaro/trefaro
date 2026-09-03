@@ -7,11 +7,12 @@ einmal schiefgegangen.**
 Das ist keine zweite Anforderungsanalyse. Die Begründung jeder Entscheidung steht
 ausführlich woanders und wird hier nur mit ihrer Nummer zitiert:
 
-- **F1–F159** — Entscheidungsprotokoll in
+- **F1–F164** — Entscheidungsprotokoll in
   [`docs/Anforderungsanalyse_und_Umsetzungsplan.md`](../Anforderungsanalyse_und_Umsetzungsplan.md)
-  (F62 wurde nie vergeben; F70 beantwortet, was für sie geplant war. **F129–F136
-  sind reserviert, aber noch nicht vergeben** — sie gehören zu Arbeitspaketen der
-  Phase 3, die noch kommen.)
+  (F62 wurde nie vergeben; F70 beantwortet, was für sie geplant war. **F129–F131
+  und F133–F136 sind unvergeben** — die ersten drei, weil AP 6 sie als schon
+  getroffene Entscheidungen wiedererkannt hat, die übrigen reserviert für
+  Arbeitspakete der Phase 3, die noch kommen.)
 - **E1–E16** — Phase 1, [`docs/PHASE1.md`](../PHASE1.md).
 - **E17–E30** — Phase 2, [`docs/PHASE2.md`](../PHASE2.md) (die Zählung läuft über
   die Phasen weiter).

@@ -19,20 +19,23 @@
  *   in this layer, the rule above it (F43).
  */
 
-import type { ConversationType } from '@trefaro/shared-models';
+import type {
+  ConversationMemberType,
+  ConversationType,
+} from '@trefaro/shared-models';
 
 /**
- * Which kind of account a membership belongs to (E39).
+ * Whoever is asking: an account or an organizer, and which one (E39).
  *
- * Both values exist in the schema from AP 6 on; only `user` is written by it.
- * The organizer's side arrives with the packages that put them in a
- * conversation — the contact request of AP 9 and the group of AP 10.
+ * The type comes from `shared-models` since AP 7, where the real-time payloads
+ * needed the same two words: both values exist in the schema from AP 6 on,
+ * only `user` is written by it, and the organizer's side arrives with the
+ * packages that put them in a conversation — the contact request of AP 9 and
+ * the group of AP 10. Two spellings of a two-value union is how one of them
+ * grows a third value alone.
  */
-export type ConversationMemberKind = 'admin' | 'user';
-
-/** Whoever is asking: an account or an organizer, and which one. */
 export interface ConversationMemberRef {
-  readonly memberType: ConversationMemberKind;
+  readonly memberType: ConversationMemberType;
   readonly memberId: string;
 }
 

@@ -24,7 +24,8 @@ to install from.
 
 Every script takes the instance's address from **`BASE`** since AP 13; the older
 names (`TREFARO_BASE_URL`, `SOCKET_BASE`, `PROXY_BASE`) still work and win where
-both are set, so one exported `BASE` now drives a whole run. The two that reach
+both are set, so one exported `BASE` now drives a whole run. `verify-socket.mjs`
+became `verify-chat.mjs` in AP 7 of phase 3 and keeps reading `SOCKET_BASE`. The two that reach
 into the database take `POSTGRES_CONTAINER`, `DATABASE_USER` and `DATABASE_NAME`
 — the development stack calls its container `trefaro-postgres`, a production
 stack names it after its Compose project, and until AP 13 the literal in the
@@ -35,7 +36,7 @@ the other one.
 | -------------------------- | -------------------------------------------------------------------------------------- |
 | `verify-api.mjs`           | server + PostgreSQL                                                                    |
 | `verify-plugin-toggle.mjs` | server + PostgreSQL + `docker exec` into the database container (`POSTGRES_CONTAINER`) |
-| `verify-socket.mjs`        | server                                                                                 |
+| `verify-chat.mjs`          | server + PostgreSQL + **Mailpit** + `docker exec` (`POSTGRES_CONTAINER`)               |
 | `verify-push.mjs`          | server + PostgreSQL + a VAPID key pair in `.env` (`POSTGRES_CONTAINER`)                |
 | `verify-i18n.mjs`          | server + PostgreSQL + `ADMIN_BOOTSTRAP_*` from `.env` (it signs in)                    |
 | `verify-mail.mjs`          | server + PostgreSQL + **Mailpit** + `ADMIN_BOOTSTRAP_*` (it signs in)                  |
@@ -52,9 +53,15 @@ npx nx build server
 node dist/apps/server/main.js           # in its own shell
 
 node tools/spike-verification/verify-api.mjs
-node tools/spike-verification/verify-socket.mjs
 node tools/spike-verification/verify-plugin-toggle.mjs
 node tools/spike-verification/verify-i18n.mjs
+
+# The chat, end to end: two accounts, two sockets, one message that has to
+# arrive at both without a reload (AP 7 of phase 3). It replaces the phase 0
+# socket probe — the `chat:echo` handler that one needed is gone. Needs
+# Mailpit for the double opt-in, and it deletes the two accounts and the
+# conversation again.
+node tools/spike-verification/verify-chat.mjs
 
 # The four mails, read out of the box they were actually sent to. It registers,
 # confirms, cancels and invites, edits the confirmation subject to prove it takes

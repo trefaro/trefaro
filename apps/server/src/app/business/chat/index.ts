@@ -1,4 +1,10 @@
-export { ChatGateway, type ChatEchoReply } from './chat.gateway';
+export {
+  ChatRealtimeService,
+  conversationRoom,
+  memberRoom,
+  type ChatRoomHost,
+} from './chat-realtime.service';
+export { ChatGateway } from './chat.gateway';
 export { ChatModule } from './chat.module';
 export {
   ConversationsService,
@@ -9,7 +15,6 @@ export { MessagesService, type MessageImageUpload } from './messages.service';
 export {
   CONVERSATION_REPOSITORY,
   type ConversationCounterpartRecord,
-  type ConversationMemberKind,
   type ConversationMemberRef,
   type ConversationMembershipRecord,
   type ConversationOverviewRecord,
@@ -19,6 +24,7 @@ export {
 } from './ports/conversation.repository';
 export {
   MESSAGE_REPOSITORY,
+  type AppendedMessage,
   type MessageImageRecord,
   type MessageRecord,
   type MessageRepository,

@@ -481,16 +481,36 @@ answer, not an opinion.
 - [ ] **Explain the notification permission before prompting.** Currently a bare
       button triggers the browser prompt; NFR 4 targets people with rudimentary
       IT skills.
-- [ ] **Authenticate the WebSocket handshake.** The gateway accepts any
-      connection from an allowed origin. A socket has to be tied to a logged-in
-      participant before chat carries anything real.
-      → [`04-websocket-through-nginx.md`](docs/spikes/04-websocket-through-nginx.md#open-items)
-- [ ] **Gate the chat gateway on the `chat` module flag.** The flag currently
-      only decides whether the clients offer chat; the handshake itself ignores
-      it.
-- [ ] **Delete the `chat:echo` spike handler.** It is a phase 0 artifact and must
-      not reach a release. The socket verification script goes with it, or gets
-      pointed at a real message.
+- [x] **Authenticate the WebSocket handshake — done in AP 7** (F132, E41). In a
+      socket.io namespace middleware, so it runs _while_ the handshake happens:
+      a connection without a valid session never comes into being, and the
+      client gets the server's own sentence as `connect_error`. The session is
+      resolved by `UserSessionService` — the same service the global participant
+      guard uses, which is why `ChatModule` now imports `ProfilesModule` and
+      imports it for nothing else. A Nest `@UseGuards` on a gateway would have
+      been the late check E41 rules out: it runs per **message**.
+- [x] **Gate the chat gateway on the `chat` module flag — done in AP 7.** Asked
+      at the same door, from the same registry the endpoints' guard reads (F53),
+      and asked **after** the session so that an anonymous socket hears about
+      the session first — the order the HTTP side has. Only at the door: a
+      socket that connected before the switch flipped stays connected and stays
+      inert, because nothing can happen behind endpoints that answer 404.
+- [x] **Delete the `chat:echo` spike handler — done in AP 7.** The handler,
+      `ChatEchoReply`, `RealtimeClient.echo`, the button on the diagnostics page
+      and `verify-socket.mjs` are all gone. What replaced the script is
+      `verify-chat.mjs`, which asks the sentence the acceptance criterion is
+      written in: two accounts, two sockets, one message that has to arrive at
+      both **through the proxy**. `verify-proxy.mjs` kept a socket check and got
+      a better probe out of it — the refusal without a cookie is the server's
+      own sentence arriving over the socket, which proves the upgrade and the
+      way back without a handler that exists for the test.
+- [ ] **The WebSocket handshake carries no rate limit.** `@nestjs/throttler`
+      sees HTTP routes, and a socket.io handshake is served by engine.io before
+      Nest's router ever sees it — so the one request that now costs a session
+      lookup is the one request nothing counts. Belongs with the configurable
+      throttling phase 5 already owes (E4); until then the cheapest mitigation
+      is that a refused handshake does no database work beyond one indexed
+      lookup on `token_hash`.
 - [ ] **Purge a conversation's pictures when the conversation goes — belongs to
       AP 10.** Deleting an **event** cascades through `conversation` to
       `message`, and a cascade removes rows but no files (E9). AP 6 built the
@@ -508,7 +528,7 @@ answer, not an opinion.
       what a conversation looks like when one side is gone.
 - [ ] **Eight copies of `isUniqueViolation` in `data-access/repositories/`** —
       `typeorm-{admin-user,event,event-series,profile-field,
-    program-item-signup,user-profile,registration,registration-field}`. The
+program-item-signup,user-profile,registration,registration-field}`. The
       same six lines each. F138 says the third caller is where something moves
       out; AP 6 avoided adding a ninth (its insert uses `ON CONFLICT DO NOTHING`
       instead of an exception as control flow) rather than doing the extraction
@@ -567,7 +587,7 @@ answer, not an opinion.
       visible there — but it deliberately does **not** show answers whose
       question is gone under their bare key (F150): the organizer's panel is an
       audit of a form, a participant is reading a person, and `local-group:
-  Bonn` is diagnostics rather than a fact about anybody.
+Bonn` is diagnostics rather than a fact about anybody.
 
 - [ ] **`formatAnswer` answers in English, and the organizer client shows it.**
       The helper in `shared-models` turns a tick into `yes` / `no` — words from a

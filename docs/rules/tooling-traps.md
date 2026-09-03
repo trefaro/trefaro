@@ -25,6 +25,15 @@ dass das Werkzeug etwas anderes tut als erwartet.
   `npx jest -c jest.config.cts --testPathPatterns=<teil>` aus `apps/server`
   (die Datei heißt `.cts`, nicht `.ts`). Playwright nimmt `--grep`.
 
+- **`nx format:write --uncommitted` überspringt still.** Es hat `todo.md`
+  aufgelistet und **nicht** geschrieben — gestaged wie ungestaged —, während
+  `npx nx format:check` und `prettier --check` die Datei beide beanstanden. Der
+  Lauf sieht damit erfolgreich aus, und der Fehlschlag kommt erst im
+  `quality`-Job der CI (`nx format:check`), also nach dem Push. Reproduziert
+  am 03.09.2026 mit einem umgebrochenen Inline-Code-Span. **Das Tor ist
+  `nx format:check`** — vor dem Commit laufen lassen, und was es nennt, mit
+  `npx nx format:write --files <pfad>` (oder `npx prettier --write <pfad>`)
+  richten; nur diese beiden haben die Datei tatsächlich angefasst.
 - **Eine schon gelaufene Migration läuft nicht erneut.** Es gibt kein
   Migrations-CLI in diesem Repository — der Server migriert beim Start. Wer eine
   Migration des laufenden Arbeitspakets **nachträglich ergänzt**, sieht die
