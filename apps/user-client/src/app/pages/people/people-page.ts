@@ -12,6 +12,7 @@ import { problemOf, type Problem } from '@trefaro/shared-http';
 import { TranslationService } from '@trefaro/shared-i18n';
 import type { ProfileSearchHit } from '@trefaro/shared-models';
 import { ParticipantSessionService } from '../../features/auth/participant-session.service';
+import { initialsOf } from '../../features/profiles/initials';
 import { ProfileSearchService } from '../../features/profiles/profile-search.service';
 
 /**
@@ -269,10 +270,7 @@ export class PeoplePage {
    * stand-in that misspells somebody's initial is worse than a blank circle.
    */
   protected initials(person: ProfileSearchHit): string {
-    return [person.firstName, person.lastName]
-      .map((name) => [...name.trim()][0] ?? '')
-      .join('')
-      .toLocaleUpperCase(this.i18n.locale());
+    return initialsOf([person.firstName, person.lastName], this.i18n.locale());
   }
 
   protected async submit(): Promise<void> {

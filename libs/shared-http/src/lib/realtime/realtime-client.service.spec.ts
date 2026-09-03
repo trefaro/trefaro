@@ -100,6 +100,9 @@ describe('RealtimeClient', () => {
       // No long-polling: a proxy that drops the upgrade has to fail visibly.
       transports: ['websocket'],
       withCredentials: true,
+      // Sooner than socket.io's own twenty seconds: a screen that says
+      // "connecting" for that long is hiding a failure.
+      timeout: 8_000,
     });
   });
 

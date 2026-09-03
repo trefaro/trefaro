@@ -85,6 +85,17 @@ instead, applied in `main.ts`.
   it broke on any instance not published on port 80 — including the compose
   default of 8080. `absolute_redirect off` makes it relative.
 
+**A proxy that forwards the upgrade and then swallows everything is the
+failure mode to design for** (added in AP 8 of phase 3). It is the one that
+looks like nothing: the socket opens, the handshake never answers, and a chat
+in which nothing arrives is indistinguishable from a chat in which nobody is
+writing. Two consequences. The client gives such a handshake up after **eight**
+seconds rather than socket.io's twenty and says so on screen (F169) — twenty
+seconds of "connecting…" is a failure being hidden. And the browser suite
+reproduces exactly this with `page.routeWebSocket` and a handler that never
+calls `connectToServer`; `context.setOffline(true)` does **not** do it, because
+an established WebSocket survives it until the heartbeat times out.
+
 **The organizer client needs its base href at build time.** It is served under
 `/admin/`, so `nx build admin-client --base-href=/admin/` is passed as a Docker
 build argument. Both clients share one Dockerfile that differs only in the Nx

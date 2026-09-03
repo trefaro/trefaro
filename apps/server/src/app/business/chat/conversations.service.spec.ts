@@ -8,7 +8,10 @@ import type {
   SearchableProfileRepository,
 } from '../common/ports/searchable-profile.repository';
 import { ChatRealtimeService } from './chat-realtime.service';
-import { ConversationsService } from './conversations.service';
+import {
+  ConversationsService,
+  NO_SUCH_CONVERSATION,
+} from './conversations.service';
 import type {
   ConversationMemberRef,
   ConversationMembershipRecord,
@@ -102,6 +105,8 @@ interface Harness {
   /** Every pair `findOrCreateDirect` was asked for, in order. */
   created: readonly [string, string][];
   listed: { member: ConversationMemberRef; offset: number; limit: number }[];
+  /** Every single-conversation read, with who asked for it. */
+  viewed: { conversationId: string; member: ConversationMemberRef }[];
   marked: { conversationId: string; at: Date }[];
   /** Every read receipt that went out (E41). */
   published: { conversationId: string; memberId: string; at: Date }[];
@@ -118,6 +123,7 @@ function harness(
 ): Harness {
   const created: [string, string][] = [];
   const listed: Harness['listed'] = [];
+  const viewed: Harness['viewed'] = [];
   const marked: Harness['marked'] = [];
   const overviews = options.overviews ?? [overview()];
 
@@ -130,7 +136,8 @@ function harness(
       listed.push({ member, offset, limit });
       return options.slice ?? { rows: overviews, total: overviews.length };
     },
-    async overviewFor(conversationId) {
+    async overviewFor(conversationId, member) {
+      viewed.push({ conversationId, member });
       return (
         overviews.find((row) => row.conversation.id === conversationId) ?? null
       );
@@ -172,6 +179,7 @@ function harness(
     service: new ConversationsService(conversations, profiles, realtime),
     created,
     listed,
+    viewed,
     marked,
     published,
   };
@@ -250,6 +258,45 @@ describe('ConversationsService', () => {
       });
 
       expect((await service.start(ME, OTHER)).unread).toBe(7);
+    });
+  });
+
+  describe('one conversation (AP 8)', () => {
+    it('answers with the row the overview draws', async () => {
+      const { service } = harness({ overviews: [overview({ unread: 4 })] });
+
+      // The same shape as a row of the list, for one id: a thread screen has
+      // to be able to say whose conversation it is showing.
+      await expect(service.get(ME, 'c1')).resolves.toMatchObject({
+        id: 'c1',
+        unread: 4,
+      });
+    });
+
+    it('asks the port as the reader, not for the row alone', async () => {
+      const { service, viewed } = harness();
+
+      await service.get(ME, 'c1');
+
+      // The membership is part of the question at the port already, so there
+      // is no "read this conversation" that a caller could ask without one.
+      expect(viewed.at(-1)).toEqual({
+        conversationId: 'c1',
+        member: { memberType: 'user', memberId: ME },
+      });
+    });
+
+    it('says the same thing for a conversation that is not the reader’s as for an unknown id', async () => {
+      const { service } = harness({ overviews: [] });
+
+      await expect(service.get(ME, 'somebody-elses')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      // Word for word what `require` says (F157): a reader who could tell the
+      // two apart could confirm that somebody else's conversation exists.
+      expect(await refusal(service.get(ME, 'somebody-elses'))).toBe(
+        NO_SUCH_CONVERSATION,
+      );
     });
   });
 

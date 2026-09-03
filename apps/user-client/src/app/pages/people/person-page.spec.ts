@@ -1,11 +1,18 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
+import { AppConfigService } from '@trefaro/shared-config';
 import {
   provideTranslationsForTest,
   TranslationService,
 } from '@trefaro/shared-i18n';
-import type { ProfileFieldPublic, PublicProfile } from '@trefaro/shared-models';
+import {
+  CHAT_MODULE_KEY,
+  type ConversationSummary,
+  type ProfileFieldPublic,
+  type PublicProfile,
+} from '@trefaro/shared-models';
+import { ChatService } from '../../features/chat/chat.service';
 import { ParticipantProfileService } from '../../features/profiles/participant-profile.service';
 import { ProfileSearchService } from '../../features/profiles/profile-search.service';
 import { PersonPage } from './person-page';
@@ -64,20 +71,51 @@ class FakeSearch {
   }
 }
 
+/** Opening the conversation with this person (E37). */
+class FakeChat {
+  readonly started: string[] = [];
+  fails: unknown = null;
+  answer: ConversationSummary = {
+    id: 'c1',
+    type: 'direct',
+    topic: null,
+    counterparts: [{ profileId: 'a1', name: 'Amina Okonkwo', avatarUrl: null }],
+    lastMessageAt: null,
+    unread: 0,
+  };
+
+  async start(profileId: string): Promise<ConversationSummary> {
+    this.started.push(profileId);
+    if (this.fails) throw this.fails;
+    return this.answer;
+  }
+}
+
 /**
  * Somebody else's profile (FR 4.4).
  *
- * Three decisions of this page are worth a test: an answer is labelled by the
+ * Four decisions of this page are worth a test: an answer is labelled by the
  * question that is still being asked, a tick reads as a word in the reader's
- * language rather than as `true` (F72), and a withdrawn profile is a sentence
- * rather than a broken screen.
+ * language rather than as `true` (F72), a withdrawn profile is a sentence
+ * rather than a broken screen — and since AP 8 the button that opens the
+ * conversation, whose 403 is that same withdrawal seen from the other side.
  */
 describe('PersonPage', () => {
   let people: FakeSearch;
+  let chat: FakeChat;
 
-  async function render(options: { id?: string; fails?: unknown } = {}) {
+  async function render(
+    options: {
+      id?: string;
+      fails?: unknown;
+      chatEnabled?: boolean;
+      startFails?: unknown;
+    } = {},
+  ) {
     people = new FakeSearch();
     people.fails = options.fails ?? null;
+    chat = new FakeChat();
+    chat.fails = options.startFails ?? null;
 
     TestBed.configureTestingModule({
       providers: [
@@ -86,8 +124,19 @@ describe('PersonPage', () => {
           'people.detail.about': 'About this person',
           'people.detail.notFound': 'This profile is not available.',
           'people.detail.error': 'This profile could not be loaded.',
+          'people.detail.write': 'Write a message',
+          'people.detail.writeRefused': 'This person cannot be written to.',
+          'people.detail.writeFailed': 'The conversation could not be opened.',
         }),
         { provide: ProfileSearchService, useValue: people },
+        { provide: ChatService, useValue: chat },
+        {
+          provide: AppConfigService,
+          useValue: {
+            isModuleEnabled: (key: string) =>
+              key === CHAT_MODULE_KEY ? (options.chatEnabled ?? true) : true,
+          },
+        },
         {
           provide: ParticipantProfileService,
           useValue: { fields: async () => questions },
@@ -113,6 +162,10 @@ describe('PersonPage', () => {
 
     return {
       fixture,
+      page: fixture.componentInstance as unknown as {
+        write: () => Promise<void>;
+      },
+      host: fixture.nativeElement as HTMLElement,
       answers: () =>
         (
           fixture.componentInstance as unknown as {
@@ -170,5 +223,52 @@ describe('PersonPage', () => {
     const { text } = await render({ fails: { status: 500, explained: false } });
 
     expect(text()).toContain('This profile could not be loaded.');
+  });
+
+  it('offers to write, and goes to the conversation it opens', async () => {
+    const { page, text } = await render();
+    const navigations: string[] = [];
+    TestBed.inject(Router).navigate = async (commands: unknown[]) => {
+      navigations.push(commands.join('/'));
+      return true;
+    };
+
+    expect(text()).toContain('Write a message');
+    await page.write();
+
+    // Idempotent on the server: two people have exactly one conversation
+    // (F153), so this button is "go to ours" rather than "start another".
+    expect(chat.started).toEqual(['a1']);
+    expect(navigations).toEqual(['/messages/c1']);
+  });
+
+  it('offers nothing of the sort where the chat is switched off', async () => {
+    const { text } = await render({ chatEnabled: false });
+
+    // Accounts and a directory without messaging is a combination an
+    // organization may run (E42).
+    expect(text()).not.toContain('Write a message');
+  });
+
+  it('reads a 403 as a withdrawal rather than as a failure', async () => {
+    const { fixture, page, text } = await render({
+      startFails: { status: 403 },
+    });
+
+    await page.write();
+    fixture.detectChanges();
+
+    expect(text()).toContain('This person cannot be written to.');
+  });
+
+  it('says something else when the server said something else', async () => {
+    const { fixture, page, text } = await render({
+      startFails: { status: 500 },
+    });
+
+    await page.write();
+    fixture.detectChanges();
+
+    expect(text()).toContain('The conversation could not be opened.');
   });
 });

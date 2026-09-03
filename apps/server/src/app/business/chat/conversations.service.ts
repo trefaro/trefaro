@@ -131,6 +131,34 @@ export class ConversationsService {
     return toSummary(overview);
   }
 
+  /**
+   * One conversation, as its own screen needs it (FR 4.5, AP 8).
+   *
+   * The same row the overview draws, for one id: who it is with, what a group
+   * is about, and how much of it is unread. A thread screen needs it to say
+   * whose conversation it is showing — the history carries messages, and a
+   * name per message would mean repeating the members on every line.
+   *
+   * Deliberately **not** answered out of the list: a client would have to page
+   * through it to find one row, and the page a row is on changes with every
+   * message anybody sends. The port has answered this exact question since
+   * AP 6 ({@link ConversationRepository.overviewFor}, which `start` reads for
+   * the same reason), so this adds a route rather than a capability.
+   *
+   * @throws NotFoundException — not a member, said as an unknown id (F157).
+   */
+  async get(
+    viewerId: string,
+    conversationId: string,
+  ): Promise<ConversationSummary> {
+    const overview = await this.conversations.overviewFor(
+      conversationId,
+      member(viewerId),
+    );
+    if (!overview) throw new NotFoundException(NO_SUCH_CONVERSATION);
+    return toSummary(overview);
+  }
+
   /** One page of "my conversations", newest activity first (E38). */
   async list(
     viewerId: string,

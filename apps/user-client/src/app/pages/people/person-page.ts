@@ -7,11 +7,18 @@ import {
   input,
   signal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { AppConfigService } from '@trefaro/shared-config';
 import { problemOf, type Problem } from '@trefaro/shared-http';
 import { TranslationService } from '@trefaro/shared-i18n';
-import type { ProfileFieldPublic, PublicProfile } from '@trefaro/shared-models';
+import {
+  CHAT_MODULE_KEY,
+  type ProfileFieldPublic,
+  type PublicProfile,
+} from '@trefaro/shared-models';
+import { ChatService } from '../../features/chat/chat.service';
+import { initialsOf } from '../../features/profiles/initials';
 import { ParticipantProfileService } from '../../features/profiles/participant-profile.service';
 import { ProfileSearchService } from '../../features/profiles/profile-search.service';
 
@@ -28,16 +35,21 @@ interface Answer {
  * work on, and their answers to the questions this instance asks (E35). No
  * address — a participant reaches another participant through a conversation
  * (FR 4.5, AP 6), and a screen that showed a mailbox would make the community
- * exportable (F55).
+ * exportable (F55). Since AP 8 the button that opens that conversation is
+ * here, because this is where somebody decides to talk to a person.
  *
- * Two decisions worth naming:
+ * Three decisions worth naming:
  *
  * 1. **A 404 is a sentence, not a broken page.** A profile can leave the search
  *    between the list and the click — withdrawing the opt-in is meant to work
  *    immediately (E37) — so "not available, perhaps withdrawn" is the normal
  *    case here rather than an error, and it reads the same as an id that never
  *    existed (F124).
- * 2. **Only answered questions appear, and only ones still being asked.** The
+ * 2. **A refused conversation is not an error either.** The same withdrawal
+ *    that makes a profile disappear makes it uncontactable (E37, one switch),
+ *    so the button's 403 gets a sentence of its own rather than a failure
+ *    notice.
+ * 3. **Only answered questions appear, and only ones still being asked.** The
  *    organizer's panel lists every question and every leftover answer, because
  *    that is an audit of a form (F34); a reader here is looking at a person, and
  *    a row saying `local-group: —` tells them nothing about anybody.
@@ -59,6 +71,20 @@ interface Answer {
         }
         <h1>{{ profile.firstName }} {{ profile.lastName }}</h1>
       </div>
+
+      <!-- The one way into a conversation (E37): whoever the search shows may
+           be written to, which is the same switch (F13). Only where this
+           instance runs messaging at all (E42). -->
+      @if (chatEnabled()) {
+        <p>
+          <button type="button" [disabled]="opening()" (click)="write()">
+            {{ 'people.detail.write' | transloco }}
+          </button>
+        </p>
+      }
+      @if (writeError(); as problem) {
+        <p class="notice" role="alert">{{ problem.key | transloco }}</p>
+      }
 
       @if (profile.activityAreas; as areas) {
         <h2>{{ 'people.detail.activityAreas' | transloco }}</h2>
@@ -157,22 +183,33 @@ export class PersonPage {
   private readonly people = inject(ProfileSearchService);
   private readonly profiles = inject(ParticipantProfileService);
   private readonly i18n = inject(TranslationService);
+  private readonly chat = inject(ChatService);
+  private readonly config = inject(AppConfigService);
+  private readonly router = inject(Router);
 
   /** From the path, bound by `withComponentInputBinding()`. */
   readonly id = input<string>();
 
   protected readonly person = signal<PublicProfile | null>(null);
   protected readonly error = signal<Problem | null>(null);
+  /** Why the conversation could not be opened, said on this page. */
+  protected readonly writeError = signal<Problem | null>(null);
+  protected readonly opening = signal(false);
+
+  /** Whether this instance lets the people in it write to each other (E42). */
+  protected readonly chatEnabled = computed(() =>
+    this.config.isModuleEnabled(CHAT_MODULE_KEY),
+  );
   /** The questions this instance asks, so an answer can be labelled (E35). */
   private readonly fields = signal<readonly ProfileFieldPublic[]>([]);
 
   protected readonly initials = computed(() => {
     const profile = this.person();
     if (!profile) return '';
-    return [profile.firstName, profile.lastName]
-      .map((name) => [...name.trim()][0] ?? '')
-      .join('')
-      .toLocaleUpperCase(this.i18n.locale());
+    return initialsOf(
+      [profile.firstName, profile.lastName],
+      this.i18n.locale(),
+    );
   });
 
   /**
@@ -224,6 +261,39 @@ export class PersonPage {
     return value ?? '';
   }
 
+  /**
+   * Opens the conversation with this person and goes there (FR 4.5, E37).
+   *
+   * Idempotent on the server — two people have exactly one direct conversation
+   * (F153) — so this button is "go to our conversation" and not "start a new
+   * one", and pressing it twice is not two threads.
+   *
+   * A 403 is the normal failure and has its own sentence: the opt-in can be
+   * withdrawn between the search and this click, and the server says the same
+   * thing for four different reasons on purpose (F124), so this page must not
+   * dress it up as a technical error.
+   */
+  protected async write(): Promise<void> {
+    const id = this.id();
+    if (!id || this.opening()) return;
+
+    this.opening.set(true);
+    this.writeError.set(null);
+    try {
+      const conversation = await this.chat.start(id);
+      await this.router.navigate(['/messages', conversation.id]);
+    } catch (error: unknown) {
+      this.writeError.set({
+        key: isRefused(error)
+          ? 'people.detail.writeRefused'
+          : 'people.detail.writeFailed',
+        detail: null,
+      });
+    } finally {
+      this.opening.set(false);
+    }
+  }
+
   private async load(id: string): Promise<void> {
     this.error.set(null);
     try {
@@ -261,4 +331,9 @@ export class PersonPage {
 /** Whether the server said "no such profile" rather than something else. */
 function isMissing(error: unknown): boolean {
   return (error as { status?: number } | null)?.status === 404;
+}
+
+/** Whether the server said "this profile cannot be written to" (F157). */
+function isRefused(error: unknown): boolean {
+  return (error as { status?: number } | null)?.status === 403;
 }

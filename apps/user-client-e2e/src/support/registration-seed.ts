@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from 'node:crypto';
 import { Pool } from 'pg';
 
 /**
@@ -96,6 +97,91 @@ export async function seedSearchableProfile(person: {
     ],
   );
   return result.rows[0].id;
+}
+
+/**
+ * A live participant session for a seeded account, without a login (E34, E4,
+ * F164).
+ *
+ * The participant login allows twenty attempts per five minutes for the whole
+ * instance and the suites of this repository already use nineteen of them, so
+ * a file that needs a **session** and nothing about logging in does not spend
+ * one — the browser gets the cookie handed to it instead
+ * (`support/participant-session.ts` puts it there). What a session *is* is a
+ * row whose `token_hash` is the SHA-256 of the cookie's value; the guard and
+ * the socket handshake both resolve it that way and neither can tell how the
+ * row got there.
+ *
+ * What this gives up is the proof that a login issues a cookie the client can
+ * use — and that proof is already run, twice: `profile.spec.ts` signs in
+ * through the form, and the API suites do it against the same guard chain.
+ *
+ * @returns the cookie value, ready to be sent as `trefaro_user_session=…`.
+ */
+export async function seedSession(profileId: string): Promise<string> {
+  const token = randomBytes(32).toString('base64url');
+  const expiresAt = new Date(Date.now() + 12 * 60 * 60_000);
+
+  await db().query(
+    `INSERT INTO user_session (user_id, token_hash, last_seen_at, expires_at)
+     VALUES ($1, $2, now(), $3)`,
+    [profileId, createHash('sha256').update(token).digest('hex'), expiresAt],
+  );
+
+  return token;
+}
+
+/**
+ * Removes the conversations of the accounts of one address domain, and the
+ * pictures in them (E40, F158).
+ *
+ * There is no endpoint and there is no cascade either:
+ * `conversation_member.member_id` carries no foreign key on purpose (E39), so
+ * deleting the accounts would leave the conversations standing — with a unique
+ * `direct_key` that would refuse the next run, and a growing `messages/`
+ * subtree.
+ *
+ * The order is the part worth knowing, and it is the order the real purge of
+ * AP 10 will need: **read the attachment ids, delete the conversations, then
+ * delete the attachments.** The other way round does not work, because
+ * `message.attachment_id` is `ON DELETE SET NULL` while
+ * `CHK_message_content` forbids a message with neither text nor picture — so
+ * a picture-only message cannot be emptied, only deleted. The **files** stay
+ * in the volume either way: SQL cannot unlink one.
+ *
+ * Called before {@link deleteProfiles}, never after: the members are found
+ * through the profiles.
+ */
+export async function deleteConversationsOfProfiles(
+  emailSuffix: string,
+): Promise<void> {
+  const conversations = await db().query<{ conversation_id: string }>(
+    `SELECT DISTINCT m.conversation_id
+       FROM conversation_member m
+       JOIN user_profile p ON p.id = m.member_id
+      WHERE m.member_type = 'user' AND p.email LIKE $1`,
+    [`%${emailSuffix}`],
+  );
+  const ids = conversations.rows.map((row) => row.conversation_id);
+  if (ids.length === 0) return;
+
+  const pictures = await db().query<{ attachment_id: string }>(
+    `SELECT attachment_id FROM message
+      WHERE conversation_id = ANY($1::uuid[]) AND attachment_id IS NOT NULL`,
+    [ids],
+  );
+
+  // Cascades through `message`, which is what frees the attachment rows.
+  await db().query('DELETE FROM conversation WHERE id = ANY($1::uuid[])', [
+    ids,
+  ]);
+
+  const attachments = pictures.rows.map((row) => row.attachment_id);
+  if (attachments.length > 0) {
+    await db().query('DELETE FROM attachment WHERE id = ANY($1::uuid[])', [
+      attachments,
+    ]);
+  }
 }
 
 export async function deleteProfiles(emailSuffix: string): Promise<void> {

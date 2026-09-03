@@ -1,6 +1,6 @@
 # Phase 3 — Profile, Kommunikation und Community-Kern
 
-**Status: in Arbeit** (seit 02.09.2026, AP 1 bis AP 7 erledigt, **M7 erreicht**). Der Teil oberhalb von
+**Status: in Arbeit** (seit 02.09.2026, AP 1 bis AP 8 erledigt, **M7 erreicht**). Der Teil oberhalb von
 _Fortschritt_ ist der **Plan** und wird nicht mehr rückwirkend korrigiert; was
 tatsächlich passierte, steht unten je Paket — wie in
 [`PHASE1.md`](PHASE1.md) und [`PHASE2.md`](PHASE2.md). Was Marius **vor** einem
@@ -694,7 +694,12 @@ keine Zusage — wann sie stattfindet, entscheidet Marius.
 - **Nichts, das den Zustand ändert, ist ein GET.** Die Cookies dieser Phase
   tragen `SameSite=Lax` und ersparen damit einen CSRF-Token — solange diese Regel
   hält.
-- **Deutsch mit Marius, Englisch im Code**; Conventional Commits.
+- **Englisch mit Marius, Englisch im Code**; Conventional Commits. (Die
+  Sprache des Gesprächs hat Marius am 03.09.2026 auf Englisch umgestellt —
+  eingetragen nach der Regel dieses Dokuments, dass ein Auftrag von ihm oben
+  mit Datum vermerkt wird. Die Pakete bis AP 7 liefen auf Deutsch, und in
+  `PHASE1.md`/`PHASE2.md` bleibt die alte Zeile stehen: das ist Historie,
+  keine Anweisung. Die **Dokumentation** dieses Repositories bleibt Deutsch.)
 - **Nach jedem Paket** `nx run-many -t lint test build` und die E2E-Suiten grün,
   dann committen. Wer „grün" sagt, hat den Stack hochgefahren.
 
@@ -1529,3 +1534,170 @@ engine.io bedient, bevor Nests Router ihn sieht — die eine Anfrage, die jetzt
 eine Sitzungsauflösung kostet, ist damit die eine, die nichts zählt. Gehört zur
 konfigurierbaren Drosselung, die Phase 5 ohnehin owed; steht in `todo.md` und
 in den offenen Punkten von Spike 4.
+
+### AP 8 — Chat im Nutzer-Client (erledigt, 03.09.2026)
+
+Umgesetzt:
+
+- **Zwei Seiten, zwei Wächter.** `/messages` ist die Gesprächsliste,
+  `/messages/:id` das Gespräch; beide hinter `participantSessionGuard` **und**
+  `chatGuard` — dem Zwilling von `profileSearchGuard`, aus demselben Grund
+  (F53, E42): die Sitzung entscheidet, ob jemand die Seite sehen darf, der
+  Schalter, ob es sie auf dieser Instanz gibt. Ein Lesezeichen, das den
+  Schalter überlebt, landet auf der Startseite und nicht in einer Liste, die
+  auf 404 wartet. Der Navigationseintrag hängt an derselben Bedingung.
+- **Der Weg hinein ist die Teilnehmersuche** (E37). Der Knopf „Nachricht
+  schreiben" steht auf dem fremden Profil — dort, wo jemand sich entscheidet,
+  eine Person anzusprechen —, und weil `POST /api/participant/conversations`
+  idempotent ist (F153), heißt er „zu unserem Gespräch" und nicht „ein neues
+  anfangen". Sein **403 ist eine Rücknahme, kein Fehler**: dieselbe
+  Zurücknahme, die ein Profil aus der Suche nimmt, macht es unerreichbar — ein
+  Schalter, zwei Wirkungen —, also bekommt er einen eigenen Satz und keine
+  Fehlermeldung.
+- **Eine Route mehr am Server, aber keine Fähigkeit mehr** (**F165**).
+  `GET /api/participant/conversations/:id` gibt die Zeile, die die Übersicht
+  zeichnet, für eine Id. Die Gesprächsansicht braucht sie, um zu sagen, wessen
+  Gespräch sie zeigt: der Verlauf trägt Nachrichten, und ein Name je Nachricht
+  hieße, die Mitglieder in jede Zeile zu kopieren. Beantwortet wird sie von
+  `ConversationRepository.overviewFor`, das die Frage seit AP 6 kann und die
+  Mitgliedschaft in derselben Anweisung führt (F152) — es kommt also eine
+  Route dazu, keine Portmethode. Aus der Liste hätte ein Client sich blättern
+  müssen, und die Seite, auf der eine Zeile steht, ändert sich mit jeder
+  Nachricht. „Nicht deins" ist derselbe 404 wie eine unbekannte Id (F157).
+- **Der Socket gehört der Sitzung, nicht dem Bildschirm** (**F166**).
+  `ChatConnection` hängt in der Shell und verbindet, solange jemand angemeldet
+  ist und `chat` an ist; abgemeldet wird getrennt. Zwei Gründe, und der zweite
+  ist der wichtige: die Liste muss sich bewegen, während jemand ein Event
+  liest (dafür ist der Mitgliedsraum aus F161 da, betreten am Handshake) — und
+  **eine Verbindung je Seite hätte E44 gebrochen.** Push geht nur raus, wenn
+  das Mitglied keinen offenen Socket **in diesem Gespräch** hat; wäre die
+  Verbindung an den Chatbildschirm gebunden, hieße „sieht jemand zu?" nur noch
+  „ist der Chat offen?". Der Raum des Gesprächs wird deshalb allein von der
+  Gesprächsansicht betreten.
+- **Eine gesendete Nachricht kommt zweimal an und wird einmal gezeichnet**
+  (**F167**). Die Antwort des POST macht das Senden unmittelbar, der Socket
+  macht es richtig — beide Wege laufen durch dasselbe Einfügen, das über die
+  **Id** entscheidet und danach nach `(created_at, id)` sortiert, also nach
+  demselben Schlüssel wie der Cursor (F154). Nicht zuzuhören wäre die
+  Alternative gewesen: dann fehlte nach einem Reconnect genau die eigene Zeile.
+- **Der Verlauf wird einmal umgedreht, hier.** Der Endpunkt antwortet neueste
+  zuerst, weil das das Ende ist, von dem ein Cursor zurückblättert; ein
+  Gespräch liest sich nach unten. Alles danach — anhängen, voranstellen,
+  entdoppeln — arbeitet in der Reihenfolge, die ein Leser sieht.
+- **Lesen ist Ansehen** (E38). Geöffnet wird als gelesen markiert, und eine
+  Zeile, die ankommt, während der Verlauf offen ist, ebenfalls — nur nicht die
+  eigene, denn eine Lesebestätigung für sich selbst ist eine Anfrage, die
+  nichts ändert. Der Zähler in der Liste ist damit weg, wenn jemand
+  zurückkommt.
+- **Die Liste frischt das Fenster auf, das auf dem Bildschirm steht**
+  (**F170**). `chat:conversation` trägt bewusst keine Zeile (F161), weil
+  „ungelesen" ohnehin neu gezählt werden muss — also fragt die Seite noch
+  einmal, mit **einer** Anfrage über so viele Zeilen wie gezeigt werden
+  (gedeckelt auf die 50 des Endpunkts), und mischt über die Id. Ohne das
+  Mischen stünde eine Zeile, die nach oben gesprungen ist, auch noch an ihrem
+  alten Platz.
+- **Bildversand mit Vorschau** (E40). Gewählt wird, dann gesendet — die
+  Vorschau ist die letzte Gelegenheit, das zu sehen, was alle sehen werden, und
+  eine Nachricht ist danach nicht bearbeitbar (E14). Typ und Größe werden
+  vorher lokal geprüft (F38 prüft der Server ohnehin, an den ersten Bytes): wer
+  auf dem Telefon ein 12-Megapixel-Foto wählt, erfährt es vor dem Upload und
+  nicht danach. Das Bild einer fremden Nachricht zeichnet ein `<img>` auf die
+  Medienroute — das Sitzungscookie reist mit, weil die Route unter `/api`
+  liegt, also aus demselben Grund, aus dem der Socket dort wohnt (F156, F160).
+- **Ein Zeitstempel im Chat gehört seinem Leser** (**F168**). Format folgt der
+  Sprache des Lesers (F78) — die **Zone** aber ist hier seine eigene und nicht
+  die eines Events (E8): eine Nachricht gehört zu keinem Event, und „18:40"
+  heißt die Uhrzeit auf dem Telefon, das sie zeigt. Kein „heute"/„gestern",
+  obwohl jeder Messenger es hat: das wären zwei Katalogschlüssel und ein
+  Tagesbegriff, der veraltet, während der Bildschirm offen ist — die
+  Tagesüberschrift beantwortet dieselbe Frage in einer Form, die auf jeder
+  Zeile gleich ist.
+- **Der Verbindungszustand ist ein Bauteil, und er lügt nicht** (**F169**).
+  `trefaro-live-status` sagt auf beiden Seiten einen von vier Sätzen: es kommt
+  von selbst an, wird verbunden, keine Live-Verbindung, oder — nur in der
+  Gesprächsansicht — dieses Gespräch wird nicht live aktualisiert, wenn der
+  `join` abgelehnt wurde. Denn ein Chat, der still die Verbindung verloren hat,
+  sieht genauso aus wie ein Chat, in dem niemand schreibt. Dazu ist der
+  Handshake-Timeout des Clients von socket.ios zwanzig auf **acht Sekunden**
+  gesetzt: zwanzig Sekunden „wird verbunden" sind ein verschwiegener
+  Fehlschlag, und der ehrliche Satz ist einer, mit dem jemand etwas anfangen
+  kann.
+- **`initialsOf` ist ausgezogen** (F138, vierte Kopie). Profilbildwähler,
+  Suche, fremdes Profil und jede Zeile des Chats zeichnen denselben Kreis; die
+  Regel liegt jetzt in `features/profiles/initials.ts` und nimmt die **Felder**
+  statt eines Strings, damit ein zweiteiliger Vorname nicht den Nachnamen
+  verdrängt.
+- **Katalog: 37 Schlüssel mehr**, Englisch und Deutsch (`chat.*` und die drei
+  `people.detail.write*`), 780 → **817**.
+- **Migration: keine.** Das zweite Paket der Phase ohne Schemaänderung, und aus
+  demselben Grund wie AP 7: die Tabellen des Chats sind seit AP 6 vollständig
+  (E40).
+
+Nachweise: Nutzer-Client **208** (+67), Server-Units **999** (+3),
+Vertragstests **512** (+4, alle in `api/chat.spec.ts`), `shared-http` 30,
+`shared-models` 95, Veranstalter-Client 169. Browsersuiten grün: **209**
+(+6, ein übersprungener) und **280** (+26 übersprungene).
+`nx run-many -t lint test build` über alle 13 Projekte fehlerfrei.
+Neue Entscheidungen: **F165**–**F170**.
+
+**Die Browsersuite dieses Pakets fährt das Abnahmekriterium als einen Gang**
+(`apps/user-client-e2e/src/chat.spec.ts`), **auf einem Telefon**: Viewport
+390 × 844, Suche → fremdes Profil → „Nachricht schreiben" → Gespräch, Text und
+Bild in einer Nachricht, und das Bild wird nicht nur _sichtbar_, sondern über
+`naturalWidth > 0` als _angekommen_ geprüft (ein kaputtes Bild ist auch
+sichtbar, und die Medienroute ist die eine mit Berechtigungsprüfung). Danach
+antwortet **die andere Seite über HTTP aus dem Testprozess**, mit ihrer eigenen
+geseedeten Sitzung — nichts im Browser hat danach gefragt, und die Zeile muss
+trotzdem erscheinen. Das ist der Live-Nachweis **durch den Dev-Proxy**, also
+über die eine Stelle des Socketpfads, die AP 7 nur von Hand belegen konnte.
+Dann: der Zähler erscheint, wenn die nächste Nachricht kommt, während die Liste
+offen ist, und verschwindet durch Lesen. Und zuletzt prüft die Seite, dass auf
+diesem Telefon nichts seitlich heraussteht. **Kein Login** in der ganzen Datei
+(F164): drei Konten pro Engine sind geseedet, das Cookie legt
+`signInWithSeededSession` in den Kontext — bei zwanzig Anmeldungen je fünf
+Minuten für die ganze Instanz wären drei Engines × ein Login der Tropfen, der
+eine fremde Suite mit 429 rot macht.
+
+Was anders lief:
+
+- **Die Gesprächsansicht konnte nicht sagen, mit wem sie ist.** Der Plan nennt
+  „Gesprächsansicht mit Verlauf und Nachladen" — und die fünf Endpunkte aus
+  AP 6 geben für eine Id keinen Gesprächskopf her: `POST` antwortet mit einer
+  Zusammenfassung, `GET` nur mit einer Seite der Liste. Die Alternativen waren,
+  die Zeile über den Router-State mitzugeben (nach einem Reload weg) oder die
+  Liste zu durchblättern (die Seite einer Zeile ändert sich mit jeder
+  Nachricht). Also eine Route mehr, F165 — der Port konnte die Frage schon.
+- **Ein `FormData.set` mit drittem Argument kopiert die Datei.** Der erste
+  Entwurf gab `message.image.name` mit, und der Test verglich die Identität der
+  Datei: `File` in, anderes `File` drin. Eine `File` trägt ihren Namen selbst,
+  das dritte Argument ist für `Blob` da. Steht in
+  `docs/rules/angular-clients.md`, weil der nächste Upload es wieder tut.
+- **Die Regel gegen Backticks in Template-Kommentaren hat sich sofort
+  bezahlt.** Ein Kommentar im Verlaufs-Template erklärte, dass das Cookie für
+  `/api` gilt — mit Backticks um den Pfad, was das Template-Literal beendet.
+  Der Compiler meldete daraufhin `TS2362` und „Cannot find name 'api'" an einer
+  Zeile weit davor; die Datei in `docs/rules/` nennt genau diese Klasse, und
+  der Fehler war in einer Minute gefunden statt in einer halben Stunde.
+- **`setOffline` kappt keine offene WebSocket-Verbindung.** Der erste Versuch,
+  den Verbindungsverlust im Browser zu zeigen, schaltete das Netz ab: der
+  Offline-Banner erschien sofort (F20), der Socketstatus blieb aber zehn
+  Sekunden lang „es kommt von selbst an" — richtig, denn eine bestehende
+  Verbindung merkt den Ausfall erst am Heartbeat, und der braucht bis zu 45 s.
+  Zwei Erkenntnisse daraus: die zwei Banner sind **nicht** dasselbe (Netz und
+  Socket), und geprüft wird der Fehlschlag, den Spike 4 gemeint hat — ein Proxy,
+  der das Upgrade weiterleitet und dann alles schluckt. Das stellt
+  `page.routeWebSocket` mit einem Handler ohne `connectToServer` nach, und dass
+  der Client es in acht statt zwanzig Sekunden zugibt, ist F169.
+- **Eine Suite des Veranstalter-Clients war einmal rot und im zweiten,
+  cachefreien Lauf grün** — welche, ist nicht mehr feststellbar: der
+  Playwright-Report hält nur den letzten Lauf, und die Ausgabe des ersten war
+  schon durchgelaufen. Nicht weggelassen, sondern hiermit protokolliert; falls
+  es wiederkommt, ist der Verdacht dieselbe Klasse wie die Landmarke aus AP 7.
+
+Offen aus diesem Paket: **die Navigation trägt keinen Ungelesen-Zähler.** Wer
+gerade nicht auf `/messages` steht, erfährt von einer neuen Nachricht erst
+dort — oder, ab AP 11, per Push (E44 ist genau dafür da, und F166 ist die
+Voraussetzung). Ein Zähler in der Leiste bräuchte die Summe ohne die Seite,
+also eine Anfrage bei jedem Anmelden; die Entscheidung gehört zum Pilotpartner
+und steht in `todo.md`. **Gruppen** sieht diese Oberfläche schon (Titel,
+mehrere Gegenüber), **angelegt** werden sie in AP 10.

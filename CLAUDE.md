@@ -150,7 +150,7 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    (offen geblieben: die Feedbackrunde mit Democracy International)
 2. **✅ 29.08.2026, M5** Whitelabel-Theming, Modul-Verwaltung, i18n, PWA,
    Installations-Story → `docs/PHASE2.md`
-3. **In Arbeit** (AP 1–AP 7 erledigt, M7 erreicht) Profile, Nachrichten,
+3. **In Arbeit** (AP 1–AP 8 erledigt, M7 erreicht) Profile, Nachrichten,
    Echtzeit-/Gruppenchat, Push, Profilsuche → `docs/PHASE3.md`
 4. Plug-ins: Programmvorschläge, Forum, Raumplanung, QR-Check-In
 5. Härtung, Usability-Test mit Democracy International (Pilotpartner), Doku,
@@ -173,9 +173,11 @@ F118–F128, F132, F137–F164; F129–F131 und F133–F136 bleiben unvergeben b
 reserviert). **AP 1 (Teilnehmerkonto und Login), AP 2 (Profil und
 Feld-Baukasten), AP 3 (Login, Registrierung und Profil in beiden Clients,
 **Meilenstein M6**), AP 4 (die Anmeldung kennt den Menschen), AP 5
-(Profilsuche), AP 6 (Gespräche, Nachrichten und Bilder) und AP 7 (Echtzeit,
-**Meilenstein M7**) sind erledigt** — Protokoll je Paket unter _Fortschritt_.
-Als nächstes AP 8: Chat im Nutzer-Client (FR 4.5). Katalog **780** Schlüssel.
+(Profilsuche), AP 6 (Gespräche, Nachrichten und Bilder), AP 7 (Echtzeit,
+**Meilenstein M7**) und AP 8 (Chat im Nutzer-Client) sind erledigt** —
+Protokoll je Paket unter _Fortschritt_. Als nächstes AP 9:
+Organisator-Kontakt ohne Registrierung (FR 3.4, UC 14, F11). Katalog **817**
+Schlüssel.
 
 Aus AP 4: die Selbstbedienung kennt zwei Ansprüche — das signierte Token aus der
 Mail und die Sitzung, aufgelöst über die Adresse (F148) —, die
@@ -220,11 +222,29 @@ Port-Methode, die „wer schreibt mit wem" für jede Id beantworten würde (F163
 Abnahmekriteriums durch den Proxy. Offen daraus: **der Handshake trägt keine
 Drosselung** (engine.io bedient ihn vor Nests Router) — Phase 5.
 
-Vier Punkte warten auf ein anderes Paket bzw. auf Marius: das **Storno über die
+Aus AP 8: zwei Seiten (`/messages`, `/messages/:id`) hinter Sitzung **und**
+`chat`-Schalter, der Weg hinein ist der Knopf auf dem fremden Profil (E37,
+sein 403 ist eine Rücknahme und kein Fehler). Der **Socket gehört der
+Sitzung**, nicht dem Bildschirm (F166) — sonst hieße E44s „sieht jemand zu?“
+nur „ist der Chat offen?“; den Raum eines Gesprächs betritt allein die
+Gesprächsansicht. Eine gesendete Nachricht kommt zweimal an (Antwort und
+Socket) und wird über die Id einmal gezeichnet (F167); die Liste frischt bei
+`chat:conversation` das **gezeigte Fenster** in einer Anfrage auf und mischt
+über die Id (F170); die Uhrzeit einer Nachricht steht in der Zone ihres
+**Lesers** (F168, die eine Ausnahme von E8); und der Verbindungszustand steht
+auf beiden Seiten in einem Bauteil, das nie mehr behauptet, als es weiß
+(F169 — dafür gibt der Client einen Handshake nach acht statt zwanzig
+Sekunden auf). Neu am Server: **eine** Route, `GET
+/api/participant/conversations/:id`, weil eine Gesprächsansicht sagen muss,
+mit wem sie ist — der Port konnte die Frage schon (F165). `initialsOf` ist als
+vierte Kopie ausgezogen (F138).
+
+Fünf Punkte warten auf ein anderes Paket bzw. auf Marius: das **Storno über die
 Sitzung** gehört zu AP 12 (F148), der **Purge der Bilder eines Gesprächs** zu
-AP 10 (F158 nennt die Reihenfolge), die **Drosselung des Handshakes** zu Phase 5,
-und ob es eine geteilte Bibliothek für
-Oberflächenbauteile geben soll, ist eine Stack-Entscheidung (F145). Alles drei in
+AP 10 (F158 nennt die Reihenfolge), die **Drosselung des Handshakes** zu
+Phase 5; ob es eine geteilte Bibliothek für Oberflächenbauteile geben soll, ist
+eine Stack-Entscheidung (F145), und ob die Navigationsleiste einen
+**Ungelesen-Zähler** tragen soll, eine Produktfrage aus AP 8. Alles fünf in
 `todo.md`.
 
 ## Betriebskontext

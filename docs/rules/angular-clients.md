@@ -90,6 +90,25 @@ besteht. Jede Zeile hier hat einmal einen halben Tag gekostet.
   Antworten erst, wenn auch die Fragen da sind — zwei Effekte, zwei Marken. Der
   erste Entwurf wartete auf beides, und eine nicht ladbare Fragenliste machte ein
   Pflichtfeld leer und das ganze Formular unabsendbar.
+- **`FormData.set(name, file, filename)` kopiert die Datei.** Das dritte
+  Argument ist für einen `Blob` da, der keinen Namen hat; eine `File` trägt ihren
+  eigenen. Wer ihn trotzdem mitgibt, findet im Formular ein **anderes**
+  `File`-Objekt mit gleichem Inhalt — ein Test auf Identität wird rot, und ein
+  Vergleich per `toBe` ist die einzige Stelle, an der es auffällt. Gefunden beim
+  Bildversand des Chats (AP 8).
+- **Der Chat-Socket gehört der Sitzung, nicht der Seite** (F166). `ChatConnection`
+  hängt in der Shell und verbindet, solange jemand angemeldet ist und `chat` an
+  ist. Eine Verbindung je Bildschirm wäre nicht nur unruhiger, sie hätte **E44
+  gebrochen**: Push geht nur raus, wenn niemand einen offenen Socket _in diesem
+  Gespräch_ hat, und der Raum eines Gesprächs wird allein von der
+  Gesprächsansicht betreten. Wer einen zweiten Echtzeitbildschirm baut, betritt
+  dort einen Raum — er verbindet nicht.
+- **Ein Verbindungszustand wird gesagt, nicht verschwiegen** (F169, F110 auf den
+  Socket angewandt). `trefaro-live-status` kennt vier Sätze und behauptet nie
+  mehr, als es weiß: „verbunden" heißt nicht „dieses Gespräch wird aktualisiert"
+  — das ist eine zweite Frage mit einer zweiten Antwort (ein abgelehnter `join`).
+  Ein Chat, der still nichts mehr empfängt, sieht wie ein Chat aus, in dem
+  niemand schreibt.
 - **Ein Client-Test, der Dateien liest, braucht `"node"` in
   `tsconfig.spec.json`** (Iconliste gegen `public/`, Manifest-Adresse gegen
   `index.html`).

@@ -142,6 +142,32 @@ export class ParticipantConversationsController {
     ) as Promise<ConversationSummaryDto>;
   }
 
+  @Get(':id')
+  @ApiOperation({
+    summary: 'One conversation of mine (FR 4.5)',
+    description:
+      'The row the overview draws, for one id — who it is with, a group’s ' +
+      'topic, and the unread count. What a thread screen needs to name the ' +
+      'conversation it is showing, without paging the whole list to find it.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: ConversationSummaryDto })
+  @ApiNotFoundResponse({
+    description:
+      'No conversation of that id is yours — said the same way for an ' +
+      'unknown id and for somebody else’s conversation (F157).',
+  })
+  @ApiUnauthorizedResponse({ description: 'No valid session.' })
+  get(
+    @CurrentParticipant() current: AuthenticatedParticipant,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<ConversationSummaryDto> {
+    return this.conversations.get(
+      current.profile.id,
+      id,
+    ) as Promise<ConversationSummaryDto>;
+  }
+
   @Get(':id/messages')
   @ApiOperation({
     summary: 'One window of a conversation’s history (FR 4.5)',

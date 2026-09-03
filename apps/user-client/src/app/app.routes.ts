@@ -3,6 +3,7 @@ import {
   participantAnonymousGuard,
   participantSessionGuard,
 } from './features/auth/participant-session.guard';
+import { chatGuard } from './features/chat/chat.service';
 import { profileSearchGuard } from './features/profiles/profile-search.service';
 
 /**
@@ -19,6 +20,7 @@ import { profileSearchGuard } from './features/profiles/profile-search.service';
  * AP 5 adds the two pages of the participant search (FR 4.4), both behind the
  * session **and** behind the `profile-search` module: a bookmark that outlives
  * the switch leads to the start page rather than to a search that answers 404.
+ * AP 8 adds the two of the chat (FR 4.5) the same way, behind `chat`.
  *
  * Since AP 4 of phase 3 the login is a second way to the same self-service:
  * `registrations` lists what an address holds and `registrations/:id` opens one
@@ -116,6 +118,30 @@ export const appRoutes: Route[] = [
     loadComponent: () =>
       import('./pages/people/person-page').then((m) => m.PersonPage),
     title: 'people.title',
+  },
+  {
+    // The conversation itself, before the list, like every longer path in this
+    // file. Two guards again, and the module is `chat` rather than
+    // `profile-search`: an instance may run a directory without messaging, and
+    // the two switches are independent (E42).
+    path: 'messages/:id',
+    canActivate: [participantSessionGuard, chatGuard],
+    loadComponent: () =>
+      import('./pages/messages/conversation-page').then(
+        (m) => m.ConversationPage,
+      ),
+    title: 'chat.title',
+  },
+  {
+    // My conversations (FR 4.5). The same title as the thread: this is that
+    // section of the client, and a tab cannot carry a name the screen has not
+    // fetched yet — the same reason the participant search has one title.
+    path: 'messages',
+    pathMatch: 'full',
+    canActivate: [participantSessionGuard, chatGuard],
+    loadComponent: () =>
+      import('./pages/messages/messages-page').then((m) => m.MessagesPage),
+    title: 'chat.title',
   },
   {
     // The objection link in an invitation points here (E15, F58); the token

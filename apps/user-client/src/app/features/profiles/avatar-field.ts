@@ -18,6 +18,7 @@ import {
   MAX_BRANDING_BYTES,
   brandingTypeSummary,
 } from '@trefaro/shared-models';
+import { initialsOf } from './initials';
 import { ParticipantProfileService } from './participant-profile.service';
 
 /** A chosen file and the local address its preview is drawn from. */
@@ -259,13 +260,9 @@ export class AvatarField {
    * `toLocaleUpperCase` because a Turkish "i" is not an "I", and a stand-in
    * that misspells somebody's initial is worse than a blank circle.
    */
-  protected readonly initials = computed(() => {
-    const locale = this.i18n.locale();
-    return [this.firstName(), this.lastName()]
-      .map((name) => [...name.trim()][0] ?? '')
-      .join('')
-      .toLocaleUpperCase(locale);
-  });
+  protected readonly initials = computed(() =>
+    initialsOf([this.firstName(), this.lastName()], this.i18n.locale()),
+  );
 
   constructor() {
     // An object URL holds the file in memory until it is released, and this

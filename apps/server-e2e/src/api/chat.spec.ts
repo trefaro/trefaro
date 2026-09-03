@@ -145,6 +145,11 @@ describe('conversations and messages', () => {
       headers: { cookie: session },
     });
 
+  const one = (session: string, id: string) =>
+    api<Conversation>(`/api/participant/conversations/${id}`, {
+      headers: { cookie: session },
+    });
+
   const history = (session: string, id: string, query = '') =>
     api<MessageWindow>(
       `/api/participant/conversations/${id}/messages${query}`,
@@ -332,6 +337,37 @@ describe('conversations and messages', () => {
       const nonsense = await start(amina, 'not-a-uuid');
 
       expect(nonsense.status).toBe(400);
+    });
+  });
+
+  describe('reading one (AP 8)', () => {
+    it('answers with the row the overview draws, for one id', async () => {
+      const row = await one(amina, withBo);
+
+      expect(row.status).toBe(200);
+      expect(row.body).toMatchObject({ id: withBo, type: 'direct' });
+      // Who it is with, because that is what a thread screen has to say — and
+      // no address, for the reason the search carries none (F55, F150).
+      expect(row.body.counterparts).toHaveLength(1);
+      expect(row.body.counterparts[0]).not.toHaveProperty('email');
+    });
+
+    it('says the same thing for somebody else’s conversation as for an unknown id', async () => {
+      const outsider = await one(bo, withChen);
+      const unknown = await one(bo, '00000000-0000-4000-8000-000000000000');
+
+      expect(outsider.status).toBe(404);
+      expect(said(outsider)).toBe(said(unknown));
+    });
+
+    it('refuses an id that is not a uuid', async () => {
+      expect((await one(amina, 'not-a-uuid')).status).toBe(400);
+    });
+
+    it('needs a session', async () => {
+      expect(
+        (await api(`/api/participant/conversations/${withBo}`)).status,
+      ).toBe(401);
     });
   });
 
@@ -622,6 +658,7 @@ describe('conversations and messages', () => {
         expect((await setModule('chat', false)).status).toBe(200);
 
         expect((await conversations(amina)).status).toBe(404);
+        expect((await one(amina, withBo)).status).toBe(404);
         expect((await start(amina, boId)).status).toBe(404);
         expect((await history(amina, withBo)).status).toBe(404);
         expect((await say(amina, withBo, { body: 'Hello?' })).status).toBe(404);

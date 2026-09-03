@@ -589,6 +589,18 @@ program-item-signup,user-profile,registration,registration-field}`. The
       audit of a form, a participant is reading a person, and `local-group:
 Bonn` is diagnostics rather than a fact about anybody.
 
+- [ ] **The navigation carries no unread counter.** The conversation list has
+      one per conversation (E38) and it moves live, but somebody who is reading
+      an event page learns about a new message only when they go to `/messages`
+      — or, from AP 11 on, by push, which is what E44 is for and what F166 (a
+      socket that belongs to the session rather than to a screen) makes
+      possible. A badge in the bar would need the **sum** without the screen,
+      so a request for every logged-in participant at every sign-in, refreshed
+      on every `chat:conversation`. Cheap to build and easy to get wrong in the
+      annoying direction. **Marius decides / a question for the pilot partner**:
+      whether a chat that only notifies by push and by its own screen is the
+      one an activist community wants.
+
 - [ ] **`formatAnswer` answers in English, and the organizer client shows it.**
       The helper in `shared-models` turns a tick into `yes` / `no` — words from a
       library that knows no catalogue — and the participant overview's detail

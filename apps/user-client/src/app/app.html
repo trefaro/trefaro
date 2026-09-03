@@ -43,6 +43,14 @@
     >{{ 'people.title' | transloco }}</a
   >
   }
+  <!-- Only where messaging is switched on (E42), for the same reason as the
+       directory above: an instance may keep accounts, let people find each
+       other, and still not run a chat. -->
+  @if (chatEnabled()) {
+  <a class="app-nav__link" routerLink="/messages"
+    >{{ 'chat.title' | transloco }}</a
+  >
+  }
   <a class="app-nav__link" routerLink="/profile"
     >{{ 'profile.title' | transloco }}</a
   >

@@ -7,11 +7,15 @@ import {
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AppConfigService } from '@trefaro/shared-config';
-import { PROFILE_SEARCH_MODULE_KEY } from '@trefaro/shared-models';
+import {
+  CHAT_MODULE_KEY,
+  PROFILE_SEARCH_MODULE_KEY,
+} from '@trefaro/shared-models';
 import { LanguageSwitcher } from '@trefaro/shared-i18n';
 import { PluginSlot } from '@trefaro/shared-plugins';
 import { ThemeService } from '@trefaro/shared-theming';
 import { ParticipantSessionService } from './features/auth/participant-session.service';
+import { ChatConnection } from './features/chat/chat-connection.service';
 import { AppIconService } from './features/pwa/app-icon.service';
 import { InstallHint } from './features/pwa/install-hint';
 import { OfflineBanner } from './features/pwa/offline-banner';
@@ -30,6 +34,10 @@ import { PushSubscriptionService } from './features/push/push-subscription.servi
  * module is off. Finding other participants hangs on a second switch of its
  * own (`profile-search`, E42): accounts without a community directory are a
  * combination an organization may want.
+ *
+ * Messaging hangs on a third switch (`chat`, E42) and the shell holds its
+ * socket open for the whole session — the reason is written down in
+ * `ChatConnection`.
  *
  * The two PWA pieces of AP 12 sit around the outlet rather than inside a page,
  * because neither belongs to one: losing the network and being installable are
@@ -69,11 +77,21 @@ export class App {
     this.config.isModuleEnabled(PROFILE_SEARCH_MODULE_KEY),
   );
 
+  /** Whether the people in this instance may write to each other (E42, F53). */
+  protected readonly chatEnabled = computed(() =>
+    this.config.isModuleEnabled(CHAT_MODULE_KEY),
+  );
+
   constructor() {
     // Injected for its effect: it keeps `<link rel="apple-touch-icon">` on the
     // configured app icon, which is the only way the whitelabel reaches an
     // iPhone's home screen (the manifest covers everywhere else).
     inject(AppIconService);
+
+    // Also injected for its effect: the chat socket belongs to the session
+    // rather than to a screen, so it is opened here and closed on sign-out
+    // (E41, and E44 depends on it — see `ChatConnection`).
+    inject(ChatConnection);
 
     // A notification exists to bring someone back into the app, so a click has
     // to land on the thing that changed.

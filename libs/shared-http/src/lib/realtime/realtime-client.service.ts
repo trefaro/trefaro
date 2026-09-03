@@ -22,6 +22,22 @@ export type RealtimeStatus =
 const JOIN_TIMEOUT_MS = 5_000;
 
 /**
+ * How long a handshake may take before it counts as failed.
+ *
+ * Shorter than socket.io's own twenty seconds on purpose. The number is not
+ * about the network but about what a screen says while it waits: twenty
+ * seconds of "connecting…" is a failure being hidden, and the honest sentence
+ * — "no live connection, reload to see new messages" — is one somebody can
+ * act on. A slow handshake is not lost work either, because the client
+ * reconnects on its own; only the wording changes.
+ *
+ * It is also what makes the failure testable in a browser: the deployment
+ * mistake this guards against is a proxy that forwards the upgrade and then
+ * swallows everything (Spike 4), which produces exactly this timeout.
+ */
+const HANDSHAKE_TIMEOUT_MS = 8_000;
+
+/**
  * The chat's socket, as a client sees it (FR 4.5, E41).
  *
  * Lives next to the HTTP client because both are "how a client talks to the
@@ -88,6 +104,7 @@ export class RealtimeClient {
       withCredentials: true,
       autoConnect: true,
       reconnectionAttempts: 5,
+      timeout: HANDSHAKE_TIMEOUT_MS,
     });
 
     socket.on('connect', () => {

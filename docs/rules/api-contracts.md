@@ -112,6 +112,12 @@ Link.
   mit dem Wortlaut einer unbekannten Id. Die Bildroute hat ihren **eigenen**
   dritten Satz für ihre drei Fehlschläge — sie darf den des Gesprächs nicht
   borgen.
+- **Ein Gespräch hat eine eigene Leseroute, und sie ist keine neue Fähigkeit**
+  (F165). `GET /api/participant/conversations/:id` gibt die Zeile der Übersicht
+  für eine Id — die Gesprächsansicht braucht sie, um zu sagen, mit wem sie ist,
+  denn Namen sind eine Eigenschaft des Gesprächs und nicht der Nachricht (E39).
+  Beantwortet von `overviewFor`, das die Mitgliedschaft seit AP 6 in derselben
+  Anweisung führt (F152); „nicht deins" ist derselbe 404 wie eine unbekannte Id.
 - **Der Verlauf eines Gesprächs paginiert über einen Cursor** (F154), als
   einzige Liste dieser Anwendung. `?before=<Nachrichten-Id>`, Vergleich über
   `(created_at, id)`, `hasMore` statt `total`. Der Grund ist, was die Liste ist:

@@ -68,7 +68,9 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   nur **geschrieben** wird; `chat-realtime.spec.ts` in AP 7 mit **keiner** — dort
   sind auch die Sitzungen geseedet, F164), die Browsersuite des
   Nutzer-Clients drei (einer je Engine, `profile.spec.ts` meldet sich genau
-  einmal an und beweist das neue Passwort in `server-e2e`); wer eine weitere
+  einmal an und beweist das neue Passwort in `server-e2e`; `chat.spec.ts` aus
+  AP 8 kommt mit **keiner** dazu — auch dort ist die Sitzung geseedet, siehe
+  unten); wer eine weitere
   schreibt, zählt vorher nach. Ein 429 sieht dort aus wie ein Anmeldefehler und
   ist keiner. **Deshalb wächst `profile.spec.ts` statt Nachbarn zu bekommen:**
   „meine Anmeldungen" (AP 4) und die Profilsuche (AP 5) laufen in dessen einem
@@ -147,6 +149,31 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   steht) und hätte das Budget auf neunzehn von zwanzig gebracht. Was das
   aufgibt — der Beweis, dass eine Anmeldung ein brauchbares Cookie ausstellt —
   führt `chat.spec.ts` mit echten Anmeldungen.
+- **Auch ein Browser darf eine geseedete Sitzung bekommen** (F164, AP 8). Zwei
+  Dinge gehören dazu, und das zweite ist das, was man vergisst: das Cookie im
+  Kontext (`addCookies`, **`path: '/api'`** — dort stellt der Server es aus) und
+  der Hinweis in `localStorage` (`trefaro.participant-session`), denn der
+  Nutzer-Client fragt ohne ihn gar nicht nach einer Sitzung (F143) und merkt das
+  Cookie folglich nie. Beides tut `signInWithSeededSession` in
+  `apps/user-client-e2e/src/support/participant-session.ts`. Damit kostet
+  `chat.spec.ts` **null** Anmeldungen — bei zwanzig je fünf Minuten für die ganze
+  Instanz war das die Bedingung dafür, dass es eine eigene Datei sein durfte
+  statt in `profile.spec.ts` mitzuwachsen.
+- **Ein toter Socket wird mit `page.routeWebSocket` nachgestellt**, nicht mit
+  `setOffline` (F169). `context.setOffline(true)` **kappt keine bestehende
+  WebSocket-Verbindung**: das Offline-Banner erscheint sofort (F110), der
+  Socketstatus bleibt aber „verbunden", bis der Heartbeat zuschlägt — bis zu
+  45 s, also weit jenseits jeder Zusicherung. Ein Handler ohne
+  `connectToServer` stellt dagegen genau den Fehlschlag her, den Spike 4 meint:
+  ein Proxy, der das Upgrade weiterleitet und dann alles schluckt. Der Client
+  gibt ihn nach acht Sekunden zu (F169), also ist er in einer normalen
+  Zusicherung prüfbar. **Netz und Socket sind zwei Banner** — wer eines prüft,
+  hat das andere nicht geprüft.
+- **Was „auf einem Telefon benutzbar" heißt, prüft man auf einem Telefon.** Die
+  drei Engines laufen in Desktop-Größen; `chat.spec.ts` setzt zu Beginn
+  390 × 844 und fährt den ganzen Gang dort, samt einer Zusicherung, dass
+  `scrollWidth` die Breite nicht übersteigt. Ein Bauteil, das seitlich
+  heraussteht, ist auf dem Desktop unsichtbar kaputt.
 - **Ein Node-Client muss das Cookie selbst setzen.** Ein Browser hängt es an,
   ein `socket.io-client` in Node nicht: `extraHeaders: { cookie }`. Gilt für die
   Vertragssuite und für `tools/spike-verification/verify-chat.mjs` — und es ist
