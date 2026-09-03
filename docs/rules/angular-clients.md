@@ -129,6 +129,29 @@ besteht. Jede Zeile hier hat einmal einen halben Tag gekostet.
 - **Ein Client-Test, der Dateien liest, braucht `"node"` in
   `tsconfig.spec.json`** (Iconliste gegen `public/`, Manifest-Adresse gegen
   `index.html`).
+- **Eine Systemberechtigung wird erklärt, bevor sie erfragt wird** (F178,
+  NFR 4). Der Dialog des Browsers nennt eine Domain, nicht die Organisation, er
+  sagt nichts darüber, was geschickt würde, und die falsche Antwort ist von der
+  Seite aus nicht wiederholbar. Also steht der Satz **vorher** auf dem
+  Bildschirm, und nur ein Klick löst den Dialog aus. Dazu: den Zustand
+  **lesen** statt raten — `Notification.permission` fragt niemanden; ein „jetzt
+  nicht" in `localStorage` gilt dauerhaft (wie F109); und gezeigt wird nur, was
+  gehen kann (kein Service Worker, kein Schlüssel, blockiert oder abgelehnt =
+  gar nichts).
+- **Was nur im Produktionsbuild lebt, braucht einen erklärten Zustand.** Angular
+  registriert den Service Worker nur dort, also ist `swPush.isEnabled` in jeder
+  Browsersuite `false`. Ein Bauteil, das dann **nichts** zeichnet, ist nicht
+  prüfbar und sieht auf einem iPhone in einem Safari-Tab kaputt aus — dem Fall,
+  von dem F7 abhängt. Der Schalter auf der Profilseite sagt deshalb „dieser
+  Browser kann das nicht" **und** den iOS-Hinweis, und genau das prüft die
+  Browsersuite.
+- **Ein Abonnement, das der Sitzung folgt, ist ein `effect` mit Gedächtnis**
+  (F134). Der Client schickt es beim An- und Abmelden erneut; verglichen wird
+  gegen den **zuletzt geschickten** Besitzer (`undefined` = noch nie geschickt,
+  was von `null` = „als niemand" verschieden ist), sonst postet jeder Start
+  zweimal. Und geschickt wird nur, wenn der Browser überhaupt ein Abonnement
+  hält: Anmelden abonniert niemanden — das ist eine Entscheidung mit einem
+  Browserdialog darin.
 - **Client-Start-Sequenz:** erst Konfiguration (Design + aktivierte Module) laden,
   dann Theming anwenden, dann die Plug-in-Webkomponenten laden.
 

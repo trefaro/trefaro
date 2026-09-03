@@ -20,6 +20,7 @@ import { CoreModuleRegistryService } from '../config';
 import { UserSessionService, participantSessionFromHeader } from '../profiles';
 import {
   ChatRealtimeService,
+  PARTICIPANT_SOCKET_DATA,
   conversationRoom,
   memberRoom,
 } from './chat-realtime.service';
@@ -36,9 +37,6 @@ import { ConversationsService } from './conversations.service';
  */
 const NO_SESSION = 'A participant session is required to open a chat socket.';
 const CHAT_DISABLED = 'This instance has messaging switched off.';
-
-/** Where the authenticated participant is parked for the life of a socket. */
-const PARTICIPANT_DATA = 'participantId';
 
 /** A uuid, checked before it reaches a query — `ParseUUIDPipe`'s job (E33). */
 const UUID =
@@ -202,13 +200,13 @@ export class ChatGateway
       throw new Error(CHAT_DISABLED);
     }
 
-    socket.data[PARTICIPANT_DATA] = participant.profile.id;
+    socket.data[PARTICIPANT_SOCKET_DATA] = participant.profile.id;
   }
 }
 
 /** The participant a socket was admitted for, or `null`. */
 function participantOf(client: Socket): string | null {
-  const participantId: unknown = client.data[PARTICIPANT_DATA];
+  const participantId: unknown = client.data[PARTICIPANT_SOCKET_DATA];
   return typeof participantId === 'string' ? participantId : null;
 }
 

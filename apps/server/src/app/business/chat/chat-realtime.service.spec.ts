@@ -6,6 +6,7 @@ import {
 } from '@trefaro/shared-models';
 import {
   ChatRealtimeService,
+  PARTICIPANT_SOCKET_DATA,
   conversationRoom,
   memberRoom,
   type ChatRoomHost,
@@ -53,7 +54,20 @@ interface Sent {
   payload: unknown;
 }
 
-function recorder(options: { throws?: boolean } = {}): {
+/**
+ * A stand-in namespace: what was emitted, and who is in which room.
+ *
+ * `occupants` is keyed by room and holds the socket `data` objects the gateway
+ * parks a participant id in — which is the shape `watchersOf` reads, and the
+ * reason the key for it is a constant both files share.
+ */
+function recorder(
+  options: {
+    throws?: boolean;
+    occupants?: Record<string, readonly Record<string, unknown>[]>;
+    fetchThrows?: boolean;
+  } = {},
+): {
   host: ChatRoomHost;
   sent: Sent[];
 } {
@@ -66,6 +80,14 @@ function recorder(options: { throws?: boolean } = {}): {
           if (options.throws) throw new Error('the namespace is closed');
           sent.push({ room, event, payload });
           return true;
+        },
+      }),
+      in: (room: string) => ({
+        fetchSockets: async () => {
+          if (options.fetchThrows) {
+            throw new Error('the namespace is closed');
+          }
+          return (options.occupants?.[room] ?? []).map((data) => ({ data }));
         },
       }),
     },
@@ -178,6 +200,74 @@ describe('ChatRealtimeService', () => {
       expect(() =>
         service.publishRead('c1', ME, new Date(CREATED)),
       ).not.toThrow();
+    });
+  });
+  describe('who is watching a conversation (E44)', () => {
+    it('names the members with a socket in the conversation’s room', async () => {
+      const service = new ChatRealtimeService();
+      service.attach(
+        recorder({
+          occupants: {
+            'conversation:c1': [
+              { [PARTICIPANT_SOCKET_DATA]: ME.memberId },
+              { [PARTICIPANT_SOCKET_DATA]: OTHER.memberId },
+            ],
+          },
+        }).host,
+      );
+
+      const watching = await service.watchersOf('c1');
+
+      expect([...watching].sort()).toEqual(
+        [ME.memberId, OTHER.memberId].sort(),
+      );
+    });
+
+    it('counts one member once, however many tabs they have open', async () => {
+      const service = new ChatRealtimeService();
+      service.attach(
+        recorder({
+          occupants: {
+            'conversation:c1': [
+              { [PARTICIPANT_SOCKET_DATA]: ME.memberId },
+              { [PARTICIPANT_SOCKET_DATA]: ME.memberId },
+            ],
+          },
+        }).host,
+      );
+
+      expect(await service.watchersOf('c1')).toEqual(new Set([ME.memberId]));
+    });
+
+    it('answers about the conversation’s room and not about the connection', async () => {
+      const service = new ChatRealtimeService();
+      service.attach(
+        recorder({
+          // Connected — the member room is joined at the handshake (F166) —
+          // but not looking at this conversation. That is exactly the person
+          // E44 wants notified.
+          occupants: {
+            'member:user:me-0000': [{ [PARTICIPANT_SOCKET_DATA]: ME.memberId }],
+          },
+        }).host,
+      );
+
+      expect(await service.watchersOf('c1')).toEqual(new Set());
+    });
+
+    it('says nobody when no gateway has initialised', async () => {
+      expect(await new ChatRealtimeService().watchersOf('c1')).toEqual(
+        new Set(),
+      );
+    });
+
+    it('says nobody when the namespace refuses to answer', async () => {
+      const service = new ChatRealtimeService();
+      service.attach(recorder({ fetchThrows: true }).host);
+
+      // Erring towards "nobody is watching" means a notification too many
+      // rather than a message nobody hears about.
+      expect(await service.watchersOf('c1')).toEqual(new Set());
     });
   });
 });

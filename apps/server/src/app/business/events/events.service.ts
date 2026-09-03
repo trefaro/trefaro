@@ -3,6 +3,7 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import type {
@@ -12,7 +13,7 @@ import type {
   OrganizerEvent,
   PublicEvent,
 } from '@trefaro/shared-models';
-import { hasEnded, isTimeZone } from '@trefaro/shared-models';
+import { hasEnded, isTimeZone, publicEventPath } from '@trefaro/shared-models';
 import { AttachmentsService } from '../attachments';
 import { isSlug, slugify } from '../common/slug';
 import { EventSeriesService } from '../event-series/event-series.service';
@@ -22,6 +23,7 @@ import {
   type LogoBytes,
   type LogoUpload,
 } from '../logo-files';
+import { PushService, type EventChange } from '../push';
 import {
   REGISTRATION_TALLY,
   type RegistrationTally,
@@ -94,6 +96,8 @@ export interface EventLocation {
  */
 @Injectable()
 export class EventsService {
+  private readonly logger = new Logger(EventsService.name);
+
   constructor(
     @Inject(EVENT_REPOSITORY)
     private readonly events: EventRepository,
@@ -115,6 +119,11 @@ export class EventsService {
     // `EventSeriesService`: that service knows nothing about events, this one
     // keeps the rule about which rows exist.
     private readonly logos: LogoImageService,
+    // Sending, not deciding: which change is worth a notification is this
+    // service's rule (F176), who hears about it and in what words is the push
+    // module's (E43). The dependency runs one way — push knows nothing about
+    // events.
+    private readonly push: PushService,
   ) {}
 
   /** Every event of a series, drafts included (FR 2.3, organizer side). */
@@ -349,10 +358,59 @@ export class EventsService {
         ...place,
       });
       if (!updated) throw new NotFoundException(`No event with id "${id}"`);
+      this.announce(existing, updated);
       return toOrganizerEvent(updated);
     } catch (error: unknown) {
       throw this.translate(error);
     }
+  }
+
+  /**
+   * Notifies the people this change concerns, if it concerns anybody (F176).
+   *
+   * **Not awaited, on purpose.** Reading an audience and handing payloads to a
+   * browser vendor's push service is a network round trip per device; an
+   * organizer pressing "save" must not wait for it, and must not see an error
+   * when a push service is down. A notification is best effort in exactly the
+   * way live delivery is (E41) — the change itself is already stored, and the
+   * landing page carries it whether or not a phone buzzed.
+   */
+  private announce(before: EventRecord, after: EventRecord): void {
+    const changes = notifiableChanges(before, after);
+    if (changes.length === 0) return;
+
+    void this.notifyChange(after, changes).catch((error: unknown) => {
+      this.logger.warn(
+        `Could not notify about the change to event ${after.id}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    });
+  }
+
+  private async notifyChange(
+    event: EventRecord,
+    changes: readonly EventChange[],
+  ): Promise<void> {
+    // The series, for the address a click has to land on. Read here rather
+    // than carried through `update`, because it is only needed when something
+    // is actually going out.
+    const series = await this.series.getForOrganizer(event.seriesId);
+
+    await this.push.notifyEventChange({
+      eventId: event.id,
+      name: event.name,
+      path: publicEventPath(series.slug, event.slug),
+      changes,
+      period: {
+        startsAt: event.startsAt.toISOString(),
+        endsAt: event.endsAt.toISOString(),
+        timezone: event.timezone,
+      },
+      // The venue if there is one to name; an online event has none, and a
+      // notification does not carry a meeting URL (NFR 7).
+      place: event.venueName,
+    });
   }
 
   /**
@@ -611,6 +669,60 @@ function toPublicEvent(
  * writing it, and a form that could not read back its own field would be a form
  * that empties itself on every save.
  */
+/**
+ * What about this change is worth a notification — and what is not (F176).
+ *
+ * The rule in one sentence: **a notification is a correction to a plan people
+ * already have.** Everything in this function follows from that.
+ *
+ * - **The event was public.** A draft is nobody's plan; publishing one is not a
+ *   correction but an announcement, and this application does not send those
+ *   (F8). So a change is notifiable only if the event *was* published before
+ *   it.
+ * - **The event has not happened.** Archiving last year's conference is
+ *   housekeeping, and "this event is not taking place as planned" would be a
+ *   lie about something that already did. Either side of the change may reach
+ *   into the future — an organizer moving a date that had slipped past is
+ *   correcting a plan too.
+ * - **Three kinds of change.** The time, the place, or that it is no longer
+ *   happening. Not the description, not the follow-up text, not a translation:
+ *   those are a page, and a page is read when somebody opens it.
+ *
+ * `eventType` counts as the place, because switching an on-site event to
+ * online is the largest possible change to where somebody has to be.
+ */
+function notifiableChanges(
+  before: EventRecord,
+  after: EventRecord,
+  now: Date = new Date(),
+): readonly EventChange[] {
+  if (before.status !== 'published') return [];
+  if (before.endsAt <= now && after.endsAt <= now) return [];
+
+  // No longer public: archived, or put back into a draft. One notification for
+  // both, because from outside they are the same fact — the event is off the
+  // page it was announced on.
+  if (after.status !== 'published') return ['withdrawn'];
+
+  const changes: EventChange[] = [];
+  if (
+    before.startsAt.getTime() !== after.startsAt.getTime() ||
+    before.endsAt.getTime() !== after.endsAt.getTime() ||
+    before.timezone !== after.timezone
+  ) {
+    changes.push('time');
+  }
+  if (
+    before.eventType !== after.eventType ||
+    before.venueName !== after.venueName ||
+    before.venueAddress !== after.venueAddress ||
+    before.onlineUrl !== after.onlineUrl
+  ) {
+    changes.push('place');
+  }
+  return changes;
+}
+
 function toOrganizerEvent(record: EventRecord): OrganizerEvent {
   return {
     ...toPublicEvent(record),

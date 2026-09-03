@@ -34,6 +34,7 @@ import { ProfilesService } from './profiles.service';
 import { UserSessionService } from './user-session.service';
 import {
   USER_SESSION_COOKIE,
+  participantSessionFromRequest,
   userSessionCookieOptions,
 } from './user-session-cookie';
 import type { TrefaroEnv } from '../../core/config/env';
@@ -130,10 +131,8 @@ export class ParticipantAuthController {
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ): Promise<void> {
-    const token = request.cookies?.[USER_SESSION_COOKIE];
-    if (typeof token === 'string' && token.length > 0) {
-      await this.sessions.revoke(token);
-    }
+    const token = participantSessionFromRequest(request);
+    if (token) await this.sessions.revoke(token);
     response.clearCookie(
       USER_SESSION_COOKIE,
       userSessionCookieOptions(this.env),

@@ -6,6 +6,7 @@ import type {
   ImageFileService,
   ImageUpload,
 } from '../common/image-file.service';
+import type { ChatNotificationsService } from './chat-notifications.service';
 import { ChatRealtimeService } from './chat-realtime.service';
 import type { ConversationsService } from './conversations.service';
 import { MessagesService, type MessageImageUpload } from './messages.service';
@@ -73,6 +74,8 @@ interface Harness {
   discarded: readonly (string | null)[][];
   asked: { conversationId: string; before: string | null; limit: number }[];
   delivered: { message: MessageRecord['id']; members: readonly string[] }[];
+  /** What was handed to the notifier for the members who are not watching. */
+  notified: { message: MessageRecord['id']; members: readonly string[] }[];
 }
 
 function harness(
@@ -156,13 +159,35 @@ function harness(
     },
   } as unknown as ChatRealtimeService;
 
+  // E44's side of the same delivery. What it decides is its own suite's
+  // business; what matters here is that sending a message asks it at all.
+  const notified: Harness['notified'] = [];
+  const notifications = {
+    async notifyAbsent(
+      message: { id: string },
+      members: readonly ConversationMemberRef[],
+    ) {
+      notified.push({
+        message: message.id,
+        members: members.map((member) => member.memberId),
+      });
+    },
+  } as unknown as ChatNotificationsService;
+
   return {
-    service: new MessagesService(conversations, images, messages, realtime),
+    service: new MessagesService(
+      conversations,
+      images,
+      messages,
+      realtime,
+      notifications,
+    ),
     appended,
     stored,
     discarded,
     asked,
     delivered,
+    notified,
   };
 }
 
@@ -288,6 +313,26 @@ describe('MessagesService', () => {
       ).rejects.toThrow();
 
       expect(delivered).toEqual([]);
+    });
+
+    it('hands the same line to the notifier, for whoever was not there (E44)', async () => {
+      const { service, notified } = harness();
+
+      const message = await service.send(ME, 'c1', { body: 'Hello' }, null);
+
+      // The same message and the same member list the socket delivery got:
+      // the two are one delivery split by whether anybody is looking.
+      expect(notified).toEqual([{ message: message.id, members: [ME, OTHER] }]);
+    });
+
+    it('notifies nobody about a message that was never stored', async () => {
+      const { service, notified } = harness({ appendFails: true });
+
+      await expect(
+        service.send(ME, 'c1', { body: 'Hello' }, null),
+      ).rejects.toThrow();
+
+      expect(notified).toEqual([]);
     });
   });
 

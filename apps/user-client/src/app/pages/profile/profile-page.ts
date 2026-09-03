@@ -26,6 +26,7 @@ import {
 } from '@trefaro/shared-models';
 import { ParticipantSessionService } from '../../features/auth/participant-session.service';
 import { CustomField } from '../../features/fields/custom-field';
+import { NotificationSettings } from '../../features/push/notification-settings';
 import {
   fillAnswers,
   syncAnswers,
@@ -62,7 +63,13 @@ import { ParticipantProfileService } from '../../features/profiles/participant-p
 @Component({
   selector: 'trefaro-profile-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [AvatarField, CustomField, ReactiveFormsModule, TranslocoPipe],
+  imports: [
+    AvatarField,
+    CustomField,
+    NotificationSettings,
+    ReactiveFormsModule,
+    TranslocoPipe,
+  ],
   template: `
     <h1>{{ 'profile.title' | transloco }}</h1>
 
@@ -219,6 +226,10 @@ import { ParticipantProfileService } from '../../features/profiles/participant-p
           </div>
         </fieldset>
       </form>
+
+      <!-- Notifications belong to a person and to a device at once, so the
+           switch is here and the offer is in the shell (FR 3.15, E43). -->
+      <trefaro-notification-settings />
     }
   `,
   styles: `

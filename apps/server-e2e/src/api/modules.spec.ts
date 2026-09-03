@@ -341,14 +341,28 @@ describe('the module administration', () => {
   it('gates push on the flag: no VAPID key and no subscriptions while it is off', async () => {
     const before = await find('push');
     const endpoint = `https://push.example.org/modules-contract-${stamp}`;
+    /**
+     * The body each verb takes, and they are not the same one.
+     *
+     * `DELETE` accepts the endpoint and nothing else — the API rejects unknown
+     * fields rather than dropping them (F44). Sending the subscribe body to it
+     * is a 400, which is what this suite did until AP 11 of phase 3: every run
+     * left its row behind, and once an event change started reading the
+     * subscriptions as an audience (E43) those rows became fifty-eight
+     * unreachable endpoints the instance dutifully tried to notify.
+     */
     const push = (method: string) =>
       api('/api/user/push/subscriptions', {
         method,
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          endpoint,
-          keys: { p256dh: 'a'.repeat(87), auth: 'b'.repeat(22) },
-        }),
+        body: JSON.stringify(
+          method === 'DELETE'
+            ? { endpoint }
+            : {
+                endpoint,
+                keys: { p256dh: 'a'.repeat(87), auth: 'b'.repeat(22) },
+              },
+        ),
       });
 
     try {
@@ -367,7 +381,7 @@ describe('the module administration', () => {
       expect((await push('POST')).status).not.toBe(404);
       // Removed while the module still answers: a suite leaves no rows behind,
       // and after the flag goes back this endpoint may be gone.
-      await push('DELETE');
+      expect((await push('DELETE')).status).toBe(204);
     } finally {
       await toggle('push', before.enabled);
     }

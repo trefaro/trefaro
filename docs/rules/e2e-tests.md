@@ -243,4 +243,36 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   Theming-Fehler aussehen, sind in Wahrheit der Seed. Zurücksetzen, nicht den
   Test anpassen.
 
+- **Eine Suite legt nur zurück, was sie gelesen hat.** Wer Instanzzustand
+  umschaltet, merkt ihn sich — und der Anfangswert dieser Variable darf **keine
+  Vermutung** sein. Ein Absturz im `beforeAll` lässt das `afterAll` sonst die
+  Vermutung _schreiben_: in AP 11 blieb so `push` in der Entwicklungsinstanz an,
+  und kaputt ging davon der eine schreibende Test der Modulverwaltung im
+  **Veranstalter-Client**, der „einschalten" klickt und nichts zum Klicken fand.
+  `boolean | null = null`, und wiederhergestellt wird nur, was gelesen wurde.
+- **Ein Aufräum-Request, dessen Rumpf abgelehnt wird, räumt nichts auf.**
+  `DELETE /api/user/push/subscriptions` nimmt nur den Endpunkt; mit dem Rumpf des
+  Abonnierens ist es ein 400 (F44). Jeder Lauf ließ eine Zeile zurück — 58, bis
+  AP 11 die Abonnements zu einer Zielgruppe machte und jede davon zu einem
+  Endpunkt, den die Instanz anzusprechen versucht. **Den Status eines Aufräumens
+  prüfen**, sonst ist es eine Absicht.
+- **`web-push` spricht immer TLS**, egal was im Endpunkt steht. Ein Push-Dienst
+  als HTTP-Attrappe bekommt einen TLS-Handshake, ein TLS-Dienst bräuchte ein
+  Zertifikat, dem der Serverprozess traut — und dafür entweder eine CA in seiner
+  Umgebung oder einen Agenten ohne Prüfung. **Kein Test ist ein Grund, warum
+  Produktionscode ein ungeprüftes Zertifikat annehmen kann.** Also ist die
+  Attrappe **ein lauschender Socket je Gerät** und die „Zustellung" ist die
+  Verbindung: das entscheidet, **wer** benachrichtigt wird. Was eine
+  Benachrichtigung sagt, prüft ein Unit-Test gegen die mitgelieferten Kataloge;
+  dass `410 Gone` aufräumt, einer gegen die gemockte Bibliothek.
+- **„Es ging nichts raus" braucht eine Wartezeit.** Eine Benachrichtigung wird
+  von der Anfrage, die sie auslöst, absichtlich nicht abgewartet — also ist die
+  Behauptung nur nach einer kurzen Stille prüfbar. Die Alternative ist eine
+  Zusicherung, die auch grün ist, wenn die Regel umgekehrt gilt.
+- **Die Vertragssuite braucht ein VAPID-Paar.** Ohne eins hat die Instanz Push an
+  der Quelle aus und `push-notifications.spec.ts` hätte nichts zu prüfen; der
+  erste Test sagt das in einem Satz, statt achtmal zu scheitern. In der CI steht
+  ein Wegwerf-Paar in der Job-Umgebung, lokal in `.env` — dasselbe, was
+  `verify-push.mjs` seit Phase 0 verlangt.
+
 Siehe auch: [Fallen in den Angular-Clients](angular-clients.md), [Deployment und Prüfung](deployment.md).

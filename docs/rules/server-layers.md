@@ -161,4 +161,28 @@ diese Eigenschaft.
   Objekt-`type` bekommt eine implizite Indexsignatur, und daran hängen der eine
   generische Port, das eine generische Repository und das eine Formularbauteil.
 
+- **Ein Port liest eine Zielgruppe, nie eine Tabelle** (F134, wie F152 und
+  F173). `PushSubscriptionRepository` hatte `findAll()`, solange es eine
+  Benachrichtigung gab („alle"). Ab AP 11 gibt es zwei Zielgruppen und **keine
+  Methode für eine dritte**: die Geräte einer Event-Änderung (bestätigte
+  Angemeldete **plus** jedes Gerät ohne Konto, in _einer_ `UNION`, damit die
+  zweite Hälfte nicht einzeln erreichbar ist) und die Geräte eines Kontos. Wer
+  eine neue Benachrichtigung baut, bringt ihre Zielgruppe als **Anweisung** mit,
+  nicht als Filter darüber.
+- **Ein Dienst, der ohne Anfrage arbeitet, fragt seinen Modulschalter selbst**
+  (E21, F63). Der Guard hängt an Routen; eine Benachrichtigung entsteht aus
+  einer Event-Änderung, also fragt niemand die Flagge für sie. `PushService`
+  liest dieselbe Registry wie der Guard (F53) — und stellt fest: Abonnements
+  bleiben beim Ausschalten liegen, es geht nur nichts mehr raus.
+- **Eine Benachrichtigung darf nie scheitern lassen, worüber sie berichtet.**
+  Beide `notify…`-Methoden antworten mit einem Bericht statt zu werfen, und ihre
+  Aufrufer `void`en sie: wer ein Event speichert oder eine Nachricht schreibt,
+  wartet nicht auf den Push-Dienst eines Browserherstellers und sieht auch
+  keinen Fehler von ihm. Dieselbe Regel wie bei der Live-Zustellung (E41) —
+  **Speichern ist verbindlich, Zustellen ist beste Absicht.**
+- **Wer Worte in einer Sprache braucht, gruppiert nach Sprache** (F177, F125).
+  Ein Katalog ist eine Auflösung aus drei Quellen (E23); eine Organisation mit
+  fünfzig Abonnenten hat zwei Sprachen, nicht fünfzig Kataloge. E24 (Rückfall
+  als Ganzes) gilt **nur** für Mail und ist bewusst nicht übernommen.
+
 Siehe auch: [Verträge der Endpunkte](api-contracts.md), [Regeln des Datenmodells](data-model.md).

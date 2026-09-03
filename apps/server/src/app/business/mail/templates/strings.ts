@@ -1,4 +1,5 @@
 import type { TranslationCatalogue } from '@trefaro/shared-models';
+import { interpolate } from '../../common/interpolate';
 import { escapeHtml, type Html } from './html';
 
 /** What a template may put in place of a `{{placeholder}}` in plain text. */
@@ -66,26 +67,4 @@ export function mailStrings(
     html: (key, params) =>
       interpolate(escapeHtml(values[key]), params ?? {}) as Html,
   };
-}
-
-/**
- * Fills `{{ name }}` placeholders, and leaves the ones nobody supplied.
- *
- * Left rather than emptied, which is the opposite of what Transloco does in the
- * clients — and on purpose. An organization may write `{{tage}}` into its own
- * German text where the template supplies `days`; on a screen the empty gap is
- * fixed by the next edit, but a mail has already been sent. A visible
- * `{{tage}}` is something a recipient can report and an organizer can find.
- *
- * The escaping of the catalogue text happens before this, never after: the
- * placeholder syntax has no HTML-significant characters, so it survives
- * escaping intact, while a parameter inserted first would be escaped twice.
- */
-function interpolate(
-  template: string,
-  params: Readonly<Record<string, string | number>>,
-): string {
-  return template.replace(/{{\s*([^}\s]+)\s*}}/g, (placeholder, name) =>
-    name in params ? String(params[name]) : placeholder,
-  );
 }

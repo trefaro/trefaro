@@ -5,7 +5,9 @@ import { EventSeriesModule } from '../event-series';
 import { EventsModule } from '../events';
 import { MailModule } from '../mail';
 import { ProfilesModule } from '../profiles';
+import { PushModule } from '../push';
 import { AdminConversationsController } from './admin-conversations.controller';
+import { ChatNotificationsService } from './chat-notifications.service';
 import { ChatRealtimeService } from './chat-realtime.service';
 import { ChatGateway } from './chat.gateway';
 import { ConversationsService } from './conversations.service';
@@ -77,6 +79,13 @@ import { PublicContactController } from './public-contact.controller';
  * is an optional P2 module that requires `profiles` (E42): an instance with no
  * participant accounts must still be reachable, and a switch that could turn
  * off the organization's own inbox would say more than it means.
+ *
+ * **AP 11 adds `PushModule`**, for the half of delivering a message that a
+ * socket cannot do (E44): a member with no socket in a conversation is
+ * notified instead of emitted to. The push module asks its own flag before
+ * sending anything, so an instance with notifications switched off writes
+ * messages exactly as before — the two switches are independent, and neither
+ * is allowed to imply the other.
  */
 @Module({
   imports: [
@@ -86,6 +95,7 @@ import { PublicContactController } from './public-contact.controller';
     EventsModule,
     EventSeriesModule,
     MailModule,
+    PushModule,
   ],
   controllers: [
     ParticipantConversationsController,
@@ -94,6 +104,7 @@ import { PublicContactController } from './public-contact.controller';
     AdminConversationsController,
   ],
   providers: [
+    ChatNotificationsService,
     ChatRealtimeService,
     ConversationsService,
     MessagesService,

@@ -10,6 +10,7 @@ import { MailDeliveryError, MailService } from '../mail';
 import type { ContactAnswerMailContext, MailContent } from '../mail';
 import { PublicLinks } from '../mail';
 import type { TrefaroEnv } from '../../core/config/env';
+import type { ChatNotificationsService } from './chat-notifications.service';
 import { ChatRealtimeService } from './chat-realtime.service';
 import { OrganizerConversationsService } from './organizer-conversations.service';
 import type {
@@ -172,7 +173,13 @@ class FakeMessageRepository implements MessageRepository {
     this.rows = [record, ...this.rows];
     return {
       record,
-      members: [{ memberType: 'user', memberId: 'profile-1' }],
+      // What the write really finds: a group has its members, a contact
+      // request has none at all — the organization's side is not a
+      // membership row (F133).
+      members:
+        message.conversationId === GROUP.id
+          ? [{ memberType: 'user', memberId: 'profile-1' }]
+          : [],
     };
   }
 
@@ -281,6 +288,21 @@ class RecordingRealtime {
   }
 }
 
+/** The other half of delivering an answer: whoever is not watching (E44). */
+class RecordingNotifications {
+  readonly notified: { id: string; members: number }[] = [];
+
+  async notifyAbsent(
+    message: { conversationId: string },
+    members: readonly unknown[],
+  ): Promise<void> {
+    this.notified.push({
+      id: message.conversationId,
+      members: members.length,
+    });
+  }
+}
+
 /**
  * The organization's side of the conversations (FR 3.4 — AP 10).
  *
@@ -300,6 +322,7 @@ describe('OrganizerConversationsService', () => {
   let mail: RecordingMailService;
   let images: FakeImageFileService;
   let realtime: RecordingRealtime;
+  let notifications: RecordingNotifications;
   let service: OrganizerConversationsService;
 
   beforeEach(() => {
@@ -309,6 +332,7 @@ describe('OrganizerConversationsService', () => {
     mail = new RecordingMailService();
     images = new FakeImageFileService();
     realtime = new RecordingRealtime();
+    notifications = new RecordingNotifications();
     service = new OrganizerConversationsService(
       conversations,
       messages,
@@ -317,6 +341,7 @@ describe('OrganizerConversationsService', () => {
       new PublicLinks(ENV),
       images as unknown as ImageFileService,
       realtime as unknown as ChatRealtimeService,
+      notifications as unknown as ChatNotificationsService,
     );
   });
 
@@ -459,6 +484,30 @@ describe('OrganizerConversationsService', () => {
       // people who were in it when the line was written.
       expect(realtime.published).toEqual([
         { id: 'conversation-2', members: 1 },
+      ]);
+    });
+
+    it('notifies the members of a group who are not watching it (E44)', async () => {
+      await service.reply('admin-1', 'conversation-2', {
+        body: 'The bus leaves at eight.',
+      });
+
+      // The same line and the same members the socket got: an answer from the
+      // organization reaches a group the way any other message does, and who
+      // is actually absent is the notifier's own question.
+      expect(notifications.notified).toEqual([
+        { id: 'conversation-2', members: 1 },
+      ]);
+    });
+
+    it('notifies nobody about an answer to a guest, who has no membership (F133)', async () => {
+      await service.reply('admin-1', 'conversation-1', { body: 'Yes, it is.' });
+
+      // Asked all the same, and it finds nobody: the write returns no members
+      // for a contact request, so the mail is the whole delivery. A branch
+      // here would be a second place that knows what F133 already says.
+      expect(notifications.notified).toEqual([
+        { id: 'conversation-1', members: 0 },
       ]);
     });
 

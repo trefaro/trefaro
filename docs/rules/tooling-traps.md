@@ -71,4 +71,10 @@ dass das Werkzeug etwas anderes tut als erwartet.
   Kompilierfehler (`NG8002`), fällt aber erst im `build` auf — `tsc --noEmit`
   sieht Templates nicht.
 
+- **Eine Warnung, die nur den Statuscode nennt, sagt nichts.** „Push delivery
+  failed with status unknown" war derselbe Satz für einen Push-Dienst mit 500 und
+  für eine Nutzlast, die die Bibliothek nicht verschlüsseln kann — und nur das
+  zweite ist ein Defekt. Der Grund gehört ins Log; ohne ihn wäre in AP 11 der
+  TLS-Fund oben eine Stunde Rätselraten geblieben.
+
 Siehe auch: [Browsersuiten und E2E-Tests](e2e-tests.md), [Schichten und Ports im Server](server-layers.md).

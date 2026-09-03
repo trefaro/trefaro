@@ -305,6 +305,26 @@ test.describe('a participant account', () => {
       page.getByLabel(t('profile.changePassword.current')),
     ).toHaveValue('');
 
+    // --- notifications (FR 3.15) ------------------------------------------
+    // The switch AP 11 put on this page, in the one state a browser without a
+    // service worker can be in — which is every browser here, because Angular
+    // registers one only in a production build. That is not a gap in this
+    // assertion but the point of it: the sentence an iPhone in a Safari tab
+    // sees is the same one, and it is the case the decision to make Web Push
+    // the only channel depends on (F7). Whether a notification then arrives is
+    // the device matrix in `docs/spikes/03-web-push.md`.
+    await expect(
+      page.getByRole('heading', { name: t('push.settings.title') }),
+    ).toBeVisible();
+    await expect(page.getByText(t('push.unsupported'))).toBeVisible();
+    await expect(page.getByText(t('push.installFirst'))).toBeVisible();
+    // No button: nothing here can be switched on, and an offer that cannot be
+    // followed is worse than an explanation.
+    await expect(
+      page.getByRole('button', { name: t('push.settings.enable') }),
+    ).toHaveCount(0);
+    await expectNoRawKeys(page);
+
     // --- my registrations (FR 4.7) ----------------------------------------
     const admin = await asAdmin(CLIENT_URL);
     let eventName = '';

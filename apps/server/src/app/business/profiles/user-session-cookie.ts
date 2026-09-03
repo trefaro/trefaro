@@ -34,6 +34,27 @@ export function userSessionCookieOptions(
 }
 
 /**
+ * The session token a request carries, or `null`.
+ *
+ * The reader for everything that speaks HTTP: `cookie-parser` has already run,
+ * so the work is one lookup — but it is a lookup under a name, and the name is
+ * the point (see above). Two callers had written it out by hand before AP 11
+ * added a third, and the third is the one that made it worth a function: the
+ * push endpoint takes a session when there is one and works without it (E43),
+ * so "no cookie" is an answer there rather than a 401.
+ *
+ * Deliberately not typed against `express.Request`: what this needs is the
+ * parsed cookies, and a structural type says so without dragging a framework
+ * into a file that is otherwise about one string.
+ */
+export function participantSessionFromRequest(request: {
+  readonly cookies?: Record<string, string | undefined>;
+}): string | null {
+  const token = request.cookies?.[USER_SESSION_COOKIE];
+  return typeof token === 'string' && token.length > 0 ? token : null;
+}
+
+/**
  * The session token out of a raw `Cookie:` header, or `null`.
  *
  * Beside the cookie's name rather than in the gateway that needs it, for the

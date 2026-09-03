@@ -220,4 +220,17 @@ Entscheidungsprotokoll (`docs/Anforderungsanalyse_und_Umsetzungsplan.md`).
   Seite gebracht, und „ich habe das Event-Logo entfernt, jetzt erscheint das der
   Reihe" hat niemand angefordert.
 
+- **`push_subscription.user_id` ist nullbar, und das ist die Zusage** (F134,
+  E43): ein Browser ohne Konto behält sein Abonnement. `ON DELETE CASCADE` —
+  ein gelöschtes Profil nimmt seine Geräte mit. Die **Identität der Zeile bleibt
+  der Endpunkt** (unique): ein Gerät wird umgehängt, nie verdoppelt, sonst hieße
+  ein geteiltes Tablet zwei Benachrichtigungen für einen Bildschirm. Die Spalte
+  fehlte seit Phase 0 mit Absicht — ohne `user_profile` hätte sie keinen
+  Fremdschlüssel gehabt, und eine Spalte, die die Datenbank nicht sauber halten
+  kann, ist schlimmer als keine.
+- **Zwei partielle Indizes statt einem** auf derselben Spalte, weil die
+  Zielgruppe zwei Hälften hat: `WHERE user_id IS NOT NULL` für die Geräte eines
+  Kontos, `WHERE user_id IS NULL` für die ohne. Ein gewöhnlicher Index über eine
+  Spalte, die zur Hälfte `NULL` ist, beantwortet die zweite Frage nicht.
+
 Siehe auch: [Schichten und Ports im Server](server-layers.md), [Ausgehende Mail](mail.md).

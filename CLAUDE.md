@@ -150,7 +150,7 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    (offen geblieben: die Feedbackrunde mit Democracy International)
 2. **✅ 29.08.2026, M5** Whitelabel-Theming, Modul-Verwaltung, i18n, PWA,
    Installations-Story → `docs/PHASE2.md`
-3. **In Arbeit** (AP 1–AP 10 erledigt, M7 erreicht) Profile, Nachrichten,
+3. **In Arbeit** (AP 1–AP 11 erledigt, M7 erreicht) Profile, Nachrichten,
    Echtzeit-/Gruppenchat, Push, Profilsuche → `docs/PHASE3.md`
 4. Plug-ins: Programmvorschläge, Forum, Raumplanung, QR-Check-In
 5. Härtung, Usability-Test mit Democracy International (Pilotpartner), Doku,
@@ -169,19 +169,17 @@ bewusst; die Begründungen stehen in `docs/rules/`. Katalog damals 646 → 654.
 
 **Phase 3 läuft** (seit 02.09.2026): Plan in `docs/PHASE3.md`, dreizehn
 Arbeitspakete, Entscheidungen **E31–E45**, Nachträge ab **F118** (vergeben:
-F118–F128, F132, F133, F137–F172; F129–F131 und F134–F136 bleiben unvergeben
-bzw. reserviert). **AP 1 (Teilnehmerkonto und Login), AP 2 (Profil und
+F118–F128, F132–F135, F137–F178; F129–F131 bleiben unvergeben, **F136** ist für
+AP 12 reserviert). **AP 1 (Teilnehmerkonto und Login), AP 2 (Profil und
 Feld-Baukasten), AP 3 (Login, Registrierung und Profil in beiden Clients,
 **Meilenstein M6**), AP 4 (die Anmeldung kennt den Menschen), AP 5
 (Profilsuche), AP 6 (Gespräche, Nachrichten und Bilder), AP 7 (Echtzeit,
 **Meilenstein M7**), AP 8 (Chat im Nutzer-Client), AP 9 (Organisator-Kontakt
-ohne Registrierung) und AP 10 (Nachrichtenübersicht im Veranstalter-Client)
-sind erledigt** — Protokoll je Paket unter _Fortschritt_. Als nächstes AP 11:
-Push wird echt (FR 3.15) — `PushService.broadcast()` bekommt seine Aufrufer,
-`push_subscription.user_id` wird nullbar (E43), der Client erklärt die
-Berechtigung **vor** dem Browserdialog, und die Gerätematrix aus Spike 3 wird
-von Hand abgehakt (samt iOS Safari mit installierter PWA, wovon F7 abhängt).
-Katalog **890** Schlüssel.
+ohne Registrierung), AP 10 (Nachrichtenübersicht im Veranstalter-Client) und
+AP 11 (Push wird echt) sind erledigt** — Protokoll je Paket unter
+_Fortschritt_. Als nächstes AP 12: die zwei P3-Zugaben (FR 4.7, 4.8) — Storno
+der eigenen Anmeldung über die Sitzung (F148) und der Newsletter als Adresse
+mit eigenem Double-Opt-In (E45, F136). Katalog **911** Schlüssel.
 
 Aus AP 4: die Selbstbedienung kennt zwei Ansprüche — das signierte Token aus der
 Mail und die Sitzung, aufgelöst über die Adresse (F148) —, die
@@ -284,16 +282,46 @@ Benachrichtigungsmail** (F172, jetzt `organizerConversationPath`). Migration:
 keine. **Nichts daran ist live** — der Handshake authentifiziert eine
 Teilnehmersitzung, und die Mail ist der Ersatz.
 
-Neun Punkte warten auf ein anderes Paket bzw. auf Marius: das **Storno über die
-Sitzung** gehört zu AP 12 (F148), die **Drosselung des Handshakes** zu Phase 5;
-ob es eine geteilte Bibliothek für Oberflächenbauteile geben soll, ist eine
-Stack-Entscheidung (F145). Produktfragen sind der **Ungelesen-Zähler** in der
-Navigationsleiste (AP 8), die **Nachrichten-Kachel** des Event-Dashboards (sie
-bräuchte eine Ungelesen-Zahl, die es für die Organisation nicht gibt) und ob die
-Übersicht sich **selbst auffrischen** soll. Benannte Grenzen: der **Name der
-antwortenden Person** ist gespeichert, aber nicht gezeigt; die **Antwort eines
-Gasts** kommt als gewöhnliche Mail außerhalb der Anwendung an; und der
-Veranstalter kann **kein Bild senden**. Alles neun in `todo.md`.
+Aus AP 11: **Push ist echt** — nur die Gerätematrix fehlt (siehe unten). Die
+Spalte, die seit Phase 0 vorgemerkt war, ist da: `push_subscription.user_id`
+nullbar mit `ON DELETE CASCADE` (F134, E43), und **nullbar ist das Merkmal** —
+dass ein Event verlegt wurde, ist öffentliche Information. Der **Endpunkt bleibt
+die Identität** der Zeile, also hängt An- und Abmelden ein Gerät _um_ statt es zu
+verdoppeln; der Endpunkt liest die Sitzung **optional** (dritter Leser des
+Cookies → `participantSessionFromRequest`). Die **Zielgruppe einer
+Event-Änderung ist eine `UNION` im Port** — bestätigte Angemeldete _plus_ jedes
+Gerät ohne Konto, nicht einzeln abfragbar (F134, wie F152). Was eine
+Benachrichtigung wert ist, sagt **F176**: veröffentlicht, nicht vorbei, und
+Zeit, Ort oder „findet nicht statt" — eine Benachrichtigung ist eine **Korrektur
+an einem Plan, den jemand schon hat**, also kündigt sie nichts an (F8). Bei
+einer neuen Nachricht geht sie nur an Mitglieder **ohne offenen Socket in diesem
+Gespräch** (F135, E44 — und deshalb war F166 die Voraussetzung); zugestellt wird
+von einem eigenen Dienst neben der Live-Zustellung, den beide Schreiber
+aufrufen. Die Worte kommen aus dem Katalog, **nach Sprache gruppiert**, und E24
+gilt hier ausdrücklich **nicht** (F177). Der Client **erklärt vor** dem
+Browserdialog, liest die Berechtigung statt sie zu erfragen und merkt sich ein
+„jetzt nicht" (F178) — Angebot in der Hülle, Schalter auf der Profilseite.
+Beide Schalter werden **im Dienst selbst** gefragt (E21, F63). `broadcast()` und
+`findAll()` sind weg: es gibt zwei Zielgruppen und keine Methode für eine
+dritte. Migration: **eine**. Vier `todo.md`-Einträge geschlossen.
+
+Was auf ein anderes Paket bzw. auf Marius wartet — alles in `todo.md`. **Für
+Marius mit Geräten:** die **Gerätematrix** aus Spike 3, vier Zeilen samt iOS
+Safari mit installierter PWA (wovon F7 abhängt); das Verfahren steht in
+`docs/spikes/03-web-push.md` und geht jetzt über eine **verschobene Session**
+statt über einen Testversand, den es bewusst nicht gibt. Andere Pakete: das
+**Storno über die Sitzung** gehört zu AP 12 (F148), die **Drosselung des
+Handshakes** zu Phase 5; ob es eine geteilte Bibliothek für Oberflächenbauteile
+geben soll, ist eine Stack-Entscheidung (F145). Produktfragen sind der
+**Ungelesen-Zähler** in der Navigationsleiste (AP 8, seit AP 11 kleiner: wer
+Benachrichtigungen an hat, erfährt es), die **Nachrichten-Kachel** des
+Event-Dashboards, ob die Übersicht sich **selbst auffrischen** soll, und ob ein
+Gerät ohne Konto weiter von **allen** öffentlichen Events hören soll (der Preis
+von E43). Benannte Grenzen: der **Name der antwortenden Person** ist
+gespeichert, aber nicht gezeigt; die **Antwort eines Gasts** kommt als
+gewöhnliche Mail außerhalb der Anwendung an; der Veranstalter kann **kein Bild
+senden**; und ein Gerät **ohne Konto** kann Benachrichtigungen nur in den
+Einstellungen seines Browsers abschalten.
 
 ## Betriebskontext
 

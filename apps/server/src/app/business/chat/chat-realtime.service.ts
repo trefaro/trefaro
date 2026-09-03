@@ -32,16 +32,37 @@ export const memberRoom = (member: ConversationMemberRef): string =>
   `member:${member.memberType}:${member.memberId}`;
 
 /**
+ * Where an admitted socket's participant is parked for its lifetime.
+ *
+ * Beside the room names rather than in the gateway, because two things read
+ * it: the gateway writes it at the door (E41), and {@link
+ * ChatRealtimeService.watchersOf} reads it back off the sockets in a room.
+ * One spelling, for the same reason the rooms have one.
+ */
+export const PARTICIPANT_SOCKET_DATA = 'participantId';
+
+/** As much of a connected socket as this service looks at. */
+export interface ChatRoomOccupant {
+  readonly data: Record<string, unknown>;
+}
+
+/**
  * The slice of a socket.io namespace this needs.
  *
- * Narrow on purpose: what the business layer has to be able to say is "send
- * this to everybody in that room", and a whole `Namespace` would also let it
- * accept connections, walk sockets and read handshakes. The gateway passes
- * itself in at boot ({@link ChatRealtimeService.attach}), and a test passes a
- * recorder.
+ * Narrow on purpose: a whole `Namespace` would also let the business layer
+ * accept connections and read handshakes. The gateway passes itself in at boot
+ * ({@link ChatRealtimeService.attach}), and a test passes a recorder.
+ *
+ * Two verbs, and the second one arrived with E44. Until AP 11 this was "send
+ * this to everybody in that room" and nothing else; a personal notification
+ * needs one more question — **who is in that room right now** — because push
+ * only goes out to a member who is *not* looking at the conversation. It is a
+ * read, it answers about occupancy rather than about people, and it is the
+ * least this interface can be widened by to make E44 answerable at all.
  */
 export interface ChatRoomHost {
   to(room: string): { emit(event: string, payload: unknown): unknown };
+  in(room: string): { fetchSockets(): Promise<readonly ChatRoomOccupant[]> };
 }
 
 /**
@@ -123,6 +144,44 @@ export class ChatRealtimeService {
 
     this.emit(conversationRoom(conversationId), CHAT_READ, read);
     this.emit(memberRoom(member), CHAT_CONVERSATION, moved);
+  }
+
+  /**
+   * The members with a socket open in one conversation right now (E44).
+   *
+   * "Watching" is the room of the conversation, not the connection: the socket
+   * belongs to the session and is held for as long as somebody is signed in
+   * (F166), while the room is joined by the conversation view and left when it
+   * closes. Asking the connection instead would mean "is the app open", and
+   * push would stop working for everybody who leaves a tab lying around.
+   *
+   * An empty set when no gateway has initialised — a unit test, or a process
+   * shutting down. Erring towards "nobody is watching" is the right direction:
+   * the worst case is a notification about something somebody can already see,
+   * and the other way round is a message nobody hears about.
+   */
+  async watchersOf(conversationId: string): Promise<ReadonlySet<string>> {
+    if (!this.host) return new Set();
+
+    try {
+      const sockets = await this.host
+        .in(conversationRoom(conversationId))
+        .fetchSockets();
+
+      const watchers = new Set<string>();
+      for (const socket of sockets) {
+        const participantId = socket.data[PARTICIPANT_SOCKET_DATA];
+        if (typeof participantId === 'string') watchers.add(participantId);
+      }
+      return watchers;
+    } catch (error: unknown) {
+      this.logger.warn(
+        `Could not read who is watching ${conversationId}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return new Set();
+    }
   }
 
   private emit(room: string, event: string, payload: unknown): void {

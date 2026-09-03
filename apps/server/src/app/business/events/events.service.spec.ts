@@ -11,6 +11,7 @@ import type {
 import type { AttachmentsService } from '../attachments';
 import type { EventSeriesService } from '../event-series/event-series.service';
 import type { LogoImageService, LogoUpload } from '../logo-files';
+import type { EventChangeNotice, PushService } from '../push';
 import type { RegistrationTally } from '../registration/ports/registration-tally';
 import { EventsService, type CreateEventInput } from './events.service';
 import type { EventTranslationReader } from './ports/event-translation.repository';
@@ -206,6 +207,21 @@ class FakeAttachmentsService {
   }
 }
 
+/**
+ * Records what an event change was worth notifying about (F176, AP 11).
+ *
+ * The audience and the words are the push module's business and its own
+ * suite's; what this one decides is *whether* — and, when the answer is yes,
+ * what a notification is told about the event.
+ */
+class RecordingPush {
+  readonly notices: EventChangeNotice[] = [];
+
+  async notifyEventChange(notice: EventChangeNotice): Promise<void> {
+    this.notices.push(notice);
+  }
+}
+
 /** What an event says in another language (FR 3.12). */
 class FakeEventTranslations implements EventTranslationReader {
   private readonly rows = new Map<string, Map<string, EventTranslation>>();
@@ -251,6 +267,7 @@ describe('EventsService', () => {
   };
 
   let logos: FakeLogoImages;
+  let push: RecordingPush;
 
   beforeEach(() => {
     repository = new FakeEventRepository();
@@ -259,6 +276,7 @@ describe('EventsService', () => {
     attachments = new FakeAttachmentsService();
     translations = new FakeEventTranslations();
     logos = new FakeLogoImages();
+    push = new RecordingPush();
     service = new EventsService(
       repository,
       series as unknown as EventSeriesService,
@@ -266,6 +284,7 @@ describe('EventsService', () => {
       attachments as unknown as AttachmentsService,
       translations,
       logos as unknown as LogoImageService,
+      push as unknown as PushService,
     );
   });
 
@@ -473,6 +492,185 @@ describe('EventsService', () => {
       await expect(service.update('event-9', { name: 'x' })).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  /**
+   * Which change is worth telling people about (F176, FR 3.15).
+   *
+   * The rule is one sentence — a notification is a correction to a plan people
+   * already have — and each test below is one way of not having such a plan.
+   *
+   * `settled()` is here because the notification is deliberately not awaited:
+   * an organizer pressing save must not wait for a browser vendor's push
+   * service. What the service returns is therefore ready before the notice is,
+   * and a test that asserted straight away would assert on the wrong turn of
+   * the loop.
+   */
+  describe('notifying about a change', () => {
+    const published: CreateEventInput = { ...onsite, status: 'published' };
+    const settled = () => new Promise((resolve) => setImmediate(resolve));
+
+    it('tells the audience about a new time, with the event and the address', async () => {
+      const created = await service.create('series-1', published);
+
+      await service.update(created.id, {
+        startsAt: '2027-03-15T09:00:00.000Z',
+        endsAt: '2027-03-15T17:00:00.000Z',
+      });
+      await settled();
+
+      expect(push.notices).toEqual([
+        {
+          eventId: created.id,
+          name: 'Kickoff in Cologne',
+          // The public address of the landing page, so a click lands on the
+          // change rather than on a start page.
+          path: `/series/climate-2027/events/${created.slug}`,
+          changes: ['time'],
+          period: {
+            startsAt: '2027-03-15T09:00:00.000Z',
+            endsAt: '2027-03-15T17:00:00.000Z',
+            timezone: 'Europe/Berlin',
+          },
+          place: 'Bürgerhaus Kalk',
+        },
+      ]);
+    });
+
+    it('counts a new zone as a new time, because the clock somebody wrote down changed', async () => {
+      const created = await service.create('series-1', published);
+
+      await service.update(created.id, { timezone: 'Europe/Lisbon' });
+      await settled();
+
+      expect(push.notices.map((notice) => notice.changes)).toEqual([['time']]);
+    });
+
+    it('tells the audience about a new place, and names it', async () => {
+      const created = await service.create('series-1', published);
+
+      await service.update(created.id, { venueName: 'Alte Feuerwache' });
+      await settled();
+
+      expect(push.notices).toEqual([
+        expect.objectContaining({
+          changes: ['place'],
+          place: 'Alte Feuerwache',
+        }),
+      ]);
+    });
+
+    it('counts a switch to online as a change of place', async () => {
+      const created = await service.create('series-1', published);
+
+      await service.update(created.id, {
+        eventType: 'online',
+        onlineUrl: 'https://meet.example.org/kickoff',
+        venueName: null,
+      });
+      await settled();
+
+      // No venue to name: a notification does not carry a meeting URL (NFR 7).
+      expect(push.notices).toEqual([
+        expect.objectContaining({ changes: ['place'], place: null }),
+      ]);
+    });
+
+    it('says only that a withdrawn event is off, even when it also moved', async () => {
+      const created = await service.create('series-1', published);
+
+      await service.update(created.id, {
+        status: 'archived',
+        startsAt: '2027-04-01T09:00:00.000Z',
+        endsAt: '2027-04-01T17:00:00.000Z',
+      });
+      await settled();
+
+      // "This is not happening" beside "the new time is…" is a notification
+      // that contradicts itself.
+      expect(push.notices.map((notice) => notice.changes)).toEqual([
+        ['withdrawn'],
+      ]);
+    });
+
+    it('treats unpublishing like archiving — from outside they are one fact', async () => {
+      const created = await service.create('series-1', published);
+
+      await service.update(created.id, { status: 'draft' });
+      await settled();
+
+      expect(push.notices.map((notice) => notice.changes)).toEqual([
+        ['withdrawn'],
+      ]);
+    });
+
+    it('says nothing when a draft is published: that is an announcement, not a correction', async () => {
+      const created = await service.create('series-1', onsite);
+
+      await service.update(created.id, { status: 'published' });
+      await settled();
+
+      expect(push.notices).toEqual([]);
+    });
+
+    it('says nothing about a draft being edited, because a draft is nobody’s plan', async () => {
+      const created = await service.create('series-1', onsite);
+
+      await service.update(created.id, {
+        startsAt: '2027-03-15T09:00:00.000Z',
+        endsAt: '2027-03-15T17:00:00.000Z',
+        venueName: 'Alte Feuerwache',
+      });
+      await settled();
+
+      expect(push.notices).toEqual([]);
+    });
+
+    it('says nothing about an event that is over — archiving one is housekeeping', async () => {
+      const created = await service.create('series-1', {
+        ...published,
+        startsAt: '2020-03-14T08:00:00.000Z',
+        endsAt: '2020-03-14T16:00:00.000Z',
+      });
+
+      await service.update(created.id, { status: 'archived' });
+      await settled();
+
+      expect(push.notices).toEqual([]);
+    });
+
+    it('does notify when a date that had slipped past is corrected', async () => {
+      const created = await service.create('series-1', {
+        ...published,
+        startsAt: '2020-03-14T08:00:00.000Z',
+        endsAt: '2020-03-14T16:00:00.000Z',
+      });
+
+      await service.update(created.id, {
+        startsAt: '2027-03-14T08:00:00.000Z',
+        endsAt: '2027-03-14T16:00:00.000Z',
+      });
+      await settled();
+
+      // Either side of the change reaching into the future is enough: this is
+      // a plan somebody can still act on.
+      expect(push.notices.map((notice) => notice.changes)).toEqual([['time']]);
+    });
+
+    it('says nothing about a new description, a title or a follow-up text', async () => {
+      const created = await service.create('series-1', published);
+
+      await service.update(created.id, {
+        name: 'Kickoff in Cologne, second try',
+        description: 'Now with a programme.',
+        followUpBody: 'Thank you for coming.',
+        languages: ['de'],
+      });
+      await settled();
+
+      // Those are a page, and a page is read when somebody opens it.
+      expect(push.notices).toEqual([]);
     });
   });
 

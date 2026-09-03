@@ -18,6 +18,7 @@ import {
   type ImageBytes,
 } from '../common/image-file.service';
 import { pageWindow } from '../common/page-window';
+import { ChatNotificationsService } from './chat-notifications.service';
 import { ChatRealtimeService } from './chat-realtime.service';
 import { ConversationsService } from './conversations.service';
 import { messageImageUrl } from './message-image-url';
@@ -83,6 +84,8 @@ export class MessagesService {
     @Inject(MESSAGE_REPOSITORY)
     private readonly messages: MessageRepository,
     private readonly realtime: ChatRealtimeService,
+    // Whoever was not in the room to see it (E44).
+    private readonly notifications: ChatNotificationsService,
   ) {}
 
   /**
@@ -189,6 +192,11 @@ export class MessagesService {
     // members were read in the same transaction as the line.
     const message = toMessage(appended.record);
     this.realtime.publishMessage(message, appended.members);
+    // And the other half of delivering it: whoever has no socket in this
+    // conversation gets a notification instead (E44). Not awaited, for the
+    // reason spelled out on `notifyAbsent` — the round trip to a push service
+    // does not belong in the response time of "send".
+    void this.notifications.notifyAbsent(message, appended.members);
     return message;
   }
 

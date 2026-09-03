@@ -94,6 +94,15 @@ jobs:
       SMTP_PORT: '1025'
       SMTP_SECURE: 'false'
       SMTP_FROM: Trefaro CI <no-reply@ci.example.org>
+      # A throwaway VAPID pair, so the push contract suite has an instance that
+      # can actually sign a notification. It is not a secret and must never be
+      # used by an instance: the private half identifies the sender to a push
+      # service, and this one is in a public repository. The suite sends to a
+      # push service of its own making (`support/push-sink.ts`), so nothing
+      # signed with it ever leaves the runner.
+      VAPID_PUBLIC_KEY: BCpXKolfKnYa_oTRMK8C6fV_DoSXeEelQwErAqtwps3W7DpadpWOqpqEKfO_qApb7ZFpv-Kv_TJZ8hX6nWF1Q_w
+      VAPID_PRIVATE_KEY: MOsPhdnKKvnVmx0mGRTA8NU2WTWtJ7Vqour3oEJp-vM
+      VAPID_SUBJECT: mailto:ci@ci.example.org
     steps:
       - uses: actions/checkout@v4
         with:

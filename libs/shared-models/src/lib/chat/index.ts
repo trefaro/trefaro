@@ -11,6 +11,8 @@ export {
   DEFAULT_CONVERSATION_PAGE_SIZE,
   MAX_CONVERSATION_PAGE_SIZE,
   MESSAGE_SENDER_TYPES,
+  PARTICIPANT_MESSAGES_PATH,
+  participantConversationPath,
   type ConversationCounterpart,
   type ConversationMemberType,
   type ConversationPage,

@@ -5,6 +5,11 @@
  * only its public VAPID key, that a subscription is stored, replaced rather than
  * duplicated on re-subscribe, and removed on request.
  *
+ * Since AP 11 of phase 3 it also checks the half of E43 that needs no account:
+ * a subscription posted without a session is stored and belongs to nobody. The
+ * other half — a session on the request binds the row to that profile — needs a
+ * participant login and is asserted in `apps/server-e2e`.
+ *
  * Actual delivery to a browser — and the iOS case, which requires the PWA to be
  * installed — has to be checked by hand. docs/spikes/ records how.
  *
@@ -82,6 +87,13 @@ function countSubscriptions() {
 function storedKeys() {
   return psql(
     `select p256dh_key || '/' || auth_key from push_subscription where endpoint = '${ENDPOINT}'`,
+  );
+}
+
+/** Whose the row is — `t` for nobody's, which is what this script subscribes as. */
+function storedOwnerIsNull() {
+  return psql(
+    `select user_id is null from push_subscription where endpoint = '${ENDPOINT}'`,
   );
 }
 
@@ -173,6 +185,11 @@ check(
   'the rotated keys were written',
   storedKeys() === 'rotated-public-key/rotated-auth',
   storedKeys(),
+);
+check(
+  'a subscription without a session belongs to nobody (E43)',
+  storedOwnerIsNull() === 't',
+  storedOwnerIsNull(),
 );
 
 const removed = await call('/api/user/push/subscriptions', {

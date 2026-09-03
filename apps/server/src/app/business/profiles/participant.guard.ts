@@ -11,7 +11,7 @@ import { allowsAnonymous } from '../common/allow-anonymous';
 import { requiresParticipant } from './requires-participant';
 import type { AuthenticatedParticipant } from './ports/user-session.repository';
 import { UserSessionService } from './user-session.service';
-import { USER_SESSION_COOKIE } from './user-session-cookie';
+import { participantSessionFromRequest } from './user-session-cookie';
 
 /** Where the authenticated participant is parked for the request. */
 export const CURRENT_PARTICIPANT_PROPERTY = 'trefaroParticipant';
@@ -91,8 +91,8 @@ export class ParticipantGuard implements CanActivate {
     if (allowsAnonymous(this.reflector, context)) return true;
 
     const request = context.switchToHttp().getRequest<RequestWithParticipant>();
-    const token = request.cookies?.[USER_SESSION_COOKIE];
-    if (typeof token !== 'string' || token.length === 0) {
+    const token = participantSessionFromRequest(request);
+    if (!token) {
       throw new UnauthorizedException('Participant session required');
     }
 

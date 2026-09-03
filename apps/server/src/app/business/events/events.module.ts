@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AttachmentsModule } from '../attachments';
 import { EventSeriesModule } from '../event-series';
 import { LogoFilesModule } from '../logo-files';
+import { PushModule } from '../push';
 import { AdminEventLogoController } from './admin-event-logo.controller';
 import { AdminEventsController } from './admin-events.controller';
 import { AdminSeriesEventsController } from './admin-series-events.controller';
@@ -27,7 +28,7 @@ import { PublicEventsController } from './public-events.controller';
  * event's own logo (FR 3.1).
  */
 @Module({
-  imports: [EventSeriesModule, AttachmentsModule, LogoFilesModule],
+  imports: [EventSeriesModule, AttachmentsModule, LogoFilesModule, PushModule],
   controllers: [
     AdminSeriesEventsController,
     AdminEventsController,

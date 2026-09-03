@@ -93,30 +93,76 @@ npx web-push generate-vapid-keys        # put both keys in .env
 # serve dist/apps/user-client/browser over HTTPS or via http://localhost
 ```
 
-Then, on `/spikes` in the participant client:
+### The procedure since AP 11 of phase 3
 
-1. **Desktop Chrome and Firefox** — subscribe, confirm the row appears in
-   `push_subscription`, send a notification and confirm it arrives and that
-   clicking it navigates to the path in the payload.
-2. **Android Chrome** — the same, over HTTPS.
-3. **iOS Safari, PWA installed to the home screen** — this is the case the
-   decision to use Web Push as the only channel depends on. Push does not work in
-   a normal iOS Safari tab; it requires the installed PWA and iOS 16.4+.
+There is still no endpoint for a test send, and there is no longer any need for
+one: an event change _is_ the send (F176). The walk is therefore the feature,
+which is the point — what gets checked is what an organizer really does.
 
-There is no endpoint for triggering a test send: an unauthenticated one would be
-a spam vector. Trigger `PushService.broadcast()` from a REPL, or wait for phase 3
-to wire it to actual event changes.
+**Once, per instance:**
+
+1. `push` must be **on** (`/modules` in the organizer client, or
+   `module_config`). A fresh instance has it off, and then `/api/config`
+   publishes no VAPID key and nothing offers a subscription.
+2. A **published** event that is **in the future**, with a confirmed
+   registration for the address the phone is signed in as. A draft, or an event
+   that is over, notifies nobody — deliberately (F176), and it is the mistake
+   to expect to make first.
+
+**Per device:**
+
+3. Open the participant client and take the offer in the banner ("Allow
+   notifications"), or the switch on `/profile`. The banner appears only where
+   it can be followed: a production build, a VAPID key, a permission that is
+   not already refused, and no earlier "not now" in `localStorage`
+   (`trefaro.push.dismissed`).
+4. Confirm the row: `select user_id, left(endpoint, 40) from push_subscription`.
+   Signed in, it carries the profile id; signed out, `NULL` — and both are
+   correct (E43).
+5. **Move the event** in the organizer client — change the time, or the venue,
+   or archive it. Nothing is awaited, so the notification arrives a moment
+   after the save.
+6. Confirm on the device: the title is the event's name, the body says what
+   changed, and **the click opens the event's landing page**. That last part is
+   the payload's `url` travelling through the service worker into the router,
+   and it is the half no suite in this repository can reach.
+7. A second row for the same person: write them a message from another account
+   while the app is **closed** — that notification is the personal one, and it
+   only goes out because nobody is watching the conversation (E44). With the
+   conversation open on the device, the same message must produce **no**
+   notification.
+
+**The matrix, to be filled in with a date and the device — a failure too:**
+
+| Case                                               | Result |
+| -------------------------------------------------- | ------ |
+| Desktop Chrome                                     |        |
+| Desktop Firefox                                    |        |
+| Android Chrome, over HTTPS                         |        |
+| **iOS Safari, PWA on the home screen** (iOS 16.4+) |        |
+
+The last row is the case the decision to use Web Push as the only channel
+depends on (F7). Push does **not** work in a normal iOS Safari tab; it requires
+the installed PWA. That the client says so rather than showing nothing is what
+the sentence under `push.installFirst` is for.
 
 ## Open items
 
 Tracked in [`todo.md`](../../todo.md), which records the phase that makes each
 of them checkable.
 
-- **Rate limiting before an instance goes public.** The subscribe endpoint is
-  anonymous until phase 3 ties subscriptions to accounts.
+- **Rate limiting before an instance goes public.** ~~The subscribe endpoint is
+  anonymous until phase 3 ties subscriptions to accounts.~~ Closed in AP 1 of
+  phase 1: `ThrottlerGuard` is global. The endpoint stays anonymous **by
+  decision** rather than by omission — E43, since AP 11 of phase 3: a
+  subscription may belong to nobody, and a session on the request binds it.
 - **Notification permission is asked for on a button press**, which is correct —
-  but the participant client should explain why before asking (NFR 4). That is UI
-  work for phase 3.
+  ~~but the participant client should explain why before asking (NFR 4). That is
+  UI work for phase 3.~~ Done in AP 11 of phase 3 (F178): the offer explains
+  what will be sent and that the browser will ask next, the permission is
+  _read_ rather than guessed, and a "not now" is remembered. Two places, because
+  E43 has two audiences — the banner in the shell for a browser with no account,
+  the switch on `/profile` for a person.
 - The service worker's `navigationUrls` excludes `/api/**`, `/socket.io/**` and —
   **since 28.08.2026** — `/admin` and `/admin/**`. The last two were missing, and
   this sentence used to name only the first two, which is how the gap survived a

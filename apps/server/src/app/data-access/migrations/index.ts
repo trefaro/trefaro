@@ -19,6 +19,7 @@ import { EntityLogos1787790400000 } from './1787790400000-EntityLogos';
 import { UserAccounts1787790500000 } from './1787790500000-UserAccounts';
 import { ProfileFields1787790600000 } from './1787790600000-ProfileFields';
 import { Conversations1787790700000 } from './1787790700000-Conversations';
+import { PushSubscriptionOwner1787790800000 } from './1787790800000-PushSubscriptionOwner';
 
 /**
  * Core migrations, in the order they must run.
@@ -48,4 +49,5 @@ export const CORE_MIGRATIONS = [
   UserAccounts1787790500000,
   ProfileFields1787790600000,
   Conversations1787790700000,
+  PushSubscriptionOwner1787790800000,
 ];

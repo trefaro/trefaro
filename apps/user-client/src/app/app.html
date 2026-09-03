@@ -21,8 +21,12 @@
 </main>
 
 <!-- After the content, never in front of it: somebody who followed a link to an
-     event came for the event. -->
+     event came for the event. The same applies to the offer of notifications,
+     which is here for the same reason the installation hint is: neither belongs
+     to a screen, and both have to be reachable for somebody with no account
+     (E43). -->
 <trefaro-install-hint />
+<trefaro-notification-offer />
 
 <nav class="app-nav" [attr.aria-label]="'app.nav.label' | transloco">
   <a class="app-nav__link" routerLink="/">{{ 'app.nav.series' | transloco }}</a>

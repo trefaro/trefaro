@@ -7,6 +7,8 @@ import {
   CONVERSATION_MEMBER_TYPES,
   CONVERSATION_TYPES,
   MESSAGE_SENDER_TYPES,
+  PARTICIPANT_MESSAGES_PATH,
+  participantConversationPath,
 } from './conversations';
 import {
   DEFAULT_MESSAGE_PAGE_SIZE,
@@ -152,6 +154,15 @@ describe('the chat’s limits and sets', () => {
     // nothing the day the route is renamed.
     expect(organizerConversationPath('conversation-1')).toBe(
       `${ORGANIZER_MESSAGES_PATH}/conversation-1`,
+    );
+  });
+
+  it('spells the participant client’s conversation address once too (AP 11)', () => {
+    // A push payload carries this path and the participant client routes it —
+    // the same argument, on the other side. Two constants rather than one
+    // shared: the two clients are free to move their own pages.
+    expect(participantConversationPath('conversation-1')).toBe(
+      `${PARTICIPANT_MESSAGES_PATH}/conversation-1`,
     );
   });
 

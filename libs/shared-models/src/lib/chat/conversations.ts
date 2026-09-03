@@ -161,3 +161,23 @@ export interface ConversationQuery {
   readonly page?: number;
   readonly pageSize?: number;
 }
+
+/**
+ * Where the participant client keeps its conversations.
+ *
+ * A constant rather than a literal in a template, because the **server** now
+ * writes this address too: it travels in a push payload, and a notification
+ * whose click lands nowhere is worse than no notification (AP 11).
+ *
+ * The organizer client's own overview happens to sit at the same address
+ * ({@link ORGANIZER_MESSAGES_PATH}) — two clients, one word, and deliberately
+ * two constants. They belong to different applications and are free to
+ * diverge; one shared constant would turn a rename in either client into a
+ * silent change to the other.
+ */
+export const PARTICIPANT_MESSAGES_PATH = '/messages';
+
+/** The page of one conversation, as a click on a notification opens it. */
+export function participantConversationPath(conversationId: string): string {
+  return `${PARTICIPANT_MESSAGES_PATH}/${conversationId}`;
+}

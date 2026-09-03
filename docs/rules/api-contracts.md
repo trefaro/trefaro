@@ -285,6 +285,16 @@ conversations` ist der Fall: Lesen und Antworten sind FR 3.4 und damit **P1**,
   Admin-Guard — und der Client **holt** die Bytes und zeigt sie aus einem Blob,
   wie bei der Datei einer Anmeldung (E9). Ein Guard, der beide Cookies
   akzeptiert, wäre genau das, was E34 verbietet.
+- **`POST/DELETE /api/user/push/subscriptions` bleiben anonym, und eine Sitzung
+  ändert ihre Bedeutung** (F134, E43). Beide Antworten sind richtig: ohne
+  Sitzung entsteht eine Zeile, die niemandem gehört, mit Sitzung eine, die an
+  das Konto gebunden ist — und dieselbe Route bindet auch wieder los, wenn
+  dasselbe Gerät sie ohne Cookie schickt. Der globale Teilnehmer-Guard kann das
+  nicht: er kennt erlauben oder ablehnen. Also liest der Controller das Cookie
+  **optional**, durch denselben Dienst wie der Guard (E34) und über
+  `participantSessionFromRequest`, damit es nicht einen dritten Leser gibt.
+  **Es gibt weiter keinen Testversand-Endpunkt** — ein unauthentifizierter wäre
+  ein Spam-Vektor, und seit AP 11 ist die Event-Änderung selbst der Versand.
 - **Query-Parameter kommen als `undefined` an**, auch wenn ein Angular-`input()`
   einen Standardwert hat. `ApiClient.put/delete/post` nehmen ebenfalls
   Query-Parameter — auch ein `PUT` muss die Sprache tragen können.

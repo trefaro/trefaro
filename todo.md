@@ -463,24 +463,52 @@ answer, not an opinion.
       deliberately without an id or a name — handing out a profile id hands out
       the picture with it (F124). In the table and in the detail panel.
 
-- [ ] **Web Push on real devices.** The one part of spike 3 that could not be
-      verified. Needs a production build, because Angular only registers the
-      service worker there. Full procedure in
-      [`03-web-push.md`](docs/spikes/03-web-push.md#still-to-be-checked-by-hand).
+- [ ] **Web Push on real devices — for Marius, and the only part of AP 11 that
+      is not done.** Needs a production build (Angular registers the service
+      worker nowhere else), HTTPS and four devices. What AP 11 changed is that
+      the walk is now the feature rather than a REPL call: switch `push` on,
+      take a published future event with a confirmed registration, allow
+      notifications on the device, **move the event**, and see what arrives.
+      Full procedure, including the personal notification of E44, in
+      [`03-web-push.md`](docs/spikes/03-web-push.md#the-procedure-since-ap-11-of-phase-3).
+      **A failure is a result too** — record the date and the device either way.
       Matrix:
-  - [ ] desktop Chrome — subscribe, receive, click navigates to the payload path
+  - [ ] desktop Chrome — allow, receive, click navigates to the payload path
   - [ ] desktop Firefox — same
   - [ ] Android Chrome over HTTPS — same
   - [ ] **iOS Safari with the PWA installed to the home screen** (iOS 16.4+) —
         this is the case the decision to make Web Push the only channel (F7)
-        depends on. It does not work in a normal Safari tab.
-- [ ] **Rate-limit the subscribe endpoint** (see _Known gaps_).
-- [ ] **Add `push_subscription.user_id` with its foreign key** in the phase 3
-      migration, once `user_profile` exists. It was deliberately left out of the
-      phase 0 schema rather than added without a constraint.
-- [ ] **Explain the notification permission before prompting.** Currently a bare
-      button triggers the browser prompt; NFR 4 targets people with rudimentary
-      IT skills.
+        depends on. It does not work in a normal Safari tab; the client says so
+        rather than showing nothing (`push.installFirst`).
+- [x] **Rate-limit the subscribe endpoint** — closed long ago and only now
+      crossed off: `ThrottlerGuard` has been global since AP 1 of phase 1. The
+      endpoint stays anonymous **by decision** rather than by omission (E43,
+      F134): a subscription may belong to nobody, and a session on the same
+      request binds it to that account.
+- [x] **Add `push_subscription.user_id` with its foreign key — done in AP 11**
+      (F134, E43). Nullable, `ON DELETE CASCADE`, and two partial indexes, one
+      per half of the audience. The endpoint stays the identity of the row, so
+      signing in and out **rebinds** it rather than duplicating it — which is
+      what stops a shared tablet from carrying whoever used it last.
+- [x] **Explain the notification permission before prompting — done in AP 11**
+      (F178). The offer says what will be sent, that the browser will ask next
+      and that it can be withdrawn; only a click reaches the dialogue. The
+      permission is **read** (`Notification.permission`) rather than found out
+      by asking a question that was already answered no, and a "not now" is
+      remembered. Two places, because E43 has two audiences: the banner in the
+      shell, and the switch on `/profile`.
+- [ ] **A device without an account can only switch notifications off in the
+      browser.** There is no page that is theirs to keep a setting on, and
+      every browser's own site settings can do it — the offer's text says as
+      much. A named limit rather than a gap: the alternative is a page for
+      somebody who has deliberately not made an account.
+- [ ] **A device without an account hears about every public event's changes.**
+      The price E43 accepts: a browser has no address and has said nothing
+      about what interests it, so "the events of this organization" is the only
+      audience it can be in. Fine for an NGO with a handful of events.
+      **Marius decides / a question for the pilot partner**: whether it stays
+      that way — the alternative is a subscription per event, which is a table
+      the phase plan does not have.
 - [x] **Authenticate the WebSocket handshake — done in AP 7** (F132, E41). In a
       socket.io namespace middleware, so it runs _while_ the handshake happens:
       a connection without a valid session never comes into being, and the
@@ -542,9 +570,15 @@ program-item-signup,user-profile,registration,registration-field}`. The
       inside a package that had no business touching eight files. Small and
       mechanical — and worth checking for drift while doing it, which is what
       `searchTerms` (AP 5) and `pageWindow` (AP 6) both turned out to have.
-- [ ] **Wire `PushService.broadcast()` to actual event changes** (FR 3.15). There
-      is deliberately no test-send endpoint — an unauthenticated one would be a
-      spam vector.
+- [x] **Wire `PushService.broadcast()` to actual event changes — done in AP 11**
+      (FR 3.15). `broadcast()` itself is gone with `findAll()`: there was one
+      notification ("everybody") and no way to say anything narrower. There are
+      now two audiences, each a statement of the port (F134) —
+      `notifyEventChange` for a moved, relocated or withdrawn event and
+      `notifyParticipant` for a new message (E44). What counts as a change is
+      F176: published, not over, and time, place or "not taking place". There is
+      still **deliberately no test-send endpoint** — an unauthenticated one
+      would be a spam vector, and since AP 11 the event change _is_ the send.
 - [x] **The organizer's screen for the profile field kit — built in AP 3.**
       AP 2 built `GET/POST /api/admin/profile-fields`, `PUT …/order` and
       `PATCH/DELETE …/:id`, and they worked; the plan assigned the _interface_ for
@@ -573,6 +607,16 @@ program-item-signup,user-profile,registration,registration-field}`. The
       original entry: the form sends `searchable` **only** when it asked for it,
       because a control whose box is hidden still carries its default and would
       have quietly withdrawn somebody's visibility.
+- [ ] **`profile-fields.spec.ts` "moves a question" is flaky.** It failed once
+      in AP 10 and once in three runs of AP 11, in both cases while everything
+      else was green. The cause is in the fixture rather than in the feature:
+      the profile field kit is **instance-wide** (E35) and three browser engines
+      reorder the same list at once, so one engine's `PUT …/order` can land
+      between another's move and its assertion. Either the writing part of that
+      spec runs in one engine only — the way the design and module suites
+      already do it, and for the same reason — or the assertion compares only
+      positions within one engine's own questions. Worth doing before phase 5
+      hardens the suites, not worth a package of its own.
 - [ ] **Should there be a shared library for interface components?** (F145) The
       participant client's `avatar-field.ts` and the organizer client's
       `ImageUploadField` do the same four things to an uploaded image — choose,
@@ -599,9 +643,11 @@ Bonn` is diagnostics rather than a fact about anybody.
 - [ ] **The navigation carries no unread counter.** The conversation list has
       one per conversation (E38) and it moves live, but somebody who is reading
       an event page learns about a new message only when they go to `/messages`
-      — or, from AP 11 on, by push, which is what E44 is for and what F166 (a
-      socket that belongs to the session rather than to a screen) makes
-      possible. A badge in the bar would need the **sum** without the screen,
+      — or **by push, which AP 11 built**: a message to a member with no socket
+      in that conversation now goes out as a notification (E44), which is what
+      F166 (a socket that belongs to the session rather than to a screen) made
+      possible. So the gap is smaller than when this entry was written: somebody
+      with notifications on hears about it, and somebody without them does not. A badge in the bar would need the **sum** without the screen,
       so a request for every logged-in participant at every sign-in, refreshed
       on every `chat:conversation`. Cheap to build and easy to get wrong in the
       annoying direction. **Marius decides / a question for the pilot partner**:

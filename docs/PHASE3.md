@@ -1,6 +1,6 @@
 # Phase 3 — Profile, Kommunikation und Community-Kern
 
-**Status: in Arbeit** (seit 02.09.2026, AP 1 bis AP 10 erledigt, **M7 erreicht**). Der Teil oberhalb von
+**Status: in Arbeit** (seit 02.09.2026, AP 1 bis AP 11 erledigt, **M7 erreicht**). Der Teil oberhalb von
 _Fortschritt_ ist der **Plan** und wird nicht mehr rückwirkend korrigiert; was
 tatsächlich passierte, steht unten je Paket — wie in
 [`PHASE1.md`](PHASE1.md) und [`PHASE2.md`](PHASE2.md). Was Marius **vor** einem
@@ -2020,3 +2020,172 @@ Offen aus diesem Paket, alles in `todo.md`:
   Postfach der Organisation an, nicht in der Übersicht. Mail zu **empfangen**
   ist kein Ziel dieser Anwendung (F8 hält den Versand schon klein); wer weiter
   in der App bleiben will, braucht ein Konto.
+
+### AP 11 — Push wird echt (erledigt, 03.09.2026)
+
+Umgesetzt:
+
+- **Die Spalte, die seit Phase 0 vorgemerkt war** (F134, E43). `push_subscription`
+  entstand, bevor es `user_profile` gab, und eine `user_id` ohne Fremdschlüssel
+  wäre eine Spalte gewesen, die die Datenbank nicht sauber halten kann — die
+  Entity sagte das in einem Kommentar, `todo.md` trug den Eintrag mit. Jetzt
+  beides: **nullbar** und `ON DELETE CASCADE`. Nullbar ist dabei nicht die
+  Ausnahme, sondern das Merkmal: dass ein Event verlegt wurde, ist öffentliche
+  Information, und wer von einer Landingpage aus abonniert, darf sie bekommen,
+  ohne sich anzumelden. Dazu zwei partielle Indizes, einer je Hälfte der
+  Zielgruppe. Migration: **eine** (`PushSubscriptionOwner`), das `down` löscht
+  keine Zeilen — ein Abonnement war auch ohne diese Spalte gültig.
+- **Ein Abonnement folgt seiner Sitzung, und der Endpunkt bleibt die Identität**
+  (F134). Der Client schickt sein Abonnement beim **Anmelden** erneut, der
+  Server bindet es an die Sitzung; beim **Abmelden** erneut, der Server bindet
+  es an niemanden. Dieselbe Route, derselbe Rumpf — was entscheidet, ist das
+  Cookie, das mitreist. Zwei Zeilen für einen Endpunkt hießen zwei
+  Benachrichtigungen für ein Gerät, und das geteilte Tablet im Büro würde
+  weitermelden, was der letzte Benutzer bekommt. Der Endpunkt liest die Sitzung
+  **optional**: der globale Teilnehmer-Guard kennt nur erlauben oder ablehnen,
+  und hier ist keins von beidem richtig. Er war damit der dritte Ort, der
+  `request.cookies[USER_SESSION_COOKIE]` von Hand las — jetzt gibt es
+  `participantSessionFromRequest` neben dem Namen des Cookies, und alle drei
+  benutzen sie (E34).
+- **Die Zielgruppe einer Event-Änderung ist eine Anweisung des Ports** (F134,
+  F152, F173): eine `UNION` aus den Geräten der **bestätigten Angemeldeten**
+  (über die Adresse mit dem Konto verbunden, weil eine Anmeldung keine `user_id`
+  hat, E31) und **jedem Gerät ohne Konto**. Die beiden Hälften sind nicht
+  einzeln abfragbar, also kann kein Aufrufer versehentlich nur die zweite
+  erwischen — das wäre jeder Browser, den diese Instanz je gesehen hat. Ein
+  Konto, das angemeldet und für dieses Event nicht registriert ist, gehört nicht
+  dazu: Benachrichtigungen sind kein Newsletter (F8). `findAll()` ist **weg** —
+  es gab eine Benachrichtigung („alle") und keine Möglichkeit, etwas engeres zu
+  sagen; jetzt gibt es zwei Zielgruppen und keine Methode, die eine dritte
+  beantworten würde.
+- **Was an einem Event eine Benachrichtigung wert ist** (F176): Zeit, Ort, und
+  dass es nicht stattfindet. Davor zwei Bedingungen — das Event **war
+  veröffentlicht** und ist **nicht vorbei**. Ein Entwurf ist niemandes Plan, das
+  Veröffentlichen eines Entwurfs ist eine Ankündigung (die diese Anwendung nicht
+  verschickt, F8), und das Archivieren der letztjährigen Konferenz ist Aufräumen
+  — „findet nicht wie geplant statt" wäre dort eine Lüge über etwas, das
+  stattgefunden hat. Zurückziehen und Archivieren sind **eine** Nachricht, weil
+  sie von außen dieselbe Tatsache sind. Beschreibung, Nachtrag, Titel,
+  Übersetzung: nichts. **Löschen** benachrichtigt ebenfalls nicht, und zwar
+  ohne eigene Regel: gelöscht werden darf nur ein Event ohne bestätigte
+  Anmeldungen (E14), also hat niemand einen Plan darauf gebaut — wer „findet
+  nicht statt" sagen will, archiviert, und das ist genau der Weg, der
+  benachrichtigt. Die Prüfung liegt in `EventsService`, wo beide Fassungen
+  der Zeile vorliegen, und **gewartet wird nicht** — wer speichert, wartet nicht
+  auf den Push-Dienst eines Browserherstellers und sieht auch keinen Fehler von
+  ihm.
+- **Eine neue Nachricht benachrichtigt nur, wer nicht zusieht** (F135, E44) —
+  und „zusieht" ist der **Raum des Gesprächs**, nicht die Verbindung. Genau
+  deshalb war F166 (der Socket gehört der Sitzung, nicht dem Bildschirm) die
+  Voraussetzung: mit einem Socket je Bildschirm hätte die Frage „ist jemand da"
+  nur „ist die App offen" geheißen. `ChatRealtimeService` bekam dafür seine
+  **zweite** Frage — wer ist gerade in diesem Raum —, was die kleinste
+  Erweiterung ist, mit der E44 überhaupt beantwortbar wird. Zugestellt wird von
+  einem eigenen Dienst neben der Live-Zustellung, den **beide** Schreiber
+  aufrufen: die Nachricht eines Teilnehmenden und die Antwort der Organisation
+  aus AP 10. Nichts davon kann eine Nachricht scheitern lassen.
+- **Die Worte kommen aus dem Katalog** (F177, E22): sechs Schlüssel, die Sprache
+  ist die des Empfängers und die Vorgabesprache der Instanz für ein Gerät ohne
+  Konto (F125), gruppiert **nach Sprache** statt je Gerät. E24 gilt hier
+  ausdrücklich nicht — zwei Zeilen, deren Kette ohnehin bei Englisch endet, und
+  gar nicht zu benachrichtigen wäre ein verlegtes Event, von dem niemand
+  erfährt. Der Titel einer Event-Benachrichtigung ist der **Name des Events**;
+  eine Nachrichten-Benachrichtigung trägt **keinen Absender und keinen Text**
+  (NFR 7). Alle sechs Sätze kommen ohne die zweite Person aus, weil ein
+  Sperrbildschirm nicht weiß, ob er neben dem _du_ der Mails oder dem _Sie_ der
+  Oberfläche steht.
+- **Der Client erklärt, bevor der Browser fragt** (F178, NFR 4). Das Angebot
+  steht in der Hülle neben dem Installationshinweis — Benachrichtigbarkeit ist
+  eine Eigenschaft des Clients, und ein Browser ohne Konto hat keine eigene
+  Seite (E43) —, der **Schalter** auf der Profilseite, weil nur dort ein Ort
+  ist, der einem Menschen gehört. Die Berechtigung wird **gelesen**
+  (`Notification.permission`) und nicht durch einen Dialog erfragt, den jemand
+  schon mit „nein" beantwortet hat; ein „jetzt nicht" gilt dauerhaft
+  (`localStorage`, wie F109); angeboten wird nur, wo es gehen kann. Der Schalter
+  sagt auch, **warum** es nichts zu schalten gibt — die iPhone-Zeile ist der
+  Fall, von dem F7 abhängt, und ein Bildschirm, der dazu schweigt, sieht kaputt
+  aus.
+- **Beide Schalter werden gefragt, und zwar im Dienst selbst** (E21, F63): kein
+  VAPID-Paar oder `push` aus, und es geht nichts raus — obwohl die Abonnements
+  noch da sind, denn Ausschalten löscht nie Daten. Der Guard kann das hier nicht
+  übernehmen: eine Benachrichtigung entsteht nicht aus einer Anfrage, also fragt
+  niemand die Flagge für sie.
+- **Das Prüfskript kennt die neue Hälfte** (`verify-push.mjs`): ein Abonnement
+  ohne Sitzung ist gespeichert und gehört niemandem.
+
+Was anders lief:
+
+- **`web-push` spricht immer TLS.** Der Plan für die Vertragssuite war ein
+  lokaler HTTP-Server als Push-Dienst — die Bibliothek benutzt aber
+  `https.request`, egal was im Endpunkt steht, und antwortet mit
+  „wrong version number" aus OpenSSL. Ein TLS-Sink bräuchte ein Zertifikat, dem
+  der Serverprozess traut: entweder eine mitgelieferte CA in seiner Umgebung
+  oder ein Agent, der die Prüfung überspringt. Beides wäre ein Test als Grund
+  dafür, dass Produktionscode ein ungeprüftes Zertifikat annehmen kann. Also
+  ist der Push-Dienst jetzt **ein lauschender Socket je Gerät**, und eine
+  „Zustellung" ist die Verbindung: das beantwortet die Frage, die dieses Paket
+  entscheidet — **wer** wird benachrichtigt —, während _was_ eine
+  Benachrichtigung sagt gegen die mitgelieferten Kataloge geprüft wird und das
+  Aufräumen bei `410 Gone` gegen eine gemockte Bibliothek.
+- **Eine Suite darf nur zurücklegen, was sie gelesen hat.** Die neue
+  Vertragssuite merkte sich die Modulschalter, um sie wiederherzustellen — mit
+  `= true` als Anfangswert. Ein früher Absturz im `beforeAll` (ein Tippfehler in
+  der Gestalt von `GET /api/admin/modules`) ließ das `afterAll` diesen **Rat**
+  schreiben, und damit blieb `push` in der Entwicklungsinstanz an. Kaputt ging
+  davon eine ganz andere Suite: der eine schreibende Test der Modulverwaltung im
+  Veranstalter-Client klickt „einschalten" und fand nichts zum Klicken —
+  dreißig Sekunden Timeout, gemeldet an der Stelle im `finally`, an der die Uhr
+  ablief. Nachgewiesen mit einem Worktree auf `HEAD`: derselbe Fehler ohne dieses
+  Paket. Der Anfangswert ist jetzt `null`, und wiederhergestellt wird nur, was
+  wirklich gelesen wurde.
+- **Ein abgelehnter Rumpf sieht wie ein Aufräumen aus.** `modules.spec.ts` in der
+  Vertragssuite abonnierte ein Gerät und räumte es hinterher weg — mit dem
+  Rumpf des Abonnierens, den `DELETE` aber ablehnt, weil die API unbekannte
+  Felder zurückweist statt sie zu verwerfen (F44). Jeder Lauf ließ also eine
+  Zeile zurück: **58** waren es. Unsichtbar, solange niemand die Abonnements
+  liest — und ab diesem Paket ist jede davon ein Endpunkt, den die Instanz bei
+  jeder Event-Änderung anzusprechen versucht. Der Status des `DELETE` wird jetzt
+  geprüft.
+- **Die Warnung sagt jetzt, was schiefging.** „Push delivery failed with status
+  unknown" war der Satz, mit dem ein Push-Dienst mit 500 und eine Nutzlast, die
+  die Bibliothek nicht verschlüsseln kann, gleich aussehen — und nur das zweite
+  ist ein Defekt. Ohne den Grund im Log wäre der TLS-Fund oben eine Stunde
+  Rätselraten geblieben.
+- **Nicht von diesem Paket:** `profile-fields.spec.ts` („moves a question")
+  scheiterte einmal in drei Läufen. Der Baukasten ist instanzweit und drei
+  Engines ordnen ihn gleichzeitig um; in AP 10 war es dieselbe Zeile. Als
+  bekannte Flakiness in `todo.md`, mit der Ursache.
+
+Zahlen: Server-Units **1098** (+47), `shared-models` **99** (+1),
+Nutzer-Client **239** (+32), Vertragssuite **561** (+16, davon 16 neu in
+`push-notifications.spec.ts`), Veranstalter-Browsersuite **289** (unverändert),
+Nutzer-Browsersuite **218** (unverändert, die neuen Prüfungen liegen im langen
+Profil-Durchlauf). Katalog **890 → 911** (6 Sätze für den Server, 15 für den
+Client). CI bekommt ein **Wegwerf-VAPID-Paar**, damit die Vertragssuite eine
+Instanz hat, die überhaupt signieren kann; es ist kein Geheimnis und darf auf
+keiner Instanz stehen.
+
+Offen aus diesem Paket, alles in `todo.md`:
+
+- **Die Gerätematrix ist nicht abgehakt.** Vier Zeilen — Chrome und Firefox am
+  Desktop, Chrome auf Android über HTTPS, **iOS Safari mit installierter PWA** —
+  brauchen einen Produktionsbuild, HTTPS und vier Geräte, und der iOS-Fall ist
+  der, von dem F7 abhängt. Das Verfahren steht in
+  [`docs/spikes/03-web-push.md`](spikes/03-web-push.md#still-to-be-checked-by-hand),
+  jetzt mit dem Weg über eine **verschobene Session** statt über einen
+  Testversand, den es bewusst nicht gibt. **Für Marius**, mit Datum und Gerät zu
+  protokollieren — auch ein Fehlschlag.
+- **Ein Gerät ohne Konto kann Benachrichtigungen nur im Browser abschalten.** Es
+  gibt keine Seite, die ihm gehört, und die Website-Einstellungen jedes Browsers
+  können es. Der Text des Angebots sagt, dass man es zurücknehmen kann.
+- **Ein Gerät ohne Konto hört von den Änderungen aller öffentlichen Events.**
+  Der Preis von E43: ein Browser hat keine Adresse und hat nichts darüber
+  gesagt, was ihn interessiert. Für eine kleine NGO mit einer Handvoll Events
+  vertretbar; ob es so bleiben soll, ist eine **Frage an den Pilotpartner** —
+  die Alternative wäre ein Abonnement je Event, also eine Tabelle, die der
+  Phasenplan nicht vorsieht.
+- **Ein neues Event benachrichtigt niemanden** (F176, F8). Das ist die
+  Entscheidung und keine Lücke; wenn der Pilotpartner es anders will, ist es
+  eine Ankündigung und braucht einen eigenen Zuschnitt.
+- **Der Handshake trägt weiter keine Drosselung** (aus AP 7, Phase 5) — davon
+  ist hier nichts besser geworden.

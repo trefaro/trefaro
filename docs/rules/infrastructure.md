@@ -20,13 +20,19 @@ Datenschutzbruch, bei der Plug-in-Aktivierung Datenverlust.
   Fremdinstallation zur Laufzeit.**
 - **Deaktivieren löscht nie Daten.** Nur `down`-Migrationen entfernen Tabellen.
 - **`CORE_MODULES` nennt nur Module, die es gibt** (E21, F63): derzeit
-  `media-links` und `push`. `newsletter` entfällt endgültig,
-  `chat`/`profiles`/`profile-search` kommen mit Phase 3 zurück. Zeilen entfallener
+  `profiles`, `profile-search`, `chat`, `media-links` und `push` — die ersten
+  drei seit Phase 3 (AP 1, AP 5, AP 6), mit `profiles` als Voraussetzung der
+  beiden anderen (E42, F128). `newsletter` entfällt endgültig. Zeilen entfallener
   Schlüssel werden **nicht gelöscht** — `ModuleFlagCache` ignoriert, was kein
   Deskriptor beansprucht.
 - **`push` ist ein echter Schalter:** Endpunkte mit Guard, `webPushPublicKey`
   `null`, solange das Modul aus ist. Wer Push testet, schaltet das Modul vorher ein
-  und stellt den Schalter zurück.
+  und stellt den Schalter zurück. **Seit AP 11 der Phase 3 fragt `PushService`
+  die Flagge auch selbst** — eine Benachrichtigung entsteht aus einer
+  Event-Änderung und nicht aus einer Anfrage, also fragt sonst niemand für sie
+  (E21, F63). Zwei unabhängige Bedingungen, und beide müssen erfüllt sein: das
+  Modul **und** ein VAPID-Paar in der Umgebung. Aus heißt: die Abonnements
+  bleiben liegen, es geht nur nichts raus.
 - **Sechs geteilte Bibliotheken:** `shared-http`, `shared-config`,
   `shared-models`, `shared-theming` (die vier des Ursprungsplans),
   `shared-plugins` (Client-Plug-in-Manager + Einhängepunkt-Komponente, seit

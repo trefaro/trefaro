@@ -36,6 +36,7 @@ import { EventsService, type EventLocation } from '../events';
 import { MailDeliveryError, MailService, PublicLinks } from '../mail';
 import type { ContactAnswerMailContext, MailEvent } from '../mail';
 import { avatarUrl } from '../profiles';
+import { ChatNotificationsService } from './chat-notifications.service';
 import { ChatRealtimeService } from './chat-realtime.service';
 import { messageImageUrl } from './message-image-url';
 import {
@@ -111,6 +112,8 @@ export class OrganizerConversationsService {
     private readonly links: PublicLinks,
     private readonly images: ImageFileService,
     private readonly realtime: ChatRealtimeService,
+    // A group's members hear about an answer even with no screen open (E44).
+    private readonly notifications: ChatNotificationsService,
   ) {}
 
   /** One page of the organization's conversations, newest activity first. */
@@ -232,6 +235,12 @@ export class OrganizerConversationsService {
     // request. Nothing is awaited: the members were read in the same
     // transaction as the line (F163).
     this.realtime.publishMessage(message, appended.members);
+    // And whoever has no socket in this conversation is notified instead
+    // (E44) — the same call the participants' own send makes, so an answer
+    // from the organization reaches a group the same way any other line does.
+    // A contact request has no membership row for the guest (F133), so this
+    // finds nobody there and the mail below is the whole delivery.
+    void this.notifications.notifyAbsent(message, appended.members);
 
     return { message, delivery: await this.deliver(conversation, body) };
   }

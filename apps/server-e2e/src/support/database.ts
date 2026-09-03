@@ -465,6 +465,41 @@ export async function attachmentExists(id: string): Promise<boolean> {
   return result.rowCount === 1;
 }
 
+/**
+ * Whose device one stored subscription is, as the database has it (E43).
+ *
+ * `undefined` when there is no such row at all, which is a different answer
+ * from `null` — "a subscription that belongs to nobody" is the ordinary state
+ * of a browser that never signed in, and the two must not be assertable as
+ * one.
+ */
+export async function pushSubscriptionOwner(
+  endpoint: string,
+): Promise<string | null | undefined> {
+  const result = await pool.query<{ user_id: string | null }>(
+    'SELECT user_id FROM push_subscription WHERE endpoint = $1',
+    [endpoint],
+  );
+  return result.rowCount === 0 ? undefined : result.rows[0].user_id;
+}
+
+/**
+ * Removes the devices a suite subscribed.
+ *
+ * By endpoint prefix, because there is no endpoint that lists subscriptions
+ * and none that deletes somebody else's: a browser removes its own
+ * (`DELETE /api/user/push/subscriptions`) and that is the whole API. A
+ * leftover row here would be a device every later event change tries to
+ * notify — an anonymous subscription is in the audience of every event (E43).
+ */
+export async function deletePushSubscriptions(
+  endpointPrefix: string,
+): Promise<void> {
+  await pool.query('DELETE FROM push_subscription WHERE endpoint LIKE $1', [
+    `${endpointPrefix}%`,
+  ]);
+}
+
 export async function closeDatabase(): Promise<void> {
   await pool.end();
 }

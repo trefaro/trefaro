@@ -13,6 +13,7 @@ import type {
 } from '@trefaro/shared-models';
 import { ParticipantSessionService } from '../../features/auth/participant-session.service';
 import { ParticipantProfileService } from '../../features/profiles/participant-profile.service';
+import { PushSubscriptionService } from '../../features/push/push-subscription.service';
 import { ProfilePage } from './profile-page';
 
 const account: ParticipantAccount = {
@@ -132,6 +133,8 @@ describe('ProfilePage', () => {
           'profile.firstName': 'First name',
           'profile.saved': 'Saved',
           'profile.searchable': 'Let other participants find me',
+          'push.settings.title': 'Notifications on this device',
+          'push.unsupported': 'This browser cannot show notifications.',
         }),
         {
           provide: AppConfigService,
@@ -142,6 +145,19 @@ describe('ProfilePage', () => {
         },
         { provide: ParticipantSessionService, useValue: session },
         { provide: ParticipantProfileService, useValue: profiles },
+        // The notification switch lives on this page (AP 11) and its own
+        // suite decides how it behaves; here it is stubbed into the one state
+        // a browser without a service worker can be in, so that this page's
+        // tests are not about push and the section is still on screen.
+        {
+          provide: PushSubscriptionService,
+          useValue: {
+            state: signal('unsupported'),
+            error: signal(null),
+            subscribe: async () => undefined,
+            unsubscribe: async () => undefined,
+          },
+        },
         {
           provide: TranslationService,
           useValue: {
@@ -317,5 +333,13 @@ describe('ProfilePage', () => {
     expect(page.passwordForm.getRawValue().newPassword).toBe(
       'a brand new passphrase',
     );
+  });
+
+  it('carries the notification switch, which belongs to a person (FR 3.15)', async () => {
+    const { text } = await render();
+
+    // What it says about this browser is its own suite's business; that this
+    // is the page it is on is this one's.
+    expect(text()).toContain('Notifications on this device');
   });
 });

@@ -19,6 +19,7 @@ import { ChatConnection } from './features/chat/chat-connection.service';
 import { AppIconService } from './features/pwa/app-icon.service';
 import { InstallHint } from './features/pwa/install-hint';
 import { OfflineBanner } from './features/pwa/offline-banner';
+import { NotificationOffer } from './features/push/notification-offer';
 import { PushSubscriptionService } from './features/push/push-subscription.service';
 
 /**
@@ -41,7 +42,10 @@ import { PushSubscriptionService } from './features/push/push-subscription.servi
  *
  * The two PWA pieces of AP 12 sit around the outlet rather than inside a page,
  * because neither belongs to one: losing the network and being installable are
- * facts about the client, not about the screen somebody happens to be on.
+ * facts about the client, not about the screen somebody happens to be on. The
+ * offer of notifications joined them in AP 11 of phase 3, for the same reason
+ * and one more: a browser without an account has no page of its own to be
+ * asked on, and E43 says it may subscribe all the same.
  */
 @Component({
   selector: 'trefaro-root',
@@ -54,6 +58,7 @@ import { PushSubscriptionService } from './features/push/push-subscription.servi
     TranslocoPipe,
     OfflineBanner,
     InstallHint,
+    NotificationOffer,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',

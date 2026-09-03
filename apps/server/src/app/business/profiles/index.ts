@@ -38,5 +38,6 @@ export { UserSessionService } from './user-session.service';
 export {
   USER_SESSION_COOKIE,
   participantSessionFromHeader,
+  participantSessionFromRequest,
   userSessionCookieOptions,
 } from './user-session-cookie';
