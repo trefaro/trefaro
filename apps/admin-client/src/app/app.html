@@ -21,6 +21,14 @@
       <a routerLink="/messages" routerLinkActive="is-active">
         {{ 'admin.messages.title' | transloco }}
       </a>
+      <!-- Only where it leads somewhere: the newsletter module is off by
+           default, and a menu entry to a page that says "switched off" is a
+           menu entry to nothing (F142). -->
+      @if (config.isModuleEnabled(newsletterModuleKey)) {
+      <a routerLink="/newsletter" routerLinkActive="is-active">
+        {{ 'admin.newsletter.title' | transloco }}
+      </a>
+      }
       <a routerLink="/administrators" routerLinkActive="is-active">
         {{ 'admin.admins.title' | transloco }}
       </a>

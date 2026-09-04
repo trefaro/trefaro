@@ -166,6 +166,12 @@ describe('my registrations API', () => {
       asParticipant({ method }),
     );
 
+  const cancelMine = (registrationId: string) =>
+    api<MyRegistration>(
+      `/api/participant/registrations/${registrationId}/cancellation`,
+      asParticipant({ method: 'POST' }),
+    );
+
   const overview = (search: string) =>
     api<{ rows: ParticipantRow[] }>(
       `/api/admin/events/${event.id}/registrations?search=${encodeURIComponent(search)}`,
@@ -450,6 +456,82 @@ describe('my registrations API', () => {
       const foreign = await seat('PUT', theirs);
 
       expect(foreign.status).toBe(404);
+    });
+  });
+
+  describe('cancelling through the session (FR 4.7, AP 12)', () => {
+    /**
+     * Puts the registration back, so this block depends on no order.
+     *
+     * An organizer may reinstate a registration that was confirmed at some
+     * point (F31) — which this one was, by the person themselves in the
+     * `beforeAll`. Restoring it here rather than cancelling something of its
+     * own keeps the suite's one registration the only one this address holds,
+     * which the list above asserts.
+     */
+    afterEach(async () => {
+      await api(
+        `/api/admin/registrations/${mine}`,
+        asAdminJson('PATCH', { status: 'confirmed' }),
+      );
+    });
+
+    it('is a POST to a cancellation, not a DELETE (F179)', async () => {
+      // `DELETE /api/admin/registrations/:id` erases a registration for good.
+      // One verb, one meaning: cancelling keeps the record (F23), so it cannot
+      // be the same word one path up.
+      const deleted = await api(
+        `/api/participant/registrations/${mine}`,
+        asParticipant({ method: 'DELETE' }),
+      );
+
+      expect(deleted.status).toBe(404);
+    });
+
+    it('cancels without a token, and says so in the answer', async () => {
+      const cancelled = await cancelMine(mine);
+
+      expect(cancelled.status).toBe(200);
+      expect(cancelled.body.status).toBe('cancelled');
+      // The whole view again, like every other operation of this service: the
+      // page the button was on has to be able to redraw itself.
+      expect(cancelled.body.event.slug).toBe(event.slug);
+    });
+
+    it('gives up the seats that registration held', async () => {
+      const claimed = await seat('PUT', mine);
+      expect(claimed.body.program[0].signedUp).toBe(true);
+
+      const cancelled = await cancelMine(mine);
+
+      // Somebody who is not coming is not coming to the workshop either.
+      expect(cancelled.body.program[0].signedUp).toBe(false);
+    });
+
+    it('refuses a second cancellation rather than pretending', async () => {
+      await cancelMine(mine);
+
+      const again = await cancelMine(mine);
+
+      // 409 and not 200: the same answer a cancelled registration gets from
+      // every other route of this service, because the rules below the claim
+      // are the same ones (F148).
+      expect(again.status).toBe(409);
+    });
+
+    it('cancels nothing that belongs to somebody else', async () => {
+      const foreign = await cancelMine(theirs);
+
+      expect(foreign.status).toBe(404);
+    });
+
+    it('needs a session', async () => {
+      const anonymous = await api(
+        `/api/participant/registrations/${mine}/cancellation`,
+        { method: 'POST' },
+      );
+
+      expect(anonymous.status).toBe(401);
     });
   });
 

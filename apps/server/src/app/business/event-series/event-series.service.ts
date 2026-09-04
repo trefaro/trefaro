@@ -132,6 +132,38 @@ export class EventSeriesService {
   }
 
   /**
+   * The names of several series, by id, in one language (FR 4.8).
+   *
+   * The plural of {@link nameOf}, and it exists for the same reason
+   * {@link slugsOf} does: a list whose rows each name a series must not read
+   * one series per row (F49). Ids nothing matches are simply absent from the
+   * map — a row is not left out of a list because its label could not be read.
+   *
+   * Without a visibility check, like the singular: the newsletter overview
+   * shows consents that were given while a series was published and stay
+   * consents afterwards.
+   */
+  async namesOf(
+    ids: readonly string[],
+    locale?: string,
+  ): Promise<ReadonlyMap<string, string>> {
+    const unique = [...new Set(ids)];
+    if (unique.length === 0) return new Map();
+
+    const found = await this.series.findByIds(unique);
+    const translations = await this.translationsFor(
+      found.map((record) => record.id),
+      locale,
+    );
+    return new Map(
+      found.map((record) => [
+        record.id,
+        toPublicEventSeries(record, translations.get(record.id)).name,
+      ]),
+    );
+  }
+
+  /**
    * A series' name by id, in one language, whatever its status is (F125).
    *
    * For the invitation footer, which says which series an address is being

@@ -28,5 +28,14 @@ Zeit und endet beim gleichen Ergebnis.
   und zwar aus demselben Grund: der Empfänger _hat_ eine Sprache gewählt, also
   folgt der Inhalt der Sprache des Briefes (F125). Unverändert bleibt, wie grob
   der Rückfall greift — Einheit ist eine ganze Mail (E24, F87).
+- **Kein Newsletter-Versand in v1** (F8, seit AP 12 auch gebaut). FR 4.8 ist die
+  **Opt-In-Verwaltung**: eine Liste, die eine Organisation exportiert, und zwei
+  Quellen, die sie unterscheiden kann (E45, F136). Ein Versandmodul ist damit
+  nicht „noch nicht", sondern nicht vorgesehen — was daran hängt, hängt auch
+  daran: kein Selbstabmelde-Link (es gibt keinen Brief, in den er gehörte,
+  F183), keine zusammengeführte Empfängerliste (sie hätte keinen Leser) und
+  keine Sprache je Adresse (nur eine der beiden Quellen könnte sie füllen,
+  F181). Das Einladen ehemaliger Teilnehmender ist ausdrücklich **nicht**
+  dasselbe (F55): dort sind die Empfänger Anmeldungen, nie Adressen.
 
 Siehe auch: die Regel zur Arbeitspaket-Freigabe (`CLAUDE.md`), [Ausgehende Mail](mail.md).

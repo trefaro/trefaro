@@ -84,6 +84,30 @@ export interface ProfileExistsMailContext {
 }
 
 /**
+ * The double opt-in of a newsletter sign-up made in the app (FR 4.8, E45).
+ *
+ * The ninth mail, and the second one that greets nobody — for the opposite
+ * reason to the contact notification, which goes to a mailbox rather than to a
+ * person. This one goes to a person whose name the instance does not know and
+ * has no business asking for: a newsletter address is an address (F42).
+ *
+ * `seriesName` is what the sign-up was about, or `null` for the whole
+ * instance, and it is resolved in the language the letter turned out to be
+ * written in (F125) like every other translated value in a mail.
+ *
+ * The "if this was not you" line is not decoration. This mail is sent to an
+ * address a public form accepted, so it may reach somebody who never asked for
+ * anything — and until the link is clicked, nothing has happened. Saying so is
+ * the difference between a confirmation and an unsolicited letter.
+ */
+export interface NewsletterConfirmationMailContext {
+  /** Where the sign-up is confirmed — a page, not the API (E5b). */
+  readonly confirmUrl: string;
+  /** The series this sign-up is about, or `null` for the instance. */
+  readonly seriesName: string | null;
+}
+
+/**
  * An invitation to former participants of a series (FR 2.4, F24).
  *
  * The organizer writes `subject` and the paragraphs; the template writes

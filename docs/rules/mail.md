@@ -32,8 +32,8 @@ gröber als in der Oberfläche.
   bricht: **auch der Fehlschlag muss gleich aussehen.** Ein 503 bei
   unerreichbarem Mailserver für die eine und ein 200 für die andere Adresse wäre
   genau die Auskunft, die das Formular nicht geben darf.
-- **Die Texte kommen aus demselben Katalog wie die Oberfläche** (38 Schlüssel
-  unter `mail.`, acht Mails). Je Mail **ein** `MailTemplate` aus Schlüsselliste
+- **Die Texte kommen aus demselben Katalog wie die Oberfläche** (43 Schlüssel
+  unter `mail.`, neun Mails). Je Mail **ein** `MailTemplate` aus Schlüsselliste
   **und** Renderer (F87) — eine daneben geführte Liste driftet, und dann prüft E24 die
   falsche Menge.
 - **Die Einheit des Rückfalls ist eine Mail** (E24, F87), nicht der Katalog und
@@ -118,5 +118,26 @@ gröber als in der Oberfläche.
   registriert, bestätigt, storniert und lädt ein, liest die vier Mails, ändert
   einen Betreff über die API und prüft ihn an der **nächsten** Mail, und stellt
   die Instanz auf eine halb übersetzte Sprache, um E24 zu zeigen.
+- **Die neunte Mail grüßt niemanden, und das ist die Regel und nicht die
+  Ausnahme** (F181, E45). Der Double-Opt-In einer Newsletter-Anmeldung hat
+  keinen Namen zu grüßen, weil das Formular keinen erfragt (F42) — „Liebe
+  Abonnentin" wäre ein Gruß an jemanden, den die Instanz nicht kennt. Sie sagt
+  stattdessen, **worum** es geht (Instanz oder eine Reihe, in der Sprache des
+  Briefes aufgelöst) und dass **ohne den Klick nichts passiert**: ein
+  öffentliches Formular nimmt jede Adresse an, also kann dieser Brief jemanden
+  erreichen, der nie etwas wollte.
+- **Es gibt keine zehnte Mail für „du stehst schon auf der Liste"** (F181). E32s
+  Muster — die immer gleiche Antwort braucht eine Mail, die den Unterschied
+  trägt — gilt hier mit einer Einschränkung: ein solcher Brief hätte nichts
+  enthalten, was man tun kann (es gibt keinen Selbstabmelde-Link, F183). Also
+  sagt das **Formular** von sich aus, dass eine Mail nur kommt, wenn die Adresse
+  noch nicht dabei ist, und der Unterschied bleibt unsichtbar, ohne dass ein
+  Brief erfunden wird.
+- **Eine Anmeldung ohne Konto speichert keine Sprache** (F181, F125). Es gibt
+  keine Zeile, auf der eine stünde, und keinen zweiten Brief, der sie benutzen
+  würde — also entscheidet die Kette von F125: Empfänger (falls die Adresse ein
+  Konto hat), sonst die Vorgabe der Instanz. Das Formular schickt **kein**
+  `preferredLocale`; ein Feld, das eine Mail entscheidet und danach verschwindet,
+  wäre ein Feld, das nichts liest.
 
 Siehe auch: [Mehrsprachigkeit und Katalog](i18n.md), [Bestätigte Zuschnitt-Entscheidungen](decisions.md).

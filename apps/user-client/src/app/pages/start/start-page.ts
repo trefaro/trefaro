@@ -10,6 +10,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { TranslationService } from '@trefaro/shared-i18n';
 import { problemOf, type ApiError, type Problem } from '@trefaro/shared-http';
 import type { PublicEventSeries } from '@trefaro/shared-models';
+import { NewsletterSignup } from '../../features/newsletter/newsletter-signup';
 import { PublicEventSeriesService } from '../../features/event-series/public-event-series.service';
 
 /**
@@ -17,11 +18,15 @@ import { PublicEventSeriesService } from '../../features/event-series/public-eve
  *
  * Reachable without a login, deliberately: anyone can see what an organization
  * is running before deciding to register.
+ *
+ * Since AP 12 it also carries the newsletter sign-up (FR 4.8) — the one that
+ * belongs to no series, because this page belongs to none either. The other
+ * placement is a series' own page, and it signs up for that series.
  */
 @Component({
   selector: 'trefaro-start-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslocoPipe],
+  imports: [NewsletterSignup, RouterLink, TranslocoPipe],
   template: `
     <h1>{{ 'start.title' | transloco }}</h1>
 
@@ -53,6 +58,10 @@ import { PublicEventSeriesService } from '../../features/event-series/public-eve
         }
       </ul>
     }
+
+    <!-- Without a series, so this is the instance-wide list (E45). The
+         component draws nothing while the module is off. -->
+    <trefaro-newsletter-signup />
   `,
   styles: `
     .notice {

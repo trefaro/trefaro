@@ -107,9 +107,20 @@ check(
     ),
   json(seriesLogos),
 );
+/**
+ * The default set, spelled out — and it has grown twice since it was written.
+ *
+ * `profile-search` came back with AP 5 of phase 3 and `chat` with AP 6, both on
+ * by default; this list still named the two of phase 2 and would have failed
+ * against every instance since. Two keys are deliberately **not** in it:
+ * `push`, which needs a VAPID pair the deployment may not have (F63), and
+ * `newsletter-opt-in`, which sends nothing (F8) and would otherwise promise
+ * news the organization has no way of sending.
+ */
 check(
-  'media-links and profiles are enabled by default, push is not',
-  json(config.body?.enabledModules) === json(['media-links', 'profiles']),
+  'a fresh instance has the four default modules on, push and the newsletter off',
+  json(config.body?.enabledModules) ===
+    json(['chat', 'media-links', 'profile-search', 'profiles']),
   json(config.body?.enabledModules),
 );
 check(

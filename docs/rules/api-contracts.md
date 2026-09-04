@@ -298,5 +298,24 @@ conversations` ist der Fall: Lesen und Antworten sind FR 3.4 und damit **P1**,
 - **Query-Parameter kommen als `undefined` an**, auch wenn ein Angular-`input()`
   einen Standardwert hat. `ApiClient.put/delete/post` nehmen ebenfalls
   Query-Parameter — auch ein `PUT` muss die Sprache tragen können.
+- **Ein `DELETE` bedeutet in dieser API „für immer weg"** (F179). Deshalb
+  storniert eine Sitzung ihre Anmeldung über
+  `POST /api/participant/registrations/:id/cancellation` und nicht über ein
+  `DELETE` auf der Anmeldung: `DELETE /api/admin/registrations/:id` löscht sie
+  wirklich, und das ist die Antwort auf ein Löschverlangen. Dieselbe Gestalt hat
+  der Weg über den Mail-Link seit Phase 1 (`POST
+/api/user/registrations/me/cancellation`), also liest sich die eine Operation
+  über beide Ansprüche gleich (F148). Die Abweichung von der API-Tabelle des
+  Phasenplans ist protokolliert.
+- **Ein öffentliches Formular, das eine Adresse annimmt, antwortet immer gleich
+  — auch wenn die Mail nicht rausgeht** (F181, E32, E45). Der
+  Newsletter-Endpunkt schluckt einen `MailDeliveryError` und loggt ihn: ein 503
+  für die eine und ein 200 für die nächste Adresse wäre die Auskunft, welche
+  Adressen die Instanz kennt. Das ist die Umkehrung von F174, wo ein Fehlschlag
+  sichtbar sein **muss** — der Unterschied ist, wer die Antwort liest.
+- **`GET /api/admin/newsletter` hat keinen Filter nach Quelle** und keine Suche:
+  jede Zeile sagt ihre Quelle, und ein Filter wäre ein zweiter Weg zu einer
+  Frage, die die Liste in jeder Zeile beantwortet. Wer eine Person sucht, sucht
+  sie in der Teilnehmerübersicht.
 
 Siehe auch: [Schichten und Ports im Server](server-layers.md), [Mehrsprachigkeit und Katalog](i18n.md).

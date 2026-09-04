@@ -161,6 +161,25 @@ export function optOutPathFrom(mail: CapturedMail): string {
   return `${url.pathname}${url.search}`;
 }
 
+/**
+ * The confirmation link of a newsletter sign-up (FR 4.8, E45), as a path.
+ *
+ * The third double opt-in of this application and the third matcher, for the
+ * reason the second one gives: three different mails go to three different
+ * pages, and one matcher taking a path as an argument would let a caller ask
+ * for a page that does not exist.
+ */
+export function newsletterPathFrom(mail: CapturedMail): string {
+  const match = /https?:\/\/[^\s]*\/newsletter\/confirm\?token=[^\s]+/.exec(
+    mail.text,
+  );
+  if (!match) {
+    throw new Error(`No newsletter confirmation link in "${mail.subject}"`);
+  }
+  const url = new URL(match[0]);
+  return `${url.pathname}${url.search}`;
+}
+
 export function selfServicePathFrom(mail: CapturedMail): string {
   const match = /https?:\/\/[^\s]*\/registrations\/me\?token=[^\s]+/.exec(
     mail.text,

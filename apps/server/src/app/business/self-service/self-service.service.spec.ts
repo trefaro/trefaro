@@ -348,6 +348,31 @@ describe('SelfServiceService', () => {
       );
     });
 
+    it('cancels through the session too, with the same rules (FR 4.7)', async () => {
+      // The second way to the one operation the session could not do until
+      // AP 12. Same actor, so still no notice (F59), and the seats still go.
+      const view = await service.cancel(accountFor());
+
+      expect(participants.setStatus).toHaveBeenCalledWith(
+        CONFIRMED.id,
+        'cancelled',
+        'participant',
+      );
+      expect(signups.signOff).toHaveBeenCalledWith('item-1', {
+        registrationId: CONFIRMED.id,
+        eventId: EVENT.id,
+      });
+      expect(view.status).toBe('cancelled');
+    });
+
+    it('does not cancel a registration of somebody else', async () => {
+      await expect(
+        service.cancel(accountFor('ben@example.org')),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(participants.setStatus).not.toHaveBeenCalled();
+    });
+
     it('lets a session claim and give up a seat as well (FR 3.10)', async () => {
       await service.signUp('item-2', accountFor());
       const view = await service.signOff('item-1', accountFor());

@@ -144,6 +144,18 @@ export const appRoutes: Route[] = [
     title: 'chat.title',
   },
   {
+    // The confirmation link of a newsletter sign-up points here (FR 4.8, E45).
+    // No module guard: somebody may click a link from a mail after the
+    // organization switched the sign-up off, and the answer they then get is
+    // the one an expired link gets — which is the truth.
+    path: 'newsletter/confirm',
+    loadComponent: () =>
+      import('./pages/newsletter-confirm/newsletter-confirm-page').then(
+        (m) => m.NewsletterConfirmPage,
+      ),
+    title: 'newsletter.confirm.title',
+  },
+  {
     // The objection link in an invitation points here (E15, F58); the token
     // arrives as a query parameter, exactly as for the two links above. The
     // page objects by POST, so a link previewer decides nothing.

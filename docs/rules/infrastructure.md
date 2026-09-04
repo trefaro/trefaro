@@ -20,11 +20,23 @@ Datenschutzbruch, bei der Plug-in-Aktivierung Datenverlust.
   Fremdinstallation zur Laufzeit.**
 - **Deaktivieren löscht nie Daten.** Nur `down`-Migrationen entfernen Tabellen.
 - **`CORE_MODULES` nennt nur Module, die es gibt** (E21, F63): derzeit
-  `profiles`, `profile-search`, `chat`, `media-links` und `push` — die ersten
-  drei seit Phase 3 (AP 1, AP 5, AP 6), mit `profiles` als Voraussetzung der
-  beiden anderen (E42, F128). `newsletter` entfällt endgültig. Zeilen entfallener
-  Schlüssel werden **nicht gelöscht** — `ModuleFlagCache` ignoriert, was kein
-  Deskriptor beansprucht.
+  `profiles`, `profile-search`, `chat`, `media-links`, `push` und
+  `newsletter-opt-in` — die ersten drei seit Phase 3 (AP 1, AP 5, AP 6), mit
+  `profiles` als Voraussetzung der beiden anderen (E42, F128), der letzte seit
+  AP 12. **`newsletter` entfällt endgültig** und ist nicht dasselbe wie
+  `newsletter-opt-in`: dieser Schlüssel schaltet ein Anmeldeformular und eine
+  Übersicht und **nie einen Versand** (F8, F136). Zeilen entfallener Schlüssel
+  werden **nicht gelöscht** — `ModuleFlagCache` ignoriert, was kein Deskriptor
+  beansprucht.
+- **Zwei Module sind aus vorgegeben, aus zwei verschiedenen Gründen.** `push`,
+  weil es ohne VAPID-Paar in der Umgebung **nicht kann** (ein angebotenes
+  Abonnement wäre eines, das nicht gespeichert wird). `newsletter-opt-in`, weil
+  es sehr wohl kann und trotzdem nichts versendet: eine Instanz mit dem Schalter
+  an sammelt Adressen für Neuigkeiten, die von woanders rausgehen müssen, und
+  eine Organisation ohne Newsletter sollte dafür kein Formular zeigen. Eine
+  Voraussetzung hat es **nicht** — eine Anmeldung fragt nach einer Adresse und
+  nicht nach einem Konto (E45), also ist das Modul auch auf einer Instanz mit
+  ausgeschaltetem `profiles` nützlich.
 - **`push` ist ein echter Schalter:** Endpunkte mit Guard, `webPushPublicKey`
   `null`, solange das Modul aus ist. Wer Push testet, schaltet das Modul vorher ein
   und stellt den Schalter zurück. **Seit AP 11 der Phase 3 fragt `PushService`

@@ -17,6 +17,7 @@ import type {
   InvitationMailContext,
   MailEvent,
   MailTemplate,
+  NewsletterConfirmationMailContext,
   ProfileConfirmationMailContext,
   ProfileExistsMailContext,
   ReceiptMailContext,
@@ -25,7 +26,7 @@ import type {
 } from './types';
 
 /**
- * The eight mails, written out of the catalogue (AP 10 of phase 2, E22, E24).
+ * The nine mails, written out of the catalogue (AP 10 of phase 2, E22, E24).
  *
  * Two renderings of the same sentences, never two sets of sentences: the plain
  * text part and the HTML part read the same key and differ only in what they do
@@ -49,11 +50,13 @@ const EVENT_DETAILS = 'mail.event.details';
 /**
  * Every mail to a person greets them and ends with something to click.
  *
- * Two of the eight are exceptions, and they prove the rule from both ends: the
+ * Three of the nine are exceptions, and they prove the rule from both ends: the
  * contact notification goes to a mailbox rather than to somebody, so it takes
  * {@link ACTION_LINE} without a greeting; the answer to a guest greets them by
  * the name they typed and has nothing to click, because the only address it
- * could offer is the event page its own block already links (F174).
+ * could offer is the event page its own block already links (F174); and the
+ * newsletter confirmation has something to click and nobody to greet, because
+ * a sign-up asked for an address and not for a name (E45).
  */
 const COMMON_KEYS = [GREETING, ACTION_LINE] as const;
 /** The block that says when and where — the receipt and the invitation carry it. */
@@ -441,6 +444,66 @@ const contactAnswer: MailTemplate<ContactAnswerMailContext> = {
   },
 };
 
+/**
+ * "Confirm that you want our news" (FR 4.8, E45).
+ *
+ * The ninth mail. Three things about it are deliberate:
+ *
+ * - **No greeting.** The sign-up asked for an address and nothing else, so
+ *   there is no name to use — and inventing "Dear subscriber" would be a
+ *   greeting for somebody the instance has not met.
+ * - **It says what was signed up for.** The whole instance or one series: a
+ *   person who signed up on one series' page and got a letter about "our
+ *   newsletter" has no way of telling whether the click did what they meant.
+ * - **It says that nothing has happened yet.** A public form accepts any
+ *   address, so this letter can reach somebody who never asked. Until the link
+ *   is clicked there is no consent, and the validity line says so — the same
+ *   sentence the account confirmation ends with, because it is the same
+ *   promise.
+ */
+const newsletterConfirmation: MailTemplate<NewsletterConfirmationMailContext> =
+  {
+    name: 'newsletter confirmation',
+    keys: [
+      ACTION_LINE,
+      'mail.newsletter.subject',
+      'mail.newsletter.intro',
+      'mail.newsletter.introSeries',
+      'mail.newsletter.action',
+      'mail.newsletter.validity',
+    ],
+
+    render(
+      s: MailStrings,
+      context: NewsletterConfirmationMailContext,
+    ): RenderedMail {
+      const { confirmUrl, seriesName } = context;
+      const label = s.text('mail.newsletter.action');
+
+      return {
+        subject: s.text('mail.newsletter.subject'),
+        text: textBody(
+          seriesName
+            ? s.text('mail.newsletter.introSeries', { series: seriesName })
+            : s.text('mail.newsletter.intro'),
+          textAction(s, label, confirmUrl),
+          s.text('mail.newsletter.validity', { days: CONFIRMATION_VALID_DAYS }),
+        ),
+        html: htmlBody(
+          seriesName
+            ? s.html('mail.newsletter.introSeries', {
+                series: htmlStrong(escapeHtml(seriesName)),
+              })
+            : s.html('mail.newsletter.intro'),
+          htmlAction(confirmUrl, label),
+          s.html('mail.newsletter.validity', {
+            days: escapeHtml(String(CONFIRMATION_VALID_DAYS)),
+          }),
+        ),
+      };
+    },
+  };
+
 export const MAIL_TEMPLATES = {
   registrationConfirmation,
   registrationConfirmed,
@@ -450,9 +513,10 @@ export const MAIL_TEMPLATES = {
   profileExists,
   contactRequest,
   contactAnswer,
+  newsletterConfirmation,
 } as const;
 
-/** Every key the eight mails between them can ask for — CI checks this list. */
+/** Every key the nine mails between them can ask for — CI checks this list. */
 export const ALL_MAIL_KEYS: readonly string[] = [
   ...new Set(
     Object.values(MAIL_TEMPLATES).flatMap((template) => template.keys),

@@ -21,6 +21,7 @@ import {
 import { ProfileSearchModule } from './business/profile-search/profile-search.module';
 import { ProfilesModule } from './business/profiles';
 import { ProgramModule } from './business/program';
+import { NewsletterModule } from './business/newsletter';
 import { PushModule } from './business/push';
 import { RegistrationModule } from './business/registration';
 import { SelfServiceModule } from './business/self-service';
@@ -105,6 +106,11 @@ import { DataAccessModule } from './data-access/data-access.module';
     ProfileSearchModule,
     ChatModule,
     PushModule,
+    // Last, and the odd one out of this family: the newsletter needs no
+    // account at all (E45). It sits here because it is the other module whose
+    // subject is an address rather than an event — and because it is the last
+    // of the optional ones (FR 1.5), switched off by default.
+    NewsletterModule,
   ],
   controllers: [HealthController],
 })

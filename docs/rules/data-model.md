@@ -232,5 +232,27 @@ Entscheidungsprotokoll (`docs/Anforderungsanalyse_und_Umsetzungsplan.md`).
   Zielgruppe zwei Hälften hat: `WHERE user_id IS NOT NULL` für die Geräte eines
   Kontos, `WHERE user_id IS NULL` für die ohne. Ein gewöhnlicher Index über eine
   Spalte, die zur Hälfte `NULL` ist, beantwortet die zweite Frage nicht.
+- **Ein eindeutiger Index über eine nullbare Spalte braucht `NULLS NOT
+DISTINCT`** (F180). PostgreSQL hält zwei `NULL` für verschieden, also erlaubt
+  `unique (lower(email), event_series_id)` dieselbe Adresse beliebig oft für die
+  instanzweite Liste — genau die Zeile, die es nicht zweimal geben darf. Mit der
+  Klausel hat eine Adresse höchstens eine Zustimmung je Reihe und höchstens eine
+  ohne. `ON CONFLICT (lower("email"), "event_series_id")` erkennt einen so
+  deklarierten Index als Konfliktziel (gegen PostgreSQL 17 geprüft).
+- **Ein Bestätigungstoken wird nie gespeichert** (F180, F23). Der Schemaentwurf
+  5.3 sah für `newsletter_subscription` ein `confirmation_token_hash` vor; es
+  gibt keins, weil kein Double-Opt-In dieser Anwendung eins hat — Token sind
+  signiert und tragen ihre Nutzlast selbst. Der Augenblick der Bestätigung heißt
+  überall `confirmed_at`, auch hier.
+- **Eine widerrufene Einwilligung wird gelöscht, nicht archiviert** (F183). Die
+  Ausnahme zu E14, und die Begründung ist dieselbe Regel: der Nachweis einer
+  Einwilligung, die es nicht mehr gibt, ist das Gegenteil dessen, worum der
+  Mensch gebeten hat. Nur die App-Quelle hat eine eigene Zeile; das Häkchen im
+  Anmeldeformular gehört zu seiner Anmeldung.
+- **Ein Widerspruch wirkt über beide Quellen** (F24, F136). `contact_opt_out`
+  steht auf einer Anmeldung, gilt aber für die **Adresse**: die SQL der
+  Newsletter-Übersicht schließt jede Adresse aus, die irgendwo widersprochen
+  hat, weil „erscheint in keiner weiteren Liste" auch für eine Liste gilt, die
+  es damals nicht gab.
 
 Siehe auch: [Schichten und Ports im Server](server-layers.md), [Ausgehende Mail](mail.md).

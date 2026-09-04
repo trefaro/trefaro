@@ -1,6 +1,7 @@
 import {
   CHAT_MODULE_KEY,
   MEDIA_LINKS_MODULE_KEY,
+  NEWSLETTER_MODULE_KEY,
   PROFILES_MODULE_KEY,
   PROFILE_SEARCH_MODULE_KEY,
   PUSH_MODULE_KEY,
@@ -21,8 +22,10 @@ import {
  * the moment an organizer got to see the list. So:
  *
  * - `newsletter` is gone. There will be no newsletter module (F8), and inviting
- *   former participants is explicitly not one (F55). Should the opt-in
- *   administration of FR 4.8 arrive in phase 3, it gets a key of its own then.
+ *   former participants is explicitly not one (F55). The opt-in administration
+ *   of FR 4.8 arrived in AP 12 of phase 3 and did get a key of its own, as this
+ *   note said it would: `newsletter-opt-in`, which switches a sign-up form and
+ *   an overview and nothing that sends.
  * - `chat` and `profile-search` were gone and came back with their modules; a
  *   descriptor list is not a roadmap. `profiles` came back in AP 1 of phase 3,
  *   the day it had endpoints to switch off — which is the shape of the rule:
@@ -128,6 +131,22 @@ export const CORE_MODULES: readonly CoreModuleDescriptor[] = [
   {
     key: PUSH_MODULE_KEY,
     titleKey: 'modules.push.title',
+    enabledByDefault: false,
+  },
+  // Keeping the addresses of people who want news (FR 4.8, E45). Off by
+  // default, and for a reason of its own: this module sends nothing (F8), so an
+  // instance that has switched it on is promising news it sends from somewhere
+  // else. An organization that has no newsletter should not collect addresses
+  // for one — while an unset VAPID pair makes push *unable* to work, an unused
+  // newsletter list works perfectly and is simply a promise nobody keeps.
+  //
+  // No prerequisite (E42), which is the only descriptor in this list where the
+  // absence is worth a sentence: a sign-up asks for an address and not for an
+  // account, so this module is at its most useful on an instance that has
+  // `profiles` switched off.
+  {
+    key: NEWSLETTER_MODULE_KEY,
+    titleKey: 'modules.newsletter.title',
     enabledByDefault: false,
   },
 ];

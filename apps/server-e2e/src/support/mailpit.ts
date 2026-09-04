@@ -117,6 +117,22 @@ export function selfServiceTokenFrom(mail: CapturedMail): string {
 }
 
 /**
+ * The `token` of a newsletter confirmation link (FR 4.8, E45).
+ *
+ * Its own path again, for the reason the account helper gives: three double
+ * opt-ins now exist in this application, they arrive in three different mails,
+ * and a helper that matched any of them would let one suite pass on another's
+ * letter.
+ */
+export function newsletterTokenFrom(mail: CapturedMail): string {
+  const match = /newsletter\/confirm\?token=([A-Za-z0-9_.%-]+)/.exec(mail.text);
+  if (!match) {
+    throw new Error(`No newsletter confirmation link in "${mail.subject}"`);
+  }
+  return decodeURIComponent(match[1]);
+}
+
+/**
  * The `token` of the objection link in an invitation (E15, F58).
  *
  * Every invitation carries one, written by the template rather than by the

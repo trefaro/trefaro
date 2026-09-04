@@ -17,7 +17,16 @@ export type TokenPurpose =
   | 'registration-self-service'
   | 'invitation-opt-out'
   /** The double opt-in of a participant account (FR 4.1, E32). */
-  | 'profile-confirmation';
+  | 'profile-confirmation'
+  /**
+   * The double opt-in of a newsletter sign-up (FR 4.8, E45).
+   *
+   * Its subject is the id of the `newsletter_subscription` row, so a token
+   * cannot confirm an address other than the one that was signed up — and
+   * cannot be replayed as any of the four purposes above it, which is what
+   * having a purpose in the payload is for.
+   */
+  | 'newsletter-confirmation';
 
 /** Fourteen days, per E5: long enough for someone who registers before a holiday. */
 export const CONFIRMATION_TOKEN_TTL_MS = 14 * 24 * 60 * 60 * 1000;

@@ -51,10 +51,16 @@ const registration = (
 /** Records which credential the page presented (E11, E31). */
 class FakeSelfService {
   readonly viewed: SelfServiceAccess[] = [];
+  readonly cancelled: SelfServiceAccess[] = [];
 
   async view(access: SelfServiceAccess): Promise<MyRegistration> {
     this.viewed.push(access);
     return registration();
+  }
+
+  async cancel(access: SelfServiceAccess): Promise<MyRegistration> {
+    this.cancelled.push(access);
+    return registration('cancelled');
   }
 }
 
@@ -130,13 +136,28 @@ describe('MyRegistrationPage', () => {
     expect(text()).toContain('mine.noToken');
   });
 
-  it('offers no cancellation to a session, because AP 12 owes it', async () => {
+  it('offers the cancellation to a session as well (FR 4.7)', async () => {
     const { text } = await render({ id: 'registration-1' });
 
-    // Absent rather than present and broken: the rule has no second way in yet
-    // (FR 4.7 is P3 and lives in AP 12).
-    expect(text()).not.toContain('Cancel my registration');
+    // AP 12 gave the rule its second claim, so the button is there for both —
+    // and the way back to the list stays, because a session has one.
+    expect(text()).toContain('Cancel my registration');
     expect(text()).toContain('Back to my registrations');
+  });
+
+  it('cancels with the credential this visit has', async () => {
+    const { fixture } = await render({ id: 'registration-1' });
+    // The one action on this page that asks first: registering again is a new
+    // registration, not an undo. Answered with yes here — that the question is
+    // asked at all is the browser suite's business.
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    fixture.nativeElement.querySelector('button.danger').click();
+    await Promise.resolve();
+
+    expect(selfService.cancelled).toEqual([
+      { kind: 'session', registrationId: 'registration-1' },
+    ]);
   });
 
   it('warns about the link only when there is one', async () => {

@@ -163,11 +163,16 @@ describe('the module administration', () => {
     // AP 5 and `chat` with AP 6 — each on the day it had endpoints to switch
     // off. `newsletter` is the one that never returns: there will be no
     // newsletter module (F8), and inviting former participants is explicitly
-    // not one (F55).
+    // not one (F55). The key beside it is not that one coming back — it
+    // administers opt-ins and sends nothing.
     expect(keys).toContain('profiles');
     expect(keys).toContain('profile-search');
     expect(keys).toContain('chat');
     expect(keys).not.toContain('newsletter');
+    // AP 12 brought the opt-in administration of FR 4.8, and it took the key
+    // that note promised it: `newsletter-opt-in`, which switches a sign-up
+    // form and an overview — never a dispatch.
+    expect(keys).toContain('newsletter-opt-in');
   });
 
   it('starts the returning module on rather than off (E21, F63)', async () => {

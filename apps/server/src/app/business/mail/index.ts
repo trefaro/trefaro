@@ -19,6 +19,7 @@ export {
   type MailEvent,
   type MailStrings,
   type MailTemplate,
+  type NewsletterConfirmationMailContext,
   type ProfileConfirmationMailContext,
   type ProfileExistsMailContext,
   type ReceiptMailContext,

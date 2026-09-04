@@ -184,5 +184,13 @@ diese Eigenschaft.
   Ein Katalog ist eine Auflösung aus drei Quellen (E23); eine Organisation mit
   fünfzig Abonnenten hat zwei Sprachen, nicht fünfzig Kataloge. E24 (Rückfall
   als Ganzes) gilt **nur** für Mail und ist bewusst nicht übernommen.
+- **Ein Port darf die Tabelle eines anderen Moduls lesen, wenn die Zielgruppe
+  aus zweien besteht** (F136, wie F134). Die Newsletter-Übersicht ist eine
+  `UNION` aus `newsletter_subscription` und `registration`, und sie steht in
+  **einer** Anweisung des Ports `business/newsletter/ports/` — nicht in einem
+  Dienst, der zwei Ports zusammenrechnet. Zwei Gründe: die drei Regeln (nur
+  bestätigt, kein Widerspruch, je Adresse und Reihe gruppiert) sind damit nicht
+  umgehbar (F152, F173), und die Alternative wäre eine Methode, die „alle
+  Adressen mit Häkchen" beantwortet — genau die Liste, die es nicht geben soll.
 
 Siehe auch: [Verträge der Endpunkte](api-contracts.md), [Regeln des Datenmodells](data-model.md).

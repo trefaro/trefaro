@@ -150,7 +150,7 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    (offen geblieben: die Feedbackrunde mit Democracy International)
 2. **✅ 29.08.2026, M5** Whitelabel-Theming, Modul-Verwaltung, i18n, PWA,
    Installations-Story → `docs/PHASE2.md`
-3. **In Arbeit** (AP 1–AP 11 erledigt, M7 erreicht) Profile, Nachrichten,
+3. **In Arbeit** (AP 1–AP 12 erledigt, M7 erreicht) Profile, Nachrichten,
    Echtzeit-/Gruppenchat, Push, Profilsuche → `docs/PHASE3.md`
 4. Plug-ins: Programmvorschläge, Forum, Raumplanung, QR-Check-In
 5. Härtung, Usability-Test mit Democracy International (Pilotpartner), Doku,
@@ -169,17 +169,19 @@ bewusst; die Begründungen stehen in `docs/rules/`. Katalog damals 646 → 654.
 
 **Phase 3 läuft** (seit 02.09.2026): Plan in `docs/PHASE3.md`, dreizehn
 Arbeitspakete, Entscheidungen **E31–E45**, Nachträge ab **F118** (vergeben:
-F118–F128, F132–F135, F137–F178; F129–F131 bleiben unvergeben, **F136** ist für
-AP 12 reserviert). **AP 1 (Teilnehmerkonto und Login), AP 2 (Profil und
-Feld-Baukasten), AP 3 (Login, Registrierung und Profil in beiden Clients,
+F118–F128, F132–F136, F137–F183; **F129–F131 bleiben unvergeben**, sonst ist
+keine Nummer mehr reserviert). **AP 1 (Teilnehmerkonto und Login), AP 2 (Profil
+und Feld-Baukasten), AP 3 (Login, Registrierung und Profil in beiden Clients,
 **Meilenstein M6**), AP 4 (die Anmeldung kennt den Menschen), AP 5
 (Profilsuche), AP 6 (Gespräche, Nachrichten und Bilder), AP 7 (Echtzeit,
 **Meilenstein M7**), AP 8 (Chat im Nutzer-Client), AP 9 (Organisator-Kontakt
-ohne Registrierung), AP 10 (Nachrichtenübersicht im Veranstalter-Client) und
-AP 11 (Push wird echt) sind erledigt** — Protokoll je Paket unter
-_Fortschritt_. Als nächstes AP 12: die zwei P3-Zugaben (FR 4.7, 4.8) — Storno
-der eigenen Anmeldung über die Sitzung (F148) und der Newsletter als Adresse
-mit eigenem Double-Opt-In (E45, F136). Katalog **911** Schlüssel.
+ohne Registrierung), AP 10 (Nachrichtenübersicht im Veranstalter-Client),
+AP 11 (Push wird echt) und AP 12 (die zwei P3-Zugaben) sind erledigt** —
+Protokoll je Paket unter _Fortschritt_. Als nächstes **AP 13: der Abschluss der
+Phase** (Meilenstein M8) — `todo.md` unter _Checkable after phase 3_
+durcharbeiten, E31–E45 gegen die Umsetzung prüfen, den Fünf-Container-Stack aus
+leerem Volume hochfahren und alle Prüfskripte gegen genau diese Instanz laufen
+lassen. Katalog **956** Schlüssel.
 
 Aus AP 4: die Selbstbedienung kennt zwei Ansprüche — das signierte Token aus der
 Mail und die Sitzung, aufgelöst über die Adresse (F148) —, die
@@ -305,6 +307,34 @@ Beide Schalter werden **im Dienst selbst** gefragt (E21, F63). `broadcast()` und
 `findAll()` sind weg: es gibt zwei Zielgruppen und keine Methode für eine
 dritte. Migration: **eine**. Vier `todo.md`-Einträge geschlossen.
 
+Aus AP 12: die zwei P3-Zugaben, und beide waren kleiner als der Plan dachte.
+Das **Storno über die Sitzung** (FR 4.7) brauchte keine neue Regel, nur eine
+zweite Route auf `SelfServiceService.cancel` — genau, was F148 vorhergesagt
+hatte. Es ist ein **`POST …/:id/cancellation`** und kein `DELETE` (F179): eine
+Zeile höher löscht `DELETE /api/admin/registrations/:id` eine Anmeldung
+endgültig, und ein Verb, das im einen Präfix „weg" und im anderen „storniert,
+aber aufgehoben" heißt (F23), ist eine API, die man nicht lesen kann. Der
+**Newsletter ist eine Adresse** (E45, F136): `newsletter_subscription` mit
+eigenem Double-Opt-In, nullbarer Reihe und einem eindeutigen Index mit
+**`NULLS NOT DISTINCT`** (F180 — ohne die Klausel hält PostgreSQL zwei `NULL`
+für verschieden und erlaubt dieselbe Adresse beliebig oft). Die Übersicht ist
+eine **`UNION` aus zwei Quellen** mit **einer Zeile je Zustimmung** und drei
+Regeln in der SQL des Ports (F136, wie F152 und F173): nur bestätigte
+Zustimmungen sind abfragbar, ein **Widerspruch** (F24) nimmt eine Adresse aus
+**beiden** Quellen, und die Formular-Hälfte ist je Adresse und Reihe gruppiert.
+Zusammengeführt wird nichts, und es geht **nichts raus** (F8) — die Liste ist
+zum Exportieren da. Die **neunte Mail** grüßt niemanden, sagt worum es geht und
+dass ohne den Klick nichts passiert; eine **zehnte** für „du stehst schon auf
+der Liste" gibt es bewusst nicht (F181), stattdessen sagt das Formular selbst,
+wann eine Mail kommt — und ein Fehlschlag beim Versenden ändert die Antwort
+nicht, sonst verriete der Statuscode, welche Adressen die Instanz kennt. Das
+Formular steht an **zwei Orten** (F182): Startseite ohne Reihe, Reihenseite mit
+ihrem Slug — damit haben beide Zweige der nullbaren Spalte einen Schreiber.
+Zurücknehmen geht über die Organisation und **löscht** die Zeile (F183, die
+Ausnahme zu E14). Der Schalter heißt **`newsletter-opt-in`** und ist **aus** —
+F63 hatte ihm den eigenen Schlüssel versprochen, `newsletter` kommt nie zurück.
+Migration: **eine**.
+
 Was auf ein anderes Paket bzw. auf Marius wartet — alles in `todo.md`. **Für
 Marius mit Geräten** gibt es dort seit 04.09.2026 einen eigenen Abschnitt weit
 oben, _On a device — waiting for Marius_: was diese Testsuiten **gar nicht**
@@ -313,18 +343,23 @@ in keiner Phasenliste stehen sollte. Darin die **Gerätematrix** aus Spike 3,
 vier Zeilen samt iOS Safari mit installierter PWA (wovon F7 abhängt); das
 Verfahren steht in `docs/spikes/03-web-push.md` und geht jetzt über eine
 **verschobene Session** statt über einen Testversand, den es bewusst nicht
-gibt. Andere Pakete: das **Storno über die Sitzung** gehört zu AP 12 (F148), die
-**Drosselung des Handshakes** zu Phase 5; ob es eine geteilte Bibliothek für Oberflächenbauteile
-geben soll, ist eine Stack-Entscheidung (F145). Produktfragen sind der
-**Ungelesen-Zähler** in der Navigationsleiste (AP 8, seit AP 11 kleiner: wer
-Benachrichtigungen an hat, erfährt es), die **Nachrichten-Kachel** des
-Event-Dashboards, ob die Übersicht sich **selbst auffrischen** soll, und ob ein
-Gerät ohne Konto weiter von **allen** öffentlichen Events hören soll (der Preis
-von E43). Benannte Grenzen: der **Name der antwortenden Person** ist
+gibt. Andere Pakete: die **Drosselung des Handshakes** gehört zu Phase 5; ob es
+eine geteilte Bibliothek für Oberflächenbauteile geben soll, ist eine
+Stack-Entscheidung (F145). Produktfragen sind der **Ungelesen-Zähler** in der
+Navigationsleiste (AP 8, seit AP 11 kleiner: wer Benachrichtigungen an hat,
+erfährt es), die **Nachrichten-Kachel** des Event-Dashboards, ob die Übersicht
+sich **selbst auffrischen** soll, ob ein Gerät ohne Konto weiter von **allen**
+öffentlichen Events hören soll (der Preis von E43), und aus AP 12: ob die
+Newsletter-Liste einen **Export** und eine **Sprache** je Adresse braucht (das
+Zweite nur für die App-Quelle speicherbar, also für die Hälfte der Zeilen
+„unbekannt"). Benannte Grenzen: der **Name der antwortenden Person** ist
 gespeichert, aber nicht gezeigt; die **Antwort eines Gasts** kommt als
 gewöhnliche Mail außerhalb der Anwendung an; der Veranstalter kann **kein Bild
-senden**; und ein Gerät **ohne Konto** kann Benachrichtigungen nur in den
-Einstellungen seines Browsers abschalten.
+senden**; ein Gerät **ohne Konto** kann Benachrichtigungen nur in den
+Einstellungen seines Browsers abschalten; und eine **Newsletter-Adresse kann
+sich nicht selbst abmelden** — von hier geht kein Newsletter raus (F8), also
+nimmt die Organisation die Zeile heraus (F183) und der Widerspruchslink einer
+Einladung wirkt über beide Quellen (F24).
 
 ## Betriebskontext
 

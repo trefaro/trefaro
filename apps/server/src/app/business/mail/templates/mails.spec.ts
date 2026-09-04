@@ -9,6 +9,7 @@ import type {
   ContactRequestMailContext,
   InvitationMailContext,
   MailTemplate,
+  NewsletterConfirmationMailContext,
   ReceiptMailContext,
   RenderedMail,
 } from './types';
@@ -130,6 +131,17 @@ const CONTACT_ANSWER: ContactAnswerMailContext = {
   paragraphs: ['yes, the whole ground floor is level.', 'See you there.'],
 };
 
+/**
+ * The ninth mail (FR 4.8, E45) — the double opt-in of a newsletter sign-up.
+ *
+ * The only context in this file without a person's name in it, and that is the
+ * point: a sign-up asked for an address and nothing else.
+ */
+const NEWSLETTER: NewsletterConfirmationMailContext = {
+  confirmUrl: 'https://events.example.org/newsletter/confirm?token=signed',
+  seriesName: 'Bürgerräte',
+};
+
 describe('the shipped catalogues, as mail text (E24)', () => {
   it('cover every key any of the mails asks for', () => {
     // The successor to the compile-time guarantee E24 gave up: English is the
@@ -164,6 +176,13 @@ describe('the shipped catalogues, as mail text (E24)', () => {
         render(locale, MAIL_TEMPLATES.invitation, INVITATION),
         render(locale, MAIL_TEMPLATES.contactRequest, CONTACT_REQUEST),
         render(locale, MAIL_TEMPLATES.contactAnswer, CONTACT_ANSWER),
+        render(locale, MAIL_TEMPLATES.newsletterConfirmation, NEWSLETTER),
+        // Both branches of the ninth mail: the instance-wide sentence has no
+        // placeholder, the series one does, and only one of them is rendered.
+        render(locale, MAIL_TEMPLATES.newsletterConfirmation, {
+          ...NEWSLETTER,
+          seriesName: null,
+        }),
       ];
       for (const mail of mails) {
         expect(`${mail.subject}\n${mail.text}\n${mail.html}`).not.toMatch(/{{/);
@@ -516,6 +535,79 @@ describe('the answer to somebody without an account (FR 3.4, F11, F174)', () => 
 
   it('loads nothing from anywhere when opened', () => {
     const mail = render('en', MAIL_TEMPLATES.contactAnswer, CONTACT_ANSWER);
+
+    expect(mail.html).not.toMatch(/<img|<link|@import|url\(/i);
+  });
+});
+
+describe('the newsletter confirmation (FR 4.8, E45)', () => {
+  it('says what was signed up for, in both languages', () => {
+    for (const locale of LOCALES) {
+      const mail = render(
+        locale,
+        MAIL_TEMPLATES.newsletterConfirmation,
+        NEWSLETTER,
+      );
+
+      // Named, because somebody who signed up on one series' page cannot
+      // otherwise tell whether the click did what they meant.
+      expect(mail.text).toContain('Bürgerräte');
+      expect(mail.html).toContain('Bürgerräte');
+      expect(mail.text).toContain(NEWSLETTER.confirmUrl);
+    }
+  });
+
+  it('names no series when the sign-up was about the instance', () => {
+    const mail = render('en', MAIL_TEMPLATES.newsletterConfirmation, {
+      ...NEWSLETTER,
+      seriesName: null,
+    });
+
+    expect(mail.text).not.toContain('Bürgerräte');
+    expect(mail.text).toContain(NEWSLETTER.confirmUrl);
+  });
+
+  it('greets nobody', () => {
+    // There is no name to greet with: the form asked for an address (E45), and
+    // "Dear subscriber" would be a greeting for somebody nobody has met.
+    for (const locale of LOCALES) {
+      const mail = render(
+        locale,
+        MAIL_TEMPLATES.newsletterConfirmation,
+        NEWSLETTER,
+      );
+      const greeting = CATALOGUES[locale]['mail.greeting'];
+
+      expect(mail.text).not.toContain(greeting.replace('{{name}}', ''));
+    }
+  });
+
+  it('says that nothing happens without the confirmation', () => {
+    // The sentence that makes this letter survivable: a public form accepts any
+    // address, so it may reach somebody who never asked for anything.
+    const en = render('en', MAIL_TEMPLATES.newsletterConfirmation, NEWSLETTER);
+    const de = render('de', MAIL_TEMPLATES.newsletterConfirmation, NEWSLETTER);
+
+    expect(en.text).toMatch(/nothing happens/i);
+    expect(de.text).toMatch(/passiert nichts/i);
+  });
+
+  it('escapes a series name rather than sending it as markup', () => {
+    const mail = render('en', MAIL_TEMPLATES.newsletterConfirmation, {
+      ...NEWSLETTER,
+      seriesName: '<script>alert(1)</script>',
+    });
+
+    expect(mail.html).not.toContain('<script>');
+    expect(mail.html).toContain('&lt;script&gt;');
+  });
+
+  it('loads nothing from anywhere when opened', () => {
+    const mail = render(
+      'de',
+      MAIL_TEMPLATES.newsletterConfirmation,
+      NEWSLETTER,
+    );
 
     expect(mail.html).not.toMatch(/<img|<link|@import|url\(/i);
   });

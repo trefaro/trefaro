@@ -1,6 +1,6 @@
 # Phase 3 — Profile, Kommunikation und Community-Kern
 
-**Status: in Arbeit** (seit 02.09.2026, AP 1 bis AP 11 erledigt, **M7 erreicht**). Der Teil oberhalb von
+**Status: in Arbeit** (seit 02.09.2026, AP 1 bis AP 12 erledigt, **M7 erreicht**). Der Teil oberhalb von
 _Fortschritt_ ist der **Plan** und wird nicht mehr rückwirkend korrigiert; was
 tatsächlich passierte, steht unten je Paket — wie in
 [`PHASE1.md`](PHASE1.md) und [`PHASE2.md`](PHASE2.md). Was Marius **vor** einem
@@ -17,10 +17,10 @@ phase 3_ — dreizehn Einträge, jeder ist unten einem Arbeitspaket zugeordnet.
 
 Die Entscheidungen zählen bei **E31** weiter (Phase 1: E1–E16, Phase 2:
 E17–E30); Ergänzungen am Referenzdokument bekommen **F118** und folgende
-(F1–F117 sind vergeben, F62 nie). Vergeben sind inzwischen F118–F128, F132,
-F133 sowie F137–F175; **F129–F131 und F134–F136 bleiben reserviert** für die
-Pakete, die noch kommen — beziehungsweise bleiben unvergeben, wo sich eine
-reservierte Nummer als schon getroffene Entscheidung entpuppt hat.
+(F1–F117 sind vergeben, F62 nie). Vergeben sind inzwischen F118–F128 und
+F132–F136 sowie F137–F183; **F129–F131 bleiben unvergeben**, weil sich diese
+reservierten Nummern in AP 6 als schon getroffene Entscheidungen entpuppt haben
+— reserviert ist nach AP 12 keine mehr.
 
 **Vier Entscheidungen hat Marius am 02.09.2026 vorab getroffen**, bevor dieser
 Plan geschrieben wurde — sie sind der Rahmen, nicht Vorschläge: die Adresse ist
@@ -760,8 +760,13 @@ Mitgliedszustand ist F56, „Text, Bild oder beides“ ist E40 selbst, und die
 Medienroute mit Berechtigung wurde F156 — F129, F130 und F131 bleiben deshalb
 unvergeben, wie F62. AP 7 hat die für ihn reservierte **F132** vergeben und fünf
 neue dazugelegt (**F160–F164**); AP 8 sechs neue (**F165–F170**); AP 9 seine
-reservierte **F133** und zwei neue (**F171**, **F172**). Von den reservierten
-Nummern sind damit nur noch **F134–F136** offen (AP 11 und AP 12).
+reservierte **F133** und zwei neue (**F171**, **F172**); AP 10 drei neue
+(**F173–F175**); AP 11 seine reservierten **F134** und **F135** und drei neue
+(**F176–F178**). AP 12 hat die letzte reservierte Nummer vergeben — **F136**,
+was der Newsletter ist — und fünf neue dazugelegt (**F179–F183**): das Verb des
+Stornos, die drei Abweichungen vom Schemaentwurf, was das Formular antwortet, wo
+es steht, und wie man eine Zustimmung zurücknimmt. Von den reservierten Nummern
+ist damit **keine** mehr offen; unvergeben bleiben F62 und F129–F131.
 
 ## Definition of Done für Phase 3
 
@@ -2189,3 +2194,135 @@ Offen aus diesem Paket, alles in `todo.md`:
   eine Ankündigung und braucht einen eigenen Zuschnitt.
 - **Der Handshake trägt weiter keine Drosselung** (aus AP 7, Phase 5) — davon
   ist hier nichts besser geworden.
+
+### AP 12 — Die zwei P3-Zugaben (erledigt, 04.09.2026)
+
+Umgesetzt:
+
+- **Das Storno über die Sitzung** (FR 4.7, F148, F179) — und es war kein neuer
+  Regelsatz, sondern eine zweite Route auf denselben. `SelfServiceService.cancel`
+  nahm seit AP 4 einen `SelfServiceClaim`; was fehlte, war der Weg dorthin ohne
+  Token. Das ist genau, was F148 vorhergesagt hatte: „zwei Ansprüche, eine
+  Regelstrecke". Der Plan hatte `DELETE /api/participant/registrations/:id`
+  vorgesehen, geworden ist es **`POST …/:id/cancellation`** (F179): eine Zeile
+  höher löscht `DELETE /api/admin/registrations/:id` eine Anmeldung **endgültig**
+  — so antwortet eine Organisation auf ein Löschverlangen —, und ein Verb, das
+  im einen Präfix „weg" und im anderen „storniert, aber aufgehoben" heißt (F23),
+  ist eine API, die man nicht lesen kann. Es ist auch die Gestalt, die der
+  Mail-Link seit Phase 1 hat, also liest sich die eine Operation über beide
+  Ansprüche gleich. Im Client wurde `cancel(token, locale)` zu
+  `cancel(access, locale)` — dieselbe Umformung, die `signOff` in AP 4 bekam —
+  und die Knopfleiste hängt nicht mehr an `linkToken()`.
+- **Der Newsletter ist eine Adresse** (FR 4.8, E45, F136). Eine Migration:
+  `newsletter_subscription`, nullbare Reihe mit `ON DELETE CASCADE`, eindeutig
+  über `(lower(email), event_series_id)` — mit **`NULLS NOT DISTINCT`** (F180),
+  ohne das PostgreSQL die instanzweite Zustimmung einer Adresse beliebig oft
+  erlaubt hätte. Zwei weitere Abweichungen vom Schemaentwurf 5.3, beide
+  protokolliert: **kein `confirmation_token_hash`** (Token sind signiert und
+  werden nirgends gespeichert, F23) und `confirmed_at` statt
+  `double_opt_in_confirmed_at` (so heißt dieser Augenblick in `registration` und
+  `user_profile`).
+- **Zwei Quellen, eine Liste, eine Zeile je Zustimmung** (F136). Die Übersicht
+  ist eine `UNION` aus dem Häkchen im Anmeldeformular und der Anmeldung in der
+  App, und drei Regeln stehen in der SQL des Ports statt in einem Aufrufer
+  darüber (F152, F173): nur **bestätigte** Zustimmungen sind überhaupt
+  abfragbar, ein **Widerspruch** (`contact_opt_out`, F24) nimmt eine Adresse aus
+  **beiden** Quellen, und die Formular-Hälfte ist je Adresse und Reihe
+  gruppiert. Zusammengeführt wird nichts: ohne Versand hätte eine Empfängerliste
+  keinen Leser (F8), und eine gemeinsame Zeile behauptete, die beiden
+  Zustimmungen bedeuteten dasselbe. Dazu vier Zahlen statt einer — Zustimmungen,
+  je Quelle, und **verschiedene Adressen**, was jemand meint, wenn er fragt, wie
+  viele Menschen die Neuigkeiten bekommen.
+- **Die neunte Mail** (F181): der Double-Opt-In einer Anmeldung. Sie **grüßt
+  niemanden** (es wurde kein Name erfragt), sagt, ob es um die Instanz oder um
+  eine Reihe geht, und sagt, dass **ohne den Klick nichts passiert** — ein
+  öffentliches Formular nimmt jede Adresse an, also kann dieser Brief jemanden
+  erreichen, der nie etwas wollte. Ihre Sprache kommt aus der Kette von F125;
+  das Formular schickt keine, weil eine Anmeldung keine Zeile hat, auf der eine
+  Sprache stehen könnte.
+- **Das Formular antwortet immer gleich** (F181, E32 wörtlich): neue,
+  unbestätigte, längst bestätigte Adresse — 200 mit der Adresse. Wer nie
+  bestätigt hat, bekommt den Link noch einmal; wer schon dabei ist, bekommt
+  **nichts**. Und der **Fehlschlag der Mail wird geschluckt**, nicht gemeldet:
+  ein 503 für die eine und ein 200 für die nächste Adresse wäre genau die
+  Auskunft, die dieses Formular nicht geben darf.
+- **Zwei Platzierungen, ein Bauteil** (F182, wie F178): die Startseite ohne
+  Reihe (instanzweit) und die Seite einer Reihe mit ihrem Slug. Damit haben
+  beide Zweige der nullbaren Spalte einen Schreiber und die Übersicht für sie
+  einen Leser (F42). Ein Slug, den keine veröffentlichte Reihe trägt, ist 404 —
+  eine Auskunft über eine Reihe, nicht über eine Adresse.
+- **Zurücknehmen geht über die Organisation** (F183): `DELETE
+/api/admin/newsletter/:id`, nur für die App-Quelle, denn nur sie ist eine
+  eigene Zeile. Gelöscht statt archiviert — der Nachweis einer Einwilligung, die
+  es nicht mehr gibt, ist das Gegenteil dessen, worum gebeten wurde (der Fall,
+  für den E14 Raum lässt). Ein Häkchen im Anmeldeformular gehört zu seiner
+  Anmeldung, und die Zeile sagt das, statt einen Knopf anzubieten, der etwas
+  anderes täte.
+- **Der Schalter heißt `newsletter-opt-in` und ist aus.** F63 hatte ihm einen
+  eigenen Schlüssel versprochen, falls die Opt-In-Verwaltung in Phase 3 kommt —
+  `newsletter` kommt nie zurück, weil es keinen Versand zu schalten gibt (F8).
+  Aus by default, und das ist der einzige Deskriptor mit diesem Grund: eine
+  Instanz, die den Schalter an hat, verspricht Neuigkeiten, die sie von woanders
+  schickt. **Keine Voraussetzung** (E42), und das ist ebenfalls eine Aussage:
+  eine Anmeldung fragt nach einer Adresse und nicht nach einem Konto, also ist
+  dieses Modul auf einer Instanz mit ausgeschaltetem `profiles` am nützlichsten.
+
+Was anders lief:
+
+- **Ein Verb war schon vergeben.** Die API-Tabelle des Plans sagte `DELETE` auf
+  der Anmeldung; im Admin-Präfix bedeutet genau dieses `DELETE` seit Phase 1
+  „für immer weg". Die Abweichung steht als F179 mit Begründung im
+  Referenzdokument — es ist die erste dieser Phase, die eine Zeile der
+  API-Tabelle korrigiert statt sie zu ergänzen.
+- **`ON CONFLICT` und `NULLS NOT DISTINCT`** mussten nachgesehen werden: ob
+  PostgreSQL einen so deklarierten Index als Konfliktziel erkennt, stand in
+  keiner Regel. Er tut es (gegen die Entwicklungsinstanz geprüft: zweimal
+  dieselbe Adresse in verschiedener Schreibweise, eine Zeile, dieselbe Id).
+- **Ein Prüfskript war seit AP 6 falsch.** `verify-api.mjs` behauptete, eine
+  frische Instanz habe `media-links` und `profiles` an — `profile-search` (AP 5)
+  und `chat` (AP 6) kamen dazu, ohne dass es jemand nachtrug, und das Skript
+  wäre gegen jede Instanz seither rot gewesen. Jetzt nennt es die vier und sagt,
+  welche zwei ausdrücklich aus sind. Gefunden beim Nachsehen, ob dieses Paket ein
+  Skript anfassen muss.
+- **Ein `test.skip` im Testrumpf hält die Hooks nicht auf.** Beide neuen
+  Browsersuiten lasen und stellten den Modulschalter **je Engine** wieder her,
+  also schaltete die erste, die fertig war, ihn aus, während die anderen noch
+  arbeiteten — mit dem Ergebnis, dass eine Suite ihre eigene Übersicht mit 404
+  beantwortet bekam. `beforeAll`/`afterAll` fragen jetzt selbst nach
+  `browserName`. Das ist die Ergänzung zur Regel „nur Chromium, und
+  wiederherstellen, was gefunden wurde".
+- **Eine Zusicherung war zu genau.** `event-landing.spec.ts` verglich **alle**
+  `<h2>` der Reihenseite mit `['Upcoming events', 'Past events']`; das
+  Anmeldeformular bringt eines mit, sobald sein Modul an ist. Sie zählt jetzt
+  die Überschriften der Reihe selbst (`article > h2`) — die bessere Zusicherung,
+  und keine, die beim nächsten Abschnitt wieder bricht.
+- **Keine zweite Mail für eine Adresse, die schon dabei ist.** E32s Muster
+  („die immer gleiche Antwort braucht eine Mail, die den Unterschied trägt")
+  hätte eine zehnte Mail bedeutet — „du stehst schon auf der Liste". Sie hätte
+  nichts enthalten, was man tun kann; stattdessen sagt das Formular von sich
+  aus, dass eine Mail nur kommt, wenn die Adresse noch nicht dabei ist. Damit
+  bleibt der Unterschied unsichtbar, ohne einen Brief zu erfinden.
+
+Zahlen: Katalog 911 → **956** Schlüssel (fünf für die neunte Mail, einer für den
+Modulnamen, dreizehn für Formular und Bestätigungsseite im Nutzer-Client,
+sechzehn für die Übersicht im Veranstalter-Client). Server-Unit-Tests 1121,
+Vertragssuite 586 (+25), Nutzer-Client 251, Veranstalter-Client 213. Eine
+Migration. Ein neues Geschäftslogik-Modul (`business/newsletter/`) mit einem
+Port, zwei Controllern und einem Dienst.
+
+Offen aus diesem Paket, alles in `todo.md`:
+
+- **Es gibt keinen Selbstabmelde-Link.** Von hier geht kein Newsletter raus
+  (F8), also trägt das Werkzeug der Organisation seinen eigenen Abmeldeweg; wer
+  von der Liste will, schreibt der Organisation (das Kontaktformular aus AP 9
+  kann das ohne Konto) und die nimmt die Zeile heraus. Ob eine Instanz mit
+  eigener Liste einen Link braucht, ist eine **Frage an den Pilotpartner**.
+- **Die Liste kennt keine Sprache.** Eine Organisation, die zweisprachig
+  versendet, müsste wissen, welche Adresse welche Sprache liest. Speicherbar
+  wäre es nur für die App-Quelle — für die Formular-Hälfte gibt es keine Spalte
+  —, und eine Übersicht, die für die Hälfte ihrer Zeilen „unbekannt" sagt, ist
+  keine Auskunft. Offen, mit diesem Grund.
+- **Es gibt keinen Export.** Die Übersicht ist eine Seite mit Blättern; wer
+  hundert Adressen in ein anderes Werkzeug bringen will, kopiert sie. Eine
+  CSV-Route wäre klein, aber sie ist nicht angefordert (FR 4.8 ist P3) —
+  **Frage an den Pilotpartner**, zusammen mit der Sprache.

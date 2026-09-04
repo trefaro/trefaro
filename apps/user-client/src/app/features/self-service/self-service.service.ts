@@ -120,19 +120,27 @@ export class SelfServiceService {
   /**
    * Cancels the registration; the record stays, the seats do not (E11, E14).
    *
-   * Only over a link. The rule itself has no second way yet: the session's
-   * route to it is AP 12, with the rest of FR 4.7 — so a page opened through
-   * the account does not offer the button rather than offering one that cannot
-   * work.
+   * Both claims can do it since AP 12 (FR 4.7), and both do it by `POST` to a
+   * `cancellation`: the link because a previewer fetching URLs must not be able
+   * to cancel anything (E5b), the session because deleting a registration is
+   * what an organizer does to erase one (F179). The token is in the body for
+   * the same reason it is on every other change.
    */
-  cancel(token: string, locale: string): Promise<MyRegistration> {
+  cancel(access: SelfServiceAccess, locale: string): Promise<MyRegistration> {
     return firstValueFrom(
-      this.api.post<MyRegistration>(
-        'user/registrations/me/cancellation',
-        { token },
-        undefined,
-        { locale },
-      ),
+      access.kind === 'link'
+        ? this.api.post<MyRegistration>(
+            'user/registrations/me/cancellation',
+            { token: access.token },
+            undefined,
+            { locale },
+          )
+        : this.api.post<MyRegistration>(
+            `participant/registrations/${encodeURIComponent(access.registrationId)}/cancellation`,
+            {},
+            undefined,
+            { locale },
+          ),
     );
   }
 

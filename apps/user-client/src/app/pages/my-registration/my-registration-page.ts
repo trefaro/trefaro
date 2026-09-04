@@ -53,9 +53,10 @@ import {
  * 3. **A missing token is its own message.** A mail client that broke the link
  *    across two lines is the usual cause, and "invalid link" would send the
  *    reader looking for the wrong problem.
- * 4. **Cancelling needs the link.** The rule exists and the mailed link can do
- *    it; the session's way to it is AP 12, so the button is absent rather than
- *    present and broken.
+ * 4. **Cancelling works through either credential** since AP 12 (FR 4.7). The
+ *    button asks for confirmation first, because it is the one action on this
+ *    page that cannot be undone from here — registering again is a new
+ *    registration.
  *
  * Times are the venue's throughout (E8), grouped into days with the same helpers
  * the public timeline uses — one implementation of "which day is this session
@@ -172,7 +173,7 @@ import {
           </section>
         }
 
-        @if (mine.status !== 'cancelled' && linkToken()) {
+        @if (mine.status !== 'cancelled') {
           <section aria-labelledby="cancel-heading">
             <h2 id="cancel-heading">{{ 'mine.cannotCome' | transloco }}</h2>
             <p class="meta">{{ 'mine.cancelHint' | transloco }}</p>
@@ -471,8 +472,8 @@ export class MyRegistrationPage {
     }
     // Every one of these answers with the whole page, so every one carries the
     // language: without it, claiming a seat would switch the page to English.
-    await this.change(() =>
-      this.selfService.cancel(this.linkToken(), this.i18n.locale()),
+    await this.withAccess((access) =>
+      this.selfService.cancel(access, this.i18n.locale()),
     );
   }
 

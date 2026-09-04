@@ -7,6 +7,7 @@ import {
 } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AppConfigService } from '@trefaro/shared-config';
+import { NEWSLETTER_MODULE_KEY } from '@trefaro/shared-models';
 import { LanguageSwitcher } from '@trefaro/shared-i18n';
 import { PluginSlot } from '@trefaro/shared-plugins';
 import { ThemeService } from '@trefaro/shared-theming';
@@ -40,6 +41,13 @@ export class App {
   protected readonly theme = inject(ThemeService);
   protected readonly config = inject(AppConfigService);
   protected readonly auth = inject(AuthService);
+  /**
+   * For the one menu entry that is only there when its module is (FR 4.8).
+   *
+   * A field and not a string in the template: the key is a constant the server
+   * reads as well, and a template cannot import one.
+   */
+  protected readonly newsletterModuleKey = NEWSLETTER_MODULE_KEY;
   private readonly router = inject(Router);
 
   protected async signOut(): Promise<void> {

@@ -359,9 +359,15 @@ test.describe('a participant account', () => {
     ).toBeVisible();
     await expect(page.getByText(email)).toBeVisible();
     await expectNoRawKeys(page);
-    // Two things a session does not get: the warning about a link it does not
-    // hold, and a cancellation the session cannot do yet (AP 12).
+    // What a session does not get: the warning about a link it does not hold.
     await expect(page.getByText(t('mine.keepLink'))).toHaveCount(0);
+
+    // What it does get since AP 12 (FR 4.7): the cancellation. It asks first,
+    // because registering again is a new registration and not an undo.
+    page.once('dialog', (dialog) => void dialog.accept());
+    await page.getByRole('button', { name: t('mine.cancel') }).click();
+    await expect(page.getByRole('status')).toHaveText(t('mine.cancelled'));
+    // And the button is gone with it: there is nothing left to cancel.
     await expect(
       page.getByRole('button', { name: t('mine.cancel') }),
     ).toHaveCount(0);

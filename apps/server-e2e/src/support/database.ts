@@ -500,6 +500,66 @@ export async function deletePushSubscriptions(
   ]);
 }
 
+/**
+ * The state of one newsletter sign-up made in the app (FR 4.8, E45).
+ *
+ * `undefined` for an address that has never signed up, `null` for a sign-up
+ * that is stored and unconfirmed, and a date for a consent. Three answers,
+ * because the middle one is the whole point of the double opt-in: the row
+ * exists and is on no list.
+ */
+export async function newsletterConfirmedAt(
+  email: string,
+  seriesId: string | null = null,
+): Promise<Date | null | undefined> {
+  const result = await pool.query<{ confirmed_at: Date | null }>(
+    `SELECT confirmed_at
+       FROM newsletter_subscription
+      WHERE lower(email) = lower($1)
+        AND event_series_id IS NOT DISTINCT FROM $2`,
+    [email, seriesId],
+  );
+  return result.rowCount === 0 ? undefined : result.rows[0].confirmed_at;
+}
+
+/** How many rows one address has, over all series — the unique index's subject. */
+export async function newsletterRowCount(email: string): Promise<number> {
+  const result = await pool.query<{ count: string }>(
+    'SELECT count(*) AS count FROM newsletter_subscription WHERE lower(email) = lower($1)',
+    [email],
+  );
+  return Number(result.rows[0].count);
+}
+
+/**
+ * Removes the sign-ups a suite made.
+ *
+ * By address suffix, like the profiles: a confirmed consent is in every later
+ * run's overview, and the numbers on that screen are what its suite asserts.
+ */
+export async function deleteNewsletterSubscriptions(
+  emailSuffix: string,
+): Promise<void> {
+  await pool.query('DELETE FROM newsletter_subscription WHERE email LIKE $1', [
+    `%${emailSuffix}`,
+  ]);
+}
+
+/**
+ * Objects to being written to, the way the invitation link does (F24).
+ *
+ * Written straight into the column because the endpoint that sets it needs an
+ * invitation token, and what is under test here is the *consequence*: an
+ * address that objected appears in no further list — including the newsletter
+ * overview, which is a further list.
+ */
+export async function markContactOptOut(email: string): Promise<void> {
+  await pool.query(
+    'UPDATE registration SET contact_opt_out = true WHERE lower(email) = lower($1)',
+    [email],
+  );
+}
+
 export async function closeDatabase(): Promise<void> {
   await pool.end();
 }

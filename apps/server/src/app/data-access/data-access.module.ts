@@ -21,6 +21,7 @@ import { MEDIA_LINK_TALLY } from '../business/media-links/ports/media-link-tally
 import { MEDIA_LINK_REPOSITORY } from '../business/media-links/ports/media-link.repository';
 import { MODULE_CONFIG_REPOSITORY } from '../business/config/ports/module-config.repository';
 import { SEARCHABLE_PROFILE_REPOSITORY } from '../business/common/ports/searchable-profile.repository';
+import { NEWSLETTER_REPOSITORY } from '../business/newsletter/ports/newsletter.repository';
 import { PROFILE_FIELD_REPOSITORY } from '../business/profiles/ports/profile-field.repository';
 import { PROGRAM_ITEM_SIGNUP_REPOSITORY } from '../business/program/ports/program-item-signup.repository';
 import { PROGRAM_ITEM_TRANSLATION_REPOSITORY } from '../business/program/ports/program-item-translation.repository';
@@ -66,6 +67,7 @@ import { TypeormProfileFieldRepository } from './repositories/typeorm-profile-fi
 import { TypeormProgramItemSignupRepository } from './repositories/typeorm-program-item-signup.repository';
 import { TypeormProgramItemTranslationRepository } from './repositories/typeorm-program-item-translation.repository';
 import { TypeormProgramItemRepository } from './repositories/typeorm-program-item.repository';
+import { TypeormNewsletterRepository } from './repositories/typeorm-newsletter.repository';
 import { TypeormPushSubscriptionRepository } from './repositories/typeorm-push-subscription.repository';
 import { TypeormRegistrationFieldRepository } from './repositories/typeorm-registration-field.repository';
 import { TypeormRegistrationRepository } from './repositories/typeorm-registration.repository';
@@ -126,6 +128,7 @@ export class DataAccessModule {
         TypeormProgramItemRepository,
         TypeormProgramItemTranslationRepository,
         TypeormProgramItemSignupRepository,
+        TypeormNewsletterRepository,
         TypeormPushSubscriptionRepository,
         TypeormRegistrationRepository,
         TypeormRegistrationFieldRepository,
@@ -256,6 +259,13 @@ export class DataAccessModule {
           provide: PUSH_SUBSCRIPTION_REPOSITORY,
           useExisting: TypeormPushSubscriptionRepository,
         },
+        // The newsletter's consents (FR 4.8, E45) — one port for the sign-up
+        // and for the overview that reads both sources, because the second is
+        // the reason the first exists.
+        {
+          provide: NEWSLETTER_REPOSITORY,
+          useExisting: TypeormNewsletterRepository,
+        },
         {
           provide: REGISTRATION_REPOSITORY,
           useExisting: TypeormRegistrationRepository,
@@ -334,6 +344,7 @@ export class DataAccessModule {
         PROGRAM_ITEM_TRANSLATION_REPOSITORY,
         PROGRAM_TALLY,
         PUSH_SUBSCRIPTION_REPOSITORY,
+        NEWSLETTER_REPOSITORY,
         REGISTRATION_REPOSITORY,
         REGISTRATION_FIELD_REPOSITORY,
         REGISTRATION_TALLY,

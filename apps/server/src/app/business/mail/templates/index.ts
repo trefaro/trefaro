@@ -22,6 +22,7 @@ export type {
   InvitationMailContext,
   MailEvent,
   MailTemplate,
+  NewsletterConfirmationMailContext,
   ProfileConfirmationMailContext,
   ProfileExistsMailContext,
   ReceiptMailContext,

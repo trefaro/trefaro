@@ -470,8 +470,8 @@ answer, not an opinion.
       same code, and the endpoints under `/api/participant/registrations` answer
       with the same view the link opens (F148). Both halves are proven in
       `apps/server-e2e/src/api/my-registrations.spec.ts` — an old link still
-      works, and a logged-in participant needs none. **Cancelling** is the one
-      operation the session cannot do yet; see the entry below.
+      works, and a logged-in participant needs none. **Cancelling** followed in
+      AP 12, on the same rules; see the entry below.
 - [x] **"My registration" is linked from the navigation — done in AP 4.** The
       condition was the participant login, and it fell away in AP 3. The entry
       points at `registrations`, the list a token cannot open (a token speaks for
@@ -621,14 +621,15 @@ program-item-signup,user-profile,registration,registration-field}`. The
       its own navigation entry and an eight-test browser suite. Its neighbour is
       the registration form's editor and the two stayed two pages; what they
       share is `features/fields/field-editing.ts` and `fieldTypeKey()` (F144).
-- [ ] **Cancelling one's own registration still needs the mailed link** (F148).
-      AP 4 gave `SelfServiceService.require` its second claim, and the session
-      uses it for reading and for programme seats — but `cancel` has no
-      participant route, because the phase plan assigns that half of FR 4.7 to
-      **AP 12** (`DELETE /api/participant/registrations/:id`). The detail page
-      therefore hides the button when it was opened through the account rather
-      than offering one that cannot work. Nothing below `require` has to change
-      for it; if AP 12 is dropped, this is the one line of it worth keeping.
+- [x] **Cancelling one's own registration works without the mailed link — done
+      in AP 12** (F148, F179). It needed no new rule, only a second route to the
+      one `SelfServiceService.cancel` has had since AP 4 —
+      `POST /api/participant/registrations/:id/cancellation`. A `POST` and not the
+      `DELETE` the phase plan named, because `DELETE /api/admin/registrations/:id`
+      erases a registration for good — one verb cannot mean "gone" in one prefix
+      and "cancelled but kept" in the next (F179, F23). The detail page offers
+      the button through either credential now, asks first, and the seats in
+      individual sessions go with the cancellation.
 - [x] **The opt-in for being findable — on the profile screen since AP 5**
       (F142, closed by F151). It waited for the search it governs: a box
       promising "other participants can find you and write to you" while nobody
@@ -751,6 +752,27 @@ Bonn` is diagnostics rather than a fact about anybody.
       organizer's panel is a screen AP 5 does not touch, so it was left alone
       rather than fixed in passing: two keys and two lines, whenever that page is
       open anyway.
+
+- [ ] **The newsletter list carries no language.** An organization that sends
+      in two languages would want to know which address reads which — and the
+      overview cannot say. Only the app source could store it (a sign-up knows
+      the page it was made on); the registration form's half has no such column,
+      so half the rows would read "unknown", which is not an answer. Decided
+      that way in AP 12 (F181) rather than half-built: whoever needs it later
+      adds the column **and** decides what the other source says.
+- [ ] **There is no export of the newsletter list.** The overview pages through
+      the consents, and moving a hundred addresses into another tool means
+      copying them by hand. A CSV route would be small — one endpoint, no new
+      rule — but FR 4.8 is P3 and asked for the opt-in administration, not for
+      an export. **Question for the pilot partner**, together with the language
+      above: what does the tool you send with want to be fed?
+- [ ] **A newsletter address cannot unsubscribe itself.** Nothing is sent from
+      Trefaro (F8), so there is no letter to put an unsubscribe link in; whoever
+      wants off writes to the organization (the contact form of AP 9 needs no
+      account) and an organizer removes the row (F183). The objection link of an
+      invitation does work across both sources (F24). Whether an instance whose
+      organization sends from its own tool needs a self-service link here is a
+      **question for the pilot partner**.
 
 ## Checkable after phase 4 — plug-ins
 

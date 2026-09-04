@@ -92,10 +92,10 @@ export function byAccount(
  *
  * The login went in front of the same operations without changing any of them:
  * it resolves the registration instead of the token, and the links already in
- * people's inboxes keep working — that is what E11 promised. Cancelling one's
- * own registration through the session is the one operation the session cannot
- * do yet; it belongs to AP 12 together with the rest of FR 4.7, and the link
- * can do it today.
+ * people's inboxes keep working — that is what E11 promised. AP 12 added the
+ * last of those operations to the session's side (FR 4.7): the cancellation
+ * needed no new rule, only a second route to the one below, which is what F148
+ * predicted when it said the two claims share one stretch of track.
  */
 @Injectable()
 export class SelfServiceService {

@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
+  Post,
   Put,
   Query,
   UseGuards,
@@ -53,9 +54,13 @@ import { SelfServiceService, byAccount } from './self-service.service';
  * Behind the `profiles` module switch (F53) like everything under
  * `participant/`: an instance that keeps no accounts has nobody to answer here.
  *
- * Cancelling one's own registration is missing on purpose. The rule exists and
- * the link can do it; the session's way to it is AP 12, together with the rest
- * of FR 4.7 — which is P3 and may still be dropped.
+ * Since AP 12 the cancellation is here as well, and it is a `POST` to
+ * `:id/cancellation` rather than a `DELETE` on the registration (F179): in this
+ * API, deleting a registration is what an organizer does to answer a request
+ * for erasure, and a verb that means "gone for good" one path up must not mean
+ * "cancelled but kept" here. It is also the same shape the mailed link has
+ * used since phase 1, so the one operation reads the same way through both
+ * claims.
  */
 @ApiTags('registrations')
 @UseGuards(CoreModuleEnabledGuard)
@@ -167,6 +172,37 @@ export class ParticipantRegistrationsController {
   ): Promise<MyRegistrationDto> {
     return this.selfService.signOff(
       itemId,
+      byAccount(current.profile.email, id),
+      locale,
+    ) as Promise<MyRegistrationDto>;
+  }
+
+  @Post(':id/cancellation')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Cancel one’s own registration through the session (FR 4.7)',
+    description:
+      'The second claim on the operation the mailed link has been able to ' +
+      'make since phase 1 (F148), and the same rules below the claim: only a ' +
+      'confirmed registration can be cancelled, the record stays (F23), and ' +
+      'the seats in individual sessions go with it. No notice goes out — the ' +
+      'participant is cancelling on their own page and reads the answer there ' +
+      '(F59).',
+  })
+  @ApiLocaleQuery()
+  @ApiOkResponse({ type: MyRegistrationDto })
+  @ApiNotFoundResponse({
+    description: 'No registration of theirs has that id — worded as above.',
+  })
+  @ApiConflictResponse({
+    description: 'Already cancelled, or not confirmed yet.',
+  })
+  cancel(
+    @CurrentParticipant() current: AuthenticatedParticipant,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('locale', LocaleQueryPipe) locale?: string,
+  ): Promise<MyRegistrationDto> {
+    return this.selfService.cancel(
       byAccount(current.profile.email, id),
       locale,
     ) as Promise<MyRegistrationDto>;

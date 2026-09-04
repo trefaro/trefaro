@@ -13,6 +13,7 @@ import { problemOf, type ApiError, type Problem } from '@trefaro/shared-http';
 import { TranslationService } from '@trefaro/shared-i18n';
 import type { PublicEvent, PublicEventSeries } from '@trefaro/shared-models';
 import { formatEventPeriod, hasEnded } from '@trefaro/shared-models';
+import { NewsletterSignup } from '../../features/newsletter/newsletter-signup';
 import { PublicEventSeriesService } from '../../features/event-series/public-event-series.service';
 import { PublicEventsService } from '../../features/events/public-events.service';
 
@@ -26,7 +27,7 @@ import { PublicEventsService } from '../../features/events/public-events.service
 @Component({
   selector: 'trefaro-series-detail-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslocoPipe],
+  imports: [NewsletterSignup, RouterLink, TranslocoPipe],
   template: `
     @if (error(); as problem) {
       <p class="notice" role="alert">
@@ -103,6 +104,14 @@ import { PublicEventsService } from '../../features/events/public-events.service
             }
           </ul>
         }
+
+        <!-- With this series, so the sign-up is about it and not about the
+             instance (E45). Its name is passed for the sentence above the
+             field; only the slug is sent. -->
+        <trefaro-newsletter-signup
+          [seriesSlug]="item.slug"
+          [seriesName]="item.name"
+        />
       </article>
     } @else {
       <p class="notice">{{ 'common.loading' | transloco }}</p>

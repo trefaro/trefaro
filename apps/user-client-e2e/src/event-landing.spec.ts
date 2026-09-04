@@ -44,10 +44,13 @@ test.describe('the event list of a series', () => {
     await expect(upcoming).toBeVisible();
     await expect(past).toBeVisible();
 
-    // Order on the page is what tells a participant which is which.
-    const headings = await page
-      .getByRole('heading', { level: 2 })
-      .allInnerTexts();
+    // Order on the page is what tells a participant which is which — asserted
+    // over the headings of the series itself (`article > h2`) rather than over
+    // every second-level heading the page has. It grew one in AP 12: the
+    // newsletter sign-up, which brings its own `<section>` when its module is
+    // on, and an exact list of everything would break for a reason that has
+    // nothing to do with upcoming and past.
+    const headings = await page.locator('article > h2').allInnerTexts();
     expect(headings).toEqual(['Upcoming events', 'Past events']);
   });
 

@@ -129,6 +129,10 @@ describe('CoreModuleRegistryService', () => {
       'chat',
       'media-links',
       'push',
+      // AP 12 of phase 3: the opt-in administration of FR 4.8, which F63
+      // promised a key of its own if it ever arrived. Not `newsletter` — that
+      // key is gone for good, because there is no dispatch to switch (F8).
+      'newsletter-opt-in',
     ]);
   });
 

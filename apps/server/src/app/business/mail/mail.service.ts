@@ -8,6 +8,7 @@ import type {
   ContactRequestMailContext,
   InvitationMailContext,
   MailTemplate,
+  NewsletterConfirmationMailContext,
   ProfileConfirmationMailContext,
   ProfileExistsMailContext,
   ReceiptMailContext,
@@ -189,6 +190,30 @@ export class MailService {
     content: MailContent<ContactAnswerMailContext>,
   ): Promise<void> {
     await this.send(MAIL_TEMPLATES.contactAnswer, to, content);
+  }
+
+  /**
+   * The double opt-in of a newsletter sign-up (FR 4.8, E45).
+   *
+   * The ninth sender, and the only one whose recipient may have no connection
+   * to this instance at all — no registration, no account, nothing but an
+   * address somebody typed into a public form. Two consequences:
+   *
+   * - Its language comes from the chain like every other mail's (F125), which
+   *   for such a recipient means the language the organization writes in. A
+   *   sign-up keeps no language of its own; there is no row to keep it on.
+   * - A failure is reported to the caller and the caller answers the same way
+   *   regardless (E32, E45): the form must not become a way of finding out
+   *   which addresses this instance already knows, and a 503 for one address
+   *   and a 200 for the next would be exactly that.
+   *
+   * @throws MailDeliveryError
+   */
+  async sendNewsletterConfirmation(
+    to: string,
+    content: MailContent<NewsletterConfirmationMailContext>,
+  ): Promise<void> {
+    await this.send(MAIL_TEMPLATES.newsletterConfirmation, to, content);
   }
 
   private async send<Context>(

@@ -274,5 +274,38 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   erste Test sagt das in einem Satz, statt achtmal zu scheitern. In der CI steht
   ein Wegwerf-Paar in der Job-Umgebung, lokal in `.env` — dasselbe, was
   `verify-push.mjs` seit Phase 0 verlangt.
+- **Ein `test.skip` im Testrumpf hält die Hooks nicht auf** (AP 12). Es
+  überspringt genau diesen Rumpf; `beforeAll` und `afterAll` laufen weiter — und
+  bei `fullyParallel` (Nx-Preset) einmal **je Worker**, nicht je Datei. Eine
+  Datei, die einen Modulschalter liest und wiederherstellt, braucht deshalb
+  beides: `test.describe.configure({ mode: 'serial' })`, damit ein Worker die
+  ganze Datei nimmt, **und** eine Abfrage auf `browserName` in den Hooks selbst.
+  Ohne das schaltet die erste Engine, die fertig ist, den Schalter zurück,
+  während die anderen noch arbeiten — der Fehlschlag war ein 404 aus der eigenen
+  Aufräumroutine.
+- **`newsletter-opt-in` ist der zweite Schalter, den eine Browsersuite umlegt**
+  (nach `push` im Veranstalter-Client). Er ist **aus** vorgegeben, also muss eine
+  Suite, die das Formular sehen will, ihn wirklich anschalten — sonst prüft sie
+  eine leere Seite und hält das für grün. Was er ändert, ist im Nutzer-Client
+  **öffentlich sichtbar**: die Startseite und jede Reihenseite bekommen einen
+  Abschnitt. Zusicherungen über solche Seiten dürfen deshalb keine
+  **vollständigen** Mengen vergleichen — `event-landing.spec.ts` verglich alle
+  `<h2>` der Reihenseite und brach; sie zählt jetzt die Überschriften der Reihe
+  selbst (`article > h2`).
+- **Das Zurückstellen eines Schalters gehört in ein `finally`.** „Wiederherstellen,
+  was gefunden wurde" (AP 11) hat eine zweite Hälfte, die AP 12 gelernt hat: ein
+  `afterAll`, das erst aufräumt und dann zurückschaltet, lässt das Modul an,
+  sobald das Aufräumen wirft — und die nächste Suite prüft eine Instanz, die
+  jemand anders eingestellt hat. Erst recht, wenn die Aufräumroute selbst am
+  Modul hängt (`DELETE /api/admin/newsletter/:id`), also nicht vorher
+  zurückgeschaltet werden darf.
+- **Eine Newsletter-Anmeldung räumt die Suite über SQL ab**, nicht über die
+  API. Eine bestätigte Adresse steht sonst in jeder späteren Übersicht, deren
+  Zahlen die Vertragssuite prüft — und eine **unbestätigte** ist für die API
+  überhaupt nicht erreichbar: die Übersicht listet nur Zustimmungen (E45), also
+  gibt es keine Id, mit der `DELETE /api/admin/newsletter/:id` sie treffen
+  könnte. `deleteNewsletterSubscriptions(suffix)` in
+  `support/registration-seed.ts`, und die Suite benutzt ihre **eigene**
+  Adressdomain, damit sie nicht die Zeilen einer anderen mitnimmt.
 
 Siehe auch: [Fallen in den Angular-Clients](angular-clients.md), [Deployment und Prüfung](deployment.md).

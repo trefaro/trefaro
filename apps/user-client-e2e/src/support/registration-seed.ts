@@ -197,6 +197,23 @@ export async function deleteProfiles(emailSuffix: string): Promise<void> {
  * in one worker process, and a closed module-level pool would fail in the
  * fixture rather than in a test.
  */
+/**
+ * Removes the newsletter sign-ups a suite made (FR 4.8, E45).
+ *
+ * By SQL and by address suffix, because there is no endpoint that could do it:
+ * `DELETE /api/admin/newsletter/:id` needs the id from the overview, and the
+ * overview deliberately lists **confirmed** consents only — a sign-up nobody
+ * confirmed is invisible to the whole API, which is the point of the double
+ * opt-in and also the reason it would otherwise stay behind for good.
+ */
+export async function deleteNewsletterSubscriptions(
+  emailSuffix: string,
+): Promise<void> {
+  await db().query('DELETE FROM newsletter_subscription WHERE email LIKE $1', [
+    `%${emailSuffix}`,
+  ]);
+}
+
 export async function closeSeedDatabase(): Promise<void> {
   const open = pool;
   pool = null;

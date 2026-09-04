@@ -154,5 +154,16 @@ besteht. Jede Zeile hier hat einmal einen halben Tag gekostet.
   Browserdialog darin.
 - **Client-Start-Sequenz:** erst Konfiguration (Design + aktivierte Module) laden,
   dann Theming anwenden, dann die Plug-in-Webkomponenten laden.
+- **Ein `OnPush`-Bauteil wird für einen Wert, der kein Signal ist, nicht neu
+  geprüft** (AP 12). Ein Modulschalter aus `AppConfigService.isModuleEnabled()`
+  ist so ein Wert: er steht beim Start fest, also darf ein Test ihn **vor** dem
+  ersten `detectChanges()` setzen und nicht dazwischen — sonst zeichnet die
+  Ansicht weiter das, was beim ersten Durchlauf galt, und der Test behauptet,
+  ein Bauteil ignoriere seinen Schalter.
+- **Zwei Platzierungen eines Bauteils sind ein Bauteil mit zwei Eingängen**
+  (F182, wie F178). Das Newsletter-Formular steht auf der Startseite (ohne
+  Reihe) und auf einer Reihenseite (mit Slug und Namen); der Unterschied ist ein
+  `input()` und ein Satz. Zwei Bauteile wären zwei Orte für die Formulierung
+  einer Einwilligung — und die driftet.
 
 Siehe auch: [Browsersuiten und E2E-Tests](e2e-tests.md), [Mehrsprachigkeit und Katalog](i18n.md), [Whitelabel und PWA](whitelabel-pwa.md).

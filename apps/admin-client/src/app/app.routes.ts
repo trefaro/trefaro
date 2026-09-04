@@ -182,6 +182,17 @@ export const appRoutes: Route[] = [
         title: 'admin.messages.title',
       },
       {
+        // Instance-wide like the profile form, and for the same reason: an
+        // address on this list may belong to nobody who registered for
+        // anything (E45).
+        path: 'newsletter',
+        loadComponent: () =>
+          import('./pages/newsletter/newsletter-page').then(
+            (m) => m.NewsletterPage,
+          ),
+        title: 'admin.newsletter.title',
+      },
+      {
         path: 'administrators',
         loadComponent: () =>
           import('./pages/admins/admins-page').then((m) => m.AdminsPage),

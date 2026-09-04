@@ -248,6 +248,19 @@ export {
   type SeriesContactPage,
 } from './lib/invitations';
 export {
+  DEFAULT_NEWSLETTER_PAGE_SIZE,
+  MAX_NEWSLETTER_PAGE_SIZE,
+  NEWSLETTER_CONFIRMATION_PATH,
+  NEWSLETTER_MODULE_KEY,
+  type NewsletterAudiencePage,
+  type NewsletterConfirmation,
+  type NewsletterConsent,
+  type NewsletterCounts,
+  type NewsletterSignupAcknowledgement,
+  type NewsletterSignupRequest,
+  type NewsletterSource,
+} from './lib/newsletter';
+export {
   MAX_PROGRAM_DESCRIPTION_LENGTH,
   MAX_PROGRAM_ITEMS,
   MAX_PROGRAM_ITEM_CAPACITY,
