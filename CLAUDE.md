@@ -306,12 +306,15 @@ Beide Schalter werden **im Dienst selbst** gefragt (E21, F63). `broadcast()` und
 dritte. Migration: **eine**. Vier `todo.md`-Einträge geschlossen.
 
 Was auf ein anderes Paket bzw. auf Marius wartet — alles in `todo.md`. **Für
-Marius mit Geräten:** die **Gerätematrix** aus Spike 3, vier Zeilen samt iOS
-Safari mit installierter PWA (wovon F7 abhängt); das Verfahren steht in
-`docs/spikes/03-web-push.md` und geht jetzt über eine **verschobene Session**
-statt über einen Testversand, den es bewusst nicht gibt. Andere Pakete: das
-**Storno über die Sitzung** gehört zu AP 12 (F148), die **Drosselung des
-Handshakes** zu Phase 5; ob es eine geteilte Bibliothek für Oberflächenbauteile
+Marius mit Geräten** gibt es dort seit 04.09.2026 einen eigenen Abschnitt weit
+oben, _On a device — waiting for Marius_: was diese Testsuiten **gar nicht**
+prüfen können, weil es einen Produktionsbuild und Geräte braucht, und was daher
+in keiner Phasenliste stehen sollte. Darin die **Gerätematrix** aus Spike 3,
+vier Zeilen samt iOS Safari mit installierter PWA (wovon F7 abhängt); das
+Verfahren steht in `docs/spikes/03-web-push.md` und geht jetzt über eine
+**verschobene Session** statt über einen Testversand, den es bewusst nicht
+gibt. Andere Pakete: das **Storno über die Sitzung** gehört zu AP 12 (F148), die
+**Drosselung des Handshakes** zu Phase 5; ob es eine geteilte Bibliothek für Oberflächenbauteile
 geben soll, ist eine Stack-Entscheidung (F145). Produktfragen sind der
 **Ungelesen-Zähler** in der Navigationsleiste (AP 8, seit AP 11 kleiner: wer
 Benachrichtigungen an hat, erfährt es), die **Nachrichten-Kachel** des

@@ -9,9 +9,11 @@ Every entry below says **which phase makes it checkable** and **how to check it*
 Work the matching section at the end of each phase; an entry that turns out to
 still be premature moves down rather than being ticked.
 
-One section is not keyed to a phase: _Questions for the pilot partner_ collects
-what no phase can decide because it needs an answer from Democracy International.
-Those entries wait for the feedback round, not for a milestone.
+Two sections are not keyed to a phase. _Questions for the pilot partner_
+collects what no phase can decide because it needs an answer from Democracy
+International; those entries wait for the feedback round, not for a milestone.
+_On a device — waiting for Marius_ collects what no phase can **check**, because
+it needs a production build and hardware in somebody's hand.
 
 Entries link to the spike protocol they came from, so the reasoning stays
 attached to the task.
@@ -79,6 +81,51 @@ an instance were exposed today.
       [`docs/PHASE2.md`](docs/PHASE2.md) under _Nachtrag_. **Verified as asked:**
       a logo uploaded on a series shows up on the start page —
       `apps/user-client-e2e/src/event-series.spec.ts`.
+
+---
+
+## On a device — waiting for Marius
+
+Three checks cannot be run from this repository **at all**, and no future phase
+changes that: they need a production build, HTTPS and hardware in somebody's
+hand. Everything else in this file waits for a work package; these wait for a
+person. They are collected here because inside a phase list they read like
+deferred verification, and deferred verification is what eventually gets done
+by a suite.
+
+- [ ] **Web Push on real devices — the only part of AP 11 that is not done.**
+      Needs a production build (Angular registers the service
+      worker nowhere else), HTTPS and four devices. What AP 11 changed is that
+      the walk is now the feature rather than a REPL call: switch `push` on,
+      take a published future event with a confirmed registration, allow
+      notifications on the device, **move the event**, and see what arrives.
+      Full procedure, including the personal notification of E44, in
+      [`03-web-push.md`](docs/spikes/03-web-push.md#the-procedure-since-ap-11-of-phase-3).
+      **A failure is a result too** — record the date and the device either way.
+      Matrix:
+  - [ ] desktop Chrome — allow, receive, click navigates to the payload path
+  - [ ] desktop Firefox — same
+  - [ ] Android Chrome over HTTPS — same
+  - [ ] **iOS Safari with the PWA installed to the home screen** (iOS 16.4+) —
+        this is the case the decision to make Web Push the only channel (F7)
+        depends on. It does not work in a normal Safari tab; the client says so
+        rather than showing nothing (`push.installFirst`).
+
+- [ ] **A reinstall picks up a newly uploaded app icon.** The manifest is built
+      from `app_config` since AP 12 of phase 2 and an uploaded icon replaces the
+      shipped set (F105, F106) — `verify-proxy.mjs` checks the document and
+      every icon through the proxy. What no script can see is the home screen:
+      whether removing and re-adding the app really shows the organization's
+      icon. See _Checkable after phase 2_, "`manifest.webmanifest` is a static
+      file".
+- [ ] **An already installed PWA picks up a new deployment.** The service
+      worker's exclusions are asserted against the built `ngsw.json` with
+      ngsw's own selection rule (AP 12 and AP 13 of phase 2), which is what
+      caught the `/admin` gap that made the organizer client unreachable. That
+      an installed client takes an update at all is the half a browser has to
+      show. Same missing net as the CI job that starts the stack, under phase 5.
+      See _Checkable after phase 2_, "Re-check the service worker
+      configuration".
 
 ---
 
@@ -463,23 +510,9 @@ answer, not an opinion.
       deliberately without an id or a name — handing out a profile id hands out
       the picture with it (F124). In the table and in the detail panel.
 
-- [ ] **Web Push on real devices — for Marius, and the only part of AP 11 that
-      is not done.** Needs a production build (Angular registers the service
-      worker nowhere else), HTTPS and four devices. What AP 11 changed is that
-      the walk is now the feature rather than a REPL call: switch `push` on,
-      take a published future event with a confirmed registration, allow
-      notifications on the device, **move the event**, and see what arrives.
-      Full procedure, including the personal notification of E44, in
-      [`03-web-push.md`](docs/spikes/03-web-push.md#the-procedure-since-ap-11-of-phase-3).
-      **A failure is a result too** — record the date and the device either way.
-      Matrix:
-  - [ ] desktop Chrome — allow, receive, click navigates to the payload path
-  - [ ] desktop Firefox — same
-  - [ ] Android Chrome over HTTPS — same
-  - [ ] **iOS Safari with the PWA installed to the home screen** (iOS 16.4+) —
-        this is the case the decision to make Web Push the only channel (F7)
-        depends on. It does not work in a normal Safari tab; the client says so
-        rather than showing nothing (`push.installFirst`).
+- [ ] **Web Push on real devices** — the four-row device matrix. Moved to
+      _On a device — waiting for Marius_ at the top of this file, because no
+      phase makes it checkable: only somebody with four devices does.
 - [x] **Rate-limit the subscribe endpoint** — closed long ago and only now
       crossed off: `ThrottlerGuard` has been global since AP 1 of phase 1. The
       endpoint stays anonymous **by decision** rather than by omission (E43,
