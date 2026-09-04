@@ -153,8 +153,12 @@ P1/P2/P3-Tabellen im Plan-Dokument.
 3. **✅ 04.09.2026** (alle 13 Pakete; **M8** bis auf die Gerätematrix, die nur
    mit Geräten in der Hand abzuhaken ist) Profile, Nachrichten,
    Echtzeit-/Gruppenchat, Push, Profilsuche → `docs/PHASE3.md`
-4. **Als nächstes** Plug-ins: Programmvorschläge, Forum, Raumplanung,
-   QR-Check-In
+4. **Geplant** (04.09.2026, `docs/PHASE4.md`, zehn Pakete, M9–M12) Plug-ins:
+   Programmvorschläge, Forum, Raumplanung, QR-Check-In — und **fünftens der
+   individuelle Programmplan** (FR 3.17), von Marius dazugenommen. Drei
+   Vorabentscheidungen: der Icon-Satz wird selbst gehostet statt das Feld zu
+   streichen, der QR-Code reist als Seite hinter dem Mail-Link statt als Anhang,
+   und der Vertrag wächst **einmal** auf `PLUGIN_API_VERSION` 1.2.0
 5. Härtung, Usability-Test mit Democracy International (Pilotpartner), Doku,
    Release v1.0 — hier auch: konfigurierbare Drosselung, `CONTRIBUTING.md`
 

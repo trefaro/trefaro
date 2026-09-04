@@ -838,6 +838,11 @@ program-item-signup,user-profile,registration,registration-field}`. The
 
 ## Checkable after phase 4 — plug-ins
 
+**Every entry in this section is assigned to a work package in
+[`docs/PHASE4.md`](docs/PHASE4.md)** (the plan, written 04.09.2026 — five
+plug-ins, ten packages, decisions E46–E59). Where the plan already answers an
+entry, the answer is noted below rather than repeated.
+
 - [ ] **A plug-in reads the originals, not the translations.** `PluginProgramReads`
       (E12, F45) hands a plug-in five fields of a programme item, and since AP 11
       of phase 2 those are the untranslated ones. Right for the room planning
@@ -846,6 +851,9 @@ program-item-signup,user-profile,registration,registration-field}`. The
       candidate. The fix is a locale on the port and a minor bump of
       `PLUGIN_API_VERSION`, not a second port. Decide it when the first
       participant-facing plug-in exists, not before.
+      **It exists in this phase** — the individual programme plan (FR 3.17) is
+      the fifth plug-in. Answered as predicted: a locale on the port plus
+      `listForEvent`, not a second port (E56, F200, AP 9).
 
 - [ ] **The plug-in contract names an icon nobody draws.**
       `PluginClientContribution.icon` carries a Material Symbols glyph name
@@ -865,11 +873,19 @@ program-item-signup,user-profile,registration,registration-field}`. The
       get answered there, in one contract change instead of two. Until then the
       field is invisible to an organizer — no client reads it — so it is a decoy
       in a contract whose only implementer is this repository.
+      **Decided by Marius on 04.09.2026: the instance ships an icon set.** The
+      glyphs the descriptors name go into the image as path data beside the
+      self-hosted fonts, drawn by one component, with a closed catalogue of
+      allowed names — so the field finally reads, and the contract stays 1.x
+      (E49, F188, AP 1).
 
-- [ ] **Build the three remaining curated plug-ins.**
+- [ ] **Build the four remaining curated plug-ins.**
       `apps/server/src/plugins/{forum,program-proposals,qr-checkin}` hold only a
       README; they are deliberately not registered as no-op plug-ins. Order from
-      the plan: programme proposals, forum, room planning, QR check-in.
+      the plan: programme proposals (AP 2/3), forum (AP 4/5), room planning
+      (AP 6), QR check-in (AP 7/8) — and since 04.09.2026 a fourth directory to
+      write, `personal-program`, for the individual programme plan Marius added
+      to the phase (AP 9). `CURATED_PLUGINS` goes from one entry to five.
 - [ ] **Implement the overbooking check** in the room planning plug-in: sign-ups
       per programme item against room capacity. Everything it needs exists since
       AP 9 — the room's capacity, the sessions assigned to it, and their sign-up
@@ -879,6 +895,12 @@ program-item-signup,user-profile,registration,registration-field}`. The
       where an organizer should see it. `GET …/rooms/:id/schedule` reports the
       numbers side by side and decides nothing. Ask the pilot partner first — the
       question is under _Questions for the pilot partner_.
+      **The plan decides the shape, not the threshold** (E50, F196, AP 6): both
+      numbers become **warnings** computed on read, at the room and at the
+      session, and nothing is refused — F41's precedent, because a tool that
+      refuses a room gets worked around ("Saal A (2)") and then the truth is no
+      longer in it. Whether an organizer wants a hard limit stays the pilot
+      partner's question.
 - [ ] **Two sessions in one room at the same time** is not refused either, for
       the same reason: the schedule carries `startsAt`/`endsAt` per booking, and
       what a double booking should _do_ is a product decision, not a phase-4

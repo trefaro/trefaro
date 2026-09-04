@@ -50,8 +50,10 @@ notifies the phones that care about it, and an address can ask for news without
 registering for anything (opt-in administration only — Trefaro sends no
 newsletters). The record is in [`docs/PHASE3.md`](docs/PHASE3.md).
 
-**Not built yet:** the four curated plug-ins — programme proposals, forum, room
-planning, QR check-in (phase 4); and the hardening round — configurable
+**Not built yet:** the five curated plug-ins — programme proposals, forum, room
+planning, QR check-in and an individual programme plan — which
+[`docs/PHASE4.md`](docs/PHASE4.md) plans package by package (phase 4); and the
+hardening round — configurable
 throttling, a participant password reset, erasure, the usability test with the
 pilot partner (phase 5). What is deferred and why is in [`todo.md`](todo.md),
 including the one check no test suite can make: push notifications on four real
