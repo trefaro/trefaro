@@ -2508,6 +2508,47 @@ Offen aus diesem Paket:
   Locator um Locator brechen — Arbeit für die Usability-Runde der Phase 5, nicht
   für ein Abschlusspaket, das grüne Suiten braucht.
 
+#### Nachtrag (04.09.2026): der Lauf auf `main` war rot
+
+Der Abschluss-Commit war gepusht, als die CI etwas zeigte, was hier oben grün
+steht: `newsletter.spec.ts` scheiterte mit **„Expected 200, received 429"** —
+und zwar an der Stelle, an der die Suite eine Zustimmung _anlegt_, nicht an
+einer, die etwas über den Newsletter behauptet. Zugeschlagen hatte die
+Drosselung, nicht der Code.
+
+Die Rechnung dahinter: `POST /api/user/newsletter` erlaubt zwanzig Anfragen je
+fünf Minuten und Client-Adresse. AP 12 hatte dafür **zwei** Suiten geschrieben —
+die Vertragssuite mit sechzehn Anmeldungen, die Chromium-Hälfte der
+Browsersuite mit vier — und niemand hatte sie addiert: zusammen genau zwanzig.
+Damit entschied allein der Abstand der beiden Suiten, ob ein Lauf grün war. In
+der CI lief die Browsersuite eine Minute vor der Vertragssuite, also im selben
+Fenster, und die eine Anfrage zu viel war die einundzwanzigste. Lokal, wo
+zwischen den Projekten mehr Zeit lag, war derselbe Stand grün — die Sorte
+Fehlschlag, die erst kommt, wenn die Maschine schneller ist als der Mensch.
+
+Abhilfe war nicht das Budget (E4, und `docs/rules/e2e-tests.md` sagt es
+wörtlich: den Server neu starten, nicht die Drosselung anfassen), sondern
+dieselbe wie beim ersten Auftreten dieser Klasse in AP 12: **ein Fixture wird
+geseedet.** `seedNewsletterSubscription` in `support/database.ts` schreibt eine
+Anmeldung oder eine Zustimmung direkt in die Tabelle; den Endpunkt rufen nur
+noch die Tests auf, deren Gegenstand er ist — zehn statt sechzehn Anmeldungen,
+plus die vier der Browsersuite: **vierzehn von zwanzig.** Die Arithmetik steht
+jetzt in `docs/rules/e2e-tests.md` neben der des Logins, und der Eintrag in
+`todo.md` über die geteilten Budgets nennt den Vorfall als den zweiten seiner
+Art.
+
+Zwei Dinge daran sind mehr als ein Testfehler. Erstens: **die Zusicherung war
+die ganze Zeit richtig, gescheitert ist die Buchhaltung** — drei Stellen im
+Regeldokument verlangen inzwischen dieselbe Addition über alle Suiten hinweg,
+und die macht auf Dauer niemand richtig. Das saubere Gegenmittel ist die
+konfigurierbare Drosselung, die Phase 5 ohnehin schuldet: dann konfiguriert die
+Testumgebung ihr Budget, statt dass die Suiten um ein festes herumlaufen.
+Zweitens: **der Fehlschlag ist eine Weile als grün gemeldet worden**, weil
+`gh run watch --exit-status` mit 0 endete, während der Lauf mit `failure`
+abschloss — GitHub setzt `status: completed`, bevor `conclusion` steht. Wer
+grün sagen will, liest den **Abschluss** und nicht den Rückgabewert des
+Wartens; die Falle steht in `docs/rules/tooling-traps.md`.
+
 ---
 
 ## Was anders lief — über die ganze Phase

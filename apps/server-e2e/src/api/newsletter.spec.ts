@@ -7,6 +7,7 @@ import {
   markContactOptOut,
   newsletterConfirmedAt,
   newsletterRowCount,
+  seedNewsletterSubscription,
   seedRegistrations,
 } from '../support/database';
 import {
@@ -41,6 +42,14 @@ import {
  * 5. **The module switch is real** (F53, E21). Off — which is the default —
  *    and the sign-up, the confirmation and the overview all answer 404, while
  *    every stored consent stays where it is (E14).
+ *
+ * What this suite spends: the sign-up route allows twenty posts per five
+ * minutes and client address (E4), and the participant client's browser suite
+ * spends four of them against the same server. So the endpoint is called by the
+ * tests whose subject it is — ten times here — and every fixture that only
+ * needs a row to exist is seeded (`seedNewsletterSubscription`). The arithmetic
+ * is in `docs/rules/e2e-tests.md`, and whoever adds a test to either file redoes
+ * it.
  *
  * There is deliberately nothing here about sending a newsletter: v1 has no
  * dispatch and will not get one (F8). What this list is for is being exported.
@@ -225,7 +234,8 @@ describe('the newsletter opt-in administration', () => {
 
     it('answers the same way for an address that is already on the list', async () => {
       const email = `repeat${DOMAIN}`;
-      await signUpAndConfirm(email);
+      // Seeded: under test is the answer, not how the address got onto the list.
+      await seedNewsletterSubscription(email);
 
       const again = await signUp(email);
 
@@ -321,8 +331,8 @@ describe('the newsletter opt-in administration', () => {
     it('names the series of a consent, and leaves an instance-wide one open', async () => {
       const wide = `wide${DOMAIN}`;
       const scoped = `scoped${DOMAIN}`;
-      await signUpAndConfirm(wide);
-      await signUpAndConfirm(scoped, series.slug);
+      await seedNewsletterSubscription(wide);
+      await seedNewsletterSubscription(scoped, { seriesId: series.id });
 
       const [wideRow] = await rowsFor(wide);
       const [scopedRow] = await rowsFor(scoped);
@@ -336,7 +346,9 @@ describe('the newsletter opt-in administration', () => {
 
     it('leaves out a sign-up nobody confirmed', async () => {
       const email = `pending${DOMAIN}`;
-      await signUp(email);
+      // That a post leaves the row unconfirmed is asserted in the first test of
+      // this file; the subject here is the list, so the row is seeded.
+      await seedNewsletterSubscription(email, { confirmed: false });
 
       expect(await newsletterConfirmedAt(email)).toBeNull();
       expect(await rowsFor(email)).toEqual([]);
@@ -385,7 +397,7 @@ describe('the newsletter opt-in administration', () => {
           newsletterOptIn: true,
         },
       ]);
-      await signUpAndConfirm(email);
+      await seedNewsletterSubscription(email);
       expect((await rowsFor(email)).length).toBeGreaterThan(0);
 
       await markContactOptOut(email);
@@ -432,7 +444,7 @@ describe('the newsletter opt-in administration', () => {
 
     it('takes one sign-up back, and only that one', async () => {
       const email = `withdrawn${DOMAIN}`;
-      await signUpAndConfirm(email);
+      await seedNewsletterSubscription(email);
       const [row] = await rowsFor(email);
 
       const removed = await api(
@@ -457,7 +469,7 @@ describe('the newsletter opt-in administration', () => {
 
     it('answers 404 on every route and keeps every consent (F53, E14)', async () => {
       const kept = `kept${DOMAIN}`;
-      await signUpAndConfirm(kept);
+      await seedNewsletterSubscription(kept);
 
       await setModule(false);
 

@@ -1089,18 +1089,40 @@ program-item-signup,user-profile,registration,registration-field}`. The
       volume, joins it against `attachment.file_path` and reports (not deletes)
       what nothing points at would close it. Phase 5: right now it would be
       stock-keeping against a problem no instance has yet.
+- [ ] **Two participant-client specs race under eight workers.** In the full
+      local run of 04.09.2026 (`nx run-many -t e2e --parallel=1`, Playwright's
+      own default of eight workers) `content-translations.spec.ts` did not find
+      the German heading it had seeded and the browser newsletter suite did not
+      see its success message — with **no** error from the server for either.
+      Both files pass when they run alone, and both passed in CI, which runs one
+      worker (`workers: process.env.CI ? 1 : undefined` in the Nx preset). So the
+      assertions are sound and something instance-wide is shared between the two
+      — which one is not established; the candidates are the interface language
+      and the start page's first series link, and the development database's 164
+      leftover fixture series make the second more likely here than on a fresh
+      instance. Worth an hour when the browser suites are next touched: either
+      the shared thing gets a per-file identity, or the two files get a serial
+      lane. Until then a local red on these two is not news, and that is exactly
+      the kind of sentence that hides a real defect one day.
 - [ ] **The three e2e projects share one server's rate limits.** CI runs them
       with `--parallel=1` against a single instance, so every limit that counts
       per client address is a budget for the whole run: sixty public
-      registrations per five minutes (`REGISTRATIONS_PER_WINDOW`) and twenty
-      logins (`LOGIN_ATTEMPTS_PER_WINDOW`). The API contract suite spends most of
+      registrations per five minutes (`REGISTRATIONS_PER_WINDOW`), twenty logins
+      (`LOGIN_ATTEMPTS_PER_WINDOW`) and twenty newsletter sign-ups
+      (`NEWSLETTER_SIGNUPS_PER_WINDOW`). The API contract suite spends most of
       the registrations, deliberately — the double opt-in through the real form
       _is_ its subject. The first CI run of AP 12 failed because the new
       participant-client suite added six more and pushed the total over sixty;
       the fix was to seed that fixture instead (`support/registration-seed.ts`).
-      What is left is the margin, and it is thin. Before a suite adds
-      registrations through the form again, either count what the run already
-      makes or seed. Worth a proper answer in phase 5, when the throttle gets a
+      **It happened a second time, on the closing commit of phase 3**, and this
+      time on the newsletter: AP 12 had written two suites against that one
+      budget of twenty without adding them up (sixteen plus four), so whether a
+      run was green depended on how far apart the two suites happened to run.
+      The fix was the same one — the fixtures are seeded now
+      (`seedNewsletterSubscription`), which brings the run to ten plus four of
+      twenty. What is left is the margin, and it is thin. Before a suite posts
+      through one of these forms again, either count what the run already makes
+      or seed. Worth a proper answer in phase 5, when the throttle gets a
       second counter per recipient anyway: a test profile that raises the limits
       would work, but only if it cannot be the one an instance ships with. That is
       now decided — see the entry about making the limits configurable.

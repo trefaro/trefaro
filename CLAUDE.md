@@ -353,6 +353,17 @@ Clients englisch), die Programmpunkt-Frage aus Phase 0 entschieden (F185) und
 `invitations.spec.ts` räumt seine Reihen ab: **jede Suite räumt ab, was sie
 angelegt hat**, und was sie über SQL gesät hat, holt nur SQL zurück.
 
+**Nachtrag zum Abschluss:** der erste Lauf auf `main` war **rot** —
+`newsletter.spec.ts` scheiterte mit einem 429, weil AP 12 zwei Suiten gegen
+**ein** Budget von zwanzig geschrieben hatte, ohne sie zu addieren (sechzehn
+plus vier), und damit allein der Abstand der Suiten über grün entschied. Die
+Fixtures werden jetzt geseedet (`seedNewsletterSubscription`): vierzehn von
+zwanzig. Zwei Lehren, beide in `docs/rules/`: **die Drosselung wird nie
+angefasst** (E4) — ein Fixture wird geseedet, den Endpunkt rufen nur die Tests
+auf, deren Gegenstand er ist —, und `gh run watch --exit-status` ist kein
+Urteil: es endete mit 0, während der Lauf mit `failure` abschloss. **Wer grün
+sagt, hat den Abschluss gelesen**, nicht den Rückgabewert des Wartens.
+
 Was auf ein anderes Paket bzw. auf Marius wartet — alles in `todo.md`. **Für
 Marius mit Geräten** gibt es dort seit 04.09.2026 einen eigenen Abschnitt weit
 oben, _On a device — waiting for Marius_: was diese Testsuiten **gar nicht**

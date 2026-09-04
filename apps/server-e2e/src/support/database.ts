@@ -554,6 +554,33 @@ export async function newsletterRowCount(email: string): Promise<number> {
 }
 
 /**
+ * A sign-up written straight into the table (FR 4.8, E45).
+ *
+ * Because the sign-up route has a budget: twenty posts per five minutes and
+ * client address (E4), and two suites spend it against one server. So the
+ * endpoint is called by the tests whose subject it *is*, and everything that
+ * only needs a row to exist is seeded here — the rule the registration and
+ * consent fixtures already follow (`docs/rules/e2e-tests.md`). That a real
+ * sign-up becomes such a row is asserted where the mailbox is part of the
+ * test, above.
+ *
+ * `confirmed` picks the state: a request nobody clicked, or a consent. The
+ * overview lists the second only, which is what the double opt-in is for.
+ */
+export async function seedNewsletterSubscription(
+  email: string,
+  options: { seriesId?: string | null; confirmed?: boolean } = {},
+): Promise<void> {
+  const { seriesId = null, confirmed = true } = options;
+  await pool.query(
+    `INSERT INTO newsletter_subscription
+       (email, event_series_id, confirmed_at, created_at, updated_at)
+     VALUES (lower($1), $2, $3, now(), now())`,
+    [email, seriesId, confirmed ? new Date() : null],
+  );
+}
+
+/**
  * Removes the sign-ups a suite made.
  *
  * By address suffix, like the profiles: a confirmed consent is in every later

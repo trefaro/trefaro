@@ -77,4 +77,13 @@ dass das Werkzeug etwas anderes tut als erwartet.
   zweite ist ein Defekt. Der Grund gehört ins Log; ohne ihn wäre in AP 11 der
   TLS-Fund oben eine Stunde Rätselraten geblieben.
 
+- **`gh run watch --exit-status` ist kein Urteil.** Auf einen Lauf, der noch
+  läuft, angesetzt, endete es mit **0**, während der Lauf als `failure`
+  abschloss: GitHub setzt `status: completed`, bevor `conclusion` steht, und wer
+  in dieses Fenster fällt, sieht keine Fehlschläge mehr. Dasselbe Kommando auf
+  denselben, jetzt abgeschlossenen Lauf endet mit 1. Also: nach dem Warten
+  **den Abschluss lesen** — `gh run view <id> --json conclusion,jobs`, oder
+  dasselbe Kommando mit `--exit-status` —, und erst dann „grün" sagen. Genau so
+  ist der rote Abschluss der Phase 3 einmal als grün gemeldet worden.
+
 Siehe auch: [Browsersuiten und E2E-Tests](e2e-tests.md), [Schichten und Ports im Server](server-layers.md).

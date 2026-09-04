@@ -25,6 +25,12 @@ import { asAdmin } from './support/series-fixtures';
  * The address carries the engine and the process, like every fixture here: an
  * address is unique instance-wide, and three engines racing on one would take
  * each other's mail.
+ *
+ * **Four posts to the sign-up route**, and that number is counted on: the route
+ * allows twenty per five minutes and client address (E4), the contract suite in
+ * `apps/server-e2e` spends ten of them, and both suites run against one server
+ * inside one window. Whoever adds a sign-up here adds up first
+ * (`docs/rules/e2e-tests.md`).
  */
 const CLIENT_URL =
   process.env['BASE_URL'] ??

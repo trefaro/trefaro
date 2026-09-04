@@ -51,6 +51,15 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   `/api/i18n/:locale` antwortet 429, beide Clients zeichnen rohe Schlüssel, und
   der Fehlschlag sieht nach kaputtem Katalog aus. Erst `user-client-e2e`, dann
   `admin-client-e2e`, wie in der CI.
+- **Lokal laufen acht Worker, in der CI einer.** Der Nx-Preset setzt
+  `workers: process.env.CI ? 1 : undefined`, also parallelisiert Playwright auf
+  dem Entwicklungsrechner über die Kerne und in der CI gar nicht. Das heißt
+  beides: ein **lokales Rot** kann ein Wettlauf sein, den die CI nie sieht (zwei
+  Dateien, die sich über instanzweiten Zustand in die Quere kommen), und ein
+  **lokales Grün** beweist weniger als das der CI. Wer einem lokalen Fehlschlag
+  nicht glaubt, fährt die Datei allein — passiert sie dort, ist es der Wettlauf
+  und nicht die Zusicherung; und wer ihn abstellen will, sucht den geteilten
+  Zustand, nicht den Timeout.
 - **Playwright emuliert Offline in WebKit nicht** — `context.setOffline()` wirkt in
   Chromium und Firefox; dort mit Begründung überspringen.
 
@@ -75,6 +84,25 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   ist keiner. **Deshalb wächst `profile.spec.ts` statt Nachbarn zu bekommen:**
   „meine Anmeldungen" (AP 4) und die Profilsuche (AP 5) laufen in dessen einem
   Test mit, weil jede eigene Datei drei weitere Anmeldungen gekostet hätte.
+- **Die Newsletter-Anmeldung hat ihr eigenes Budget** — 20 Anmeldungen _und_ 20
+  Bestätigungen je fünf Minuten und Client-Adresse. Das `@Throttle` steht an der
+  Klasse, gezählt wird aber je **Route** und Adresse, also hat jede der beiden
+  Routen ihr eigenes. Verbraucht werden **zehn** Anmeldungen in
+  `apps/server-e2e/src/api/newsletter.spec.ts` und **vier** in der
+  Chromium-Hälfte von `apps/user-client-e2e/src/newsletter.spec.ts`. AP 12 hatte
+  beide Dateien geschrieben, ohne sie zu addieren: sie lagen zusammen bei genau
+  zwanzig, und ob ein Lauf grün war, entschied allein der Abstand der beiden
+  Suiten. In der CI lief die Browsersuite eine Minute vor der Vertragssuite,
+  also im selben Fünf-Minuten-Fenster — und der Lauf war rot mit einem 429, das
+  im Test wie ein kaputtes Formular aussieht („Expected 200, received 429"). Die
+  Abhilfe ist nie das Budget (E4): **ein Fixture wird geseedet**
+  (`seedNewsletterSubscription`), den Endpunkt rufen nur die Tests auf, deren
+  Gegenstand er ist. Das ist die dritte Stelle in diesem Dokument, an der über
+  **alle** Suiten hinweg addiert werden musste — wer die vierte schreibt, zählt
+  vorher nach. Ehrlich gesagt ist das eine Rechnung, die niemand ewig richtig
+  macht: das saubere Gegenmittel ist die konfigurierbare Drosselung aus Phase 5,
+  denn dann konfiguriert die Testumgebung ihr Budget, statt dass die Suiten um
+  ein festes herumlaufen.
 - **Was instanzweit ist, muss eine Suite selbst wieder abräumen.** Der
   Profil-Baukasten (`profile_field`) hat kein Event, an dem er hängt: eine
   liegengebliebene **Pflichtfrage** lässt jedes `PATCH /api/participant/me`
