@@ -12,6 +12,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { problemOf, type Problem } from '@trefaro/shared-http';
 import { TranslationService } from '@trefaro/shared-i18n';
 import type {
+  AnswerWords,
   AttachmentSummary,
   OrganizerEvent,
   ParticipantDetail,
@@ -902,6 +903,7 @@ export class ParticipantsPage {
   protected readonly answers = computed(() => {
     const person = this.detail();
     if (!person) return [];
+    const words = this.answerWords();
     return (
       this.fields()
         // A file field is not answered with a value (F37); it appears under
@@ -909,9 +911,24 @@ export class ParticipantsPage {
         .filter((field) => field.type !== 'file')
         .map((field) => ({
           label: field.label,
-          value: formatAnswer(person.customFields[field.key]),
+          value: formatAnswer(person.customFields[field.key], words),
         }))
     );
+  });
+
+  /**
+   * The two words a tick reads as, in the language of the organizer reading it.
+   *
+   * A signal rather than two calls at the call site, so that both lists below
+   * follow a language switch (F72): `translate` does not track the locale, so
+   * something has to read it.
+   */
+  private readonly answerWords = computed<AnswerWords>(() => {
+    this.i18n.locale();
+    return {
+      yes: this.i18n.translate('common.yes'),
+      no: this.i18n.translate('common.no'),
+    };
   });
 
   /**
@@ -961,7 +978,10 @@ export class ParticipantsPage {
     const known = new Set(this.fields().map((field) => field.key));
     return Object.entries(person.customFields)
       .filter(([key]) => !known.has(key))
-      .map(([key, value]) => ({ key, value: formatAnswer(value) }));
+      .map(([key, value]) => ({
+        key,
+        value: formatAnswer(value, this.answerWords()),
+      }));
   });
 
   protected size(file: AttachmentSummary): string {

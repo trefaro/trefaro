@@ -12,6 +12,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { problemOf, type Problem } from '@trefaro/shared-http';
 import { TranslationService } from '@trefaro/shared-i18n';
 import type {
+  AnswerWords,
   MyProgramItem,
   MyRegistration,
   ProgramDay,
@@ -391,13 +392,27 @@ export class MyRegistrationPage {
     return registrationStatusKey(mine.status);
   }
 
-  /** Their own answers, in the shape the participant overview shows them. */
+  /**
+   * Their own answers, in the shape the participant overview shows them — and
+   * in their own language.
+   *
+   * The two words for a tick are handed to `formatAnswer` (AP 13 of phase 3):
+   * it used to answer in English, and this page printed that, in a client whose
+   * every other sentence is translated (NFR 4).
+   */
   protected answers(
     mine: MyRegistration,
   ): readonly { key: string; value: string }[] {
+    // The locale is read here, not only inside `translate` — which does not
+    // track it — so that a language switch redraws these words too (F72).
+    this.i18n.locale();
+    const words: AnswerWords = {
+      yes: this.i18n.translate('common.yes'),
+      no: this.i18n.translate('common.no'),
+    };
     return Object.entries(mine.customFields).map(([key, value]) => ({
       key,
-      value: formatAnswer(value),
+      value: formatAnswer(value, words),
     }));
   }
 

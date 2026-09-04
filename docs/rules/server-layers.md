@@ -192,5 +192,19 @@ diese Eigenschaft.
   bestätigt, kein Widerspruch, je Adresse und Reihe gruppiert) sind damit nicht
   umgehbar (F152, F173), und die Alternative wäre eine Methode, die „alle
   Adressen mit Häkchen" beantwortet — genau die Liste, die es nicht geben soll.
+- **Ein Helfer, den nur die Datenzugriffsschicht braucht, bleibt in ihr.**
+  `isUniqueViolation` stand achtmal wörtlich in `data-access/repositories/` und
+  ist in AP 13 der Phase 3 nach `repositories/unique-violation.ts` gezogen —
+  **nicht** nach `business/common/`, wohin ein geteilter Port gehören würde
+  (F138 nennt den dritten Aufrufer, dieser war weit darüber). Ein SQLSTATE ist
+  eine Tatsache über PostgreSQL, und die Geschäftslogik darf keine lernen; nach
+  oben reist ein `ConflictException` oder ein `null`, und **welches** von
+  beidem, entscheidet jeder Aufrufer für sich — „dieser Slug ist belegt" und
+  „diese Adresse ist schon angemeldet" sind nicht dieselbe Antwort. Beim
+  Zusammenlegen fiel auf, was acht Kopien mit sich bringen: sieben erkannten
+  den Fehler des Treibers, ob TypeORM ihn eingepackt hatte oder nicht, eine nur
+  den eingepackten. Geblieben ist die weitere Lesart (sie ist eine Obermenge,
+  also ändert sich für keinen Aufrufer etwas) — mit einem Unit-Test, weil drei
+  Aufrufer die Antwort als Kontrollfluss benutzen.
 
 Siehe auch: [Verträge der Endpunkte](api-contracts.md), [Regeln des Datenmodells](data-model.md).

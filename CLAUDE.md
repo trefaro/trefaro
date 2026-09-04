@@ -23,7 +23,7 @@ werden müssen:
 
 | Frage                                                     | Nachschlagen in                                                                           |
 | --------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Anforderungen, Use Cases, Prioritäten, DB-Schema, F1–F112 | **`docs/Anforderungsanalyse_und_Umsetzungsplan.md`** (maßgeblich)                         |
+| Anforderungen, Use Cases, Prioritäten, DB-Schema, F1–F185 | **`docs/Anforderungsanalyse_und_Umsetzungsplan.md`** (maßgeblich)                         |
 | Was in einer Phase passierte, E1–E45, _Was anders lief_   | `docs/PHASE1.md`, `docs/PHASE2.md`, `docs/PHASE3.md`, `docs/BOOTSTRAP.md`, `docs/spikes/` |
 | Installation, TLS, Betrieb                                | `docs/INSTALL.md`                                                                         |
 | Offene Punkte, bekannte Lücken, Pilotpartner-Fragen       | `todo.md` (nach Phase gruppiert, nach jeder Phase durchgehen)                             |
@@ -150,9 +150,11 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    (offen geblieben: die Feedbackrunde mit Democracy International)
 2. **✅ 29.08.2026, M5** Whitelabel-Theming, Modul-Verwaltung, i18n, PWA,
    Installations-Story → `docs/PHASE2.md`
-3. **In Arbeit** (AP 1–AP 12 erledigt, M7 erreicht) Profile, Nachrichten,
+3. **✅ 04.09.2026** (alle 13 Pakete; **M8** bis auf die Gerätematrix, die nur
+   mit Geräten in der Hand abzuhaken ist) Profile, Nachrichten,
    Echtzeit-/Gruppenchat, Push, Profilsuche → `docs/PHASE3.md`
-4. Plug-ins: Programmvorschläge, Forum, Raumplanung, QR-Check-In
+4. **Als nächstes** Plug-ins: Programmvorschläge, Forum, Raumplanung,
+   QR-Check-In
 5. Härtung, Usability-Test mit Democracy International (Pilotpartner), Doku,
    Release v1.0 — hier auch: konfigurierbare Drosselung, `CONTRIBUTING.md`
 
@@ -167,21 +169,15 @@ dieselben Uploadregeln wie das Branding. **Kein** Erben des Reihenlogos durch ei
 Event (F114) und **kein** Statusfilter auf der Medienroute (F115) — beides
 bewusst; die Begründungen stehen in `docs/rules/`. Katalog damals 646 → 654.
 
-**Phase 3 läuft** (seit 02.09.2026): Plan in `docs/PHASE3.md`, dreizehn
-Arbeitspakete, Entscheidungen **E31–E45**, Nachträge ab **F118** (vergeben:
-F118–F128, F132–F136, F137–F183; **F129–F131 bleiben unvergeben**, sonst ist
-keine Nummer mehr reserviert). **AP 1 (Teilnehmerkonto und Login), AP 2 (Profil
-und Feld-Baukasten), AP 3 (Login, Registrierung und Profil in beiden Clients,
-**Meilenstein M6**), AP 4 (die Anmeldung kennt den Menschen), AP 5
-(Profilsuche), AP 6 (Gespräche, Nachrichten und Bilder), AP 7 (Echtzeit,
-**Meilenstein M7**), AP 8 (Chat im Nutzer-Client), AP 9 (Organisator-Kontakt
-ohne Registrierung), AP 10 (Nachrichtenübersicht im Veranstalter-Client),
-AP 11 (Push wird echt) und AP 12 (die zwei P3-Zugaben) sind erledigt** —
-Protokoll je Paket unter _Fortschritt_. Als nächstes **AP 13: der Abschluss der
-Phase** (Meilenstein M8) — `todo.md` unter _Checkable after phase 3_
-durcharbeiten, E31–E45 gegen die Umsetzung prüfen, den Fünf-Container-Stack aus
-leerem Volume hochfahren und alle Prüfskripte gegen genau diese Instanz laufen
-lassen. Katalog **956** Schlüssel.
+**Phase 3 ist abgeschlossen** (02.–04.09.2026, dreizehn Arbeitspakete):
+Protokoll in `docs/PHASE3.md`, je Paket ein Abschnitt unter _Fortschritt_ und am
+Ende ein phasenweites _Was anders lief_. Entscheidungen **E31–E45** — in AP 13
+gegen die Umsetzung geprüft, ohne Abweichung; Nachträge **F118–F185** (ohne F62
+und F129–F131, die unvergeben bleiben). Katalog **956** Schlüssel.
+**Meilenstein M8 ist erreicht bis auf einen Punkt:** „Push auf echten Geräten
+belegt" braucht vier Geräte und einen Produktionsbuild — die Matrix steht in
+`todo.md` unter _On a device — waiting for Marius_ und ist das einzige offene
+Kästchen der Phase.
 
 Aus AP 4: die Selbstbedienung kennt zwei Ansprüche — das signierte Token aus der
 Mail und die Sitzung, aufgelöst über die Adresse (F148) —, die
@@ -335,6 +331,28 @@ Ausnahme zu E14). Der Schalter heißt **`newsletter-opt-in`** und ist **aus** �
 F63 hatte ihm den eigenen Schlüssel versprochen, `newsletter` kommt nie zurück.
 Migration: **eine**.
 
+Aus AP 13: der Abschluss. **`todo.md` unter _Checkable after phase 3_ hat ein
+einziges offenes Kästchen** — die Gerätematrix, die nur mit Geräten abzuhaken
+ist; von zwanzig offenen Einträgen sind vier Code geworden, fünfzehn in den
+Abschnitt gezogen, dem sie gehören (Pilotpartner, Phase 5, _Decided_), jeder mit
+Begründung im Eintrag. **E31–E45 gegen die Umsetzung geprüft, keine Abweichung**
+— nur eine Benennung: der Tätigkeitsbereich aus E36 heißt `activity_areas`. Der
+**Fünf-Container-Stack lief aus leerem Volume** (25 Migrationen, 29 Tabellen,
+kein Administrator, Token im Log) und **neun Prüfskripte** liefen gegen genau
+diese Instanz — eines davon neu: `verify-contact.mjs` geht den Weg von FR 3.4
+ganz durch (Punkt 3 der Definition of Done) und prüft auch die Hälfte, die nicht
+passieren darf: **wer fragt, bekommt selbst keine Mail.** Zwei Skripte
+behaupteten Veraltetes und sind korrigiert — das ist dieselbe Klasse wie der
+Fund aus AP 12, und die Lehre steht in `tools/CLAUDE.md`: **ein Prüfskript
+nagelt keinen konfigurierbaren Wert fest.** Code aus diesem Paket:
+`isUniqueViolation` einmal statt achtmal (mit der Drift, die der Eintrag
+vermutet hatte), die flackernde Zusicherung in `profile-fields.spec.ts`
+repariert — **ein Klick ist keine erledigte Anfrage** —, `formatAnswer` nimmt
+seine zwei Wörter jetzt als Pflichtargument (F184, es antwortete in **beiden**
+Clients englisch), die Programmpunkt-Frage aus Phase 0 entschieden (F185) und
+`invitations.spec.ts` räumt seine Reihen ab: **jede Suite räumt ab, was sie
+angelegt hat**, und was sie über SQL gesät hat, holt nur SQL zurück.
+
 Was auf ein anderes Paket bzw. auf Marius wartet — alles in `todo.md`. **Für
 Marius mit Geräten** gibt es dort seit 04.09.2026 einen eigenen Abschnitt weit
 oben, _On a device — waiting for Marius_: was diese Testsuiten **gar nicht**
@@ -343,9 +361,12 @@ in keiner Phasenliste stehen sollte. Darin die **Gerätematrix** aus Spike 3,
 vier Zeilen samt iOS Safari mit installierter PWA (wovon F7 abhängt); das
 Verfahren steht in `docs/spikes/03-web-push.md` und geht jetzt über eine
 **verschobene Session** statt über einen Testversand, den es bewusst nicht
-gibt. Andere Pakete: die **Drosselung des Handshakes** gehört zu Phase 5; ob es
-eine geteilte Bibliothek für Oberflächenbauteile geben soll, ist eine
-Stack-Entscheidung (F145). Produktfragen sind der **Ungelesen-Zähler** in der
+gibt. **Seit AP 13 steht jeder dieser Punkte in dem Abschnitt, der ihn besitzt**
+— Phase 5, _Questions for the pilot partner_ oder _Decided_ —, nicht mehr in der
+Phasenliste. Andere Pakete: die **Drosselung des Handshakes** und das **Löschen
+eines Profils** gehören zu Phase 5, ebenso der Hinweis auf eine geschrumpfte
+Auswahlliste; ob es eine geteilte Bibliothek für Oberflächenbauteile geben soll,
+ist eine Stack-Entscheidung (F145). Produktfragen sind der **Ungelesen-Zähler** in der
 Navigationsleiste (AP 8, seit AP 11 kleiner: wer Benachrichtigungen an hat,
 erfährt es), die **Nachrichten-Kachel** des Event-Dashboards, ob die Übersicht
 sich **selbst auffrischen** soll, ob ein Gerät ohne Konto weiter von **allen**

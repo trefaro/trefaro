@@ -40,6 +40,7 @@ the other one.
 | `verify-push.mjs`          | server + PostgreSQL + a VAPID key pair in `.env` (`POSTGRES_CONTAINER`)                |
 | `verify-i18n.mjs`          | server + PostgreSQL + `ADMIN_BOOTSTRAP_*` from `.env` (it signs in)                    |
 | `verify-mail.mjs`          | server + PostgreSQL + **Mailpit** + `ADMIN_BOOTSTRAP_*` (it signs in)                  |
+| `verify-contact.mjs`       | server + PostgreSQL + **Mailpit** + `ADMIN_BOOTSTRAP_*` (it signs in)                  |
 | `verify-proxy.mjs`         | the full five-container stack; over HTTPS when `PROXY_BASE` is an https URL            |
 | `verify-setup.mjs`         | a **fresh** stack with no administrator, and the token from its startup log            |
 
@@ -68,6 +69,15 @@ node tools/spike-verification/verify-chat.mjs
 # effect with no rebuild, and puts the instance into a half-translated language
 # to prove E24 — then puts everything back.
 node tools/spike-verification/verify-mail.mjs
+
+# The contact loop of FR 3.4, which is point 3 of phase 3's Definition of Done:
+# somebody with no account asks a question from an event page, the organization
+# is told by mail, the organizer answers on their screen, and the answer arrives
+# in the guest's mailbox. It also asserts the half that must **not** happen —
+# asking sends the guest nothing, because an open endpoint that mails whoever is
+# typed into it is a way to post mail to strangers from somebody else's server.
+# Creates one series with one event and deletes both again.
+node tools/spike-verification/verify-contact.mjs
 
 # For push, add a key pair to .env first and restart the server:
 npx web-push generate-vapid-keys

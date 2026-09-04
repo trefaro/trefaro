@@ -10,6 +10,7 @@ export {
   formatAnswer,
   type AnswerableField,
   type AnswerableFieldType,
+  type AnswerWords,
   type CustomFieldValue,
   type CustomFieldValues,
   type RegistrationField,

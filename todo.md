@@ -25,7 +25,7 @@ attached to the task.
 Not deferred verification — things that are genuinely missing and would matter if
 an instance were exposed today.
 
-- [ ] **The API contract suites leave rows behind, and the development database
+- [x] **The API contract suites leave rows behind, and the development database
       has 94 event series to prove it.** `invitations.spec.ts` creates two
       series per run and removes neither, so every run adds two. Nothing fails
       because of it today, but it hides the failures that matter: a suite whose
@@ -34,6 +34,20 @@ an instance were exposed today.
       that). Either every suite tears down what it created — `event-series.spec.ts`
       does — or the run starts from a known state. Worth deciding before the
       suites grow again in phase 3.
+      **Closed in AP 13 of phase 3.** The suite that leaked is the only one
+      that leaked — `invitations.spec.ts` now removes both of its series in
+      `afterAll`, by SQL rather than through the endpoint — which refuses a
+      series with confirmed registrations (E14), and this suite seeds two
+      hundred of them. One statement is enough:
+      `event.series_id`, `registration.event_id` and `invitation.series_id` all
+      cascade. The decision the entry asked for, for the record: **every suite
+      tears down what it created**, rather than the run starting from a known
+      state — a shared development instance is the thing being tested against,
+      and a suite that can only run on an empty database cannot run on a real
+      one. What the fix does **not** do is clean up: the ninety-four series had
+      become 164, with 16,774 registrations under them, and deleting somebody's
+      development data is not a work package's business — the statement is in
+      the AP 13 protocol for whenever Marius wants it run.
 
 - [x] **Nothing is authenticated.** ~~There is no login yet, so `/api/admin/**`
       has no guard.~~ Closed in phase 1, AP 1: every route below `/api/admin` —
@@ -278,6 +292,138 @@ answer, not an opinion.
       side by side and decides nothing. Whether an organizer wants a warning, a
       refusal or a hint, and where they should see it, is what the answer decides.
 
+- [ ] **A device without an account hears about every public event's changes.**
+      The price E43 accepts: a browser has no address and has said nothing
+      about what interests it, so "the events of this organization" is the only
+      audience it can be in. Fine for an NGO with a handful of events.
+      **Marius decides / a question for the pilot partner**: whether it stays
+      that way — the alternative is a subscription per event, which is a table
+      the phase plan does not have.
+      **Moved to _Questions for the pilot partner_ in AP 13 of phase 3**, where
+      every entry that needs an answer rather than a package lives. The
+      decision on the table is the current behaviour, and what would change it
+      is what an organization with thirty events thinks of it — not an opinion
+      from here.
+
+- [ ] **Should there be a shared library for interface components?** (F145) The
+      participant client's `avatar-field.ts` and the organizer client's
+      `ImageUploadField` do the same four things to an uploaded image — choose,
+      check locally, preview, write — and cannot share code, because Nx keeps the
+      two applications apart and the list of shared libraries comes from the
+      thesis' architecture (HTTP, configuration, models, plug-ins, i18n) rather
+      than from a work package. Two callers in two applications is not yet an
+      argument; a third would be. **Marius decides**: it is a change to the fixed
+      stack, and the vocabularies differ as much as the code overlaps
+      (`admin.design.*` versus `profile.avatar.*`, F82).
+      **Moved to _Questions for the pilot partner_ in AP 13 of phase 3** — not
+      because the pilot partner decides it (Marius does, it is a change to the
+      fixed stack), but because that section is the one place in this file for
+      a question that no package can settle. Two callers in two applications is
+      still not an argument; the third one is the trigger, and phase 4 builds
+      four plug-ins that may well bring it.
+
+- [ ] **The navigation carries no unread counter.** The conversation list has
+      one per conversation (E38) and it moves live, but somebody who is reading
+      an event page learns about a new message only when they go to `/messages`
+      — or **by push, which AP 11 built**: a message to a member with no socket
+      in that conversation now goes out as a notification (E44), which is what
+      F166 (a socket that belongs to the session rather than to a screen) made
+      possible. So the gap is smaller than when this entry was written: somebody
+      with notifications on hears about it, and somebody without them does not. A badge in the bar would need the **sum** without the screen,
+      so a request for every logged-in participant at every sign-in, refreshed
+      on every `chat:conversation`. Cheap to build and easy to get wrong in the
+      annoying direction. **Marius decides / a question for the pilot partner**:
+      whether a chat that only notifies by push and by its own screen is the
+      one an activist community wants.
+      **Moved to _Questions for the pilot partner_ in AP 13 of phase 3.** The
+      entry has always ended in a question, and AP 11 made it a smaller one:
+      whoever has notifications on already hears about a message. What is left
+      is a preference about a badge, and building it on a guess is exactly what
+      that section exists to prevent.
+
+- [ ] **The event dashboard has no messages tile** (the parenthesis in the
+      plug-in hook entry below said phase 3 would add one). It cannot be the
+      tile the mockup draws: that one counts **new** messages, and the
+      organization has no read marker to count them against (F133). What is
+      available is "N conversations about this event", which is a different
+      tile — so this is a **product question for Marius / the pilot partner**,
+      not an implementation gap. Whatever it says, it is a field on
+      `EventDashboard` plus a tile, and the endpoint that would answer it
+      already exists.
+      **Moved to _Questions for the pilot partner_ in AP 13 of phase 3.** The
+      endpoint exists, the tile is an hour of work, and what it should say is
+      the part nobody here can answer: "N conversations about this event" is
+      not the number the mockup drew, and a number the organization cannot act
+      on is worse than no tile.
+
+- [ ] **The organizer's message overview does not refresh itself.** It loads
+      when it is opened, and that is a decision rather than an omission: the
+      socket handshake authenticates a **participant** session (F132), the
+      organization has no membership to deliver to (F133), and the notification
+      mail exists precisely so that nobody has to watch a screen (F172). Making
+      it live would mean admitting administrative sessions to the gateway and
+      inventing an "organization" room — AP 7-sized work for a screen that a
+      mail already points at. **Marius decides / a question for the pilot
+      partner**: whether an inbox that answers when you open it is enough.
+      **Moved to _Questions for the pilot partner_ in AP 13 of phase 3.**
+      Making it live is AP 7-sized work — administrative sessions at the
+      gateway and a room for an organization that has no membership (F133) —
+      for a screen a mail already points at. Whether an inbox that answers when
+      you open it is enough is a question about how an organization works, not
+      about this code.
+
+- [ ] **A guest's answer to the answer arrives outside the application**, as
+      ordinary mail in the mailbox the instance sends from — not in the
+      overview. Receiving mail is not a goal of this application (F8 keeps even
+      the sending small), and the alternative for somebody who wants to stay in
+      the app is an account. Worth naming to the pilot partner, because it is
+      the one place where a conversation started in Trefaro can continue
+      somewhere else.
+      **Moved to _Questions for the pilot partner_ in AP 13 of phase 3**,
+      because that is what the entry always was: the one place where a
+      conversation started in Trefaro continues somewhere else, and the
+      alternative for somebody who wants to stay in the application is an
+      account. Receiving mail is not a goal of this application (F8 keeps even
+      the sending small), so the answer changes a sentence on a screen at most
+      — unless it does not, and then it changes phase 5.
+
+- [ ] **The newsletter list carries no language.** An organization that sends
+      in two languages would want to know which address reads which — and the
+      overview cannot say. Only the app source could store it (a sign-up knows
+      the page it was made on); the registration form's half has no such column,
+      so half the rows would read "unknown", which is not an answer. Decided
+      that way in AP 12 (F181) rather than half-built: whoever needs it later
+      adds the column **and** decides what the other source says.
+      **Moved to _Questions for the pilot partner_ in AP 13 of phase 3**,
+      together with the export below: both are questions about the tool an
+      organization already sends with, and one answer settles both. Half the
+      rows reading "unknown" is the reason this was not half-built (F181).
+
+- [ ] **There is no export of the newsletter list.** The overview pages through
+      the consents, and moving a hundred addresses into another tool means
+      copying them by hand. A CSV route would be small — one endpoint, no new
+      rule — but FR 4.8 is P3 and asked for the opt-in administration, not for
+      an export. **Question for the pilot partner**, together with the language
+      above: what does the tool you send with want to be fed?
+      **Moved to _Questions for the pilot partner_ in AP 13 of phase 3.** One
+      endpoint, no new rule — and no requirement: FR 4.8 asked for the opt-in
+      administration. What the receiving tool wants to be fed decides the
+      format, so asking costs less than guessing a CSV twice.
+
+- [ ] **A newsletter address cannot unsubscribe itself.** Nothing is sent from
+      Trefaro (F8), so there is no letter to put an unsubscribe link in; whoever
+      wants off writes to the organization (the contact form of AP 9 needs no
+      account) and an organizer removes the row (F183). The objection link of an
+      invitation does work across both sources (F24). Whether an instance whose
+      organization sends from its own tool needs a self-service link here is a
+      **question for the pilot partner**.
+      **Moved to _Questions for the pilot partner_ in AP 13 of phase 3.**
+      Nothing goes out from here (F8), so there is no letter to put a link in;
+      the objection link of an invitation already works across both sources
+      (F24) and the contact form needs no account. Whether an instance whose
+      organization sends from its own tool needs a self-service link is the
+      question, and it is theirs.
+
 ---
 
 ## Checkable after phase 2 — whitelabel, modules, i18n, PWA, installation
@@ -479,10 +625,20 @@ answer, not an opinion.
       opens one of them with the same component the mailed link uses, and the
       link keeps working.
 
-- [ ] **A sign-up belongs to a registration, not to a person** (`program_item_signup.registration_id`).
+- [x] **A sign-up belongs to a registration, not to a person** (`program_item_signup.registration_id`).
       Once `user_profile` exists, decide whether a participant sees their seats
       across events — that needs a join over `registration`, not a second column
       here.
+      **Decided in AP 13 of phase 3, and the answer is no.** A participant sees
+      the seats of one registration, on the page that registration opens —
+      which is what FR 4.7 asks for and what
+      `program_item_signup.registration_id` already answers. One list across
+      events would be a join over `registration` by address (E31), so the
+      column stays as it is either way: the question was never where the row
+      hangs, it was whether a screen wants the other cut. Nothing asks for that
+      screen today. If the pilot partner does, it is a read and a page, not a
+      migration — recorded under _Questions for the pilot partner_ with the
+      rest of what a community might want and nobody has asked for.
 
 - [x] **Mail in the participant's own language — done in AP 4** (F125). It was
       not quite one line: `MailCatalogue.strings(keys, to)` asks
@@ -530,18 +686,6 @@ answer, not an opinion.
       by asking a question that was already answered no, and a "not now" is
       remembered. Two places, because E43 has two audiences: the banner in the
       shell, and the switch on `/profile`.
-- [ ] **A device without an account can only switch notifications off in the
-      browser.** There is no page that is theirs to keep a setting on, and
-      every browser's own site settings can do it — the offer's text says as
-      much. A named limit rather than a gap: the alternative is a page for
-      somebody who has deliberately not made an account.
-- [ ] **A device without an account hears about every public event's changes.**
-      The price E43 accepts: a browser has no address and has said nothing
-      about what interests it, so "the events of this organization" is the only
-      audience it can be in. Fine for an NGO with a handful of events.
-      **Marius decides / a question for the pilot partner**: whether it stays
-      that way — the alternative is a subscription per event, which is a table
-      the phase plan does not have.
 - [x] **Authenticate the WebSocket handshake — done in AP 7** (F132, E41). In a
       socket.io namespace middleware, so it runs _while_ the handshake happens:
       a connection without a valid session never comes into being, and the
@@ -565,13 +709,6 @@ answer, not an opinion.
       a better probe out of it — the refusal without a cookie is the server's
       own sentence arriving over the socket, which proves the upgrade and the
       way back without a handler that exists for the test.
-- [ ] **The WebSocket handshake carries no rate limit.** `@nestjs/throttler`
-      sees HTTP routes, and a socket.io handshake is served by engine.io before
-      Nest's router ever sees it — so the one request that now costs a session
-      lookup is the one request nothing counts. Belongs with the configurable
-      throttling phase 5 already owes (E4); until then the cheapest mitigation
-      is that a refused handshake does no database work beyond one indexed
-      lookup on `token_hash`.
 - [x] **Purge a conversation's pictures when the conversation goes — belongs to
       AP 10.** Deleting an **event** cascades through `conversation` to
       `message`, and a cascade removes rows but no files (E9). ~~That package
@@ -588,13 +725,7 @@ answer, not an opinion.
       real: an event with confirmed registrations cannot be deleted (E14), so
       this catches the one whose registrations were cancelled again — asserted
       against a real database in the contract suite.
-- [ ] **A deleted profile leaves its conversations standing** —
-      `conversation_member.member_id` carries no foreign key (E39), on purpose.
-      Nothing can delete a profile today (there is no endpoint, by design), so
-      this is erasure work for **phase 5**, together with the rest of it: what a
-      person may have removed, what stays because somebody else wrote it, and
-      what a conversation looks like when one side is gone.
-- [ ] **Eight copies of `isUniqueViolation` in `data-access/repositories/`** —
+- [x] **Eight copies of `isUniqueViolation` in `data-access/repositories/`** —
       `typeorm-{admin-user,event,event-series,profile-field,
 program-item-signup,user-profile,registration,registration-field}`. The
       same six lines each. F138 says the third caller is where something moves
@@ -603,6 +734,16 @@ program-item-signup,user-profile,registration,registration-field}`. The
       inside a package that had no business touching eight files. Small and
       mechanical — and worth checking for drift while doing it, which is what
       `searchTerms` (AP 5) and `pageWindow` (AP 6) both turned out to have.
+      **Done in AP 13 of phase 3.** One `unique-violation.ts` next to the eight
+      repositories that asked the question, and it stays inside the data access
+      layer: a SQLSTATE is a fact about PostgreSQL, and what travels upwards is
+      a `ConflictException` or a `null`, decided per caller. The drift this
+      entry predicted was there — seven copies recognised a driver error
+      whether TypeORM had wrapped it or not, the eighth only the wrapped one.
+      The wider reading is the one that stayed (it is a superset, so no caller
+      changed behaviour), and it has a unit test now, because three callers use
+      the answer as control flow and a helper that stopped recognising a
+      violation would turn three friendly answers into a 500 at once.
 - [x] **Wire `PushService.broadcast()` to actual event changes — done in AP 11**
       (FR 3.15). `broadcast()` itself is gone with `findAll()`: there was one
       notification ("everybody") and no way to say anything narrower. There are
@@ -641,7 +782,7 @@ program-item-signup,user-profile,registration,registration-field}`. The
       original entry: the form sends `searchable` **only** when it asked for it,
       because a control whose box is hidden still carries its default and would
       have quietly withdrawn somebody's visibility.
-- [ ] **`profile-fields.spec.ts` "moves a question" is flaky.** It failed once
+- [x] **`profile-fields.spec.ts` "moves a question" is flaky.** It failed once
       in AP 10 and once in three runs of AP 11, in both cases while everything
       else was green. The cause is in the fixture rather than in the feature:
       the profile field kit is **instance-wide** (E35) and three browser engines
@@ -651,88 +792,17 @@ program-item-signup,user-profile,registration,registration-field}`. The
       already do it, and for the same reason — or the assertion compares only
       positions within one engine's own questions. Worth doing before phase 5
       hardens the suites, not worth a package of its own.
-- [ ] **Should there be a shared library for interface components?** (F145) The
-      participant client's `avatar-field.ts` and the organizer client's
-      `ImageUploadField` do the same four things to an uploaded image — choose,
-      check locally, preview, write — and cannot share code, because Nx keeps the
-      two applications apart and the list of shared libraries comes from the
-      thesis' architecture (HTTP, configuration, models, plug-ins, i18n) rather
-      than from a work package. Two callers in two applications is not yet an
-      argument; a third would be. **Marius decides**: it is a change to the fixed
-      stack, and the vocabularies differ as much as the code overlaps
-      (`admin.design.*` versus `profile.avatar.*`, F82).
-- [ ] **A `select` profile question whose choices shrink leaves answers behind
-      that are no longer offered.** The same situation as a deleted question
-      (F34) and deliberately not refused — but nothing tells the organizer that
-      four people answered "Bonn" before "Bonn" was removed from the list. Still
-      open, and now only for the **organizer**: that is where the information is
-      missing, and the participant search of AP 5 turned out to be the wrong
-      place to put it. Its profile view shows an answer to a question that is
-      still asked whatever the option list now says — so a shrunk `select` is
-      visible there — but it deliberately does **not** show answers whose
-      question is gone under their bare key (F150): the organizer's panel is an
-      audit of a form, a participant is reading a person, and `local-group:
-Bonn` is diagnostics rather than a fact about anybody.
-
-- [ ] **The navigation carries no unread counter.** The conversation list has
-      one per conversation (E38) and it moves live, but somebody who is reading
-      an event page learns about a new message only when they go to `/messages`
-      — or **by push, which AP 11 built**: a message to a member with no socket
-      in that conversation now goes out as a notification (E44), which is what
-      F166 (a socket that belongs to the session rather than to a screen) made
-      possible. So the gap is smaller than when this entry was written: somebody
-      with notifications on hears about it, and somebody without them does not. A badge in the bar would need the **sum** without the screen,
-      so a request for every logged-in participant at every sign-in, refreshed
-      on every `chat:conversation`. Cheap to build and easy to get wrong in the
-      annoying direction. **Marius decides / a question for the pilot partner**:
-      whether a chat that only notifies by push and by its own screen is the
-      one an activist community wants.
-
-- [ ] **Who from the organization answered is stored, and not shown.** A reply
-      carries the administrator's own account in `sender_id` (E39, precisely so
-      that the history says which _person_ answered), but the organizer client
-      only recognises the reader's **own** lines — by the id of their session —
-      and calls everything else "your organization". Showing a colleague's name
-      needs a fourth read of `admin_user` through a port of its own; it was not
-      in AP 10's acceptance criterion, and for a two-person organization the
-      difference is invisible. Worth doing when an instance has more
-      administrators than it has people who remember who wrote what.
-
-- [ ] **The event dashboard has no messages tile** (the parenthesis in the
-      plug-in hook entry below said phase 3 would add one). It cannot be the
-      tile the mockup draws: that one counts **new** messages, and the
-      organization has no read marker to count them against (F133). What is
-      available is "N conversations about this event", which is a different
-      tile — so this is a **product question for Marius / the pilot partner**,
-      not an implementation gap. Whatever it says, it is a field on
-      `EventDashboard` plus a tile, and the endpoint that would answer it
-      already exists.
-
-- [ ] **The organizer's message overview does not refresh itself.** It loads
-      when it is opened, and that is a decision rather than an omission: the
-      socket handshake authenticates a **participant** session (F132), the
-      organization has no membership to deliver to (F133), and the notification
-      mail exists precisely so that nobody has to watch a screen (F172). Making
-      it live would mean admitting administrative sessions to the gateway and
-      inventing an "organization" room — AP 7-sized work for a screen that a
-      mail already points at. **Marius decides / a question for the pilot
-      partner**: whether an inbox that answers when you open it is enough.
-
-- [ ] **A guest's answer to the answer arrives outside the application**, as
-      ordinary mail in the mailbox the instance sends from — not in the
-      overview. Receiving mail is not a goal of this application (F8 keeps even
-      the sending small), and the alternative for somebody who wants to stay in
-      the app is an account. Worth naming to the pilot partner, because it is
-      the one place where a conversation started in Trefaro can continue
-      somewhere else.
-
-- [ ] **The organizer can see a picture in a conversation but not send one.**
-      A participant may (E40), and the organizer's own route serves theirs
-      (F133) — but an answer has to work as a **mail** too, and an attachment
-      there would be a second delivery mechanism for something FR 3.4 does not
-      ask for. If it ever comes, it comes for `group` conversations only, and
-      the asymmetry has to be visible on the screen rather than in a 400.
-
+      **Done in AP 13 of phase 3 — and the cause named in this entry was not
+      the cause.** The suite has been Chromium-only and serial since it was
+      written, so no second engine was ever writing that list. The race was
+      inside the one engine: `page.reload()` came straight after the click that
+      moves a question, and a click resolves when it is _dispatched_, not when
+      the `PUT …/order` it starts has answered — and the page redraws from that
+      answer. The order is now polled twice, once on the page's own redraw and
+      once after the reload, which is the assertion the test was always trying
+      to make. The lesson is general enough to have gone into
+      `docs/rules/e2e-tests.md`: a click that starts a request is not a request
+      that has finished.
 - [x] **The contact notification links to the organizer client, not to the
       request** (F172, AP 9). ~~`ANSWER_PATH = '/'`, because the overview
       arrives with AP 10 and a deep link into a screen that does not exist yet
@@ -742,7 +812,7 @@ Bonn` is diagnostics rather than a fact about anybody.
       client's route and by the mail, so a rename cannot leave the letter
       pointing at nothing. Nothing else about the notification changed.
 
-- [ ] **`formatAnswer` answers in English, and the organizer client shows it.**
+- [x] **`formatAnswer` answers in English, and the organizer client shows it.**
       The helper in `shared-models` turns a tick into `yes` / `no` — words from a
       library that knows no catalogue — and the participant overview's detail
       panel renders them as they come, in a screen an organization reads in its
@@ -752,27 +822,19 @@ Bonn` is diagnostics rather than a fact about anybody.
       organizer's panel is a screen AP 5 does not touch, so it was left alone
       rather than fixed in passing: two keys and two lines, whenever that page is
       open anyway.
-
-- [ ] **The newsletter list carries no language.** An organization that sends
-      in two languages would want to know which address reads which — and the
-      overview cannot say. Only the app source could store it (a sign-up knows
-      the page it was made on); the registration form's half has no such column,
-      so half the rows would read "unknown", which is not an answer. Decided
-      that way in AP 12 (F181) rather than half-built: whoever needs it later
-      adds the column **and** decides what the other source says.
-- [ ] **There is no export of the newsletter list.** The overview pages through
-      the consents, and moving a hundred addresses into another tool means
-      copying them by hand. A CSV route would be small — one endpoint, no new
-      rule — but FR 4.8 is P3 and asked for the opt-in administration, not for
-      an export. **Question for the pilot partner**, together with the language
-      above: what does the tool you send with want to be fed?
-- [ ] **A newsletter address cannot unsubscribe itself.** Nothing is sent from
-      Trefaro (F8), so there is no letter to put an unsubscribe link in; whoever
-      wants off writes to the organization (the contact form of AP 9 needs no
-      account) and an organizer removes the row (F183). The objection link of an
-      invitation does work across both sources (F24). Whether an instance whose
-      organization sends from its own tool needs a self-service link here is a
-      **question for the pilot partner**.
+      **Done in AP 13 of phase 3, and it was one screen worse than this entry
+      said:** the participant client's own "my registration" page uses
+      `formatAnswer` as well, so somebody reading their own answers in German
+      read `yes` under a ticked box. `formatAnswer` now takes the two words as
+      a **required** argument — a default would have kept the bug available —
+      so the library still decides the one thing that is not a word (the dash
+      for a question nobody answered) and both clients say the rest in the
+      reader's language. Three call sites, two catalogue keys that already
+      existed (`common.yes`, `common.no`), and the organizer's panel reads the
+      locale in the same `computed()` so that a language switch redraws it
+      (F72). `person-page.ts` still spells the tick itself, for the one reason
+      that is left: an unanswered question is dropped there rather than dashed,
+      because a reader is looking at a person, not at a form.
 
 ## Checkable after phase 4 — plug-ins
 
@@ -1082,6 +1144,49 @@ Bonn` is diagnostics rather than a fact about anybody.
 - [ ] **Usability test with Democracy International**: the thesis' seven tasks
       repeated, plus the use cases it never tested.
 
+- [ ] **The WebSocket handshake carries no rate limit.** `@nestjs/throttler`
+      sees HTTP routes, and a socket.io handshake is served by engine.io before
+      Nest's router ever sees it — so the one request that now costs a session
+      lookup is the one request nothing counts. Belongs with the configurable
+      throttling phase 5 already owes (E4); until then the cheapest mitigation
+      is that a refused handshake does no database work beyond one indexed
+      lookup on `token_hash`.
+      **Moved to _Checkable after phase 5_ in AP 13 of phase 3**, which is
+      where the configurable throttling of E4 already lives: the two are one
+      piece of work, and doing the handshake alone would mean inventing a
+      second place where limits are configured.
+
+- [ ] **A deleted profile leaves its conversations standing** —
+      `conversation_member.member_id` carries no foreign key (E39), on purpose.
+      Nothing can delete a profile today (there is no endpoint, by design), so
+      this is erasure work for **phase 5**, together with the rest of it: what a
+      person may have removed, what stays because somebody else wrote it, and
+      what a conversation looks like when one side is gone.
+      **Moved to _Checkable after phase 5_ in AP 13 of phase 3.** Erasure is
+      one subject, not five: what a person may have removed, what stays because
+      somebody else wrote it, and what a conversation looks like when one side
+      is gone. Nothing can delete a profile today, so nothing is broken in the
+      meantime.
+
+- [ ] **A `select` profile question whose choices shrink leaves answers behind
+      that are no longer offered.** The same situation as a deleted question
+      (F34) and deliberately not refused — but nothing tells the organizer that
+      four people answered "Bonn" before "Bonn" was removed from the list. Still
+      open, and now only for the **organizer**: that is where the information is
+      missing, and the participant search of AP 5 turned out to be the wrong
+      place to put it. Its profile view shows an answer to a question that is
+      still asked whatever the option list now says — so a shrunk `select` is
+      visible there — but it deliberately does **not** show answers whose
+      question is gone under their bare key (F150): the organizer's panel is an
+      audit of a form, a participant is reading a person, and `local-group:
+Bonn` is diagnostics rather than a fact about anybody.
+      **Moved to _Checkable after phase 5_ in AP 13 of phase 3.** What is
+      missing is a sentence on the organizer's editor, and a sentence needs a
+      number to put in it — how many people answered with the option about to
+      disappear — which is a read nothing has today. Usability work with a
+      query behind it, so it belongs with the usability round rather than in a
+      closure package.
+
 ---
 
 ## Decided
@@ -1097,3 +1202,36 @@ Decisions only — the work they imply stays in the phase sections above.
 - [x] **Thesis material in a public repository** — decided 2026-08-26: diagrams
       and mockups stay (they document where the architecture comes from), the
       full thesis PDF does not.
+
+- [x] **A device without an account can only switch notifications off in the
+      browser.** There is no page that is theirs to keep a setting on, and
+      every browser's own site settings can do it — the offer's text says as
+      much. A named limit rather than a gap: the alternative is a page for
+      somebody who has deliberately not made an account.
+      **Moved here in AP 13 of phase 3**, out of the phase-3 list: no phase
+      closes it, because it is not open — it is what E43 costs, and nothing is
+      waiting on anybody.
+
+- [x] **Who from the organization answered is stored, and not shown.** A reply
+      carries the administrator's own account in `sender_id` (E39, precisely so
+      that the history says which _person_ answered), but the organizer client
+      only recognises the reader's **own** lines — by the id of their session —
+      and calls everything else "your organization". Showing a colleague's name
+      needs a fourth read of `admin_user` through a port of its own; it was not
+      in AP 10's acceptance criterion, and for a two-person organization the
+      difference is invisible. Worth doing when an instance has more
+      administrators than it has people who remember who wrote what.
+      **Moved here in AP 13 of phase 3**, out of the phase-3 list: the fourth
+      read of `admin_user` is not deferred work but work nobody has asked for.
+      It becomes a task the day an instance has enough administrators for the
+      question to come up.
+
+- [x] **The organizer can see a picture in a conversation but not send one.**
+      A participant may (E40), and the organizer's own route serves theirs
+      (F133) — but an answer has to work as a **mail** too, and an attachment
+      there would be a second delivery mechanism for something FR 3.4 does not
+      ask for. If it ever comes, it comes for `group` conversations only, and
+      the asymmetry has to be visible on the screen rather than in a 400.
+      **Moved here in AP 13 of phase 3**, out of the phase-3 list: an answer
+      that also has to arrive as a mail (F172) cannot carry an attachment, so
+      the asymmetry is the decision rather than a gap in it.

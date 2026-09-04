@@ -1,6 +1,9 @@
 # Phase 3 — Profile, Kommunikation und Community-Kern
 
-**Status: in Arbeit** (seit 02.09.2026, AP 1 bis AP 12 erledigt, **M7 erreicht**). Der Teil oberhalb von
+**Status: abgeschlossen** (02.–04.09.2026, alle dreizehn Arbeitspakete;
+**M7 erreicht**, **M8 bis auf die Gerätematrix**, die vier Geräte in der Hand
+braucht — siehe AP 13 unten und `todo.md` unter _On a device — waiting for
+Marius_). Der Teil oberhalb von
 _Fortschritt_ ist der **Plan** und wird nicht mehr rückwirkend korrigiert; was
 tatsächlich passierte, steht unten je Paket — wie in
 [`PHASE1.md`](PHASE1.md) und [`PHASE2.md`](PHASE2.md). Was Marius **vor** einem
@@ -14,6 +17,8 @@ Grundlage: Kapitel 6, Phase 3 in
 (FR 4.1–4.5, 4.7, 4.8, FR 3.4, FR 3.15; Entscheidungen F7–F13). Was Phase 2
 offen gelassen hat, steht in [`todo.md`](../todo.md) unter _Checkable after
 phase 3_ — dreizehn Einträge, jeder ist unten einem Arbeitspaket zugeordnet.
+(Bis zum Ende der Phase sind daraus zwanzig offene geworden, weil jedes Paket
+notiert hat, was es liegen ließ; AP 13 hat sie durchgearbeitet.)
 
 Die Entscheidungen zählen bei **E31** weiter (Phase 1: E1–E16, Phase 2:
 E17–E30); Ergänzungen am Referenzdokument bekommen **F118** und folgende
@@ -2326,3 +2331,244 @@ Offen aus diesem Paket, alles in `todo.md`:
   hundert Adressen in ein anderes Werkzeug bringen will, kopiert sie. Eine
   CSV-Route wäre klein, aber sie ist nicht angefordert (FR 4.8 ist P3) —
   **Frage an den Pilotpartner**, zusammen mit der Sprache.
+
+### AP 13 — Abschluss der Phase (erledigt, 04.09.2026) → **Meilenstein M8**
+
+Umgesetzt:
+
+- **`todo.md` unter _Checkable after phase 3_ durchgearbeitet.** Zwanzig offene
+  Einträge, und am Ende steht **ein** offenes Kästchen: die Gerätematrix, die
+  nur mit Geräten in der Hand abzuhaken ist. Vier wurden hier erledigt (siehe
+  unten), **fünfzehn** sind in den Abschnitt gezogen, dem sie gehören — neun als
+  **Frage an den Pilotpartner** (der Ungelesen-Zähler, die Nachrichten-Kachel,
+  die sich nicht auffrischende Übersicht, Export und Sprache der
+  Newsletter-Liste, der Selbstabmelde-Link, ein Gerät ohne Konto, die Antwort
+  eines Gasts außerhalb der Anwendung, und die geteilte Oberflächen-Bibliothek
+  F145), drei nach **Phase 5** (die Drosselung des Handshakes, das Löschen eines
+  Profils, der Hinweis auf eine geschrumpfte Auswahlliste) und drei nach
+  **_Decided_** (drei benannte Grenzen, die keine Arbeit implizieren). Jeder
+  Umzug trägt seinen Grund im Eintrag — verschoben ohne Begründung ist die
+  Sorte Buchführung, die diese Datei nicht sein soll.
+- **Vier Einträge sind Code geworden**, alle drei aus der Kategorie „klein und
+  mechanisch, und deshalb seit Paketen liegengeblieben":
+  - **`isUniqueViolation` achtmal wörtlich** → `repositories/unique-violation.ts`
+    (F138 nennt den dritten Aufrufer; dieser war der achte). Bleibt in der
+    Datenzugriffsschicht: ein SQLSTATE ist eine Tatsache über PostgreSQL, und
+    was nach oben reist, ist ein `ConflictException` oder ein `null` — je
+    Aufrufer entschieden. **Die vermutete Drift war da:** sieben Kopien
+    erkannten den Treiberfehler eingepackt _und_ nackt, eine nur eingepackt.
+    Geblieben ist die weitere Lesart, mit einem Unit-Test, weil drei Aufrufer
+    die Antwort als Kontrollfluss benutzen.
+  - **`profile-fields.spec.ts` „moves a question"** war sporadisch rot — und die
+    im Eintrag vermutete Ursache war **falsch**. Die Suite lief längst nur in
+    Chromium und seriell; das Rennen war innerhalb einer Engine: `page.reload()`
+    stand direkt hinter dem Klick, und ein Klick ist erledigt, wenn er
+    _zugestellt_ ist, nicht wenn das `PUT …/order` geantwortet hat. Jetzt wird
+    die Reihenfolge zweimal zugesichert — einmal auf dem Bildschirm
+    (`expect.poll`, also nach der Antwort, aus der sich die Seite neu zeichnet)
+    und einmal nach dem Neuladen.
+  - **`formatAnswer` antwortete englisch** — und zwar in **beiden** Clients, nicht
+    nur im Veranstalter-Client, wie der Eintrag sagte: die eigene Anmeldung im
+    Nutzer-Client zeichnet dieselben Antworten. Die Funktion nimmt jetzt
+    `AnswerWords { yes, no }` als **Pflichtargument** (F184); der
+    Gedankenstrich für eine unbeantwortete Frage bleibt in der Bibliothek, weil
+    er kein Wort ist.
+  - **Die Frage aus Phase 0** („gehört eine Programmpunkt-Anmeldung an die
+    Anmeldung oder an den Menschen?") ist entschieden statt vertagt: sie bleibt
+    an der Anmeldung, und es gibt keine ereignisübergreifende Sitzliste (F185).
+- **E31–E45 gegen die Umsetzung geprüft — keine Abweichung.** Fünfzehn
+  Entscheidungen, jede an dem geprüft, was sie behauptet: die Schema-Hälften
+  gegen die laufende Datenbank (`information_schema` und `pg_constraint`, nicht
+  gegen die Migrationsdateien — eine Migration, die nie gelaufen ist, beweist
+  nichts), die Code-Hälften gegen die Stelle, die die Regel trägt. Eine
+  **Benennung** weicht ab: der Tätigkeitsbereich aus E36 heißt in der Datenbank
+  `activity_areas`, nicht `field_of_work` — eine Spalte ist er, wie E36 verlangt.
+  Die Tabelle steht unten.
+- **Ein Prüfskript ist dazugekommen: `verify-contact.mjs`.** Punkt 3 der
+  Definition of Done ist ein Satz über eine Instanz — „ein Interessent ohne
+  Konto erreicht den Veranstalter, und die Antwort kommt bei ihm per E-Mail an"
+  —, und keine Suite konnte ihn sagen: die Vertragssuite spricht mit dem Server
+  und liest keine Postfächer, die Browsersuite liest Postfächer, aber der
+  Veranstalter antwortet in der anderen Anwendung. Das Skript geht den Weg ganz
+  durch und prüft dabei die Hälfte, die **nicht** passieren darf: wer fragt,
+  bekommt selbst keine Mail — ein offener Endpunkt, der an jede eingetippte
+  Adresse schreibt, ist ein Weg, von fremden Servern Post zu verschicken.
+- **`docs/rules/` um drei Lehren ergänzt** (i18n: wer die Wörter liefert;
+  e2e-tests: ein Klick ist keine erledigte Anfrage, und jede Suite räumt ab, was
+  sie angelegt hat; server-layers: wo ein Helfer der Datenzugriffsschicht
+  wohnt), `CLAUDE.md` auf den Stand gebracht, dieses Dokument von Plan auf
+  Protokoll gezogen und um ein phasenweites _Was anders lief_ ergänzt.
+- **Der README stand noch bei „Phase 2 is under way"** — zwei Phasen alt. Jetzt
+  nennt er beide fertigen Phasen und was Phase 3 einem Menschen gibt, statt
+  eine Feature-Liste zu wiederholen.
+- **Der Fünf-Container-Stack aus leerem Volume, und alle Prüfskripte gegen
+  genau diese Instanz.** `-p trefaro-p3ap13`, eigenes Wegwerf-`.env`, danach
+  `down -v`. **25 Migrationen** liefen von Null auf 29 Tabellen — darunter die
+  aus AP 11 und AP 12, die vorher nur auf einer gewachsenen Datenbank gelaufen
+  waren. Die frische Instanz hatte wie vorgesehen **keinen Administrator**, hat
+  den Einrichtungs-Token ins Log geschrieben und die vier Vorgabemodule an
+  (`chat`, `media-links`, `profile-search`, `profiles`), `push` und
+  `newsletter-opt-in` aus. Mailpit hing über `docker network connect` am Netz
+  des Stacks, damit die Mail-Prüfungen echte Postfächer lesen. Neun Skripte,
+  alle grün: `verify-setup`, `verify-proxy` (samt Socket durch den Proxy und
+  PWA-Manifest), `verify-api`, `verify-plugin-toggle`, `verify-i18n`,
+  `verify-mail`, `verify-chat`, `verify-contact` und `verify-push`.
+
+Was anders lief:
+
+- **Drei Prüfskripte behaupteten Dinge, die nicht mehr stimmten — und zwei
+  davon sind dieselbe Klasse wie der Fund aus AP 12.** `verify-api.mjs` hatte in
+  AP 12 eine veraltete Vorgabemodul-Liste; jetzt kamen dazu:
+  `verify-plugin-toggle.mjs` prüfte „nur Module, die es gibt (E21)" als
+  „`newsletter` und `chat` fehlen" — `chat` ist seit AP 6 ein echtes Modul, also
+  schlug die Prüfung aus dem richtigen Grund am falschen Kriterium fehl (jetzt
+  eine gepflegte Liste dessen, was dieses Image ausliefert, plus `newsletter`
+  ausdrücklich nie). Und `verify-i18n.mjs` verlangte „die Instanz bietet mehr
+  als eine Sprache an" — ein **konfigurierbarer Wert**, also genau das, was
+  `tools/CLAUDE.md` verbietet: eine Instanz, die durch die geführte
+  Ersteinrichtung kam, bietet die eine Sprache an, auf die sie gestellt wurde.
+  Geprüft wird jetzt die **Form** (Sprachtags, und die Vorgabesprache ist
+  darunter); dass das Image zwei Kataloge trägt, sagen die Prüfungen darunter,
+  die Englisch und Deutsch abfragen — beide werden ausgeliefert, ob sie
+  angeboten werden oder nicht (F76). **Die Klasse ist die eigentliche
+  Erkenntnis:** ein Prüfskript, das eine Liste festnagelt, veraltet leise, und
+  es fällt erst am Phasenende auf, weil nur dort ein Deployment hochgefahren
+  wird.
+- **Die eigene Vertragssuite war der größte Verursacher von Datenmüll.**
+  `invitations.spec.ts` hinterließ zwei Reihen je Lauf; die
+  Entwicklungsdatenbank trug **164 Fixture-Reihen mit 16.774 Anmeldungen**. Der
+  `todo.md`-Eintrag stand seit AP 1 dieser Phase mit „vor Phase 3 entscheiden"
+  darin und wurde hier entschieden: **jede Suite räumt ab, was sie angelegt
+  hat** — nicht „der Lauf beginnt bei einem bekannten Zustand", denn geprüft
+  wird gegen eine geteilte Entwicklungsinstanz. Über SQL, weil der Endpunkt eine
+  Reihe mit bestätigten Anmeldungen verweigert (E14) und genau die sät diese
+  Suite. Nachgewiesen: 172 Reihen vor dem Lauf, 172 danach. **Aufgeräumt wurde
+  nicht** — 164 fremde Zeilen zu löschen ist keine Entscheidung, die ein
+  Arbeitspaket für Marius trifft; die Anweisung steht unten.
+- **`formatAnswer` war ein Bildschirm mehr als gedacht.** Der `todo.md`-Eintrag
+  nannte den Veranstalter-Client. Beim Anfassen zeigte sich, dass auch die
+  eigene Anmeldung im Nutzer-Client dieselbe Funktion benutzt — ein Teilnehmer
+  las „yes" unter seiner eigenen Antwort, in einem Client, dessen jeder andere
+  Satz übersetzt ist. Zwei Aufrufstellen statt einer, und das Pflichtargument
+  (F184) ist die Antwort darauf: ein Standardwert hätte die dritte Stelle wieder
+  englisch werden lassen.
+- **Die Ursachenvermutung im Eintrag zur flackernden Suite war falsch**, und das
+  ist der Grund, warum sie hier steht: „drei Engines schreiben dieselbe Liste"
+  klang plausibel, weil AP 12 genau diese Klasse gefunden hatte — die Suite lief
+  aber längst nur in Chromium und seriell. Ein wiederkehrender Fehlschlag mit
+  einer plausiblen Vermutung daneben ist gefährlicher als einer ohne.
+- **Was die Prüfung nicht abdeckt, bleibt gesagt:** die Browsersuiten laufen
+  gegen `nx serve`, nicht gegen den Container-Stack (das ist der Grund, warum
+  `tools/spike-verification/` überhaupt existiert), der TLS-Aufsatz ist in
+  Phase 2 geprüft und hier nicht wiederholt, und **mobil** ist von den
+  Nutzersuiten nur der Chat-Weg aus AP 8 (390×844 in allen drei Engines) — die
+  übrigen Dateien laufen in Desktop-Größen.
+
+Zahlen: Server-Unit-Tests 1121 → **1125** (+4 für `isUniqueViolation`),
+`shared-models` 99 → **102** (+3 für `formatAnswer`), Nutzer-Client 251,
+Veranstalter-Client 213 (eine Zusicherung umgeschrieben), Vertragssuite 586,
+Nutzer-Browsersuite 222, Veranstalter-Browsersuite 294 (+36 übersprungen).
+Katalog unverändert **956** — AP 13 hat keinen Schlüssel gebraucht, weil
+`common.yes`/`common.no` seit Phase 2 da sind. **Keine Migration.** Ein neues
+Prüfskript, zwei korrigierte. Referenzdokument 1.39 → **1.40** (F184, F185).
+`todo.md`: der Phasenabschnitt von zwanzig offenen Einträgen auf **einen**.
+
+Definition of Done, Punkt für Punkt:
+
+1. **Abnahmekriterien und Suiten** — erfüllt, alle nacheinander gefahren.
+2. **Ein Mensch kann die Instanz ohne den Veranstalter benutzen** — erfüllt
+   (AP 1–AP 8 und AP 12, je mit Browsersuite; der Chat-Weg auf Telefongröße).
+3. **Ein Interessent ohne Konto erreicht den Veranstalter, die Antwort kommt
+   per Mail an** — erfüllt, am laufenden Stack mit Mailpit durchgespielt und ab
+   jetzt als `verify-contact.mjs` wiederholbar.
+4. **Eine Event-Änderung erreicht ein echtes Gerät** — **offen, und nur mit
+   Geräten abzuhaken.** Die Zustellstrecke ist gebaut und geprüft
+   (`verify-push.mjs`, Unit-Tests, Vertragstests); was fehlt, ist die
+   Vier-Zeilen-Matrix aus Spike 3 auf echter Hardware. Steht in `todo.md` unter
+   _On a device — waiting for Marius_, mit dem Verfahren in
+   `docs/spikes/03-web-push.md`.
+5. **`todo.md` durchgearbeitet, F118–F139 im Referenzdokument** — erfüllt
+   (vergeben sind F118–F185 ohne F62 und F129–F131).
+6. **Dieses Dokument von Plan auf Protokoll** — erfüllt, samt phasenweitem
+   _Was anders lief_ am Ende.
+
+**M8 ist damit bis auf Punkt 4 erreicht.**
+
+Offen aus diesem Paket:
+
+- **Die Gerätematrix** (Punkt 4 oben) — Marius, mit vier Geräten.
+- **Die 164 Fixture-Reihen in der Entwicklungsdatenbank.** Der Neuzuwachs ist
+  gestoppt; das Aufräumen ist eine Anweisung und Marius' Entscheidung:
+  `DELETE FROM event_series WHERE name LIKE 'Invitations %Series %'` —
+  16.774 Anmeldungen hängen mit `ON DELETE CASCADE` daran. Vorher zählen, nicht
+  hinterher.
+- **Die Browsersuiten laufen fast nur in Desktop-Größen.** Der Nutzer-Client ist
+  mobile-first (Produktregel), und geprüft wird das an einer Stelle. Eine
+  Telefongröße für die Profil- und Anmeldungswege wäre billig, kann aber
+  Locator um Locator brechen — Arbeit für die Usability-Runde der Phase 5, nicht
+  für ein Abschlusspaket, das grüne Suiten braucht.
+
+---
+
+## Was anders lief — über die ganze Phase
+
+Je Paket steht es oben; das hier sind die fünf Dinge, die man erst sieht, wenn
+man dreizehn Pakete nebeneinanderlegt.
+
+**Viermal dieselbe Bewegung: die Zusage gehört in die SQL des Ports.** F152 (die
+Profilsuche liest `searchable`, nicht der Aufrufer), F173 (jede Anweisung der
+Veranstalterseite trägt `type IN ('group', 'organizer_contact')`), F134 (die
+Zielgruppe einer Event-Änderung ist eine `UNION`, nicht zwei Abfragen) und F136
+(die Newsletter-Übersicht trägt ihre drei Regeln selbst). Vier Pakete, dieselbe
+Antwort auf dieselbe Frage — **wie verhindert man, dass ein späterer Aufrufer
+die Zusage umgeht?** Nicht mit einer Prüfung darüber: die kann man vergessen.
+Die Alternative war jedes Mal eine Port-Methode, die mehr beantwortet, als
+irgendwer fragen darf („alle Profile", „alle Gespräche", „alle Geräte", „alle
+Adressen mit Häkchen") — und die dann nur noch durch Disziplin harmlos bleibt.
+Das ist die Regel, die diese Phase am häufigsten neu gelernt hat, und sie steht
+jetzt in `docs/rules/server-layers.md`.
+
+**Push hat eine Voraussetzung erzwungen, die der Plan nicht kannte.** E44 sagt:
+eine persönliche Benachrichtigung geht nur raus, wenn niemand zusieht. Gebaut
+wurde das in AP 11 — möglich geworden ist es in **AP 8**, weil dort entschieden
+wurde, dass der Socket der **Sitzung** gehört und nicht dem Bildschirm (F166).
+Die naheliegende Wahl wäre die andere gewesen: ein Socket, den die
+Gesprächsansicht öffnet und beim Verlassen schließt. Dann hätte „sieht jemand
+zu?" nur „ist dieses Gespräch offen?" heißen können, und AP 11 hätte AP 8
+umbauen müssen. Zwei Pakete früher richtig geraten, ohne es zu wissen — das ist
+der Grund, warum die Chat-Pakete in der Reihenfolge Fachlichkeit, Echtzeit,
+Oberfläche geschnitten waren und nicht umgekehrt.
+
+**Der Chat war der größte Zuwachs, und der Schnitt in drei Pakete hat
+gehalten.** Was das Risikoregister nicht vorhergesehen hatte, war nicht die
+Größe, sondern **der Weg des Cookies**: das Sitzungscookie trägt `Path=/api`,
+also reist es nicht zu einem Socket unter `/socket.io` mit (F160). Der Socket
+ist deshalb nach `/api/socket.io` gezogen — eine Zeile in `shared-models`, die
+seither Server, beide Clients, der Proxy und das Prüfskript lesen. Gefunden hat
+es die kleinste mögliche Prüfung am Anfang von AP 7, genau wie die
+Gegenmaßnahme es vorgesehen hatte: **die Tür zuerst, die Räume danach.**
+
+**Ein Modulschalter ist nie nur ein Schalter.** Diese Phase hat fünf angefasst
+(`profiles`, `profile-search`, `chat`, `push`, `newsletter-opt-in`), und jeder
+hat etwas beigetragen: ein Schalter darf eine **Voraussetzung** haben und löst
+sie nie still auf (E42, F128); ein zurückkehrender Schlüssel bringt die
+**Altlast** seiner Attrappenzeile mit (F137); gefragt wird er **im Dienst**, nicht
+in einem Client, der ihn auch liest (E21, F63); er darf an **einzelnen Routen**
+hängen statt an der Klasse, wenn P1 und P2 in einem Controller wohnen (F175);
+und der Handshake ist eine eigene Tür, an der er auch gefragt werden muss (E41).
+Der teuerste Teil war keiner davon, sondern der Test: eine **instanzweite**
+Zeile, drei Browser-Engines und `fullyParallel` ergeben eine Suite, die sich das
+Modul unter den eigenen Füßen abschaltet.
+
+**Am Ende war die Testinfrastruktur der Reibungspunkt, nicht der Code.** Die
+Fehlschläge der letzten drei Pakete lagen fast alle dort: eine geteilte
+instanzweite Zeile (AP 12), ein Aufräumen ohne `finally`, das ein Modul
+angeschaltet zurückließ (AP 12), über SQL gesäte Zeilen, die nur SQL wieder
+loswird (AP 12 und AP 13), zweitausend Fixture-Zeilen, die eine Suite über
+zweiundachtzig Läufe hinterlassen hatte (AP 13), und ein Klick, der noch keine
+erledigte Anfrage ist (AP 13). Keiner davon war ein Fehler im Produkt, jeder
+hätte einen verdecken können. Alle fünf stehen in
+`docs/rules/e2e-tests.md` — die Datei ist in dieser Phase um die Hälfte
+gewachsen und ist damit das genaue Gegenstück zu
+`tools/spike-verification/`: das eine Netz für Fehler, die nur ein Deployment
+zeigt, das andere für Fehler, die nur eine geteilte Instanz zeigt.

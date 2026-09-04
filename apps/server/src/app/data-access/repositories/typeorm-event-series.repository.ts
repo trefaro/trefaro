@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, QueryFailedError, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import {
   EventSeriesSlugTakenError,
   type EventSeriesChanges,
@@ -9,9 +9,7 @@ import {
   type NewEventSeries,
 } from '../../business/event-series/ports/event-series.repository';
 import { EventSeriesEntity } from '../entities';
-
-/** PostgreSQL's unique-violation SQLSTATE. */
-const UNIQUE_VIOLATION = '23505';
+import { isUniqueViolation } from './unique-violation';
 
 /** PostgreSQL implementation of {@link EventSeriesRepository}. */
 @Injectable()
@@ -113,14 +111,6 @@ export class TypeormEventSeriesRepository implements EventSeriesRepository {
       ? new EventSeriesSlugTakenError(slug)
       : error;
   }
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  const driverError =
-    error instanceof QueryFailedError
-      ? (error.driverError as { code?: string } | undefined)
-      : (error as { code?: string } | undefined);
-  return driverError?.code === UNIQUE_VIOLATION;
 }
 
 function toRecord(row: EventSeriesEntity): EventSeriesRecord {

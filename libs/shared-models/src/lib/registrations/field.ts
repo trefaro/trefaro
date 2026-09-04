@@ -181,19 +181,40 @@ export interface RegistrationFieldOrder {
 }
 
 /**
+ * The two words a ticked box can read as, in the reader's language.
+ *
+ * Passed in rather than looked up: this library knows no catalogue, and a tick
+ * is shown in three places in two clients, each of which has one (NFR 4).
+ */
+export interface AnswerWords {
+  readonly yes: string;
+  readonly no: string;
+}
+
+/**
  * How an answer reads in a table or a detail view.
  *
  * In one place, because the overview, the detail panel and later the export all
  * have to say the same thing about the same answer — and because "false" is not
  * what an organizer should read where "no" is meant.
  *
+ * The two words are an **argument, and a required one** (AP 13 of phase 3):
+ * until then this function answered `yes` and `no` in English and both clients
+ * printed that as it came, in screens an organization reads in its own language
+ * (NFR 4). A default would have kept that bug available, so there is none —
+ * whoever formats an answer says in which words. The dash for an unanswered
+ * question stays here: it is punctuation, not a word.
+ *
  * Not for a file field: what was uploaded is an {@link AttachmentSummary}, and
  * a file field with nothing uploaded reads as the same dash as any other
  * unanswered question.
  */
-export function formatAnswer(value: CustomFieldValue | undefined): string {
+export function formatAnswer(
+  value: CustomFieldValue | undefined,
+  words: AnswerWords,
+): string {
   if (value === undefined || value === '') return '—';
-  if (value === true) return 'yes';
-  if (value === false) return 'no';
+  if (value === true) return words.yes;
+  if (value === false) return words.no;
   return value;
 }

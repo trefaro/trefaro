@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import {
   RegistrationFieldKeyTakenError,
   type NewRegistrationField,
@@ -9,9 +9,7 @@ import {
   type RegistrationFieldRepository,
 } from '../../business/registration/ports/registration-field.repository';
 import { RegistrationFieldEntity } from '../entities';
-
-/** PostgreSQL's unique-violation SQLSTATE. */
-const UNIQUE_VIOLATION = '23505';
+import { isUniqueViolation } from './unique-violation';
 
 /** PostgreSQL implementation of the field kit port (F12). */
 @Injectable()
@@ -99,14 +97,6 @@ export class TypeormRegistrationFieldRepository implements RegistrationFieldRepo
     });
     return this.findByEvent(eventId);
   }
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  const driverError =
-    error instanceof QueryFailedError
-      ? (error.driverError as { code?: string } | undefined)
-      : (error as { code?: string } | undefined);
-  return driverError?.code === UNIQUE_VIOLATION;
 }
 
 function toRecord(row: RegistrationFieldEntity): RegistrationFieldRecord {

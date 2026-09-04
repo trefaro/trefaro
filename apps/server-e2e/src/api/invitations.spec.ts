@@ -2,6 +2,7 @@ import { adminCookie } from '../support/admin-session';
 import { api } from '../support/api-client';
 import {
   closeDatabase,
+  deleteSeries,
   seedManyConfirmedRegistrations,
   seedRegistrations,
 } from '../support/database';
@@ -266,6 +267,13 @@ describe('invitations API', () => {
   }, 60_000);
 
   afterAll(async () => {
+    // Both series, with their events, registrations and invitations under them
+    // (AP 13 of phase 3). This suite used to leave them standing — two series
+    // per run, and one development database with ninety-four of them to show
+    // for it. A leftover fixture does not fail anything by itself; it makes the
+    // next suite that collides with one report a wrong count and look like a
+    // regression.
+    await deleteSeries(series?.id, otherSeries?.id);
     await closeDatabase();
   });
 

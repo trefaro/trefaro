@@ -421,9 +421,31 @@ check(
   listed.includes('room-planning'),
   JSON.stringify(listed),
 );
+/**
+ * What this image actually ships, core modules and plug-ins together.
+ *
+ * A literal, and it has to be maintained — which is the point: E21 says a
+ * switch nothing reads must not be offered, and only a list somebody keeps can
+ * say what "nothing reads" means. This one was written in phase 2 as
+ * "`newsletter` and `chat` must be absent", when both were withdrawn
+ * placeholder keys; `chat` came back as a real module in AP 6 of phase 3 and
+ * the check failed for the right reason on the wrong grounds. `newsletter` is
+ * the one key that never comes back (F8, F63) — FR 4.8 is an opt-in
+ * administration and got `newsletter-opt-in` of its own in AP 12.
+ */
+const SHIPPED = [
+  'profiles',
+  'profile-search',
+  'chat',
+  'media-links',
+  'push',
+  'newsletter-opt-in',
+  'room-planning',
+];
 check(
   'and only modules that exist (E21)',
-  !listed.includes('newsletter') && !listed.includes('chat'),
+  !listed.includes('newsletter') &&
+    listed.every((key) => SHIPPED.includes(key)),
   JSON.stringify(listed),
 );
 

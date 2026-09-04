@@ -23,24 +23,39 @@ invitations to former participants — and administrator accounts with a login i
 front of all of it. An organization can run its event work on an instance today.
 The record, decision by decision, is in [`docs/PHASE1.md`](docs/PHASE1.md).
 
-**Phase 2 is under way.** An instance already carries the organization's name,
-colours, logo and app icon, switches its optional modules and plug-ins on and
-off, walks an operator through its own first-run setup (with TLS as a compose
-overlay), and speaks English and German with a switch that takes effect without a
-reload. The interface text is **data the instance serves**, not strings baked into
-a client — so an organization can correct a word, or add a language, without
-rebuilding anything: the administration lists every language with how far it is
-translated, edits it key by key beside the English original, takes a translation
-file out and back in again, and decides separately which languages visitors may
-choose. The **participant client is fully translated**: every page a visitor sees
-speaks the language they picked, dates and sizes included.
+**Phase 2 is complete** (29.08.2026): an instance carries the organization's
+name, colours, logo and app icon, switches its optional modules and plug-ins on
+and off, walks an operator through its own first-run setup (with TLS as a compose
+overlay), and installs on a phone as a PWA. Every sentence in both clients and in
+every mail is **data the instance serves**, not strings baked into a client — so
+an organization can correct a word, or add a language, without rebuilding
+anything: the administration lists every language with how far it is translated,
+edits it key by key beside the English original, takes a translation file out and
+back in again, and decides separately which languages visitors may choose. Event
+titles, descriptions and programmes get translations of their own. The record is
+in [`docs/PHASE2.md`](docs/PHASE2.md).
 
-**Not built yet:** the organizer client's own text, translated mails, content
-translations and the PWA polish (phase 2 — planned and
-recorded in [`docs/PHASE2.md`](docs/PHASE2.md)); participant login, profiles, messaging,
-real-time chat and push (phase 3); the four curated plug-ins — programme
-proposals, forum, room planning, QR check-in (phase 4). What is deferred and why
-is in [`todo.md`](todo.md).
+**Phase 3 is complete** (04.09.2026): the community half. Somebody who has been to
+an event can now make an account of their own — double opt-in, like a
+registration — keep a profile with an avatar and the questions this organization
+asks, decide whether they may be found at all, and see and cancel their
+registrations without waiting for the mailed link. Those who opt in can be found
+by name, place or field of work, and written to: one-to-one conversations with
+pictures, groups the organizer assembles from an event's confirmed registrations,
+delivered live over a WebSocket and by push notification to whoever is not
+watching. An interested person with no account reaches the organizers from the
+event page, and their answer arrives as ordinary mail. Organizers read and answer
+all of it on a screen of their own. And two smaller promises: a moved event
+notifies the phones that care about it, and an address can ask for news without
+registering for anything (opt-in administration only — Trefaro sends no
+newsletters). The record is in [`docs/PHASE3.md`](docs/PHASE3.md).
+
+**Not built yet:** the four curated plug-ins — programme proposals, forum, room
+planning, QR check-in (phase 4); and the hardening round — configurable
+throttling, a participant password reset, erasure, the usability test with the
+pilot partner (phase 5). What is deferred and why is in [`todo.md`](todo.md),
+including the one check no test suite can make: push notifications on four real
+devices.
 
 [`docs/INSTALL.md`](docs/INSTALL.md) installs an instance;
 `docs/BOOTSTRAP.md` sets up a development environment.

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import type {
   ProgramItemParticipant,
   ProgramItemSignupRecord,
@@ -9,9 +9,7 @@ import type {
   SignUpRequest,
 } from '../../business/program/ports/program-item-signup.repository';
 import { ProgramItemSignupEntity, RegistrationEntity } from '../entities';
-
-/** PostgreSQL's unique-violation SQLSTATE. */
-const UNIQUE_VIOLATION = '23505';
+import { isUniqueViolation } from './unique-violation';
 
 /**
  * PostgreSQL implementation of the sign-up port (FR 3.10).
@@ -149,12 +147,4 @@ export class TypeormProgramItemSignupRepository implements ProgramItemSignupRepo
       signedUpAt: row.signedUpAt,
     }));
   }
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  const driverError =
-    error instanceof QueryFailedError
-      ? (error.driverError as { code?: string } | undefined)
-      : undefined;
-  return driverError?.code === UNIQUE_VIOLATION;
 }

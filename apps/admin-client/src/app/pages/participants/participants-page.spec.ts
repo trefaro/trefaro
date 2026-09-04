@@ -232,6 +232,11 @@ async function render(
           '{{peak}} with {{count}}.',
         'admin.participants.matchFiltered.many':
           '{{shown}} of {{total}} registrations',
+        // German on purpose: a ticked box used to read "no" here whatever
+        // language the organizer had chosen (AP 13 of phase 3), so the point of
+        // the assertion below is that the word comes out of the catalogue.
+        'common.yes': 'Ja',
+        'common.no': 'Nein',
       }),
       provideRouter([]),
       { provide: ParticipantsAdminService, useValue: participants },
@@ -476,15 +481,18 @@ describe('ParticipantsPage', () => {
       ]);
     });
 
-    it('reads a checkbox answer as yes and no, not as true and false', async () => {
+    it("reads a checkbox answer in words, and in the reader's language", async () => {
       const { page } = await render(
         { selected: 'registration-1' },
         { detail: detail({ visa: false }) },
       );
 
+      // Not `false`, and not the English `no` either: `formatAnswer` takes the
+      // two words from here since AP 13 of phase 3, because this panel is a
+      // screen an organization reads in its own language (NFR 4).
       expect(page.answers().at(1)).toEqual({
         label: 'Needs a visa letter',
-        value: 'no',
+        value: 'Nein',
       });
     });
 

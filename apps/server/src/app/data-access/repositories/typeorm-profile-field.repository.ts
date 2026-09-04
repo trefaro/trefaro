@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import {
   ProfileFieldKeyTakenError,
   type NewProfileField,
@@ -9,9 +9,7 @@ import {
   type ProfileFieldRepository,
 } from '../../business/profiles/ports/profile-field.repository';
 import { ProfileFieldEntity } from '../entities';
-
-/** PostgreSQL's unique-violation SQLSTATE. */
-const UNIQUE_VIOLATION = '23505';
+import { isUniqueViolation } from './unique-violation';
 
 /** PostgreSQL implementation of the profile field kit port (FR 4.3, E35). */
 @Injectable()
@@ -87,14 +85,6 @@ export class TypeormProfileFieldRepository implements ProfileFieldRepository {
     });
     return this.findAll();
   }
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  const driverError =
-    error instanceof QueryFailedError
-      ? (error.driverError as { code?: string } | undefined)
-      : (error as { code?: string } | undefined);
-  return driverError?.code === UNIQUE_VIOLATION;
 }
 
 function toRecord(row: ProfileFieldEntity): ProfileFieldRecord {

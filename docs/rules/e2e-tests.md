@@ -307,5 +307,29 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   könnte. `deleteNewsletterSubscriptions(suffix)` in
   `support/registration-seed.ts`, und die Suite benutzt ihre **eigene**
   Adressdomain, damit sie nicht die Zeilen einer anderen mitnimmt.
+- **Ein Klick, der eine Anfrage auslöst, ist keine erledigte Anfrage.**
+  `click()` löst sich auf, wenn der Klick zugestellt ist — nicht, wenn das
+  `PUT`, das er startet, geantwortet hat. `profile-fields.spec.ts` lud direkt
+  danach neu und war deshalb sporadisch rot (einmal in AP 10, einmal in drei
+  Läufen von AP 11), während alles andere grün war. Der Verdacht stand als
+  „drei Engines schreiben dieselbe Liste" in `todo.md` und war **falsch**: die
+  Suite lief längst nur in Chromium und seriell. Die Reparatur ist eine
+  Zusicherung **vor** dem Neuladen — `expect.poll` auf die Reihenfolge, die der
+  Bildschirm zeigt, weil die Seite sich aus der Antwort des Servers neu zeichnet
+  — und danach dieselbe noch einmal. Aus einer sporadischen Zusicherung sind so
+  zwei feste geworden: einmal gegen den Client, einmal gegen den Server.
+- **Jede Suite räumt ab, was sie angelegt hat — und über SQL, was sie über SQL
+  gesät hat.** Das ist die in AP 13 der Phase 3 getroffene Entscheidung,
+  nachdem `invitations.spec.ts` zwei Reihen je Lauf hinterlassen hatte: 164
+  Reihen mit 16.774 Anmeldungen in einer Entwicklungsdatenbank. Die Alternative
+  („der Lauf beginnt bei einem bekannten Zustand") ist verworfen — gegen eine
+  geteilte Entwicklungsinstanz wird geprüft, und eine Suite, die nur auf einer
+  leeren Datenbank läuft, läuft nicht auf einer echten. Über den Endpunkt geht
+  es dabei nicht: `DELETE /api/admin/series/:id` verweigert eine Reihe mit
+  bestätigten Anmeldungen (E14), und genau die sät diese Suite. `deleteSeries`
+  in `support/database.ts` löscht die Reihe, und `event`, `registration` und
+  `invitation` hängen mit `ON DELETE CASCADE` daran. Was **nicht** mitgeht,
+  sind Dateien (E9) — eine Suite mit Uploads oder Gesprächsbildern braucht mehr
+  als diese eine Anweisung.
 
 Siehe auch: [Fallen in den Angular-Clients](angular-clients.md), [Deployment und Prüfung](deployment.md).

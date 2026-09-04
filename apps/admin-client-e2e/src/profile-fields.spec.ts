@@ -77,6 +77,25 @@ test.describe('the profile form of the instance', () => {
   const addForm = (page: Page) =>
     page.getByRole('region', { name: t('admin.profileFields.addHeading') });
 
+  /**
+   * Whether this test's second question sits above its first one.
+   *
+   * A predicate rather than an assertion, so both call sites can poll it:
+   * `allInnerTexts` reads whatever is on the screen at that moment and waits
+   * for nothing, which is the trap this used to fall into on a freshly
+   * reloaded page.
+   */
+  const movedIsAbove = async (page: Page, label: string): Promise<boolean> => {
+    const keys = await questions(page).allInnerTexts();
+    const first = keys.findIndex((text) =>
+      text.includes(`e2e-first-${label.toLowerCase()}`),
+    );
+    const moved = keys.findIndex((text) =>
+      text.includes(`e2e-second-${label.toLowerCase()}`),
+    );
+    return first >= 0 && moved >= 0 && moved < first;
+  };
+
   test('is reachable from the navigation', async ({ page }) => {
     await page.goto('/');
 
@@ -221,22 +240,17 @@ test.describe('the profile form of the instance', () => {
       })
       .click();
 
-    // The order survives a reload, because it is the server's and was sent as
-    // the whole list rather than as "move this one".
+    // The screen first, and polled: a click resolves when it is dispatched, not
+    // when the `PUT …/order` it starts has answered — and this page redraws
+    // from that answer. Reloading straight afterwards therefore raced the
+    // request, which is what made this test fail once in AP 10 and once in
+    // AP 11 while everything around it was green.
+    await expect.poll(() => movedIsAbove(page, label)).toBe(true);
+
+    // And then the server's: the order survives a reload because it was sent
+    // as the whole list rather than as "move this one".
     await page.reload();
-    // Awaited before the texts are read: `allInnerTexts` does not wait, and a
-    // freshly reloaded page has not fetched its questions yet.
-    await expect(
-      question(page, `e2e-first-${label.toLowerCase()}`),
-    ).toBeVisible();
-    const keys = await questions(page).allInnerTexts();
-    const first = keys.findIndex((text) =>
-      text.includes(`e2e-first-${label.toLowerCase()}`),
-    );
-    const moved = keys.findIndex((text) =>
-      text.includes(`e2e-second-${label.toLowerCase()}`),
-    );
-    expect(moved).toBeLessThan(first);
+    await expect.poll(() => movedIsAbove(page, label)).toBe(true);
   });
 
   test('says that deleting a question keeps the answers (F34)', async ({

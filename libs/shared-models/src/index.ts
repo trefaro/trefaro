@@ -179,6 +179,7 @@ export {
   uploadTypeLabelKey,
   type AnswerableField,
   type AnswerableFieldType,
+  type AnswerWords,
   type AttachmentSummary,
   type ConfirmationState,
   type CustomFieldValue,

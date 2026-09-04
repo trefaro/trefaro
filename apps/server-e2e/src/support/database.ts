@@ -213,6 +213,28 @@ export async function deleteRegistrations(eventId: string): Promise<void> {
 }
 
 /**
+ * Removes whole series a suite created, with everything under them.
+ *
+ * By SQL rather than through `DELETE /api/admin/series/:id`, and that is the
+ * point: the endpoint refuses a series with confirmed registrations (E14), and
+ * a suite that seeded two hundred of them by SQL has to take them back the same
+ * way. One statement is enough — `event.series_id`, `registration.event_id`
+ * and `invitation.series_id` all cascade — and a suite that uploaded files or
+ * held conversations needs more than this (the files are not in the database,
+ * E9), which is why this says series and not "clean up".
+ *
+ * Added in AP 13 of phase 3, for the leak that made the development database
+ * grow by two series per contract run.
+ */
+export async function deleteSeries(...ids: readonly string[]): Promise<void> {
+  const known = ids.filter((id) => !!id);
+  if (known.length === 0) return;
+  await pool.query('DELETE FROM event_series WHERE id = ANY($1::uuid[])', [
+    known,
+  ]);
+}
+
+/**
  * A participant account, put into the table directly (FR 4.1, FR 4.4).
  *
  * The deliberate exception the other seeds also claim, and here it is not only

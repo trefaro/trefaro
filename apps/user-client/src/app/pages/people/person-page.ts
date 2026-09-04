@@ -249,11 +249,13 @@ export class PersonPage {
   /**
    * How one answer reads.
    *
-   * `formatAnswer` in `shared-models` does the same job for the organizer
-   * client, and is deliberately not used here: it answers in English, which is
-   * right for nothing this client shows (NFR 4). An unanswered question reads
-   * as the empty string and is dropped by the caller rather than becoming a
-   * dash — a reader is looking at a person, not at a form.
+   * `formatAnswer` in `shared-models` does the same job wherever an answer
+   * stands in a form, and is still not used here — but for one reason now
+   * instead of two: since AP 13 of phase 3 it takes the two words for a tick
+   * from its caller, so it no longer answers in English (NFR 4), and what is
+   * left is the dash. An unanswered question reads as the empty string here and
+   * is dropped by the caller — a reader is looking at a person, not at a form,
+   * and a form's gaps are not a person's.
    */
   private reads(value: string | boolean | undefined): string {
     if (value === true) return this.i18n.translate('common.yes');

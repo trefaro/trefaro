@@ -409,7 +409,7 @@ which half of a problem is which.
    :443 / :80 ────────▶│ nginx (reverse proxy)         │
                        └──┬──────────┬─────────────┬───┘
                           │          │             │
-              /           │  /admin/ │       /api/ │  /socket.io/
+              /           │  /admin/ │       /api/ │  /api/socket.io/
                           ▼          ▼             ▼
                  ┌────────────┐ ┌──────────────┐ ┌──────────────────┐
                  │ user-client│ │ admin-client │ │ server (NestJS)  │
@@ -424,6 +424,14 @@ which half of a problem is which.
 Only the reverse proxy publishes a port. The server and the database are on the
 internal Docker network alone, so no endpoint of theirs can be reached from
 outside except through the proxy.
+
+The WebSocket lives **inside** `/api` — at `/api/socket.io/`, not at the
+socket.io default — because the participant session cookie carries `Path=/api`
+and would not travel anywhere else, and that handshake is what authenticates the
+socket. A proxy in front of this one has to pass the `Upgrade` and `Connection`
+headers through for that location; `infra/nginx/trefaro-locations.conf` shows
+what nginx needs, and `tools/spike-verification/verify-proxy.mjs` says whether
+it arrived.
 
 The participant client is a mobile-first installable PWA served at the root; the
 organizer client is desktop-first and served under `/admin/`. Both fetch their

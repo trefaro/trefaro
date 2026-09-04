@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import {
   AdminEmailTakenError,
   type AdminUserRecord,
@@ -8,9 +8,7 @@ import {
   type NewAdminUser,
 } from '../../business/login/ports/admin-user.repository';
 import { AdminUserEntity } from '../entities';
-
-/** PostgreSQL's unique-violation SQLSTATE. */
-const UNIQUE_VIOLATION = '23505';
+import { isUniqueViolation } from './unique-violation';
 
 /** PostgreSQL implementation of {@link AdminUserRepository}. */
 @Injectable()
@@ -73,14 +71,6 @@ export class TypeormAdminUserRepository implements AdminUserRepository {
   async recordLogin(id: string, at: Date): Promise<void> {
     await this.repository.update({ id }, { lastLoginAt: at });
   }
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  const driverError =
-    error instanceof QueryFailedError
-      ? (error.driverError as { code?: string } | undefined)
-      : (error as { code?: string } | undefined);
-  return driverError?.code === UNIQUE_VIOLATION;
 }
 
 function toRecord(row: AdminUserEntity): AdminUserRecord {

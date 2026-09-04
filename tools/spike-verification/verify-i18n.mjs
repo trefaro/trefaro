@@ -90,11 +90,27 @@ function send(method, path, payload) {
 // --- the catalogue is inside this deployment -------------------------------
 
 const config = await call('/api/config');
+/**
+ * The **shape** of the offer, not its size.
+ *
+ * Until AP 13 of phase 3 this asserted "more than one language", which is a
+ * configurable value and therefore not a script's business (`tools/CLAUDE.md`):
+ * an instance that came up through the guided setup offers exactly the one
+ * language it was set to, and it failed there for no defect at all. What has to
+ * hold is that the list is language tags and that the default is among them —
+ * a client picks from this list and falls back to the default. That the image
+ * carries **two** catalogues is asserted below, where it belongs: by asking for
+ * English and German, both of which are served whether or not they are offered
+ * (F76 — "translated" and "offered" are two decisions).
+ */
+const offered = config.body?.availableLocales;
 check(
-  'the instance offers more than one language',
-  Array.isArray(config.body?.availableLocales) &&
-    config.body.availableLocales.length > 1,
-  JSON.stringify(config.body?.availableLocales),
+  'the offered languages are language tags, and the default is one of them',
+  Array.isArray(offered) &&
+    offered.length > 0 &&
+    offered.every((tag) => /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(tag)) &&
+    offered.includes(config.body?.defaultLocale),
+  `${JSON.stringify(offered)}, default ${config.body?.defaultLocale}`,
 );
 
 const english = await call('/api/i18n/en');

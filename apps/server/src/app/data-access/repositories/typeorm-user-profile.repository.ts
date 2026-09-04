@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import {
   ProfileEmailTakenError,
   type NewUserProfile,
@@ -9,9 +9,7 @@ import {
   type UserProfileRepository,
 } from '../../business/profiles/ports/user-profile.repository';
 import { UserProfileEntity } from '../entities';
-
-/** PostgreSQL's unique-violation SQLSTATE. */
-const UNIQUE_VIOLATION = '23505';
+import { isUniqueViolation } from './unique-violation';
 
 /** PostgreSQL implementation of {@link UserProfileRepository}. */
 @Injectable()
@@ -113,14 +111,6 @@ export class TypeormUserProfileRepository implements UserProfileRepository {
     if ((result.affected ?? 0) === 0) return null;
     return this.findById(id);
   }
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  const driverError =
-    error instanceof QueryFailedError
-      ? (error.driverError as { code?: string } | undefined)
-      : (error as { code?: string } | undefined);
-  return driverError?.code === UNIQUE_VIOLATION;
 }
 
 /**

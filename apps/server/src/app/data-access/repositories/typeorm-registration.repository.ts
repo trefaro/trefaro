@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import type {
   ParticipantSort,
   RegistrationCounts,
@@ -22,9 +22,7 @@ import {
 } from '../../business/registration/ports/registration.repository';
 import type { RegistrationTally } from '../../business/registration/ports/registration-tally';
 import { RegistrationEntity } from '../entities';
-
-/** PostgreSQL's unique-violation SQLSTATE. */
-const UNIQUE_VIOLATION = '23505';
+import { isUniqueViolation } from './unique-violation';
 
 /**
  * PostgreSQL implementation of the two registration ports.
@@ -478,14 +476,6 @@ function orderBy(
  */
 function escapeLike(term: string): string {
   return term.replace(/[\\%_]/g, (character) => `\\${character}`);
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  const driverError =
-    error instanceof QueryFailedError
-      ? (error.driverError as { code?: string } | undefined)
-      : (error as { code?: string } | undefined);
-  return driverError?.code === UNIQUE_VIOLATION;
 }
 
 function toRecord(row: RegistrationEntity): RegistrationRecord {
