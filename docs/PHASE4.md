@@ -706,7 +706,9 @@ Kein neuer Code außer dem, was der Abschluss findet:
   Voraussetzung: Einschalten ohne `profiles` ist ein 409.
 - **Katalogzahl, README, `CLAUDE.md`, `docs/rules/`** nachgezogen; die Regeln
   dieser Phase gehören nach `docs/rules/` (Plug-in-Vertrag, Einhängepunkte,
-  Icons), nicht in `CLAUDE.md`.
+  Icons), nicht in `CLAUDE.md`. Dort ändern sich **eine Zeile in der Phasenliste
+  und die Zahlen darunter** — kein Absatz je Paket, das war die Diät vom
+  07.09.2026 (`docs/rules/README.md`, _Pflege_).
 - **Dieses Dokument von Plan auf Protokoll korrigiert**, mit einem phasenweiten
   _Was anders lief_.
 

@@ -7,16 +7,18 @@ einmal schiefgegangen.**
 Das ist keine zweite Anforderungsanalyse. Die Begründung jeder Entscheidung steht
 ausführlich woanders und wird hier nur mit ihrer Nummer zitiert:
 
-- **F1–F183** — Entscheidungsprotokoll in
+- **F1–F185** — Entscheidungsprotokoll in
   [`docs/Anforderungsanalyse_und_Umsetzungsplan.md`](../Anforderungsanalyse_und_Umsetzungsplan.md)
   (F62 wurde nie vergeben; F70 beantwortet, was für sie geplant war. **F129–F131
   sind unvergeben** — AP 6 hat sie als schon getroffene Entscheidungen
   wiedererkannt. **F134 und F135** kamen mit AP 11, **F136 und F179–F183** mit
-  AP 12 — damit ist keine Nummer mehr reserviert.)
+  AP 12, **F184 und F185** mit AP 13.)
 - **E1–E16** — Phase 1, [`docs/PHASE1.md`](../PHASE1.md).
 - **E17–E30** — Phase 2, [`docs/PHASE2.md`](../PHASE2.md) (die Zählung läuft über
   die Phasen weiter).
 - **E31–E45** — Phase 3, [`docs/PHASE3.md`](../PHASE3.md).
+- **E46–E59** und **F186–F201** — im Plan der Phase 4 reserviert, noch nicht
+  vergeben: [`docs/PHASE4.md`](../PHASE4.md).
 - **NFR / FR** — nummeriert wie im Anforderungsdokument.
 
 ## Vor der Arbeit an … zuerst lesen
@@ -48,3 +50,12 @@ Bedingungen erfüllt:
 
 Was nur ein Detail der Umsetzung war, gehört ins Phasenprotokoll. Was jede
 Sitzung braucht, gehört in `CLAUDE.md`.
+
+Und die Regel, die `CLAUDE.md` zweimal gebraucht hat: **der Stand einer Phase
+gehört in ihr Protokoll, nicht in die Kurzfassung.** Phase 3 hat `CLAUDE.md` je
+Arbeitspaket einen Absatz angehängt — dreizehn Absätze, 255 Zeilen, jede Tatsache
+darin ein drittes Mal aufgeschrieben (Protokoll, Referenzdokument, hier) — und
+damit die Datei von 178 auf 414 Zeilen gebracht, die jede Sitzung vollständig
+liest. Ein abgeschlossenes Paket bekommt dort **keinen** Absatz: die Phasenliste
+nennt Datum, Meilenstein und das Dokument, die Zahlen stehen in einer Zeile
+darunter, und alles andere hat schon einen Ort.

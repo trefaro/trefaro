@@ -25,6 +25,7 @@ werden müssen:
 | --------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | Anforderungen, Use Cases, Prioritäten, DB-Schema, F1–F185 | **`docs/Anforderungsanalyse_und_Umsetzungsplan.md`** (maßgeblich)                         |
 | Was in einer Phase passierte, E1–E45, _Was anders lief_   | `docs/PHASE1.md`, `docs/PHASE2.md`, `docs/PHASE3.md`, `docs/BOOTSTRAP.md`, `docs/spikes/` |
+| Was Phase 4 vorhat: Pakete, E46–E59, F186–F201            | **`docs/PHASE4.md`** (Plan, noch kein Protokoll)                                          |
 | Installation, TLS, Betrieb                                | `docs/INSTALL.md`                                                                         |
 | Offene Punkte, bekannte Lücken, Pilotpartner-Fragen       | `todo.md` (nach Phase gruppiert, nach jeder Phase durchgehen)                             |
 | Diagramme der Thesis                                      | `docs/thesis/`                                                                            |
@@ -41,9 +42,11 @@ Fünf Teilbäume tragen dafür eine eigene kurze `CLAUDE.md`, die nur auf die
 passenden Regeldateien zeigt: `apps/server/`, `apps/admin-client/`,
 `apps/user-client/`, `infra/`, `tools/`.
 
-**Neu gelernte Regeln kommen nach `docs/rules/`, nicht in dieses Dokument.** Hier
-landet nur, was jede Sitzung braucht. Die Aufnahmebedingung steht in
-`docs/rules/README.md`.
+**Neu gelernte Regeln kommen nach `docs/rules/`, nicht in dieses Dokument**, und
+**der Stand eines Arbeitspakets in sein Phasenprotokoll.** Hier landet nur, was
+jede Sitzung braucht — ein fertiges Paket bekommt deshalb keinen Absatz, sondern
+höchstens eine Zeile in der Phasenliste unten. Die Aufnahmebedingung für eine
+Regel steht in `docs/rules/README.md`.
 
 ## Kommunikation & Konventionen
 
@@ -97,7 +100,8 @@ landet nur, was jede Sitzung braucht. Die Aufnahmebedingung steht in
    Programm, Registrierung, Teilnehmer, Profil, Profil-Suche, Chat, E-Mail,
    Push, Medien-Links (nur externe Stream-/Mediathek-URLs, kein Upload/
    Transcoding). **Plug-ins:** Raumplanung, Diskussionsforum,
-   Programmvorschläge, QR-Code-Check-In, (optional) Individueller Programmplan.
+   Programmvorschläge, QR-Code-Check-In — und seit 04.09.2026 fest dazu, nicht
+   mehr optional: Individueller Programmplan (FR 3.17).
 6. **Plug-in-Distribution v1:** kuratierte Plug-ins sind im Image enthalten und
    werden zur Laufzeit per Konfiguration aktiviert/deaktiviert. Keine
    Fremdinstallation zur Laufzeit; Deaktivieren löscht nie Daten.
@@ -149,253 +153,34 @@ P1/P2/P3-Tabellen im Plan-Dokument.
 1. **✅ 28.08.2026, M2** Kern-MVP Eventmanagement (alle P1) → `docs/PHASE1.md`
    (offen geblieben: die Feedbackrunde mit Democracy International)
 2. **✅ 29.08.2026, M5** Whitelabel-Theming, Modul-Verwaltung, i18n, PWA,
-   Installations-Story → `docs/PHASE2.md`
-3. **✅ 04.09.2026** (alle 13 Pakete; **M8** bis auf die Gerätematrix, die nur
-   mit Geräten in der Hand abzuhaken ist) Profile, Nachrichten,
-   Echtzeit-/Gruppenchat, Push, Profilsuche → `docs/PHASE3.md`
-4. **Geplant** (04.09.2026, `docs/PHASE4.md`, zehn Pakete, M9–M12) Plug-ins:
-   Programmvorschläge, Forum, Raumplanung, QR-Check-In — und **fünftens der
-   individuelle Programmplan** (FR 3.17), von Marius dazugenommen. Drei
-   Vorabentscheidungen: der Icon-Satz wird selbst gehostet statt das Feld zu
-   streichen, der QR-Code reist als Seite hinter dem Mail-Link statt als Anhang,
-   und der Vertrag wächst **einmal** auf `PLUGIN_API_VERSION` 1.2.0
+   Installations-Story → `docs/PHASE2.md`; im _Nachtrag_ dort auch das
+   Zwischenpaket vom 01.09.2026, **das Logo je Reihe und Event** (F113–F117)
+3. **✅ 04.09.2026** Profile, Nachrichten, Echtzeit-/Gruppenchat, Push,
+   Profilsuche → `docs/PHASE3.md` — dreizehn Pakete, je eines mit einem
+   Abschnitt unter _Fortschritt_, dazu ein phasenweites _Was anders lief_.
+   **Meilenstein M8 ist erreicht bis auf die Gerätematrix**, die nur mit Geräten
+   in der Hand abzuhaken ist
+4. **Geplant am 04.09.2026** Plug-ins: Programmvorschläge, Forum, Raumplanung,
+   QR-Check-In und **individueller Programmplan** → `docs/PHASE4.md` (zehn
+   Pakete, M9–M12; der Plug-in-Vertrag wächst **einmal** von
+   `PLUGIN_API_VERSION` 1.1.0 auf 1.2.0). **Kein Paket ist freigegeben.**
 5. Härtung, Usability-Test mit Democracy International (Pilotpartner), Doku,
    Release v1.0 — hier auch: konfigurierbare Drosselung, `CONTRIBUTING.md`
 
-**Das Logo je Reihe und Event ist gebaut** (01.09.2026, eigenes Arbeitspaket
-zwischen den Phasen, so von Marius am 31.08.2026 terminiert) — die P1-Lücke aus
-FR 2.1 und FR 3.1, die Phase 2 in AP 13 gefunden und eskaliert hatte. Protokoll
-in `docs/PHASE2.md` unter _Nachtrag_, Entscheidungen **F113–F117**. Kurz:
-`business/logo-files/` besitzt die Bytes, die beiden Entity-Services behalten
-ihre 404-Regel, je Zeile eine pfadfreie Medienroute (`/api/media/series/:id/logo`,
-`…/events/:id/logo`), eigener Teilbaum `logos/` mit `CHECK` auf beiden Spalten,
-dieselben Uploadregeln wie das Branding. **Kein** Erben des Reihenlogos durch ein
-Event (F114) und **kein** Statusfilter auf der Medienroute (F115) — beides
-bewusst; die Begründungen stehen in `docs/rules/`. Katalog damals 646 → 654.
+**Der Stand in Zahlen:** Entscheidungen **E1–E45** vergeben (Phasen 1–3),
+**E46–E59** im Plan der Phase 4 reserviert; Nachträge **F1–F185** stehen im
+Referenzdokument (F62 und F129–F131 bleiben unvergeben), **F186–F201** sind
+reserviert; Katalog **956** Schlüssel. Was in einem Paket tatsächlich passierte,
+steht im Phasenprotokoll, und was man beim Bauen daraus braucht, in
+`docs/rules/` — **hier nicht noch einmal.**
 
-**Phase 3 ist abgeschlossen** (02.–04.09.2026, dreizehn Arbeitspakete):
-Protokoll in `docs/PHASE3.md`, je Paket ein Abschnitt unter _Fortschritt_ und am
-Ende ein phasenweites _Was anders lief_. Entscheidungen **E31–E45** — in AP 13
-gegen die Umsetzung geprüft, ohne Abweichung; Nachträge **F118–F185** (ohne F62
-und F129–F131, die unvergeben bleiben). Katalog **956** Schlüssel.
-**Meilenstein M8 ist erreicht bis auf einen Punkt:** „Push auf echten Geräten
-belegt" braucht vier Geräte und einen Produktionsbuild — die Matrix steht in
-`todo.md` unter _On a device — waiting for Marius_ und ist das einzige offene
-Kästchen der Phase.
-
-Aus AP 4: die Selbstbedienung kennt zwei Ansprüche — das signierte Token aus der
-Mail und die Sitzung, aufgelöst über die Adresse (F148) —, die
-Teilnehmerübersicht hat ihre Profilspalte (F149) und **eine Mail spricht die
-Sprache ihres Empfängers, samt Inhalt** (F125).
-
-Aus AP 5: `business/profile-search/` mit zwei Lesezugriffen unter
-`/api/participant/profiles`, und das Opt-in **kann nichts umgehen** — die SQL des
-Ports trägt `searchable` und die Bestätigung, nicht der Aufrufer (F152).
-`searchable` steht jetzt auf der Profilseite, aber nur wo eine Suche es liest
-(F151, schließt F142); ein fremdes Profil trägt **keine Adresse** (F150); und ein
-Modulschalter darf eine **Voraussetzung** haben, die er nie still auflöst
-(F128) — `profile-search` braucht `profiles`; `chat` hat seine seit AP 6.
-
-Aus AP 6: `business/chat/` mit sechs Endpunkten, und die Zugangsregel hat **zwei
-Hälften** — ein Gespräch _beginnen_ fragt nach `searchable` (403 für alles
-andere, wortgleich), alles danach fragt nur nach Mitgliedschaft, weil laufende
-Gespräche bleiben (F157, E14). Zwei Menschen haben **genau ein** Gespräch, und
-das garantiert ein eindeutiger `direct_key` statt der Geschäftslogik (F153); der
-Verlauf paginiert als einzige Liste über einen **Cursor** (F154); das Bild einer
-Nachricht ist ein `attachment` in `messages/`, weshalb
-`GET /api/admin/attachments/:id` seither **nur** Anmeldungsdateien bedient
-(F155); und `/api/media/messages/:id/attachment` ist die **einzige** Medienroute
-mit Berechtigungsprüfung — Sitzung über `@RequiresParticipant()`, ein Dekorator,
-der nur verschärfen kann (F156). `chat` ist als Modul zurück, mit `profiles` als
-Voraussetzung — womit die zweite Hälfte des Abnahmekriteriums von AP 5 geprüft
-ist.
-
-Aus AP 7: **der Handshake ist die Tür** (F132) — die Prüfung hängt in einer
-socket.io-Namensraum-Middleware, fragt Sitzung **und** `chat`-Schalter, und eine
-Verbindung ohne Sitzung entsteht nicht. Dafür ist der Socket nach
-**`/api/socket.io`** umgezogen (F160): das Sitzungscookie trägt `Path=/api`, also
-reist es nirgends anders mit — `REALTIME_PATH` in `shared-models` ist die eine
-Schreibweise für Server, beide Clients, Proxy und Prüfskript. Zwei Räume, zwei
-Fragen (F161): der eines Gesprächs wird nur auf `chat:join` und nur von einem
-Mitglied betreten, der eines Mitglieds am Handshake — daher `chat:message` für
-den offenen Verlauf und `chat:conversation` für die Liste. Zugestellt wird von
-einem **eigenen** Dienst, weil Gateway und Gespräche sonst einen Kreis bilden
-(F162), und die Empfänger kommen **aus dem Schreiben** statt aus einer
-Port-Methode, die „wer schreibt mit wem" für jede Id beantworten würde (F163).
-`chat:echo` ist überall weg; `verify-chat.mjs` prüft stattdessen den Satz des
-Abnahmekriteriums durch den Proxy. Offen daraus: **der Handshake trägt keine
-Drosselung** (engine.io bedient ihn vor Nests Router) — Phase 5.
-
-Aus AP 8: zwei Seiten (`/messages`, `/messages/:id`) hinter Sitzung **und**
-`chat`-Schalter, der Weg hinein ist der Knopf auf dem fremden Profil (E37,
-sein 403 ist eine Rücknahme und kein Fehler). Der **Socket gehört der
-Sitzung**, nicht dem Bildschirm (F166) — sonst hieße E44s „sieht jemand zu?“
-nur „ist der Chat offen?“; den Raum eines Gesprächs betritt allein die
-Gesprächsansicht. Eine gesendete Nachricht kommt zweimal an (Antwort und
-Socket) und wird über die Id einmal gezeichnet (F167); die Liste frischt bei
-`chat:conversation` das **gezeigte Fenster** in einer Anfrage auf und mischt
-über die Id (F170); die Uhrzeit einer Nachricht steht in der Zone ihres
-**Lesers** (F168, die eine Ausnahme von E8); und der Verbindungszustand steht
-auf beiden Seiten in einem Bauteil, das nie mehr behauptet, als es weiß
-(F169 — dafür gibt der Client einen Handshake nach acht statt zwanzig
-Sekunden auf). Neu am Server: **eine** Route, `GET
-/api/participant/conversations/:id`, weil eine Gesprächsansicht sagen muss,
-mit wem sie ist — der Port konnte die Frage schon (F165). `initialsOf` ist als
-vierte Kopie ausgezogen (F138).
-
-Aus AP 9: ein Kontaktformular auf der Event-Landingpage, ohne Konto und ohne
-Login — `POST /api/user/series/:reihe/events/:event/contact`, immer **202** mit
-der geschickten Adresse (E10), eigene Drosselung, 404 nur für ein
-unveröffentlichtes Event und **kein** Riegel gegen ein Event, das vorbei ist.
-Die Anfrage wird ein `organizer_contact`-Gespräch mit der Adresse auf dem
-Gespräch, `sender_type = 'guest'`, Event ohne Betreff, **je Anfrage ein neues**
-und **ohne Mitgliedszeile für die Veranstalterseite** (F133 — die Organisation
-ist kein Konto; die Art des Gesprächs sagt, wessen es ist, und AP 10 liest
-danach). Das Formular hängt **nicht** am `chat`-Schalter (F171): FR 3.4 ist P1,
-der Chat ein abschaltbares P2-Modul mit `profiles` als Voraussetzung — eine
-Instanz ohne Teilnehmerkonten muss erreichbar bleiben. Die **siebte Mail** geht
-an die Kontaktadresse der Reihe (sonst an die Absenderadresse der Instanz), in
-der Vorgabesprache der Instanz, grüßt niemanden, und ihr Fehlschlag ändert die
-Antwort des Formulars nicht (F172) — **an den Gast geht keine Mail**, damit
-dieser offene Endpunkt niemandem Fremdes Mail schicken kann. Kein Bild, also
-JSON statt `multipart`. Migration: keine.
-
-Aus AP 10: `business/chat/` hat eine zweite Seite. Die Organisation liest ihre
-Gespräche über einen **zweiten Port**, dessen jede Anweisung
-`type IN ('group', 'organizer_contact')` trägt — ein `direct`-Gespräch kommt
-dort nicht heraus, und das ist eine Zusage der SQL statt einer Prüfung darüber
-(F173, wie F152). Sie hat keine Mitgliedszeile (F133), also auch keine
-Ungelesen-Zahl; an deren Stelle steht **wer zuletzt geschrieben hat**
-(`awaitsAnswer`). Eine Antwort an einen Gast wird **erst gespeichert, dann
-gesendet**, und was aus der Mail wurde, reist in der Antwort mit
-(`delivery: none | sent | failed`, F174) — das Gegenteil von F172, aus dem
-entgegengesetzten Grund: dort darf ein Fehlschlag nicht sichtbar sein (E10),
-hier muss er es sein. Die **achte Mail** grüßt mit dem getippten Namen und
-trägt keinen Handlungsknopf. Gruppen entstehen aus den **bestätigten
-Anmeldungen mit Konto** einer Veranstaltung, und wer hineindarf, entscheidet
-das `INSERT … SELECT`; ist einer nicht dabei, entsteht **nichts**. Der
-`chat`-Schalter hängt an **zwei Routen** statt an der Klasse (F175): Lesen und
-Antworten sind P1, eine Gruppe anzulegen ist FR 4.5. Das Bild einer Nachricht
-hat für den Veranstalter eine **eigene** Route, weil die Medienroute über
-Mitgliedschaft entscheidet (F156). Dazu erledigt: der **Purge der Bilder eines
-Gesprächs** (F158 — über einen eigenen Port, nicht über
-`AttachmentsService.purgeForEvent`) und der **Deep-Link der
-Benachrichtigungsmail** (F172, jetzt `organizerConversationPath`). Migration:
-keine. **Nichts daran ist live** — der Handshake authentifiziert eine
-Teilnehmersitzung, und die Mail ist der Ersatz.
-
-Aus AP 11: **Push ist echt** — nur die Gerätematrix fehlt (siehe unten). Die
-Spalte, die seit Phase 0 vorgemerkt war, ist da: `push_subscription.user_id`
-nullbar mit `ON DELETE CASCADE` (F134, E43), und **nullbar ist das Merkmal** —
-dass ein Event verlegt wurde, ist öffentliche Information. Der **Endpunkt bleibt
-die Identität** der Zeile, also hängt An- und Abmelden ein Gerät _um_ statt es zu
-verdoppeln; der Endpunkt liest die Sitzung **optional** (dritter Leser des
-Cookies → `participantSessionFromRequest`). Die **Zielgruppe einer
-Event-Änderung ist eine `UNION` im Port** — bestätigte Angemeldete _plus_ jedes
-Gerät ohne Konto, nicht einzeln abfragbar (F134, wie F152). Was eine
-Benachrichtigung wert ist, sagt **F176**: veröffentlicht, nicht vorbei, und
-Zeit, Ort oder „findet nicht statt" — eine Benachrichtigung ist eine **Korrektur
-an einem Plan, den jemand schon hat**, also kündigt sie nichts an (F8). Bei
-einer neuen Nachricht geht sie nur an Mitglieder **ohne offenen Socket in diesem
-Gespräch** (F135, E44 — und deshalb war F166 die Voraussetzung); zugestellt wird
-von einem eigenen Dienst neben der Live-Zustellung, den beide Schreiber
-aufrufen. Die Worte kommen aus dem Katalog, **nach Sprache gruppiert**, und E24
-gilt hier ausdrücklich **nicht** (F177). Der Client **erklärt vor** dem
-Browserdialog, liest die Berechtigung statt sie zu erfragen und merkt sich ein
-„jetzt nicht" (F178) — Angebot in der Hülle, Schalter auf der Profilseite.
-Beide Schalter werden **im Dienst selbst** gefragt (E21, F63). `broadcast()` und
-`findAll()` sind weg: es gibt zwei Zielgruppen und keine Methode für eine
-dritte. Migration: **eine**. Vier `todo.md`-Einträge geschlossen.
-
-Aus AP 12: die zwei P3-Zugaben, und beide waren kleiner als der Plan dachte.
-Das **Storno über die Sitzung** (FR 4.7) brauchte keine neue Regel, nur eine
-zweite Route auf `SelfServiceService.cancel` — genau, was F148 vorhergesagt
-hatte. Es ist ein **`POST …/:id/cancellation`** und kein `DELETE` (F179): eine
-Zeile höher löscht `DELETE /api/admin/registrations/:id` eine Anmeldung
-endgültig, und ein Verb, das im einen Präfix „weg" und im anderen „storniert,
-aber aufgehoben" heißt (F23), ist eine API, die man nicht lesen kann. Der
-**Newsletter ist eine Adresse** (E45, F136): `newsletter_subscription` mit
-eigenem Double-Opt-In, nullbarer Reihe und einem eindeutigen Index mit
-**`NULLS NOT DISTINCT`** (F180 — ohne die Klausel hält PostgreSQL zwei `NULL`
-für verschieden und erlaubt dieselbe Adresse beliebig oft). Die Übersicht ist
-eine **`UNION` aus zwei Quellen** mit **einer Zeile je Zustimmung** und drei
-Regeln in der SQL des Ports (F136, wie F152 und F173): nur bestätigte
-Zustimmungen sind abfragbar, ein **Widerspruch** (F24) nimmt eine Adresse aus
-**beiden** Quellen, und die Formular-Hälfte ist je Adresse und Reihe gruppiert.
-Zusammengeführt wird nichts, und es geht **nichts raus** (F8) — die Liste ist
-zum Exportieren da. Die **neunte Mail** grüßt niemanden, sagt worum es geht und
-dass ohne den Klick nichts passiert; eine **zehnte** für „du stehst schon auf
-der Liste" gibt es bewusst nicht (F181), stattdessen sagt das Formular selbst,
-wann eine Mail kommt — und ein Fehlschlag beim Versenden ändert die Antwort
-nicht, sonst verriete der Statuscode, welche Adressen die Instanz kennt. Das
-Formular steht an **zwei Orten** (F182): Startseite ohne Reihe, Reihenseite mit
-ihrem Slug — damit haben beide Zweige der nullbaren Spalte einen Schreiber.
-Zurücknehmen geht über die Organisation und **löscht** die Zeile (F183, die
-Ausnahme zu E14). Der Schalter heißt **`newsletter-opt-in`** und ist **aus** —
-F63 hatte ihm den eigenen Schlüssel versprochen, `newsletter` kommt nie zurück.
-Migration: **eine**.
-
-Aus AP 13: der Abschluss. **`todo.md` unter _Checkable after phase 3_ hat ein
-einziges offenes Kästchen** — die Gerätematrix, die nur mit Geräten abzuhaken
-ist; von zwanzig offenen Einträgen sind vier Code geworden, fünfzehn in den
-Abschnitt gezogen, dem sie gehören (Pilotpartner, Phase 5, _Decided_), jeder mit
-Begründung im Eintrag. **E31–E45 gegen die Umsetzung geprüft, keine Abweichung**
-— nur eine Benennung: der Tätigkeitsbereich aus E36 heißt `activity_areas`. Der
-**Fünf-Container-Stack lief aus leerem Volume** (25 Migrationen, 29 Tabellen,
-kein Administrator, Token im Log) und **neun Prüfskripte** liefen gegen genau
-diese Instanz — eines davon neu: `verify-contact.mjs` geht den Weg von FR 3.4
-ganz durch (Punkt 3 der Definition of Done) und prüft auch die Hälfte, die nicht
-passieren darf: **wer fragt, bekommt selbst keine Mail.** Zwei Skripte
-behaupteten Veraltetes und sind korrigiert — das ist dieselbe Klasse wie der
-Fund aus AP 12, und die Lehre steht in `tools/CLAUDE.md`: **ein Prüfskript
-nagelt keinen konfigurierbaren Wert fest.** Code aus diesem Paket:
-`isUniqueViolation` einmal statt achtmal (mit der Drift, die der Eintrag
-vermutet hatte), die flackernde Zusicherung in `profile-fields.spec.ts`
-repariert — **ein Klick ist keine erledigte Anfrage** —, `formatAnswer` nimmt
-seine zwei Wörter jetzt als Pflichtargument (F184, es antwortete in **beiden**
-Clients englisch), die Programmpunkt-Frage aus Phase 0 entschieden (F185) und
-`invitations.spec.ts` räumt seine Reihen ab: **jede Suite räumt ab, was sie
-angelegt hat**, und was sie über SQL gesät hat, holt nur SQL zurück.
-
-**Nachtrag zum Abschluss:** der erste Lauf auf `main` war **rot** —
-`newsletter.spec.ts` scheiterte mit einem 429, weil AP 12 zwei Suiten gegen
-**ein** Budget von zwanzig geschrieben hatte, ohne sie zu addieren (sechzehn
-plus vier), und damit allein der Abstand der Suiten über grün entschied. Die
-Fixtures werden jetzt geseedet (`seedNewsletterSubscription`): vierzehn von
-zwanzig. Zwei Lehren, beide in `docs/rules/`: **die Drosselung wird nie
-angefasst** (E4) — ein Fixture wird geseedet, den Endpunkt rufen nur die Tests
-auf, deren Gegenstand er ist —, und `gh run watch --exit-status` ist kein
-Urteil: es endete mit 0, während der Lauf mit `failure` abschloss. **Wer grün
-sagt, hat den Abschluss gelesen**, nicht den Rückgabewert des Wartens.
-
-Was auf ein anderes Paket bzw. auf Marius wartet — alles in `todo.md`. **Für
-Marius mit Geräten** gibt es dort seit 04.09.2026 einen eigenen Abschnitt weit
-oben, _On a device — waiting for Marius_: was diese Testsuiten **gar nicht**
-prüfen können, weil es einen Produktionsbuild und Geräte braucht, und was daher
-in keiner Phasenliste stehen sollte. Darin die **Gerätematrix** aus Spike 3,
-vier Zeilen samt iOS Safari mit installierter PWA (wovon F7 abhängt); das
-Verfahren steht in `docs/spikes/03-web-push.md` und geht jetzt über eine
-**verschobene Session** statt über einen Testversand, den es bewusst nicht
-gibt. **Seit AP 13 steht jeder dieser Punkte in dem Abschnitt, der ihn besitzt**
-— Phase 5, _Questions for the pilot partner_ oder _Decided_ —, nicht mehr in der
-Phasenliste. Andere Pakete: die **Drosselung des Handshakes** und das **Löschen
-eines Profils** gehören zu Phase 5, ebenso der Hinweis auf eine geschrumpfte
-Auswahlliste; ob es eine geteilte Bibliothek für Oberflächenbauteile geben soll,
-ist eine Stack-Entscheidung (F145). Produktfragen sind der **Ungelesen-Zähler** in der
-Navigationsleiste (AP 8, seit AP 11 kleiner: wer Benachrichtigungen an hat,
-erfährt es), die **Nachrichten-Kachel** des Event-Dashboards, ob die Übersicht
-sich **selbst auffrischen** soll, ob ein Gerät ohne Konto weiter von **allen**
-öffentlichen Events hören soll (der Preis von E43), und aus AP 12: ob die
-Newsletter-Liste einen **Export** und eine **Sprache** je Adresse braucht (das
-Zweite nur für die App-Quelle speicherbar, also für die Hälfte der Zeilen
-„unbekannt"). Benannte Grenzen: der **Name der antwortenden Person** ist
-gespeichert, aber nicht gezeigt; die **Antwort eines Gasts** kommt als
-gewöhnliche Mail außerhalb der Anwendung an; der Veranstalter kann **kein Bild
-senden**; ein Gerät **ohne Konto** kann Benachrichtigungen nur in den
-Einstellungen seines Browsers abschalten; und eine **Newsletter-Adresse kann
-sich nicht selbst abmelden** — von hier geht kein Newsletter raus (F8), also
-nimmt die Organisation die Zeile heraus (F183) und der Widerspruchslink einer
-Einladung wirkt über beide Quellen (F24).
+**Wo die offenen Punkte liegen:** in `todo.md`, nach Phase gruppiert und nach
+jeder Phase durchgegangen. Zwei Abschnitte braucht man öfter als die anderen —
+_On a device — waiting for Marius_ (was einen Produktionsbuild und echte Geräte
+braucht, darunter die Gerätematrix aus Spike 3, von der F7 abhängt) und
+_Questions for the pilot partner_ (was in diesem Repository niemand entscheiden
+kann). Was zu einer späteren Phase gehört, steht in deren Abschnitt, nicht in
+der Liste oben.
 
 ## Betriebskontext
 
@@ -411,4 +196,6 @@ Demo-Daten — ausschließlich über die API. Alle Skripte nehmen die Adresse au
 `BASE`, die zwei mit Datenbankzugriff zusätzlich `POSTGRES_CONTAINER`. Der Seed
 braucht Mailpit. **Wer „grün" sagen will, hat den Stack hochgefahren** — was nur
 im Produktionsbuild oder nur im Containerbetrieb passiert, sieht keine Testsuite
-dieses Repositories.
+dieses Repositories. Und **wer „grün" über die CI sagt, hat den Abschluss des
+Laufs gelesen**, nicht den Rückgabewert eines Wartens
+(`docs/rules/tooling-traps.md`).
