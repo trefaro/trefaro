@@ -151,9 +151,35 @@ diese Eigenschaft.
   schreiben".
 - **Ein Plug-in liest Kerndaten nur über den Vertrag** (E12, F45).
   `PluginProgramReads` liefert fünf Felder je Programmpunkt und Anmeldezahlen,
-  nichts sonst; bereitgestellt vom globalen `PluginHostModule`. Ein Plug-in
-  importiert ausschließlich aus `plugin-api`. Neue Fähigkeit = Minor am
-  `PLUGIN_API_VERSION` **plus** ein Fall im Kompatibilitätstest.
+  `PluginParticipantReads` den **Namen** eines Autors samt Bildadresse und
+  ausdrücklich keine E-Mail-Adresse (E58, F55, F192); beide vom globalen
+  `PluginHostModule`. Neue Fähigkeit = Minor am `PLUGIN_API_VERSION` **plus**
+  ein Fall im Kompatibilitätstest.
+- **„Ein Plug-in importiert nur aus `plugin-api`" ist eine ESLint-Regel**, seit
+  AP 2 der Phase 4 — und sie hat beim Einschalten sofort den Verstoß gefunden,
+  der schon dastand: das Referenz-Plug-in holte Dekorator und Guard aus
+  `plugin-manager`. Die Antwort war die vorgeschriebene: **ein Port**.
+  `PluginController` und `PluginEnabledGuard` liegen jetzt in `plugin-api`, und
+  was der Guard vom Manager braucht, ist das Token `PLUGIN_ENABLED` — die
+  Abhängigkeit läuft vom Manager zum Vertrag und nie zurück, denn ein Re-Export
+  wäre ein Zyklus. Wer also im Vertrag etwas anlegt, das ein Guard braucht,
+  bringt es **mit seinem Port** mit.
+- **Host-Code, den ein Plug-in braucht, reist durch den Vertrag** — nicht als
+  Kopie. `business/common/` ist für ein Plug-in unerreichbar, also
+  re-exportiert `plugin-api` `pageWindow` (F138, F159): fünf Dienste hatten
+  diese drei Zeilen zweimal, und der sechste fand den Drift. Jedes Plug-in der
+  Phase 4 beantwortet mindestens eine paginierte Liste; die zweite Lesart von
+  „Seite 0" wäre genau derselbe Fehler eine Ebene tiefer.
+- **Zwei Ports über eine Tabelle sind kein Duplikat, wenn der Unterschied die
+  Zugangsregel ist** — und `user_profile` hat davon jetzt drei.
+  `UserProfileRepository` kann ein ganzes Konto lesen und schreiben (das darf
+  das Modul, dem die Konten gehören, E33), `SearchableProfileRepository` **kann
+  kein** Profil herausgeben, das sich nicht eingetragen hat (E37), und
+  `ProfileNameRepository` kennt vier Spalten und nur bestätigte Konten. Der
+  dritte ist nötig, weil der zweite die falsche Regel trägt: wer einen Vorschlag
+  einreicht oder einen Beitrag schreibt, hat seinen Namen absichtlich an etwas
+  geschrieben, und `searchable` ist das Opt-in für gefunden und angeschrieben
+  werden — eine Liste anonymer Zeilen ist nicht, was FR 3.13 beschreibt.
 - Ein Plug-in bringt **eigene** Entities und Migrationen mit; Kerntabellen werden
   nie angefasst. Raumzuordnung von Programmpunkten = plug-in-eigene Join-Tabelle
   (F21) — `program_item` hat **kein** `room_id`.

@@ -21,7 +21,7 @@ import {
 import {
   PluginController,
   PluginEnabledGuard,
-} from '../../../app/business/plugin-manager';
+} from '../../../app/business/plugin-api';
 import { RoomPlanningService } from '../business/room-planning.service';
 import { ROOM_PLANNING_PLUGIN_KEY } from '../room-planning.plugin-key';
 import { CreateRoomDto, RoomDto, RoomScheduleDto } from './room.dto';
@@ -33,6 +33,13 @@ import { CreateRoomDto, RoomDto, RoomScheduleDto } from './room.dto';
  * controller follows: while the organization has the plug-in switched off, these
  * routes answer 404 — the plug-in looks absent rather than forbidden, matching
  * what the clients see, since a disabled plug-in never appears in `/api/config`.
+ * Both come from `plugin-api`, which is the only place inside the server a
+ * plug-in may import from — the linter says so since AP 2 of phase 4, and this
+ * import is the one it caught.
+ *
+ * The access level comes from the declared path (E57): `admin/plugins/…` is
+ * behind the administrative session by virtue of the prefix (E16), so this file
+ * declares no session guard and cannot withdraw one.
  */
 @ApiTags('plugin: room planning')
 @ApiNotFoundResponse({

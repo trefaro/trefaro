@@ -23,6 +23,7 @@ import { MODULE_CONFIG_REPOSITORY } from '../business/config/ports/module-config
 import { SEARCHABLE_PROFILE_REPOSITORY } from '../business/common/ports/searchable-profile.repository';
 import { NEWSLETTER_REPOSITORY } from '../business/newsletter/ports/newsletter.repository';
 import { PROFILE_FIELD_REPOSITORY } from '../business/profiles/ports/profile-field.repository';
+import { PROFILE_NAME_REPOSITORY } from '../business/profiles/ports/profile-name.repository';
 import { PROGRAM_ITEM_SIGNUP_REPOSITORY } from '../business/program/ports/program-item-signup.repository';
 import { PROGRAM_ITEM_TRANSLATION_REPOSITORY } from '../business/program/ports/program-item-translation.repository';
 import { PROGRAM_ITEM_REPOSITORY } from '../business/program/ports/program-item.repository';
@@ -64,6 +65,7 @@ import { TypeormModuleConfigRepository } from './repositories/typeorm-module-con
 import { TypeormProfileDirectory } from './repositories/typeorm-profile-directory.repository';
 import { TypeormSearchableProfileRepository } from './repositories/typeorm-searchable-profile.repository';
 import { TypeormProfileFieldRepository } from './repositories/typeorm-profile-field.repository';
+import { TypeormProfileNameRepository } from './repositories/typeorm-profile-name.repository';
 import { TypeormProgramItemSignupRepository } from './repositories/typeorm-program-item-signup.repository';
 import { TypeormProgramItemTranslationRepository } from './repositories/typeorm-program-item-translation.repository';
 import { TypeormProgramItemRepository } from './repositories/typeorm-program-item.repository';
@@ -124,6 +126,7 @@ export class DataAccessModule {
         TypeormModuleConfigRepository,
         TypeormProfileDirectory,
         TypeormProfileFieldRepository,
+        TypeormProfileNameRepository,
         TypeormSearchableProfileRepository,
         TypeormProgramItemRepository,
         TypeormProgramItemTranslationRepository,
@@ -238,6 +241,10 @@ export class DataAccessModule {
           useExisting: TypeormProfileFieldRepository,
         },
         {
+          provide: PROFILE_NAME_REPOSITORY,
+          useExisting: TypeormProfileNameRepository,
+        },
+        {
           provide: PROGRAM_ITEM_REPOSITORY,
           useExisting: TypeormProgramItemRepository,
         },
@@ -338,6 +345,7 @@ export class DataAccessModule {
         MODULE_CONFIG_REPOSITORY,
         PROFILE_DIRECTORY,
         PROFILE_FIELD_REPOSITORY,
+        PROFILE_NAME_REPOSITORY,
         SEARCHABLE_PROFILE_REPOSITORY,
         PROGRAM_ITEM_REPOSITORY,
         PROGRAM_ITEM_SIGNUP_REPOSITORY,

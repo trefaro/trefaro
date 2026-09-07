@@ -8,13 +8,20 @@ import { PATH_METADATA } from '@nestjs/common/constants';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { allowsAnonymous } from '../common/allow-anonymous';
+import { CURRENT_PARTICIPANT_PROPERTY } from '../common/current-participant';
 import { requiresParticipant } from './requires-participant';
 import type { AuthenticatedParticipant } from './ports/user-session.repository';
 import { UserSessionService } from './user-session.service';
 import { participantSessionFromRequest } from './user-session-cookie';
 
-/** Where the authenticated participant is parked for the request. */
-export const CURRENT_PARTICIPANT_PROPERTY = 'trefaroParticipant';
+/**
+ * Where the authenticated participant is parked for the request.
+ *
+ * The name lives in `business/common/` since AP 2 of phase 4, because the
+ * plug-in contract reads the same property to answer "who is asking" (F100).
+ * Re-exported here so this file stays the one place a reader looks for it.
+ */
+export { CURRENT_PARTICIPANT_PROPERTY };
 
 export interface RequestWithParticipant extends Request {
   [CURRENT_PARTICIPANT_PROPERTY]?: AuthenticatedParticipant;

@@ -1,4 +1,5 @@
 import type { ServerPlugin } from '../app/business/plugin-api';
+import { programProposalsPlugin } from './program-proposals/program-proposals.plugin';
 import { roomPlanningPlugin } from './room-planning/room-planning.plugin';
 
 /**
@@ -10,5 +11,15 @@ import { roomPlanningPlugin } from './room-planning/room-planning.plugin';
  *
  * Registered in this list, not discovered: an accidental directory does not
  * become a mounted plug-in.
+ *
+ * The order is the one the plan of phase 4 fixes, which is also the order of the
+ * work packages — and it is the order the organizer's dashboard draws its tiles
+ * and the sections under them in (E59). Registered rather than discovered means
+ * sorted rather than incidental, so it is worth being deliberate about: the
+ * reference plug-in moved down a line when the first plug-in of phase 4 arrived
+ * above it.
  */
-export const CURATED_PLUGINS: readonly ServerPlugin[] = [roomPlanningPlugin];
+export const CURATED_PLUGINS: readonly ServerPlugin[] = [
+  programProposalsPlugin,
+  roomPlanningPlugin,
+];

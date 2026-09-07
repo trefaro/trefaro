@@ -44,6 +44,29 @@ describe('the keys the module administration hands out', () => {
     }
   });
 
+  /**
+   * Since E47 a plug-in may declare a prerequisite, and a prerequisite is a
+   * **key** — so a typo in it is a plug-in that can never be switched on, with
+   * a 409 naming a module nobody has heard of. Nothing else in the build
+   * notices, because the type is `string`.
+   */
+  it('names only prerequisites this image actually ships', () => {
+    const known = new Set([
+      ...CORE_MODULES.map((module) => module.key),
+      ...CURATED_PLUGINS.map((plugin) => plugin.key),
+    ]);
+
+    for (const declared of [...CORE_MODULES, ...CURATED_PLUGINS]) {
+      for (const required of declared.requires ?? []) {
+        expect({
+          key: declared.key,
+          required,
+          ships: known.has(required),
+        }).toEqual({ key: declared.key, required, ships: true });
+      }
+    }
+  });
+
   it('gives no two modules the same name key', () => {
     const keys = [
       ...CORE_MODULES.map((module) => module.titleKey),

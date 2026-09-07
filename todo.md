@@ -899,12 +899,18 @@ entry, the answer is noted below rather than repeated.
       `docs/PHASE4.md` under _Fortschritt_.
 
 - [ ] **Build the four remaining curated plug-ins.**
-      `apps/server/src/plugins/{forum,program-proposals,qr-checkin}` hold only a
-      README; they are deliberately not registered as no-op plug-ins. Order from
-      the plan: programme proposals (AP 2/3), forum (AP 4/5), room planning
-      (AP 6), QR check-in (AP 7/8) — and since 04.09.2026 a fourth directory to
-      write, `personal-program`, for the individual programme plan Marius added
-      to the phase (AP 9). `CURATED_PLUGINS` goes from one entry to five.
+      `apps/server/src/plugins/{forum,qr-checkin}` hold only a README; they are
+      deliberately not registered as no-op plug-ins. Order from the plan:
+      programme proposals (AP 2/3), forum (AP 4/5), room planning (AP 6), QR
+      check-in (AP 7/8) — and since 04.09.2026 a fourth directory to write,
+      `personal-program`, for the individual programme plan Marius added to the
+      phase (AP 9). `CURATED_PLUGINS` goes from one entry to five.
+      **One of four is there: the server half of the programme proposals, in
+      AP 2 of phase 4** — `plugin_program_proposals_proposal`, two controllers
+      (one per access level), five routes, `requires: ['profiles']`, no client
+      contribution yet because the bundle arrives with the screens in AP 3.
+      `CURATED_PLUGINS` has two entries, proposals above room planning, in the
+      order the plan fixes. Three left, plus the clients.
 - [ ] **Implement the overbooking check** in the room planning plug-in: sign-ups
       per programme item against room capacity. Everything it needs exists since
       AP 9 — the room's capacity, the sessions assigned to it, and their sign-up
@@ -929,6 +935,15 @@ entry, the answer is noted below rather than repeated.
 - [ ] **Each new plug-in proves the contract.** Verify per plug-in: own tables
       only, prefixed `plugin_<key>_`; disabled means 404 and absent from
       `/api/config`; disabling keeps its data.
+      **Proven for the first one, and the proof is now mechanical for the next.**
+      `apps/server-e2e/src/api/plugin-program-proposals.spec.ts` asserts all
+      three of those for the programme proposals, and
+      `apps/server/src/plugins/plugin-controllers.spec.ts` holds **every**
+      controller of **every** mounted plug-in to E57 — path prefix with its own
+      key, `@PluginController`, `PluginEnabledGuard`, and no session guard of its
+      own. A plug-in written in AP 4, AP 7 or AP 9 cannot ship without them.
+      Since AP 2 the rule "a plug-in imports from `plugin-api` and nothing else
+      in the server" is an ESLint rule as well.
 - [ ] **The dashboard needs a hook point for plug-in tiles** (F47). The mockups
       put programme proposals and forum posts on KPI tiles of the event
       dashboard; both are plug-ins, and both arrive in this phase. AP 10

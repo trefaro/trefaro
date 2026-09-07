@@ -11,6 +11,17 @@ Entscheidungsprotokoll (`docs/Anforderungsanalyse_und_Umsetzungsplan.md`).
   bestätigten Anmeldungen: 409. Eine **einzelne** Anmeldung ist immer löschbar
   (DSGVO-Vorarbeit). Deaktivieren löscht nie Daten — nur `down`-Migrationen
   entfernen Tabellen. `DATABASE_SYNCHRONIZE` bleibt im Zielbetrieb aus.
+- **Eine Plug-in-Tabelle heißt `plugin_<key>_<name>`**, ihre Migration liegt im
+  Plug-in und ist **nach** der Kernmigration gestempelt, auf die sie zeigt —
+  beide Ströme werden gemeinsam nach Zeitstempel geordnet, und eine Referenz
+  kann nicht vor der Tabelle stehen, auf die sie zeigt. Eine **Kerntabelle wird
+  nie angefasst** (F21); umgekehrt darf eine Plug-in-Tabelle einen echten
+  Fremdschlüssel **auf** eine Kerntabelle haben, denn das bindet das Plug-in und
+  nicht den Kern. Ein Wort zu `ON DELETE`: was einem Event oder einem Konto
+  gehört, geht mit ihm (`CASCADE`); wer eine **Entscheidung** getroffen hat, geht
+  nicht mit ihr (`SET NULL`) — sonst schreibt das Schließen eines
+  Veranstalterkontos Geschichte um. Eine Migration je Arbeitspaket, explizites
+  SQL, `down` mitgeschrieben und einmal wirklich ausgeführt.
 - **Zeiten sind absolute Zeitpunkte, die Zone hängt am Event** (E8). Formatiert
   wird ausschließlich über die Helfer in `shared-models`, auch beim Aggregieren
   (F33). Ein Programmpunkt hat keine eigene Zone; Timeline-Tage über

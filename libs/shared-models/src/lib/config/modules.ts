@@ -67,6 +67,10 @@ export interface ModuleSummary {
    * Here rather than only on the server, because the administration shows the
    * prerequisite in the row: an organizer who cannot switch the participant
    * search on has to be able to see why without pressing the button first.
+   *
+   * Both families carry it since AP 2 of phase 4 (E47): three of the five
+   * curated plug-ins need `profiles`, because a proposal, a forum post and a
+   * personal programme belong to an account.
    */
   readonly requires: readonly string[];
   /** Plug-ins only: the plug-in's own version. */

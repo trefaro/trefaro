@@ -54,6 +54,33 @@ export default [
     rules: businessLayerRules,
   },
   {
+    // "A plug-in imports from `plugin-api` and from nowhere else inside the
+    // server" was a sentence in the contract's docstring until AP 2 of phase 4,
+    // and the reference plug-in's own controller was already reaching past it
+    // for the enabled guard. Now the linter says it, and the answer to the
+    // violation was a port rather than an exception: the guard moved into
+    // `plugin-api` and asks the manager through `PLUGIN_ENABLED`.
+    //
+    // A regex over the import path rather than negated globs, for the reason
+    // the data access layer's rule gives: ESLint's glob negation does not
+    // apply to relative paths starting with `..`.
+    files: ['src/plugins/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '/app/(?!business/plugin-api)',
+              message:
+                'A plug-in may only import the host through `app/business/plugin-api`. If it needs something else, the contract gets a port — and that port is a versioned change to the contract.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // The data access layer implements the business layer's ports and reads the
     // plug-in contract; it must not reach for a business service or a barrel.
     // Expressed as a regex rather than negated globs, because ESLint's glob

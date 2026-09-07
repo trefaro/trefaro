@@ -67,9 +67,13 @@ export interface CoreModuleDescriptor {
    * prerequisite off while this is on. Never resolved silently — "then I will
    * switch the others off for you" is a switch that does more than it says.
    *
-   * Only core modules can carry one. A plug-in reaches core data through the
-   * plug-in contract (E12), which is always there; a plug-in that needed
-   * another module switched on would be reaching past that contract.
+   * Not the only place one can be declared any more. F128 reserved this for
+   * core modules on the grounds that a plug-in reaches core data through the
+   * contract (E12), which is always there — true for programme items and
+   * sign-ups, and false for **people**: a proposal or a forum post belongs to
+   * an account, and accounts exist only while `profiles` is on. So
+   * `ServerPlugin.requires` exists since AP 2 of phase 4 (E47), enforced by the
+   * same `ModuleAdminService` in the same two directions.
    */
   readonly requires?: readonly string[];
 }

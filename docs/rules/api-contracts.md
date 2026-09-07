@@ -24,6 +24,27 @@ Link.
   ihn aus wie `/api/admin/…`. Absicht, weil der Fehler in die andere Richtung ein
   offener Endpunkt wäre. Wer so eine Route braucht, setzt `@AllowAnonymous()`
   **und** einen eigenen Guard davor.
+- **Ein Plug-in bekommt seine Zugangsstufe aus dem Pfad** (E57, F189) —
+  `admin/plugins/<key>/…`, `participant/plugins/<key>/…`,
+  `user/plugins/<key>/…`. Es erfindet keine Authentifizierung, deklariert keinen
+  Sitzungs-Guard und kann keinen zurücknehmen; dazu trägt jeder Controller
+  `@PluginController(<key>)` **und** `PluginEnabledGuard`, damit ein
+  abgeschaltetes Plug-in 404 gibt. Wer fragt, kommt aus
+  `CurrentPluginParticipant` bzw. `CurrentPluginOrganizer` — **zwei**
+  Dekoratoren, weil zwei Cookies zwei Berechtigungen sind (E34) und „wer auch
+  immer angemeldet ist" die Gestalt wäre, in der jemand seinen eigenen Vorschlag
+  freigibt. `plugins/plugin-controllers.spec.ts` läuft über **alle** montierten
+  Plug-in-Controller und hält Präfix, Schlüssel und Guard fest — und dass der
+  Switch-Guard der einzige ist.
+- **Eine Freigabe ist eine Route, kein Feld** (E51, F191). `POST …/approval` und
+  `POST …/rejection`, nie ein `PATCH` mit `status` — das wäre die Gestalt, in
+  der jemand `pending` zurücksetzt. Zustand und Zeitpunkt werden in **einer**
+  Anweisung geschrieben, weil die Prüfbedingung der Tabelle keine andere
+  Kombination zulässt; eine Korrektur ist erlaubt und verschiebt den Zeitpunkt.
+  Die abgelehnte Zeile bleibt stehen (E14) und ist genau zwei Parteien
+  sichtbar — die Sichtbarkeitsregel steht in der **Anweisung** des Repositories
+  (F152), nicht in einem Aufrufer und erst recht nicht in einem
+  Query-Parameter.
 - **Slugs sind je Elternteil eindeutig** (E7), nicht je Instanz → öffentliche
   Adressen sind geschachtelt (`/series/:reihe/events/:event`), die API-Pfade
   folgen (F28). Die öffentliche Adresse wird an **einer** Stelle gebaut:
@@ -60,13 +81,19 @@ Link.
   mit dem fehlenden Schlüssel**, Ausschalten der Voraussetzung unter einem
   laufenden Abhängigen ein **409 mit den Abhängigen** — beides **vor** dem
   Schreiben, damit ein verweigerter Klick nichts ändert. „Dann schalte ich die
-  anderen eben mit ab" wäre ein Schalter, der mehr tut als er sagt. Nur
-  Kernmodule können eine haben: ein Plug-in erreicht Kerndaten über den
-  Plug-in-Vertrag (E12), und der ist immer da. Bisher zwei, und beide dieselbe:
-  `profile-search` und `chat` brauchen `profiles`. **`chat` braucht
+  anderen eben mit ab" wäre ein Schalter, der mehr tut als er sagt.
+  `profile-search` und `chat` brauchen `profiles`; **`chat` braucht
   ausdrücklich nicht `profile-search`** — ohne Verzeichnis lässt sich kein neues
   Gespräch beginnen, die bestehenden bleiben lesbar (E14, E37), und eine
   Voraussetzung hätte behauptet, Nachrichten seien ohne Verzeichnis sinnlos.
+  **Seit AP 2 der Phase 4 gilt das auch für Plug-ins** (E47, F190):
+  `ServerPlugin.requires`, dieselbe Mechanik, und der Prüfweg liest **beide**
+  Registries — die Voraussetzung eines Plug-ins ist ein Kernmodul, und der
+  Abhängige eines Kernmoduls kann ein Plug-in sein. Wer nur eine Familie fragt,
+  setzt die Hälfte der Regel durch, und zwar die falsche. F128 hatte Plug-ins
+  ausgenommen, weil ein Plug-in Kerndaten über den Vertrag erreicht (E12) — das
+  gilt für Programmpunkte und Anmeldungen und **nicht für Menschen**: ein
+  Vorschlag gehört einem Konto, und Konten gibt es nur mit `profiles`.
 - **Ein Modulschalter deckt keine P1-Anforderung** (F171). Das Kontaktformular
   `POST /api/user/series/:reihe/events/:event/contact` liegt in
   `business/chat/`, weil dieses Modul die Gespräche besitzt — und trägt als

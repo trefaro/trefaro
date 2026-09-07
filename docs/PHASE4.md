@@ -1,6 +1,6 @@
 # Phase 4 — Plug-ins: die fünf kuratierten Fachlichkeiten
 
-**Status: in Arbeit** (Plan 04.09.2026, AP 1 erledigt am 07.09.2026). Alles über
+**Status: in Arbeit** (Plan 04.09.2026, AP 1 und AP 2 erledigt am 07.09.2026). Alles über
 dem Abschnitt _Fortschritt_ ist der **Plan** und wird nicht rückwirkend
 korrigiert; was tatsächlich passierte — samt Abweichungen — steht unten, wie in
 [`PHASE1.md`](PHASE1.md), [`PHASE2.md`](PHASE2.md) und
@@ -956,3 +956,137 @@ Was anders lief als geplant:
   zuerst auf die Überschrift der Startseite wartet; die Regel steht jetzt in
   `docs/rules/e2e-tests.md`. Der abschließende Lauf ist grün (231 Tests, neun
   übersprungen).
+
+### AP 2 — Programmvorschläge: Server (erledigt, 07.09.2026)
+
+Umgesetzt:
+
+- **Das Plug-in** — `apps/server/src/plugins/program-proposals/` nach dem Muster
+  von `room-planning`: `api/` (zwei Controller, je Zugangsstufe einer, plus
+  DTOs), `business/` (Service und ein Repository-Port), `data-access/` (Entity,
+  TypeORM-Repository, **eine** Migration), Deskriptor und `enabledByDefault:
+false`. `CURATED_PLUGINS` hat zwei Einträge, in der Reihenfolge, die der Plan
+  festlegt — die Vorschläge stehen jetzt über der Raumplanung.
+- **Die Tabelle** — `plugin_program_proposals_proposal`, eine Migration,
+  explizites SQL, `down` mitgeschrieben und wirklich ausgeführt
+  (`CreateProgramProposalsSchema1787880000000`, nach beiden Kernströmen
+  gestempelt). Vier Prüfbedingungen tragen Entscheidungen statt Typen: die drei
+  Zustände (E51), `(status = 'pending') = (decided_at IS NULL)`, und
+  `btrim(...) <> ''` für Titel und Beschreibung. Drei echte Fremdschlüssel auf
+  Kerntabellen — Event und Autor mit `CASCADE`, `decided_by` mit
+  `SET NULL` —, keine Kerntabelle angefasst (F21).
+- **Die Routen** — genau die fünf, die die API-Oberfläche des Plans für AP 2
+  nennt: lesen und einreichen unter `participant/plugins/program-proposals/…`,
+  Moderationsliste und die zwei Entscheidungsrouten unter
+  `admin/plugins/program-proposals/…`. `…/summary` gehört zu AP 3 und ist nicht
+  gebaut.
+- **Der Vertrag, drei Erweiterungen** — `ServerPlugin.requires` (E47);
+  `PluginParticipantReads` mit `findAuthors(ids)`, das Namen und Bildadresse
+  liefert und **keine** Adresse (F55), gebunden im `PluginHostModule`; und die
+  zwei Dekoratoren, die sagen, wer fragt: `CurrentPluginParticipant` und
+  `CurrentPluginOrganizer`.
+- **Voraussetzungen über beide Familien** — `ModuleAdminService` liest jetzt
+  beide Registries: einschalten ohne `profiles` ist ein 409 mit `profiles`,
+  `profiles` ausschalten unter dem laufenden Plug-in ein 409 mit
+  `program-proposals`, beides **vor** dem Schreiben. `ModuleSummary.requires`
+  trägt die Voraussetzung eines Plug-ins in die Modulzeile, die sie schon
+  zeichnen konnte.
+- **Der Vertragstest über alle Plug-in-Controller** (E57) —
+  `plugins/plugin-controllers.spec.ts` läuft über jeden Controller jedes
+  montierten Plug-ins und hält vier Dinge fest: der deklarierte Pfad beginnt mit
+  `(admin|participant|user)/plugins/<eigener Schlüssel>`, `@PluginController`
+  nennt denselben Schlüssel, `PluginEnabledGuard` steht davor — und es steht
+  **nur** er davor, denn ein Plug-in erfindet keine Sitzungsprüfung.
+- **Die Regel „ein Plug-in importiert nur aus `plugin-api`" ist jetzt eine
+  ESLint-Regel** für `src/plugins/**`. Sie hat sofort den einen Verstoß
+  gefunden, der schon da war, und er wurde mit einem Port beantwortet, nicht mit
+  einer Ausnahme (siehe unten).
+- **Nutzlasten in `shared-models`** — `lib/plugins/program-proposals.ts` mit den
+  drei Zuständen, den Längen, `ProgramProposal`, `ProposalAuthor`,
+  `ProposalPage` und `NewProgramProposal`; die DTOs des Plug-ins implementieren
+  sie. Ein Client, der ein Bundle lädt, teilt mit ihm die Modelle.
+- **Katalog** — 962 auf **963** Schlüssel: `plugins.programProposals.title`, der
+  Name in der Modulverwaltung, Englisch und Deutsch. Mehr braucht dieses Paket
+  nicht, weil es keinen Bildschirm hat.
+- **Referenzdokument** — F189–F192.
+
+Belegt: `nx run-many -t lint test build` grün (13 Projekte), Server-Unit-Tests
+**1166** (1134 vorher; neu: der Plug-in-Service, die zwei Dekoratoren, der
+Adapter des Namens-Ports, die E47-Fälle der Modulverwaltung und der
+Controller-Vertragstest), API-Vertragstests **601** (587 vorher; neu
+`apps/server-e2e/src/api/plugin-program-proposals.spec.ts` mit vierzehn Tests),
+beide Browsersuiten grün. Die Vertragssuite entscheidet, was nur eine echte
+Datenbank entscheiden kann: dass ein zweiter Teilnehmender einen offenen
+Vorschlag **nicht** sieht, dass eine Freigabe ihn in dessen Liste bringt, dass
+eine Ablehnung die Zeile behält, dass beide 409 vor dem Schreiben kommen, und
+dass Abschalten 404 gibt, ohne eine Zeile zu verlieren. Die Migration ist gegen
+die laufende Instanz gefahren; `\d plugin_program_proposals_proposal` zeigt die
+vier Prüfbedingungen und die drei Fremdschlüssel.
+
+Was anders lief als geplant:
+
+- **In der Tabelle „Was 1.2.0 hinzufügt" fehlte eine Zeile**, und sie fiel beim
+  ersten Schreibzugriff auf: das Schema des Plans gibt der Vorschlagszeile
+  `decided_by → admin_user` (und dem Ticket in AP 7 `checked_in_by`), aber die
+  Tabelle nennt als Erweiterung nur `PluginParticipantReads` — „wer fragt" war
+  dort der **Teilnehmende**. Ein Plug-in kann also nicht aufschreiben, wer
+  entschieden hat. Die Wahl war: die Spalte streichen (dann weicht das Schema
+  ab, und eine Entscheidung ohne Entscheider ist eine halbe Entscheidung) oder
+  den Vertrag um die Organisator-Identität erweitern. Zweites, weil **drei**
+  Pakete des Plans sie brauchen (AP 2, AP 4, AP 7) — E46 verlangt einen Füller
+  je Erweiterung, und hier gibt es drei. Also `CurrentPluginOrganizer` neben
+  `CurrentPluginParticipant`, beide nur mit einer Id, und die Tabelle des Plans
+  hat eine Zeile mehr. **Zwei** Dekoratoren, nie einer: die Sitzungen eines
+  Veranstalters und eines Teilnehmenden sind verschiedene Berechtigungen mit
+  verschiedenen Cookies (E34), und „wer auch immer angemeldet ist" wäre die
+  Gestalt, in der irgendwann jemand seinen eigenen Vorschlag freigibt.
+- **„Wer fragt" ist kein Lese-Port geworden.** Der Plan beschreibt beide Fragen
+  unter `PluginParticipantReads`; wer fragt, ist aber eine Eigenschaft der
+  Anfrage und nichts, was man nachschlägt — die globalen Guards des Hosts haben
+  die Sitzung längst aufgelöst, wenn der Handler eines Plug-ins läuft (E33).
+  Also ein Dekorator für „wer fragt" und ein Port für „wie heißt ein Autor".
+- **Die Regel über Plug-in-Importe war keine Regel, sondern ein Satz in einem
+  Docstring** — und das Referenz-Plug-in hielt sie schon nicht ein: sein
+  Controller holte `PluginController` und `PluginEnabledGuard` aus
+  `plugin-manager`. Beantwortet wie die Querschnittsregel es verlangt, mit
+  einem Port: Dekorator und Guard sind nach `plugin-api` gezogen, und was der
+  Guard vom Manager braucht, ist jetzt das Token `PLUGIN_ENABLED` — die
+  Abhängigkeit läuft vom Manager zum Vertrag und nie zurück. Ein Re-Export wäre
+  ein Zyklus gewesen.
+- **`pageWindow` kommt durch den Vertrag, nicht als Kopie.** Der erste Entwurf
+  hatte die drei Zeilen im Plug-in — genau das Duplikat, gegen das F138 und
+  F159 geschrieben sind (fünf Dienste hatten sie zweimal, der sechste fand den
+  Drift). Ein Plug-in darf `business/common/` nicht importieren, also
+  re-exportiert `plugin-api` die Funktion. Jedes Plug-in dieser Phase
+  beantwortet mindestens eine paginierte Liste.
+- **Ein dritter schmaler Port über `user_profile`**, und das ist kein Duplikat,
+  sondern die Zugangsregel: `SearchableProfileRepository` **kann** kein Profil
+  herausgeben, das sich nicht in die Suche eingetragen hat (E37) — richtig für
+  ein Verzeichnis, falsch für einen Autor, denn wer einen Vorschlag einreicht,
+  hat seinen Namen absichtlich an etwas geschrieben, und eine Liste anonymer
+  Zeilen ist nicht, was FR 3.13 beschreibt. Der neue Port
+  (`ProfileNameRepository`) kann nur vier Spalten und nur bestätigte Konten, und
+  beides steht in der Anweisung (F152).
+- **Auch die Teilnehmerliste ist paginiert**, obwohl der Plan nur die
+  Moderationsliste so nennt: „kein Endpunkt liefert alles" ist eine Regel dieses
+  Repositories und nicht eine Eigenschaft der Moderation.
+- **Kein „ist das meins"-Feld.** Naheliegend, aber es hätte auf der Route des
+  Veranstalters etwas anderes bedeutet (dort immer „nein"), und ein Feld, dessen
+  Bedeutung vom Endpunkt abhängt, wird auf dem falschen gelesen. Ein Client
+  vergleicht `author.id` mit seiner eigenen Sitzung.
+- **Der Deskriptor hat noch keinen `client`-Teil.** Web-Komponente,
+  Einhängepunkte und Icon kommen in AP 3, zusammen mit den zwei Bildschirmen,
+  die sie zeichnen; ein `bundleUrl` ohne Bundle wäre ein Ladefehler, den die
+  Modulverwaltung einem Veranstalter als kaputtes Plug-in meldet (F47).
+- **Ob ein Event veröffentlicht oder vorbei ist, prüft das Plug-in nicht.** Der
+  Vertrag hat keinen Port für den Zustand eines Events, und die Regel hier zu
+  erfinden wäre eine Produktentscheidung in einem Plug-in. Was die Datenbank
+  erzwingt, ist die Existenz von Event und Konto; ein fehlendes ist ein 404.
+- **Ein leerer Titel war zuerst ein 500.** `Length(1, …)` sieht nicht, dass
+  `"   "` eine Länge hat; die Prüfbedingung der Tabelle griff, und eine
+  Constraint-Verletzung ist kein Satz. Jetzt lehnt der Service ab, wie es die
+  Kontaktanfrage vormacht — die Bedingung bleibt als Rückhalt.
+- **Der Newsletter-Test fiel wieder aus, aus demselben Grund wie in AP 1**: fünf
+  volle Läufe der Teilnehmersuite in einer Viertelstunde erschöpfen die
+  Drosselung (20 Anmeldungen je fünf Minuten und Adresse, E4). Allein gefahren
+  grün, und die Drosselung wird dafür nicht angefasst.

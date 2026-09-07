@@ -22,7 +22,7 @@ import {
  * one question ("what does this instance offer?"), so a page that showed them in
  * two unrelated tables would be describing the implementation.
  *
- * Three decisions worth naming:
+ * Five decisions worth naming:
  *
  * 1. **The state comes from the registries, not from the table.** The two
  *    registries are what the guards and `/api/config` answer from (F53), so
@@ -42,6 +42,12 @@ import {
  *    prerequisite off while something depends on it is a 409 naming the
  *    dependants. Both refusals happen before the write, so a rejected click
  *    changes nothing at all.
+ * 5. **A prerequisite crosses the two families** (E47, AP 2 of phase 4). Since
+ *    a plug-in may declare one, the two checks read both registries: the key a
+ *    plug-in needs is usually a core module (`profiles`), and the dependant a
+ *    core module has to be refused for may be a plug-in. Anything that asked
+ *    one family only would enforce half the rule — and the half it dropped is
+ *    the one that lets a prerequisite be withdrawn under a running dependant.
  */
 @Injectable()
 export class ModuleAdminService {
@@ -98,7 +104,7 @@ export class ModuleAdminService {
    */
   private requirePrerequisites(moduleKey: string): void {
     const missing = this.prerequisitesOf(moduleKey).filter(
-      (required) => !this.coreModules.isEnabled(required),
+      (required) => !this.isEnabled(required),
     );
     if (missing.length === 0) return;
 
@@ -118,14 +124,10 @@ export class ModuleAdminService {
    * two answers, one of them unasked.
    */
   private requireNoDependants(moduleKey: string): void {
-    const dependants = this.coreModules
-      .all()
-      .filter(
-        (module) =>
-          this.coreModules.isEnabled(module.key) &&
-          this.prerequisitesOf(module.key).includes(moduleKey),
-      )
-      .map((module) => module.key);
+    const dependants = this.switchableKeys().filter(
+      (key) =>
+        this.isEnabled(key) && this.prerequisitesOf(key).includes(moduleKey),
+    );
     if (dependants.length === 0) return;
 
     throw new ConflictException(
@@ -134,12 +136,48 @@ export class ModuleAdminService {
     );
   }
 
-  /** What a key declares it needs — nothing, for a plug-in or an unknown key. */
+  /**
+   * What a key declares it needs — nothing, for an unknown key.
+   *
+   * Both families since E47: a plug-in may declare a prerequisite too, and
+   * three of the five curated ones need `profiles` because they attribute a row
+   * to a person.
+   */
   private prerequisitesOf(moduleKey: string): readonly string[] {
+    const core = this.coreModules
+      .all()
+      .find((module) => module.key === moduleKey);
+    if (core) return core.requires ?? [];
+
     return (
-      this.coreModules.all().find((module) => module.key === moduleKey)
-        ?.requires ?? []
+      this.plugins.all().find((plugin) => plugin.key === moduleKey)?.requires ??
+      []
     );
+  }
+
+  /** Every switchable key of this instance, core modules first. */
+  private switchableKeys(): readonly string[] {
+    return [
+      ...this.coreModules.all().map((module) => module.key),
+      ...this.plugins.all().map((plugin) => plugin.key),
+    ];
+  }
+
+  /**
+   * Whether a key is switched on, whichever family it belongs to.
+   *
+   * An unknown key answers `false`, which is the reading the prerequisite check
+   * needs: a module that names something this image does not ship cannot be
+   * switched on, and the 409 says which key is missing.
+   */
+  private isEnabled(moduleKey: string): boolean {
+    if (this.coreModules.all().some((module) => module.key === moduleKey)) {
+      return this.coreModules.isEnabled(moduleKey);
+    }
+    if (this.plugins.all().some((plugin) => plugin.key === moduleKey)) {
+      return this.plugins.isEnabled(moduleKey);
+    }
+    return false;
   }
 
   private require(moduleKey: string): ModuleSummary {
@@ -178,8 +216,10 @@ export class ModuleAdminService {
       titleKey: plugin.titleKey,
       enabled: this.plugins.isEnabled(plugin.key),
       enabledByDefault: plugin.enabledByDefault ?? false,
-      // A plug-in has no prerequisite to declare — see `CoreModuleDescriptor`.
-      requires: [],
+      // Since E47 a plug-in may declare one, and the row shows it by name like
+      // a core module's — an organizer who cannot switch the proposals on has
+      // to see that accounts are what they need.
+      requires: plugin.requires ?? [],
       version: plugin.version,
       bundleUrl: plugin.client?.bundleUrl ?? null,
       mountPoints: plugin.client?.mountPoints ?? [],

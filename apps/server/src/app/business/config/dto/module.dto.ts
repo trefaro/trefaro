@@ -54,10 +54,11 @@ export class ModuleSummaryDto implements ModuleSummary {
     type: String,
     example: ['profiles'],
     description:
-      'Module keys that have to be on before this one can be (E42). Empty ' +
-      'for almost everything. Switching this module on while one of them is ' +
-      'off answers 409 and names it; switching one of them off while this ' +
-      'module is on answers 409 as well. Nothing is ever resolved silently.',
+      'Module keys that have to be on before this one can be (E42, E47). ' +
+      'Empty for almost everything, and set for a plug-in that attributes a ' +
+      'row to a person. Switching this module on while one of them is off ' +
+      'answers 409 and names it; switching one of them off while this module ' +
+      'is on answers 409 as well. Nothing is ever resolved silently.',
   })
   requires!: readonly string[];
 

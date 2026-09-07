@@ -8,12 +8,20 @@ import { PATH_METADATA } from '@nestjs/common/constants';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { allowsAnonymous } from '../common/allow-anonymous';
+import { CURRENT_ADMIN_PROPERTY } from '../common/current-organizer';
 import type { AuthenticatedAdmin } from './ports/admin-session.repository';
 import { SessionService } from './session.service';
 import { ADMIN_SESSION_COOKIE } from './session-cookie';
 
-/** Where the authenticated administrator is parked for the request. */
-export const CURRENT_ADMIN_PROPERTY = 'trefaroAdmin';
+/**
+ * Where the authenticated administrator is parked for the request.
+ *
+ * The name lives in `business/common/` since AP 2 of phase 4, because the
+ * plug-in contract reads the same property to answer who took a moderation
+ * decision (F100). Re-exported here so this file stays the one place a reader
+ * looks for it.
+ */
+export { CURRENT_ADMIN_PROPERTY };
 
 export interface RequestWithAdmin extends Request {
   [CURRENT_ADMIN_PROPERTY]?: AuthenticatedAdmin;

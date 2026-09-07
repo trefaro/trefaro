@@ -1,7 +1,11 @@
 import { ExecutionContext, NotFoundException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { PluginEnabledGuard } from './plugin-enabled.guard';
-import type { PluginRegistryService } from './plugin-registry.service';
+import {
+  PluginController,
+  PluginEnabledGuard,
+  declaredPluginKey,
+  type PluginEnabled,
+} from './plugin-controller';
 
 function contextFor(handler: () => void, controller: object): ExecutionContext {
   return {
@@ -21,10 +25,10 @@ describe('PluginEnabledGuard', () => {
     const reflector = {
       getAllAndOverride: () => metadata,
     } as unknown as Reflector;
-    const registry = {
+    const plugins: PluginEnabled = {
       isEnabled: (key: string) => enabledKeys.includes(key),
-    } as PluginRegistryService;
-    return new PluginEnabledGuard(reflector, registry);
+    };
+    return new PluginEnabledGuard(reflector, plugins);
   }
 
   it('lets a request through when the plug-in is enabled', () => {
@@ -47,5 +51,17 @@ describe('PluginEnabledGuard', () => {
     expect(() =>
       guard.canActivate(contextFor(handler, ForumController)),
     ).toThrow(NotFoundException);
+  });
+
+  it('reads back the key a controller declared, for the contract test', () => {
+    // What `plugin-controllers.spec.ts` walks the mounted plug-ins with (E57).
+    // A controller without the decorator answers `undefined` rather than
+    // throwing, so the test can report *which* controller forgot it.
+    @PluginController('forum')
+    class Declared {}
+    class Undeclared {}
+
+    expect(declaredPluginKey(Declared)).toBe('forum');
+    expect(declaredPluginKey(Undeclared)).toBeUndefined();
   });
 });

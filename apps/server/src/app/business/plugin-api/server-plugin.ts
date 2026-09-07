@@ -97,4 +97,27 @@ export interface ServerPlugin {
    * actually asked for (NFR 1, appropriateness).
    */
   readonly enabledByDefault?: boolean;
+  /**
+   * Module keys that have to be switched on before this plug-in can be (E47).
+   *
+   * Added in plug-in API 1.2.0, and it is an addition in the strict sense: a
+   * plug-in that declares nothing has no prerequisite, which is what every
+   * plug-in before AP 2 of phase 4 was.
+   *
+   * Enforced by the module administration in both directions, exactly as a core
+   * module's `requires` is (E42, F128): switching this plug-in on while one of
+   * these is off answers 409 and names the missing key, and switching one of
+   * them off while this plug-in is on answers 409 and names the plug-in. Never
+   * resolved silently — "then I will switch the others on for you" is a switch
+   * that does more than it says.
+   *
+   * F128 exempted plug-ins from this on the grounds that a plug-in reaches core
+   * data through the contract, and the contract is always there. That holds for
+   * programme items and sign-ups. It does not hold for **people**: a proposal, a
+   * forum post and a personal programme belong to an account, and accounts exist
+   * only while `profiles` is on. A plug-in that stored rows pointing at
+   * `user_profile` on an instance without accounts would be a plug-in whose
+   * every route answers 401.
+   */
+  readonly requires?: readonly string[];
 }

@@ -95,6 +95,22 @@ const SERVER_ONLY = {
   titleKey: 'plugins.auditLog.title',
 } as unknown as ServerPlugin;
 
+/**
+ * A plug-in that needs accounts (E47).
+ *
+ * Its own fixture for the same reason {@link DEPENDENT} is one: the E47 cases
+ * need a plug-in with a prerequisite, and every other test here would otherwise
+ * carry it in its expectations.
+ */
+const NEEDS_ACCOUNTS = {
+  key: 'program-proposals',
+  version: '0.1.0',
+  apiVersion: '1.2.0',
+  titleKey: 'plugins.programProposals.title',
+  requires: ['profiles'],
+  enabledByDefault: false,
+} as unknown as ServerPlugin;
+
 interface Harness {
   service: ModuleAdminService;
   repository: FakeModuleConfigRepository;
@@ -106,10 +122,12 @@ function harness(
   options: {
     enabled?: readonly string[];
     core?: readonly CoreModuleDescriptor[];
+    plugins?: readonly ServerPlugin[];
   } = {},
 ): Harness {
   const enabled = new Set(options.enabled ?? ['media-links']);
   const core = options.core ?? CORE;
+  const mounted = options.plugins ?? [ROOM_PLANNING, SERVER_ONLY];
   const refreshed: string[] = [];
   const repository = new FakeModuleConfigRepository();
 
@@ -122,7 +140,7 @@ function harness(
   } as unknown as CoreModuleRegistryService;
 
   const plugins = {
-    all: () => [ROOM_PLANNING, SERVER_ONLY],
+    all: () => mounted,
     isEnabled: (key: string) => enabled.has(key),
     refresh: async () => {
       refreshed.push('plugins');
@@ -332,6 +350,96 @@ describe('ModuleAdminService', () => {
       await service.setEnabled('profiles', false);
 
       expect(repository.written).toHaveLength(1);
+    });
+  });
+
+  /**
+   * The same rule, one family further (E47).
+   *
+   * A prerequisite now crosses the two registries: the key a plug-in needs is a
+   * core module, and the dependant a core module has to be refused for is a
+   * plug-in. Both directions get a case, because a check that read one registry
+   * only would pass the first and fail the second in production.
+   */
+  describe('a plug-in with a prerequisite (E47)', () => {
+    const withProposals = (enabled: readonly string[]) =>
+      harness({
+        core: DEPENDENT,
+        plugins: [NEEDS_ACCOUNTS],
+        enabled,
+      });
+
+    it('reports what it needs, like a core module does', () => {
+      const { service } = withProposals(['profiles']);
+
+      const row = service
+        .list()
+        .find((module) => module.key === 'program-proposals');
+
+      expect(row).toMatchObject({
+        family: 'plugin',
+        requires: ['profiles'],
+      });
+    });
+
+    it('refuses to switch on while the core module it needs is off', async () => {
+      const { service, repository } = withProposals([]);
+
+      await expect(
+        service.setEnabled('program-proposals', true),
+      ).rejects.toThrow(/"profiles"/);
+      // Not a row in `module_config` either: a plug-in whose rows point at
+      // `user_profile` must not be switchable on an instance without accounts.
+      expect(repository.written).toEqual([]);
+    });
+
+    it('refuses to withdraw the core module while the plug-in is on, and names the plug-in', async () => {
+      const { service, repository } = withProposals([
+        'profiles',
+        'program-proposals',
+      ]);
+
+      await expect(service.setEnabled('profiles', false)).rejects.toThrow(
+        /"program-proposals"/,
+      );
+      expect(repository.written).toEqual([]);
+    });
+
+    it('lets both switches move once the other side allows it', async () => {
+      const { service, repository } = withProposals(['profiles']);
+
+      await service.setEnabled('program-proposals', true);
+      // And the other way round: with the plug-in off again, accounts may go.
+      const { service: second, repository: secondWrites } = withProposals([
+        'profiles',
+      ]);
+      await second.setEnabled('profiles', false);
+
+      expect(repository.written).toEqual([
+        { moduleKey: 'program-proposals', enabled: true },
+      ]);
+      expect(secondWrites.written).toEqual([
+        { moduleKey: 'profiles', enabled: false },
+      ]);
+    });
+
+    it('treats a prerequisite this image does not ship as missing', async () => {
+      const { service } = harness({
+        core: DEPENDENT,
+        plugins: [
+          {
+            ...NEEDS_ACCOUNTS,
+            requires: ['a-module-nobody-ships'],
+          } as ServerPlugin,
+        ],
+        enabled: ['profiles'],
+      });
+
+      // `false` for an unknown key rather than `true`: a module naming
+      // something absent cannot be switched on, and the 409 says which key.
+      await expect(
+        service.setEnabled('program-proposals', true),
+      ).rejects.toThrow(/"a-module-nobody-ships"/);
     });
   });
 });

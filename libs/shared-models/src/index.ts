@@ -283,6 +283,20 @@ export {
   type PublicProgramItem,
 } from './lib/program';
 export {
+  DEFAULT_PROPOSAL_PAGE_SIZE,
+  MAX_PROPOSAL_DESCRIPTION_LENGTH,
+  MAX_PROPOSAL_PAGE_SIZE,
+  MAX_PROPOSAL_TITLE_LENGTH,
+  PROGRAM_PROPOSALS_MODULE_KEY,
+  PROPOSAL_STATUSES,
+  type NewProgramProposal,
+  type ProgramProposal,
+  type ProposalAuthor,
+  type ProposalPage,
+  type ProposalQuery,
+  type ProposalStatus,
+} from './lib/plugins';
+export {
   DEFAULT_MY_REGISTRATION_PAGE_SIZE,
   MAX_MY_REGISTRATION_PAGE_SIZE,
   SELF_SERVICE_PATH,
