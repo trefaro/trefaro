@@ -19,6 +19,16 @@ Datenschutzbruch, bei der Plug-in-Aktivierung Datenverlust.
   werden zur Laufzeit per Konfiguration aktiviert/deaktiviert. **Keine
   Fremdinstallation zur Laufzeit.**
 - **Deaktivieren löscht nie Daten.** Nur `down`-Migrationen entfernen Tabellen.
+- **Ein Client-Plug-in ist ein eigenes Nx-Projekt, und es muss gebaut werden.**
+  Je Bündel ein Verzeichnis unter `apps/plugins/<key>` (Projektname
+  `plugin-<key>`, Tag `type:plugin-bundle`), Ausgabe nach
+  `dist/apps/plugins/<key>`, ausgeliefert vom **Server** unter
+  `/api/plugins/<key>/main.js` (`PLUGIN_BUNDLE_DIR`) — eine Adresse, die in der
+  Entwicklung und in Produktion dieselbe ist. Wer ein Bündel anlegt, trägt es an
+  **zwei** weiteren Stellen nach: `infra/docker/server.Dockerfile` (sonst fehlt
+  es im Image, obwohl der Deskriptor es nennt) und `.github/workflows/ci.yml`
+  vor `nx run-many -t e2e` (sonst montiert der Browser nichts, und die Suite,
+  die davon abhängt, prüft eine leere Seite und hält das für grün).
 - **`CORE_MODULES` nennt nur Module, die es gibt** (E21, F63): derzeit
   `profiles`, `profile-search`, `chat`, `media-links`, `push` und
   `newsletter-opt-in` — die ersten drei seit Phase 3 (AP 1, AP 5, AP 6), mit
@@ -49,7 +59,11 @@ Datenschutzbruch, bei der Plug-in-Aktivierung Datenverlust.
   `shared-models`, `shared-theming` (die vier des Ursprungsplans),
   `shared-plugins` (Client-Plug-in-Manager + Einhängepunkt-Komponente, seit
   Phase 0) und `shared-i18n` (mitgelieferte Kataloge + Transloco-Verkabelung +
-  Sprachumschalter + `TrefaroTitleStrategy`, seit AP 6 der Phase 2).
+  Sprachumschalter + `TrefaroTitleStrategy`, seit AP 6 der Phase 2). Ein
+  Plug-in-Bündel darf davon genau eine benutzen: **`shared-models`**. Ein Client
+  teilt mit einem Bündel die **Modelle**, nie die Implementierung — der Rest
+  wäre ein zweiter HTTP-Stapel, eine zweite Übersetzungskette oder ein zweiter
+  Konfigurationszustand in etwas, das zur Laufzeit nachgeladen wird.
 - **Ein zweiter Server-Container braucht einen socket.io-Adapter.** Räume
   leben im Speicher **eines** Prozesses, also erreicht eine Nachricht bei zwei
   Containern nur die Hälfte der Sockets. Für die Zielgruppe (eine Instanz je

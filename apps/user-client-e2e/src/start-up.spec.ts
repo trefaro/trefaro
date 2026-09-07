@@ -66,8 +66,9 @@ test.describe('participant client startup', () => {
     await expectNoRawKeys(page);
   });
 
-  test('mounts nothing at the event detail hook point while no plug-in is enabled', async ({
+  test('mounts exactly the plug-ins the configuration names at the event detail hook point', async ({
     page,
+    request,
   }) => {
     // The real landing page carries the hook point since AP 3; the phase-0
     // placeholder page it used to live on is gone.
@@ -82,7 +83,52 @@ test.describe('participant client startup', () => {
       '.trefaro-plugin-slot[data-mount-point="event-detail"]',
     );
     await expect(slot).toBeAttached();
-    expect(await slot.locator('> *').count()).toBe(0);
+
+    /*
+     * Against the configuration rather than against zero — and that is a
+     * stronger assertion, not a weaker one: what this test is for is that the
+     * slot mounts what the instance says and nothing else. Zero was the same
+     * sentence while every curated plug-in was off, and it stopped being one in
+     * AP 3 of phase 4, when `plugin-program-proposals.spec.ts` began switching
+     * one on for its own tests. Two files against one `module_config` is the
+     * flake `docs/rules/e2e-tests.md` is mostly about; asking the instance
+     * makes both of them true at once.
+     *
+     * Polled, because the other file switches its plug-in on and off again
+     * while this one runs: locally Playwright hands the two files to different
+     * workers, so the DOM and a freshly read configuration can be one moment
+     * apart. What must hold is that they agree — and the message says which
+     * two lists did not, rather than "expected true".
+     */
+    const mounted = async (): Promise<string> =>
+      (
+        await slot
+          .locator('> *')
+          .evaluateAll((nodes) =>
+            nodes.map((node) => node.getAttribute('data-plugin') ?? '?'),
+          )
+      )
+        .sort()
+        .join(', ');
+
+    const configured = async (): Promise<string> => {
+      const config: { plugins: { key: string; mountPoints: string[] }[] } =
+        await (await request.get('/api/config')).json();
+      return config.plugins
+        .filter((plugin) => plugin.mountPoints.includes('event-detail'))
+        .map((plugin) => plugin.key)
+        .sort()
+        .join(', ');
+    };
+
+    await expect
+      .poll(async () => {
+        const [inDom, inConfig] = await Promise.all([mounted(), configured()]);
+        return inDom === inConfig
+          ? 'the hook point mounts what the configuration names'
+          : `mounted [${inDom}] while the configuration names [${inConfig}]`;
+      })
+      .toBe('the hook point mounts what the configuration names');
   });
 
   test('serves the plug-in bundle the configuration points at', async ({

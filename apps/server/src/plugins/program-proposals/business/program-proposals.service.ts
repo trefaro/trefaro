@@ -12,6 +12,7 @@ import {
   type ProposalPage,
   type ProposalQuery,
   type ProposalStatus,
+  type ProposalSummary,
 } from '@trefaro/shared-models';
 import {
   PLUGIN_PARTICIPANT_READS,
@@ -36,7 +37,7 @@ import {
  * table (F21) — so both arrive through `plugin-api`, and this file contains no
  * ORM import, no core entity and no knowledge of `user_profile`.
  *
- * Four decisions worth naming:
+ * Five decisions worth naming:
  *
  * 1. **A proposal is pending until somebody decides** (E51), and a decision is
  *    a route rather than a field in a `PATCH`: `POST …/approval` and
@@ -55,6 +56,11 @@ import {
  * 4. **Names are resolved once per page** (F49). One call to the host port for
  *    the whole list rather than one per row; an id it cannot resolve is left
  *    without an author rather than given a placeholder name.
+ * 5. **The count is the plug-in's, not the host's** (E59). {@link summarize}
+ *    answers the heading of the section this plug-in renders on the organizer's
+ *    dashboard. The tile above that section is a jump link with a label and an
+ *    icon and no number — a number there would mean the host asking a plug-in a
+ *    question, which is the one direction the contract does not have.
  */
 @Injectable()
 export class ProgramProposalsService {
@@ -101,6 +107,28 @@ export class ProgramProposalsService {
       rows(window),
     );
     return this.page(slice, window);
+  }
+
+  /**
+   * How many of one event's proposals are in each state (E59).
+   *
+   * For the heading of the section the plug-in draws on the organizer's
+   * dashboard. Its own route rather than a field on the moderation list,
+   * because the list is narrowed to the queue there and a narrowed list can
+   * only count itself — and because the number belongs to the section, not to
+   * whichever page of the list happens to be open.
+   *
+   * A state the event has no rows in is a zero rather than a missing key: SQL
+   * groups what is there, and a heading that showed nothing where it should
+   * show "0 rejected" would read as a broken heading.
+   */
+  async summarize(eventId: string): Promise<ProposalSummary> {
+    const counts = await this.proposals.countByStatus(eventId);
+    return {
+      pending: counts.get('pending') ?? 0,
+      approved: counts.get('approved') ?? 0,
+      rejected: counts.get('rejected') ?? 0,
+    };
   }
 
   /**

@@ -295,6 +295,7 @@ export {
   type ProposalPage,
   type ProposalQuery,
   type ProposalStatus,
+  type ProposalSummary,
 } from './lib/plugins';
 export {
   DEFAULT_MY_REGISTRATION_PAGE_SIZE,

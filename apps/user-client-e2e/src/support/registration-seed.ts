@@ -100,6 +100,36 @@ export async function seedSearchableProfile(person: {
 }
 
 /**
+ * A confirmed participant account that is **not** in the directory (E37).
+ *
+ * For the suites whose subject is something a person *did* rather than
+ * somebody being found: a programme proposal carries its author's name because
+ * they put it on something on purpose, and `searchable` has nothing to do with
+ * it. Which is also what this fixture proves in passing — the plug-in resolves
+ * an author through the host port that does not ask for an opt-in (AP 2 of
+ * phase 4), so a row like this one must still come back with a name.
+ *
+ * Seeded rather than registered for the reason above it: a registration, a
+ * confirmation mail and a login out of budgets three e2e projects share (E4).
+ * The password hash is nonsense on purpose — nothing may sign in as this row.
+ */
+export async function seedProfile(person: {
+  email: string;
+  firstName: string;
+  lastName: string;
+}): Promise<string> {
+  const result = await db().query<{ id: string }>(
+    `INSERT INTO user_profile
+       (email, password_hash, first_name, last_name, preferred_locale,
+        searchable, confirmed_at)
+     VALUES ($1, 'not-a-usable-hash', $2, $3, 'en', false, now())
+     RETURNING id`,
+    [person.email.toLowerCase(), person.firstName, person.lastName],
+  );
+  return result.rows[0].id;
+}
+
+/**
  * A live participant session for a seeded account, without a login (E34, E4,
  * F164).
  *

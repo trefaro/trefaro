@@ -3,11 +3,12 @@
 Participants suggest programme items; the organizer approves or rejects, and the
 status stays visible to the person who submitted it.
 
-Built in **AP 2 of phase 4** — the server half. The web component, its mount
-points (`event-detail`, `event-dashboard`) and its icon arrive in AP 3, which is
-why the descriptor carries no `client` contribution yet: a bundle URL with
-nothing behind it is a load failure reported to an organizer as a broken
-plug-in.
+Built in **AP 2 and AP 3 of phase 4** — the server here, the web component in
+`apps/plugins/program-proposals`. **One bundle, two audiences**: the same
+element renders a participant's panel at the `event-detail` hook point and the
+organization's moderation section at `event-dashboard`, and which of the two it
+is drawing arrives as `mountPoint` in the slot context, because only the host
+knows (F202).
 
 ## Shape
 
@@ -29,6 +30,8 @@ plug-in rather than the core.
 | What an author is called       | `PluginParticipantReads` (name and picture, no address — F55) |
 | A prerequisite (`profiles`)    | `ServerPlugin.requires`                                       |
 | The window of a paginated list | `pageWindow`, re-exported by the contract                     |
+| Which screen is being drawn    | `PluginSlotContext.mountPoint` (client side, F202)            |
+| Its words and its language     | `PluginSlotContext.strings` and `locale` (E48)                |
 
 ## Decisions that are not obvious from the code
 
@@ -44,3 +47,8 @@ plug-in rather than the core.
 - **Whether an event is published or over is not checked.** The contract
   publishes no port for an event's state, and inventing the rule here would be a
   product decision taken inside a plug-in.
+- **`…/summary` exists because a screen reads it** (E21). AP 2 deliberately left
+  it unbuilt; AP 3 added it for the three counts above the queue in the section
+  this plug-in draws on the organizer's dashboard. The **tile** above that
+  section carries no number — that would be the host asking a plug-in a
+  question (E59).

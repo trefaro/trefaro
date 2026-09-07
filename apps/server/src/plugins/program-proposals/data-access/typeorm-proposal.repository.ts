@@ -70,6 +70,23 @@ export class TypeormProposalRepository implements ProposalRepository {
     return row ? toRecord(row) : null;
   }
 
+  async countByStatus(
+    eventId: string,
+  ): Promise<ReadonlyMap<ProposalStatus, number>> {
+    const rows = await this.repository
+      .createQueryBuilder('proposal')
+      .select('proposal.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .where('proposal.event_id = :eventId', { eventId })
+      .groupBy('proposal.status')
+      .getRawMany<{ status: ProposalStatus; count: string }>();
+
+    // `COUNT(*)` comes back as a string: PostgreSQL's `bigint` does not fit in
+    // a double, so the driver hands it over as text rather than silently
+    // rounding it. The number of proposals of one event does fit.
+    return new Map(rows.map((row) => [row.status, Number(row.count)]));
+  }
+
   async create(input: CreateProposalInput): Promise<ProposalRecord> {
     try {
       const saved = await this.repository.save(

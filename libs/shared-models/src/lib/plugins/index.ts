@@ -11,4 +11,5 @@ export {
   type ProposalPage,
   type ProposalQuery,
   type ProposalStatus,
+  type ProposalSummary,
 } from './program-proposals';

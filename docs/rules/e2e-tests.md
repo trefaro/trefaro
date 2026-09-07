@@ -369,4 +369,46 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   sind Dateien (E9) — eine Suite mit Uploads oder Gesprächsbildern braucht mehr
   als diese eine Anweisung.
 
+- **`program-proposals` ist der dritte Schalter, den eine Browsersuite umlegt**
+  (nach `push` im Veranstalter-Client und `newsletter-opt-in` im
+  Nutzer-Client) — und der erste, den **zwei** Suiten umlegen, je eine pro
+  Client. Dieselben vier Bedingungen wie bei den anderen: nur Chromium,
+  `test.describe.configure({ mode: 'serial' })`, `browserName` **auch in den
+  Hooks**, und Zurückstellen im `finally`.
+- **Eine Zusicherung über „nichts montiert" wird falsch, sobald ein Paket etwas
+  einschaltet.** `start-up.spec.ts` bestand darauf, dass der
+  `event-detail`-Einhängepunkt **keine** Kinder hat — wahr, solange jedes
+  kuratierte Plug-in aus war, und ab AP 3 der Phase 4 ein Wettlauf gegen die
+  Suite, die eines einschaltet. Sie prüft jetzt gegen `/api/config`, also gegen
+  **das, was die Instanz sagt** — die stärkere Zusicherung — und mit
+  `expect.poll`, weil DOM und frisch gelesene Konfiguration einen Moment
+  auseinanderliegen können, wenn Playwright die zwei Dateien lokal auf zwei
+  Arbeiter verteilt. Allgemein: wer eine **vollständige Menge** vergleicht,
+  vergleicht sie gegen den Zustand der Instanz und nicht gegen eine Konstante.
+- **Ein Plug-in prüft man mit gebautem Bündel.** `nx build plugin-<key>` gehört
+  vor den E2E-Lauf (in der CI steht es so); ohne das Bündel definiert der
+  Browser kein Custom Element, der Slot montiert nichts — und eine Suite, die
+  nur „ist nicht sichtbar" prüft, wäre grün.
+- **Ein Fixture eines Plug-ins wird per SQL gesät, wenn die Suite es nur liest.**
+  Die Vorschläge der Veranstaltersuite gehen direkt in
+  `plugin_program_proposals_proposal`: über den Endpunkt bräuchte jede Zeile ein
+  Konto, eine Sitzung und einen Aufruf, und was hier geprüft wird, ist der
+  Bildschirm des Veranstalters. Dass ein Einreichen so eine Zeile erzeugt,
+  entscheiden die Vertragssuite und die Teilnehmersuite. Aufgeräumt wird über
+  den **Autor**: `author_id` kaskadiert, also nimmt das Löschen des Kontos die
+  Vorschläge mit.
+- **Ein geseedetes Konto für einen Autor ist bewusst nicht auffindbar**
+  (`searchable` false). Damit prüft jeder Lauf mit, dass der Namens-Port des
+  Vertrags kein Opt-in verlangt (E37) — mit einem eingetragenen Konto würde
+  niemand merken, wenn sich das änderte.
+- **Ist ein Port belegt, weil auf der Maschine etwas anderes läuft**, startet man
+  die Server selbst (`nx run server:serve:development`,
+  `nx run <client>:serve:development --port=…`) und fährt Playwright direkt
+  (`npx playwright test -c apps/<suite>/playwright.config.mts`) mit `BASE_URL`
+  und `API_HEALTH_URL` in der Umgebung — `nx run <suite>:e2e` setzt `BASE_URL`
+  in `options.env` und überschreibt eine eigene Variable. Dabei die `.env`
+  selbst laden (`set -a; . ./.env; set +a`), denn die kommt sonst von Nx: ohne
+  sie fehlen dem Seed die Admin-Zugangsdaten und der Lauf scheitert im
+  `globalSetup`.
+
 Siehe auch: [Fallen in den Angular-Clients](angular-clients.md), [Deployment und Prüfung](deployment.md).

@@ -1,0 +1,51 @@
+{
+  "name": "plugin-program-proposals",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "trefaro",
+  "sourceRoot": "apps/plugins/program-proposals/src",
+  "tags": ["scope:shared", "type:plugin-bundle"],
+  "targets": {
+    "build": {
+      "executor": "@angular/build:application",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "outputPath": {
+          "base": "dist/apps/plugins/program-proposals",
+          "browser": ""
+        },
+        "browser": "apps/plugins/program-proposals/src/main.ts",
+        "tsConfig": "apps/plugins/program-proposals/tsconfig.app.json",
+        "inlineStyleLanguage": "scss",
+        "index": false
+      },
+      "configurations": {
+        "production": {
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "250kb",
+              "maximumError": "500kb"
+            }
+          ],
+          "outputHashing": "none"
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true
+        }
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "test": {
+      "executor": "@angular/build:unit-test",
+      "options": {
+        "watch": false
+      }
+    }
+  }
+}

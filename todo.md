@@ -905,12 +905,16 @@ entry, the answer is noted below rather than repeated.
       check-in (AP 7/8) — and since 04.09.2026 a fourth directory to write,
       `personal-program`, for the individual programme plan Marius added to the
       phase (AP 9). `CURATED_PLUGINS` goes from one entry to five.
-      **One of four is there: the server half of the programme proposals, in
-      AP 2 of phase 4** — `plugin_program_proposals_proposal`, two controllers
-      (one per access level), five routes, `requires: ['profiles']`, no client
-      contribution yet because the bundle arrives with the screens in AP 3.
-      `CURATED_PLUGINS` has two entries, proposals above room planning, in the
-      order the plan fixes. Three left, plus the clients.
+      **One of four is done, both halves: the programme proposals.** The server
+      in AP 2 — `plugin_program_proposals_proposal`, two controllers (one per
+      access level), `requires: ['profiles']` — and the clients in AP 3: a
+      second bundle under `apps/plugins/program-proposals`, mounted at
+      `event-detail` in the participant client and at the new `event-dashboard`
+      hook point in the organizer client, plus the sixth route (`…/summary`) for
+      the counts the section draws. `CURATED_PLUGINS` has two entries, proposals
+      above room planning, in the order the plan fixes. **Milestone M9 is
+      reached**: the first curated plug-in is complete and the 1.2.0 contract has
+      a second implementer. Three plug-ins left.
 - [ ] **Implement the overbooking check** in the room planning plug-in: sign-ups
       per programme item against room capacity. Everything it needs exists since
       AP 9 — the room's capacity, the sessions assigned to it, and their sign-up
@@ -962,6 +966,35 @@ entry, the answer is noted below rather than repeated.
       did **not** arrive in AP 1, because a value in the closed set that no host
       serves is the decoy F47 warns about. The tile's icon comes from AP 1
       (E49).
+      **Done in AP 3 of phase 4, and verified as this entry asked.**
+      `event-dashboard` is the third value of `PluginMountPoint`; the organizer's
+      event dashboard mounts the slot below its table and puts one tile per
+      mounted plug-in into its existing grid — label from `labelKey`, icon from
+      `icon`, and a **jump mark** to the section rather than a route, with no
+      number on it (E59, F193). Switching the plug-in on makes tile and section
+      appear on every event's dashboard, switching it off removes both and
+      nothing else, and no row is lost
+      (`apps/admin-client-e2e/src/plugin-program-proposals.spec.ts`). The forum
+      is the second filler, in AP 5. One thing the entry did not anticipate: a
+      bundle with two hook points has to be told **which one** is drawing it, so
+      the slot hands over `mountPoint` as well (F202).
+
+- [ ] **A plug-in behind the login cannot tell whether there is a session.** The
+      contract hands a mounted element `locale`, `strings` and `mountPoint` — not
+      whether the reader is signed in. So the participant half of the programme
+      proposals asks its own endpoint and reads the 401 (E58: no session is a
+      state it renders, an invitation to log in). The cost is one failed request
+      in the console of every anonymous visit to an event page — exactly what
+      F143 taught the **host** to avoid, where a hint in `localStorage` decides
+      whether the client asks at all. A plug-in cannot use that hint: it belongs
+      to one of the two clients, and the same bundle runs in both. The fix would
+      be a fourth promised property, and it has a catch worth deciding rather
+      than assuming: only the **page** knows the answer, not the slot, so it
+      would be the first context value a hook point can forget — which is the
+      argument F187 and F202 use against exactly that shape. Decide it when the
+      third filler exists: AP 5 (forum) and AP 9 (individual programme plan)
+      mount participant-facing elements with the same question, which is E46's
+      condition for extending the contract.
 
 ## Checkable after phase 5 — hardening and release
 

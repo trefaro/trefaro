@@ -1,5 +1,15 @@
-/** The two places a plug-in's web component may be mounted in a client. */
-export type PluginMountPoint = 'navigation' | 'event-detail';
+/**
+ * The places a plug-in's web component may be mounted in a client.
+ *
+ * A **closed** set, and extending it is a contract step (plug-in API 1.2.0
+ * added `event-dashboard`, and `my-registration` arrives with the ticket page
+ * in AP 8 of phase 4). One hook point per screen that shows plug-in content —
+ * not one per screen — because a name in here is a promise both clients keep:
+ * whoever adds a value builds the host side that serves it, or a plug-in
+ * declares a place that never draws it.
+ */
+export type PluginMountPoint =
+  'navigation' | 'event-detail' | 'event-dashboard';
 
 /**
  * An enabled plug-in as announced to the clients.
@@ -64,8 +74,9 @@ export function pluginCataloguePrefix(pluginKey: string): string {
  *
  * Assigned as element properties by the slot — Angular Elements surfaces a
  * component's inputs as DOM properties, and a plug-in written without Angular
- * reads the same two. Both are **reassigned** on a language switch rather than
- * the element being replaced, so a plug-in keeps whatever state it was holding.
+ * reads the same three. They are **reassigned** on a language switch rather
+ * than the element being replaced, so a plug-in keeps whatever state it was
+ * holding.
  *
  * The host hands over words, never finished sentences: {@link strings} is the
  * catalogue selection under the plug-in's own prefix, with the prefix stripped,
@@ -80,4 +91,21 @@ export interface PluginSlotContext {
   readonly locale: string;
   /** The plug-in's own catalogue entries, keyed without the prefix. */
   readonly strings: Readonly<Record<string, string>>;
+  /**
+   * Which hook point is drawing this element right now.
+   *
+   * A plug-in declares one element and may declare several hook points, and
+   * from AP 3 of phase 4 that is the normal case rather than an edge: the
+   * programme proposals render a participant's panel at `event-detail` and the
+   * organization's moderation section at `event-dashboard` — one bundle, two
+   * audiences, two sets of routes. Only the host knows which of them it is
+   * asking for.
+   *
+   * Supplied by the slot itself, like {@link locale} and for the same reason: a
+   * hook point cannot forget it and no two of them can spell it differently.
+   * The alternative — a plug-in guessing from the address in the browser's bar
+   * or from which of its calls answers 401 — would make the two clients'
+   * deployment part of a plug-in's contract.
+   */
+  readonly mountPoint: PluginMountPoint;
 }

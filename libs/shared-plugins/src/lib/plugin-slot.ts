@@ -23,8 +23,9 @@ import { PluginLoaderService } from './plugin-loader.service';
  * A hook point where plug-in web components are mounted.
  *
  * The thesis fixes two of them — the navigation bar and the event detail view —
- * and both clients place this component there. Whether anything appears depends
- * entirely on the configuration.
+ * and both clients place this component there; the organizer's event dashboard
+ * is the third, added by plug-in API 1.2.0 for the tiles the mockups draw
+ * (E59, F47). Whether anything appears depends entirely on the configuration.
  *
  * The custom elements are created imperatively because their tag names come from
  * the configuration at runtime, so no template can name them. Values from
@@ -32,14 +33,17 @@ import { PluginLoaderService } from './plugin-loader.service';
  * Elements surfaces a component's inputs; a plug-in written without Angular
  * reads the same properties.
  *
- * On top of the hook point's own values, every element is handed the two
- * properties of {@link PluginSlotContext} — `locale` and `strings` (E48, plug-in
- * API 1.2.0). The host resolves a plug-in's words against the catalogue it
- * already loaded and passes them on, so a plug-in's text is maintainable by the
- * organization like every other sentence in the application (E22) without a
- * bundle carrying Transloco or fetching `/api/i18n/:locale` a second time. They
- * are assigned last on purpose: a hook point may add anything it likes to the
- * context, but not shadow the two the contract promises.
+ * On top of the hook point's own values, every element is handed the three
+ * properties of {@link PluginSlotContext} — `locale`, `strings` and
+ * `mountPoint` (E48, plug-in API 1.2.0). The host resolves a plug-in's words
+ * against the catalogue it already loaded and passes them on, so a plug-in's
+ * text is maintainable by the organization like every other sentence in the
+ * application (E22) without a bundle carrying Transloco or fetching
+ * `/api/i18n/:locale` a second time. The hook point travels with them because a
+ * plug-in may be mounted at more than one and render something different at
+ * each — one bundle, two audiences, from AP 3 of phase 4 onwards. All three are
+ * assigned last on purpose: a hook point may add anything it likes to the
+ * context, but not shadow what the contract promises.
  *
  * **A language switch reassigns, it does not remount.** The elements are kept
  * and their properties written again, because a plug-in may be holding state
@@ -160,6 +164,9 @@ export class PluginSlot {
     const promised: PluginSlotContext = {
       locale,
       strings: this.i18n.stringsWithPrefix(pluginCataloguePrefix(plugin.key)),
+      // Not from the context input: the slot knows its own hook point, so this
+      // is the one value a hook point cannot get wrong.
+      mountPoint: this.mountPoint(),
     };
     Object.assign(element, context, promised);
   }

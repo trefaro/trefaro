@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { AppConfigService } from '@trefaro/shared-config';
 import { problemOf, type ApiError, type Problem } from '@trefaro/shared-http';
 import { TranslationService } from '@trefaro/shared-i18n';
 import type {
@@ -21,9 +22,12 @@ import {
   formatEventPeriod,
   formatInstant,
   mediaLinkKindKey,
+  pluginElementId,
   publicEventPath,
   registrationStatusKey,
 } from '@trefaro/shared-models';
+import { PluginLoaderService, PluginSlot } from '@trefaro/shared-plugins';
+import { TrefaroIcon } from '@trefaro/shared-theming';
 import { EventsAdminService } from '../../features/events/events-admin.service';
 import { PublicSite } from '../../features/public-site/public-site.service';
 
@@ -52,6 +56,13 @@ import { PublicSite } from '../../features/public-site/public-site.service';
  *    different origin, and this client is not told which one (that arrives with
  *    the configuration work of phase 2). A link that works in production and
  *    404s in development would be worse than the address itself.
+ * 5. **A plug-in's tile jumps to its own section** (E59, AP 3 of phase 4).
+ *    Every plug-in mounted at the `event-dashboard` hook point gets a tile in
+ *    this grid — label from `labelKey`, icon from `icon` — and the section it
+ *    renders sits below the table. The tile carries no number: the host would
+ *    have to ask the plug-in for one, which is the first capability in the
+ *    reverse direction, complete with a refresh problem, for a figure two
+ *    centimetres further down. Same shape as the participant's tiles (F68).
  *
  * The lines under the numbers are assembled here rather than in the template,
  * so each is a method that reads the catalogue — and a method, not a
@@ -61,7 +72,7 @@ import { PublicSite } from '../../features/public-site/public-site.service';
 @Component({
   selector: 'trefaro-event-dashboard-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslocoPipe],
+  imports: [RouterLink, TranslocoPipe, PluginSlot, TrefaroIcon],
   template: `
     @if (error(); as problem) {
       <p class="error" role="alert">
@@ -245,9 +256,24 @@ import { PublicSite } from '../../features/public-site/public-site.service';
             <p class="tile__meta">{{ mediaMeta(media) }}</p>
           </article>
         }
-        <!-- The tiles for messages (phase 3) and for the proposal and forum
-             plug-ins (phase 4) appear here. Deliberately not present as zeros
-             while the modules do not exist. -->
+        <!-- One tile per plug-in mounted at this hook point (E59). A jump
+             mark with a label and an icon and no number: the number belongs to
+             the section the plug-in draws below, and asking a plug-in for one
+             would be the first capability pointing the other way. The tile for
+             new messages (phase 3) is still absent rather than a hard zero. -->
+        @for (tile of pluginTiles(); track tile.target) {
+          <article class="tile tile--plugin">
+            <h2>
+              <a [routerLink]="[]" [fragment]="tile.target">
+                <trefaro-icon [name]="tile.icon" />
+                {{ tile.label }}
+              </a>
+            </h2>
+            <p class="tile__meta">
+              {{ 'admin.dashboard.pluginSection' | transloco }}
+            </p>
+          </article>
+        }
       </section>
 
       <section>
@@ -301,6 +327,16 @@ import { PublicSite } from '../../features/public-site/public-site.service';
           </table>
         }
       </section>
+
+      <!-- Plug-in hook point three: the organizer's event dashboard (E59,
+           plug-in API 1.2.0). Each plug-in renders its own section here — the
+           proposals draw their moderation queue — and the tiles above jump to
+           them. Below the table on purpose: what an organizer came for is
+           their event, and a plug-in adds to that page rather than opening it. -->
+      <trefaro-plugin-slot
+        mountPoint="event-dashboard"
+        [context]="pluginContext()"
+      />
     } @else if (loading()) {
       <p class="meta">{{ 'common.loading' | transloco }}</p>
     }
@@ -354,6 +390,14 @@ import { PublicSite } from '../../features/public-site/public-site.service';
     .tile h2 {
       margin: 0;
       font-size: 1rem;
+    }
+
+    /* Label and glyph on one line. A plug-in's tile carries no number, so it
+       is shorter than its neighbours, and the grid reflows around it. */
+    .tile--plugin h2 a {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
     }
 
     /* One real link per tile, stretched over the whole card: the tile is a
@@ -445,6 +489,8 @@ export class EventDashboardPage {
 
   private readonly events = inject(EventsAdminService);
   private readonly i18n = inject(TranslationService);
+  private readonly config = inject(AppConfigService);
+  private readonly plugins = inject(PluginLoaderService);
 
   protected readonly publicSite = inject(PublicSite);
 
@@ -458,6 +504,49 @@ export class EventDashboardPage {
   protected readonly latest = computed(
     () => this.dashboard()?.latestRegistrations ?? [],
   );
+
+  /**
+   * What a plug-in mounted here is told about this page.
+   *
+   * Only the event: the slot itself hands over `locale`, the plug-in's words
+   * and which hook point is drawing it (E48, plug-in API 1.2.0), so a hook
+   * point can neither forget the language nor lie about where it is.
+   */
+  protected readonly pluginContext = computed(() => ({
+    eventId: this.eventId(),
+  }));
+
+  /**
+   * One tile per plug-in that renders a section on this page (E59).
+   *
+   * A jump mark, not a route and not a number: everything a tile can lead to is
+   * already on this page, drawn by the plug-in itself, and a count on the tile
+   * would have to come from the host asking a plug-in — the one direction the
+   * contract does not have.
+   *
+   * A plug-in whose bundle failed to load gets no tile, for the reason the
+   * participant's tiles give: a jump mark to nothing is worse than no tile, and
+   * the module administration is where a broken plug-in is reported. The order
+   * is the order the descriptors arrive in, which is the order they are
+   * registered in — the same order as the sections below, so the tiles are not
+   * shuffled against them.
+   */
+  protected readonly pluginTiles = computed(() => {
+    // The active language, read before the first label: nothing else would make
+    // this recompute after a switch (F72).
+    this.i18n.locale();
+    // And the load results, so a tile appears as its bundle becomes ready.
+    this.plugins.loadResults();
+
+    return this.config
+      .pluginsAt('event-dashboard')
+      .filter((plugin) => this.plugins.isReady(plugin.key))
+      .map((plugin) => ({
+        target: pluginElementId(plugin.key),
+        label: this.i18n.translate(plugin.labelKey),
+        icon: plugin.icon,
+      }));
+  });
 
   constructor() {
     effect(() => {

@@ -87,6 +87,28 @@ export interface ProposalPage {
   readonly pageSize: number;
 }
 
+/**
+ * How many proposals of one event are in each state (E59).
+ *
+ * The number the organizer's dashboard section draws — and it is the **plug-in**
+ * that draws it, in the section it renders itself, never the host on the tile
+ * above: a count on the tile would mean the host asking a plug-in a question,
+ * the first capability pointing the wrong way, for a figure two centimetres
+ * further down the page.
+ *
+ * Three counts rather than one, because the section says what the queue means:
+ * a heading that reads "3 open · 12 approved · 1 rejected" tells an organizer
+ * whether they are behind, and one request answers it. The moderation list's
+ * own `total` cannot: narrowed to `?status=pending` it counts the queue and
+ * nothing else, and three pages fetched for three numbers would be three
+ * requests for one heading.
+ */
+export interface ProposalSummary {
+  readonly pending: number;
+  readonly approved: number;
+  readonly rejected: number;
+}
+
 /** What the moderation list may ask for. */
 export interface ProposalQuery {
   readonly status?: ProposalStatus;

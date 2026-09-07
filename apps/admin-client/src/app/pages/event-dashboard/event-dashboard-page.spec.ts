@@ -1,13 +1,18 @@
 import { provideTranslationsForTest } from '@trefaro/shared-i18n';
+import { computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { AppConfigService } from '@trefaro/shared-config';
 import type {
   EventDashboard,
   EventStatus,
   MediaLinkSummary,
   OrganizerEvent,
   ParticipantRow,
+  PluginDescriptor,
+  PluginMountPoint,
 } from '@trefaro/shared-models';
+import { PluginLoaderService } from '@trefaro/shared-plugins';
 import { EventsAdminService } from '../../features/events/events-admin.service';
 import { EventDashboardPage } from './event-dashboard-page';
 
@@ -97,19 +102,73 @@ class FakeEventsAdminService {
   }
 }
 
+/**
+ * The two host services the plug-in tiles read (E59, AP 3 of phase 4).
+ *
+ * Stubbed rather than fed a configuration: what is under test here is the
+ * dashboard's behaviour given a set of mounted plug-ins, and the real service
+ * would need a whole `/api/config` answer to say the same thing. Both keep the
+ * one other member this page uses — `publicUserClientUrl`, which `PublicSite`
+ * reads for the link to the public event page.
+ */
+class StubAppConfig {
+  readonly plugins = signal<readonly PluginDescriptor[]>([]);
+  readonly publicUserClientUrl = signal('https://events.example.org');
+
+  pluginsAt(mountPoint: PluginMountPoint): readonly PluginDescriptor[] {
+    return this.plugins().filter((plugin) =>
+      plugin.mountPoints.includes(mountPoint),
+    );
+  }
+}
+
+class StubPluginLoader {
+  readonly ready = signal<readonly string[]>([]);
+
+  readonly loadResults = computed(() => this.ready());
+
+  isReady(key: string): boolean {
+    return this.ready().includes(key);
+  }
+}
+
+function descriptor(
+  key: string,
+  mountPoints: readonly PluginMountPoint[],
+  icon: string | null = 'lightbulb',
+): PluginDescriptor {
+  return {
+    key,
+    version: '0.1.0',
+    labelKey: `plugins.${key}.label`,
+    elementName: `trefaro-plugin-${key}`,
+    bundleUrl: `/api/plugins/${key}/main.js`,
+    mountPoints,
+    icon,
+  };
+}
+
 async function render(
   seeded: {
     view?: EventDashboard;
     failure?: { status: number; message: string };
+    plugins?: readonly PluginDescriptor[];
+    ready?: readonly string[];
   } = {},
 ): Promise<{
   page: PageInternals;
   events: FakeEventsAdminService;
   text: () => string;
   links: () => string[];
+  tiles: () => string[];
+  host: () => HTMLElement;
   settle: () => Promise<void>;
 }> {
   const events = new FakeEventsAdminService();
+  const config = new StubAppConfig();
+  const loader = new StubPluginLoader();
+  config.plugins.set(seeded.plugins ?? []);
+  loader.ready.set(seeded.ready ?? []);
   if (seeded.view !== undefined) events.view = seeded.view;
   if (seeded.failure) events.failure = seeded.failure;
 
@@ -140,9 +199,14 @@ async function render(
         'admin.dashboard.metaRequired': '{{count}} of them required.',
         'admin.events.errorMissing': 'This event no longer exists.',
         'eventStatus.draft': 'draft',
+        'admin.dashboard.pluginSection': 'on this page',
+        'plugins.program-proposals.label': 'Proposals',
+        'plugins.forum.label': 'Forum',
       }),
       provideRouter([]),
       { provide: EventsAdminService, useValue: events },
+      { provide: AppConfigService, useValue: config },
+      { provide: PluginLoaderService, useValue: loader },
     ],
   });
 
@@ -162,6 +226,11 @@ async function render(
       [...host.querySelectorAll('a')].map((link) =>
         (link.textContent ?? '').trim(),
       ),
+    tiles: () =>
+      [...host.querySelectorAll('.tile h2')].map((heading) =>
+        (heading.textContent ?? '').trim(),
+      ),
+    host: () => host,
     settle: async () => {
       await fixture.whenStable();
       fixture.detectChanges();
@@ -340,5 +409,92 @@ describe('EventDashboardPage', () => {
     });
 
     expect(text()).toContain('This event no longer exists.');
+  });
+
+  describe('the plug-ins that render here (E59)', () => {
+    it('mounts the hook point, so a plug-in has a place at all', async () => {
+      const { host } = await render();
+
+      expect(
+        host().querySelector(
+          '.trefaro-plugin-slot[data-mount-point="event-dashboard"]',
+        ),
+      ).not.toBeNull();
+    });
+
+    it('gives a mounted plug-in a tile that jumps to its section', async () => {
+      const { tiles, host } = await render({
+        plugins: [descriptor('program-proposals', ['event-dashboard'])],
+        ready: ['program-proposals'],
+      });
+
+      expect(tiles()).toContain('Proposals');
+      const tile = host().querySelector('.tile--plugin a') as HTMLAnchorElement;
+      // A jump mark, not a route: what it leads to is on this page, drawn by
+      // the plug-in itself.
+      expect(tile.getAttribute('href')).toMatch(/#plugin-program-proposals$/);
+      // And the glyph its descriptor names, from this instance's own files.
+      expect(tile.querySelectorAll('svg path')).toHaveLength(1);
+    });
+
+    it('puts no number on that tile', async () => {
+      const { host } = await render({
+        plugins: [descriptor('program-proposals', ['event-dashboard'])],
+        ready: ['program-proposals'],
+      });
+
+      // The count belongs to the section the plug-in renders. A number here
+      // would mean the host asking a plug-in a question — the one direction
+      // the contract does not have.
+      const tile = host().querySelector('.tile--plugin') as HTMLElement;
+      expect(tile.querySelector('.tile__value')).toBeNull();
+    });
+
+    it('leaves out a plug-in whose bundle never became ready', async () => {
+      const { tiles } = await render({
+        plugins: [descriptor('program-proposals', ['event-dashboard'])],
+        ready: [],
+      });
+
+      // A jump mark to nothing is worse than no tile; the module
+      // administration is where a broken plug-in is reported.
+      expect(tiles()).not.toContain('Proposals');
+    });
+
+    it('leaves out a plug-in that does not mount here', async () => {
+      const { tiles } = await render({
+        plugins: [descriptor('room-planning', ['event-detail'])],
+        ready: ['room-planning'],
+      });
+
+      expect(tiles().some((tile) => tile.includes('room'))).toBe(false);
+    });
+
+    it('takes two plug-ins in the order they were registered', async () => {
+      const { tiles } = await render({
+        plugins: [
+          descriptor('program-proposals', ['event-dashboard']),
+          descriptor('forum', ['event-dashboard']),
+        ],
+        ready: ['program-proposals', 'forum'],
+      });
+
+      // Registered, not discovered — so the tiles keep the order of the
+      // sections below them (AP 5 adds the second one).
+      expect(tiles().slice(-2)).toEqual(['Proposals', 'Forum']);
+    });
+
+    it('draws no tile for a plug-in that names no icon', async () => {
+      const { host } = await render({
+        plugins: [descriptor('program-proposals', ['event-dashboard'], null)],
+        ready: ['program-proposals'],
+      });
+
+      const tile = host().querySelector('.tile--plugin a') as HTMLAnchorElement;
+      // The tile stands, the glyph does not: the whole behaviour of
+      // `trefaro-icon`, and the reason the module page reports the name.
+      expect(tile.textContent).toContain('Proposals');
+      expect(tile.querySelectorAll('svg')).toHaveLength(0);
+    });
   });
 });

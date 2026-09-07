@@ -29,6 +29,7 @@ import {
   ProgramProposalDto,
   ProposalPageDto,
   ProposalQueryDto,
+  ProposalSummaryDto,
 } from './proposal.dto';
 
 /**
@@ -47,6 +48,11 @@ import {
  *
  * Both answer 200 with the row as it now is, rather than 204: the organizer's
  * list is the screen this is called from, and the answer is what it redraws.
+ *
+ * The third read, `…/summary`, is the one AP 3 added — the counts above the
+ * queue in the section this plug-in draws on the event dashboard. It exists
+ * because something reads it (E21): AP 2 deliberately left it unbuilt while
+ * there was no screen for it.
  */
 @ApiTags('plugin: programme proposals')
 @ApiNotFoundResponse({
@@ -81,6 +87,24 @@ export class AdminProposalsController {
       eventId,
       query,
     ) as Promise<ProposalPageDto>;
+  }
+
+  @Get('events/:eventId/summary')
+  @ApiOperation({
+    summary: 'How many proposals of this event are in each state (E59)',
+    description:
+      'The heading of the section this plug-in renders on the organizer’s ' +
+      'dashboard — three numbers in one request. The **tile** above that ' +
+      'section carries no number: it is a jump link with a label and an icon, ' +
+      'because a count on the tile would mean the host asking a plug-in a ' +
+      'question, and the contract has no capability pointing that way.',
+  })
+  @ApiOkResponse({ type: ProposalSummaryDto })
+  @ApiUnauthorizedResponse({ description: 'No administrative session.' })
+  summary(
+    @Param('eventId', ParseUUIDPipe) eventId: string,
+  ): Promise<ProposalSummaryDto> {
+    return this.proposals.summarize(eventId) as Promise<ProposalSummaryDto>;
   }
 
   @Post('proposals/:proposalId/approval')

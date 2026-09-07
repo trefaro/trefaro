@@ -60,7 +60,7 @@ export class PluginDescriptorDto implements PluginDescriptor {
 
   @ApiProperty({
     isArray: true,
-    enum: ['navigation', 'event-detail'],
+    enum: ['navigation', 'event-detail', 'event-dashboard'],
     example: ['event-detail'],
   })
   mountPoints!: readonly PluginMountPoint[];

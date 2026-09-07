@@ -36,6 +36,14 @@ Link.
   freigibt. `plugins/plugin-controllers.spec.ts` läuft über **alle** montierten
   Plug-in-Controller und hält Präfix, Schlüssel und Guard fest — und dass der
   Switch-Guard der einzige ist.
+- **Eine Zählroute entsteht, wenn ein Abschnitt sie liest** (E21, E59, F193).
+  `GET …/events/:id/summary` gibt die drei Zustände in **einer** Anweisung
+  (`GROUP BY status`), mit einer Null für einen Zustand ohne Zeilen — sie kam
+  deshalb in AP 3 und nicht in AP 2, wo es den Bildschirm noch nicht gab. Die
+  Zahl gehört dem **Abschnitt des Plug-ins**, nie der Kachel des Hosts: eine
+  Kachel mit Zahl hieße, dass der Host ein Plug-in fragt, und diese Richtung hat
+  der Vertrag nicht. Und `total` einer gefilterten Liste ist keine
+  Zusammenfassung: es zählt genau die eine Teilmenge.
 - **Eine Freigabe ist eine Route, kein Feld** (E51, F191). `POST …/approval` und
   `POST …/rejection`, nie ein `PATCH` mit `status` — das wäre die Gestalt, in
   der jemand `pending` zurücksetzt. Zustand und Zeitpunkt werden in **einer**

@@ -23,11 +23,13 @@ import { PROGRAM_PROPOSALS_PLUGIN_KEY } from './program-proposals.plugin-key';
  * switching this on without accounts is a 409 naming `profiles`, and switching
  * `profiles` off while this is on is a 409 naming this plug-in.
  *
- * **No client contribution yet.** The web component, its mount points and its
- * icon arrive in AP 3 together with the two screens that render them — a
- * `bundleUrl` in the descriptor before there is a bundle behind it would be a
- * load failure reported to an organizer as a broken plug-in (E21, F47). Until
- * then this is a server-only plug-in, which the contract has always allowed.
+ * **Two hook points, one bundle** (AP 3). The web component renders a
+ * participant's panel at `event-detail` — submit, and see one's own proposals
+ * with their status — and the organization's moderation section at
+ * `event-dashboard`, where the tile above it is a jump link (E59). Which of the
+ * two it is drawing arrives as `mountPoint` in the slot context, because only
+ * the host knows: a bundle that guessed from the address in the browser's bar
+ * would make the clients' deployment part of the contract.
  */
 export const programProposalsPlugin: ServerPlugin = {
   key: PROGRAM_PROPOSALS_PLUGIN_KEY,
@@ -45,6 +47,17 @@ export const programProposalsPlugin: ServerPlugin = {
     migrations: [CreateProgramProposalsSchema1787880000000],
   },
   requires: [PROFILES_MODULE_KEY],
+  client: {
+    elementName: 'trefaro-plugin-program-proposals',
+    bundleUrl: '/api/plugins/program-proposals/main.js',
+    // Both halves of FR 3.13/3.14 in one element: proposing is something a
+    // participant does while reading about an event, and moderating is
+    // something an organizer does on that event's dashboard.
+    mountPoints: ['event-detail', 'event-dashboard'],
+    labelKey: 'plugins.programProposals.label',
+    // A suggestion, not a booking (E49).
+    icon: 'lightbulb',
+  },
   // Off by default like every curated plug-in: an instance offers what the
   // organization asked for (NFR 1). Participating in the programme is a
   // decision about how an organization works, not a default.

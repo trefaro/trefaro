@@ -7,7 +7,11 @@ import {
   withFetch,
   withInterceptors,
 } from '@angular/common/http';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import {
+  provideRouter,
+  withComponentInputBinding,
+  withInMemoryScrolling,
+} from '@angular/router';
 import { provideTrefaroConfig } from '@trefaro/shared-config';
 import {
   provideTrefaroTitles,
@@ -35,7 +39,15 @@ export const appConfig: ApplicationConfig = {
       // full of failed requests.
       withInterceptors([unauthorizedInterceptor]),
     ),
-    provideRouter(appRoutes, withComponentInputBinding()),
+    // `anchorScrolling` because an event's dashboard leads to the sections its
+    // plug-ins render, through tiles in its own grid (E59, AP 3 of phase 4):
+    // they navigate to the current route with a fragment, and without this the
+    // URL would change and nothing would move.
+    provideRouter(
+      appRoutes,
+      withComponentInputBinding(),
+      withInMemoryScrolling({ anchorScrolling: 'enabled' }),
+    ),
     // Route titles are catalogue keys, and the tab ends in the organization's
     // name rather than in the product's (F60).
     provideTrefaroTitles(),

@@ -10,6 +10,7 @@ import {
   type ProposalPage,
   type ProposalQuery,
   type ProposalStatus,
+  type ProposalSummary,
 } from '@trefaro/shared-models';
 import {
   IsIn,
@@ -101,6 +102,27 @@ export class ProposalPageDto implements ProposalPage {
 
   @ApiProperty()
   pageSize!: number;
+}
+
+/**
+ * The counts the organizer's dashboard section draws (E59).
+ *
+ * Three numbers and no rows: the queue itself arrives through the moderation
+ * list, and this is the heading above it.
+ */
+export class ProposalSummaryDto implements ProposalSummary {
+  @ApiProperty({ description: 'Waiting for a decision — the queue.' })
+  pending!: number;
+
+  @ApiProperty()
+  approved!: number;
+
+  @ApiProperty({
+    description:
+      'Rejected proposals keep their row (E14), so this never becomes zero ' +
+      'by a decision being taken.',
+  })
+  rejected!: number;
 }
 
 /** What a participant sends to propose a session (FR 3.13). */

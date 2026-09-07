@@ -3,10 +3,20 @@ import type { DynamicModule, Type } from '@nestjs/common';
 /**
  * Where a plug-in's web component may be mounted in the clients.
  *
- * The thesis fixes exactly two hook points, so the set stays closed: adding one
- * is a versioned change to this contract, not an ad-hoc extension.
+ * The set stays closed: adding one is a versioned change to this contract, not
+ * an ad-hoc extension. The thesis fixed two hook points; plug-in API 1.2.0
+ * adds the organizer's event dashboard, because the mockups draw the tiles for
+ * the proposals and the forum there (E59, F47), and `my-registration` follows
+ * with the ticket page in AP 8 of phase 4.
+ *
+ * Spelled here as well as in `@trefaro/shared-models`, on purpose: this is what
+ * a **plug-in** declares, and the clients read the other one. A plug-in gets
+ * its contract from `plugin-api` and nothing else of the host (the ESLint rule
+ * over `src/plugins/**`), and the two lists agree by the descriptors passing
+ * through `ModuleAdminService` into `PluginDescriptorDto`.
  */
-export type PluginMountPoint = 'navigation' | 'event-detail';
+export type PluginMountPoint =
+  'navigation' | 'event-detail' | 'event-dashboard';
 
 /**
  * The plug-in's persistence contribution: its own entities and its own

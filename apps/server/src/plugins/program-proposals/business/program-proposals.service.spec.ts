@@ -68,6 +68,17 @@ class FakeProposalRepository implements ProposalRepository {
     return this.rows.find((row) => row.id === id) ?? null;
   }
 
+  async countByStatus(
+    _eventId: string,
+  ): Promise<ReadonlyMap<ProposalStatus, number>> {
+    // Only what the event has rows in, the way `GROUP BY` answers.
+    const counts = new Map<ProposalStatus, number>();
+    for (const row of this.rows) {
+      counts.set(row.status, (counts.get(row.status) ?? 0) + 1);
+    }
+    return counts;
+  }
+
   async create(input: CreateProposalInput): Promise<ProposalRecord> {
     if (this.unknownTarget) {
       throw new UnknownProposalTargetError(input.eventId);
@@ -323,6 +334,48 @@ describe('ProgramProposalsService', () => {
       await expect(service.approve('nothing', 'organizer-3')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('the count for the dashboard section (E59)', () => {
+    it('counts each state of one event', async () => {
+      const { service, repository } = harness();
+      repository.rows.push(
+        proposal({ id: 'a', status: 'pending' }),
+        proposal({ id: 'b', status: 'pending' }),
+        proposal({ id: 'c', status: 'approved' }),
+        proposal({ id: 'd', status: 'rejected' }),
+      );
+
+      await expect(service.summarize('event-1')).resolves.toEqual({
+        pending: 2,
+        approved: 1,
+        rejected: 1,
+      });
+    });
+
+    it('says zero for a state with no rows, rather than leaving it out', async () => {
+      const { service, repository } = harness();
+      repository.rows.push(proposal({ id: 'a', status: 'pending' }));
+
+      // `GROUP BY` answers with what is there; a heading needs all three, and
+      // a missing number would read as a broken heading.
+      await expect(service.summarize('event-1')).resolves.toEqual({
+        pending: 1,
+        approved: 0,
+        rejected: 0,
+      });
+    });
+
+    it('asks for no names — a count has no authors', async () => {
+      const { service, repository, asked } = harness();
+      repository.rows.push(proposal({ id: 'a' }));
+
+      await service.summarize('event-1');
+
+      // The host port is the expensive part of a page (F49); a heading of
+      // three numbers must not pay for it.
+      expect(asked).toEqual([]);
     });
   });
 });

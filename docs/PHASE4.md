@@ -1,6 +1,6 @@
 # Phase 4 — Plug-ins: die fünf kuratierten Fachlichkeiten
 
-**Status: in Arbeit** (Plan 04.09.2026, AP 1 und AP 2 erledigt am 07.09.2026). Alles über
+**Status: in Arbeit** (Plan 04.09.2026, AP 1 bis AP 3 erledigt am 07.09.2026 — **Meilenstein M9 erreicht**). Alles über
 dem Abschnitt _Fortschritt_ ist der **Plan** und wird nicht rückwirkend
 korrigiert; was tatsächlich passierte — samt Abweichungen — steht unten, wie in
 [`PHASE1.md`](PHASE1.md), [`PHASE2.md`](PHASE2.md) und
@@ -800,6 +800,7 @@ Wird beim jeweiligen Paket eingetragen, nicht am Ende gesammelt:
 | F199 | Die Tür funktioniert ohne Kamera (Bezug NFR 4, E10)                                                | 8   |
 | F200 | Ein Plug-in liest übersetzt, wenn ein Teilnehmender es liest (E56, Bezug F45, E12, F95)            | 9   |
 | F201 | Der individuelle Programmplan ist eine Auswahl, keine Anmeldung (E55, Bezug FR 3.10, F42)          | 9   |
+| F202 | Ein Plug-in erfährt, welcher Einhängepunkt es zeichnet (Nachtrag aus AP 3, Bezug F187, E46)        | 3   |
 
 Die Nummern sind reserviert, nicht garantiert: was sich beim Bauen als dieselbe
 Entscheidung entpuppt, wird zusammengelegt, und die freigewordene Nummer bleibt
@@ -1090,3 +1091,120 @@ Was anders lief als geplant:
   volle Läufe der Teilnehmersuite in einer Viertelstunde erschöpfen die
   Drosselung (20 Anmeldungen je fünf Minuten und Adresse, E4). Allein gefahren
   grün, und die Drosselung wird dafür nicht angefasst.
+
+### AP 3 — Programmvorschläge in beiden Clients (erledigt, 07.09.2026) → M9
+
+Umgesetzt:
+
+- **Der Vertrag** — `PluginMountPoint` hat einen dritten Wert,
+  `event-dashboard`, und `PluginSlotContext` eine dritte zugesagte Eigenschaft,
+  `mountPoint`. Beides gehört zu 1.2.0 (die Version bleibt, wie der Plan es
+  vorsieht: **ein** Schritt für diese Phase). Der Slot setzt `mountPoint`
+  selbst, weil er der einzige ist, der es weiß — ein Einhängepunkt kann es
+  damit nicht vergessen und nicht überschreiben, genau wie `locale` (F187,
+  F202).
+- **Das Bündel** — `apps/plugins/program-proposals` als zweite Web-Komponente
+  des Repositories, `<trefaro-plugin-program-proposals>`, gebaut wie die
+  Raumplanung und im Image serviert (`/api/plugins/program-proposals/main.js`).
+  Der Deskriptor hat jetzt seinen `client`-Teil: zwei Einhängepunkte,
+  `labelKey`, und `lightbulb` als Icon — ein Vorschlag, keine Buchung.
+- **Ein Bündel, zwei Hälften.** `program-proposals-plugin.ts` ist nur der
+  Schalter; darunter liegen `participant-proposals.ts` (einreichen, die Liste
+  mit Status, ohne Sitzung die Anmeldeaufforderung) und
+  `organizer-proposals.ts` (die drei Zahlen, die Warteschlange, je Zeile zwei
+  Knöpfe). Die Worte kommen aus `strings`, die Modelle aus `shared-models`,
+  und die vier Aufrufe macht `proposals-api.ts` mit `fetch` — kein zweiter
+  HTTP-Stapel in einem Bündel, das zur Laufzeit geladen wird.
+- **Server** — die sechste Route, `GET /api/admin/plugins/program-proposals/events/:id/summary`:
+  drei Zustände in **einer** Anweisung (`GROUP BY status`), ein fehlender
+  Zustand als Null. Sie entsteht jetzt, weil sie jetzt einen Leser hat (E21) —
+  AP 2 hatte sie deshalb ausdrücklich nicht gebaut. Migration: **keine**.
+- **Veranstalter-Client** — der neue Einhängepunkt am Event-Dashboard: je
+  montiertem Plug-in eine Kachel im vorhandenen Raster (Beschriftung, Icon,
+  Sprungmarke, **keine** Zahl) und unter der Tabelle der Abschnitt, den das
+  Plug-in zeichnet. Dazu `anchorScrolling` im Router dieses Clients, ohne das
+  eine Sprungmarke die Adresse ändert und sonst nichts (F193).
+- **Nutzer-Client** — **nichts**. Der `event-detail`-Einhängepunkt und die
+  Kachel dazu stehen seit AP 4 der Phase 2 und sind allgemein: das Plug-in
+  erscheint dort, weil es montiert wird, nicht weil jemand es eingebaut hat.
+  Das ist der Beweis, den dieses Paket für den Vertrag liefert.
+- **Katalog** — 963 auf **988** Schlüssel: 24 unter
+  `plugins.programProposals.*` — jetzt 25 mit dem Namen aus AP 2 —
+  (Beschriftung, Formular, Statuswörter, die zwei Knöpfe, die Leerzustände, der
+  Satz über eine Freigabe, die Anmeldeaufforderung) plus
+  `admin.dashboard.pluginSection`. Englisch und Deutsch, wie immer.
+- **Referenzdokument** — F193, F194 und F202.
+
+Belegt: `nx run-many -t lint test build` grün (**14** Projekte, das Bündel ist
+das neue), Server-Unit-Tests **1170**, davon drei neu (die Fälle der
+Zusammenfassung: die drei Zahlen, die Null für einen Zustand ohne Zeilen, und
+dass eine Überschrift aus Zahlen keine Namen nachfragt),
+API-Vertragstests **604** (601 vorher; die drei neuen prüfen,
+dass die Zahlen mit den Zeilen übereinstimmen, dass eine Korrektur sie bewegt
+und dass die Route hinter der Verwaltungssitzung liegt), Teilnehmersuite **235**
+(231 vorher), Veranstaltersuite **299** (294 vorher), dazu **24** Unit-Tests im
+Bündel selbst.
+
+Die zwei Browsersuiten teilen sich das Abnahmekriterium, weil es zwei Clients
+auf zwei Adressen sind: `apps/user-client-e2e/src/plugin-program-proposals.spec.ts`
+reicht im Browser einen Vorschlag ein (auf einem Telefon, 390 × 844), findet ihn
+mit Status wieder, zeigt, dass ein **zweiter** Teilnehmender ihn nicht sieht und
+nach der Freigabe doch, und dass Abschalten Kachel **und** Abschnitt nimmt, ohne
+eine Zeile zu verlieren; `apps/admin-client-e2e/src/plugin-program-proposals.spec.ts`
+klickt „Freigeben" und „Ablehnen" auf dem Dashboard und liest den Zustand danach
+aus der Datenbank. Beide nur in Chromium, beide seriell, beide stellen den
+Schalter im `finally` wieder her — es ist der dritte Modulschalter, den eine
+Browsersuite dieses Repositories umlegt.
+
+Was anders lief als geplant:
+
+- **Der Plan sagt nicht, woher ein Bündel weiß, welche Hälfte es zeichnen
+  soll** — und mit zwei Einhängepunkten ist das die erste Frage. Der Vertrag
+  gibt einem Plug-in **einen** `elementName` und **eine** `bundleUrl`, also
+  brauchte es eine dritte zugesagte Eigenschaft (F202). Die Alternativen waren
+  ein Bündel, das die Adresszeile liest — damit wäre das Deployment der zwei
+  Clients Teil des Vertrags — oder eines, das ausprobiert, welcher Aufruf 401
+  antwortet, was auch das Aussehen einer abgelaufenen Sitzung ist. Vier Pakete
+  füllen die Erweiterung (AP 3, 5, 6, 7), also erfüllt sie E46. Das ist der
+  zweite Nachtrag an der 1.2.0-Tabelle nach dem aus AP 2.
+- **Ein Plug-in hinter dem Login kann nicht wissen, ob es eine Sitzung gibt.**
+  Der Vertrag sagt es ihm nicht, also fragt die Tafel und liest den 401 — für
+  einen anonymen Besucher der Event-Seite ist das eine fehlgeschlagene Anfrage
+  in der Konsole, genau das, was F143 dem **Host** abgewöhnt hat (der fragt
+  nur, wenn ein Hinweis im `localStorage` steht). Ein Plug-in kann diesen
+  Hinweis nicht lesen: es ist der Interna eines der zwei Clients, und dasselbe
+  Bündel läuft in beiden. Eine vierte zugesagte Eigenschaft wäre die Abhilfe,
+  aber sie kennt nur die **Seite**, nicht der Slot — sie wäre also der erste
+  Wert, den ein Einhängepunkt vergessen kann. Bleibt so, mit einer Zeile in
+  `todo.md`: AP 5 und AP 9 bringen dieselbe Frage mit, und drei Füller sind die
+  Bedingung, unter der man sie beantwortet.
+- **Der Vorschlag hat kein „meins" und braucht keins.** Die Tafel zeigt eine
+  Liste statt zweier, weil die Sichtbarkeitsregel es schon entscheidet: eine
+  Zeile in dieser Liste, die **nicht** freigegeben ist, kann nach E51 nur die
+  eigene sein. Das Statuszeichen sitzt deshalb nur an den ausstehenden und
+  abgelehnten Zeilen — an einer freigegebenen wäre es ein Wort, das sich die
+  Seite hinunter wiederholt (F194).
+- **`start-up.spec.ts` behauptete „nichts montiert"** und war damit ein Test,
+  der nur solange stimmt, wie kein Paket ein Plug-in einschaltet. Er prüft
+  jetzt gegen `/api/config`, also **genau das, was die Instanz sagt** — eine
+  stärkere Zusicherung, und mit `expect.poll`, weil die neue Suite den Schalter
+  parallel umlegt, wenn Playwright die zwei Dateien lokal auf zwei Arbeiter
+  verteilt.
+- **Der Abschnitt liest nach einer Entscheidung neu**, statt seine zwei Listen
+  selbst zu korrigieren: eine Entscheidung bewegt die Warteschlange **und**
+  alle drei Zahlen, und eine Zahl, die von der Datenbank abweicht, ist schlimmer
+  als ein Moment Warten. Es ist ein Klick eines Menschen.
+- **Die Fixtures der Veranstaltersuite werden per SQL geschrieben.** Ein
+  Vorschlag über den Endpunkt hieße: Konto seeden, Sitzung seeden, je Zeile ein
+  HTTP-Aufruf — für Zeilen, die diese Suite nur liest und entscheidet. Derselbe
+  begründete Verzicht wie bei den Anmeldungen der Teilnehmerübersicht; dass ein
+  Einreichen wirklich so eine Zeile erzeugt, entscheiden die Vertragssuite und
+  die Teilnehmersuite.
+- **Beide Suiten seeden Konten, die _nicht_ im Verzeichnis stehen**
+  (`searchable` false). Nicht nebenbei: damit prüft jeder Lauf mit, dass der
+  Namens-Port aus AP 2 kein Opt-in verlangt (E37) — mit einem eingetragenen
+  Konto würde niemand merken, wenn sich das änderte.
+- **Port 4200 war belegt**, weil auf dieser Maschine ein anderes Projekt lief.
+  Die Browsersuiten wurden deshalb gegen selbst gestartete Server auf 4210 und
+  4300 gefahren (`playwright test -c …` direkt, `BASE_URL` gesetzt) — dieselbe
+  Kette, nur andere Zahlen; in der CI startet Nx sie wie immer.

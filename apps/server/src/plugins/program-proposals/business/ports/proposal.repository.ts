@@ -105,6 +105,17 @@ export interface ProposalRepository {
 
   findById(id: string): Promise<ProposalRecord | null>;
 
+  /**
+   * How many proposals of one event are in each state (E59).
+   *
+   * Counted in one statement, grouped by status: the alternative is three
+   * queries for three numbers that belong in one heading, and the one after
+   * that is reading every row to count them in TypeScript (F49). A state with
+   * no rows is absent from the result and the caller fills in a zero — SQL
+   * groups what is there, not what could have been.
+   */
+  countByStatus(eventId: string): Promise<ReadonlyMap<ProposalStatus, number>>;
+
   /** @throws UnknownProposalTargetError */
   create(input: CreateProposalInput): Promise<ProposalRecord>;
 

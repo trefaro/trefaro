@@ -26,6 +26,12 @@ import {
  * - **A disabled plug-in is absent, not forbidden**: every route 404, and no
  *   entry in `/api/config` — and switching it off keeps every row (E14).
  *
+ * AP 3 added the sixth route, `…/summary` — the three counts the section on the
+ * organizer's dashboard draws (E59) — and the tests for it are here for the
+ * same reason as the rest: what is worth deciding about a count is that it
+ * agrees with the rows, that it says zero rather than nothing, and that it
+ * moves when a decision does.
+ *
  * Instance-wide state, which is why it lives in `apps/server-e2e` and why every
  * test puts back what it found: `module_config` belongs to the instance, and the
  * suites after this one expect `profiles`, `profile-search` and `chat` to
@@ -58,6 +64,12 @@ interface Proposal {
   author: Author | null;
   createdAt: string;
   decidedAt: string | null;
+}
+
+interface ProposalSummary {
+  pending: number;
+  approved: number;
+  rejected: number;
 }
 
 interface ProposalPage {
@@ -146,6 +158,12 @@ describe('the programme proposals plug-in', () => {
       { headers: { cookie } },
     );
 
+  const summary = (headers: Record<string, string> = { cookie }) =>
+    api<ProposalSummary>(
+      `/api/admin/plugins/${PLUGIN}/events/${event.id}/summary`,
+      { headers },
+    );
+
   const decide = (proposalId: string, decision: 'approval' | 'rejection') =>
     api<Proposal>(
       `/api/admin/plugins/${PLUGIN}/proposals/${proposalId}/${decision}`,
@@ -212,11 +230,12 @@ describe('the programme proposals plug-in', () => {
 
   describe('while the organization has it switched off', () => {
     it('answers 404 on every route and appears in no configuration', async () => {
-      const [participantList, submission, adminList, approval, config] =
+      const [participantList, submission, adminList, counts, approval, config] =
         await Promise.all([
           listAs(proposer),
           propose(proposer, { title: 'A workshop', description: 'Half a day' }),
           moderationList(),
+          summary(),
           decide('00000000-0000-4000-8000-000000000000', 'approval'),
           api<PublicConfig>('/api/config'),
         ]);
@@ -227,8 +246,9 @@ describe('the programme proposals plug-in', () => {
         participantList.status,
         submission.status,
         adminList.status,
+        counts.status,
         approval.status,
-      ]).toEqual([404, 404, 404, 404]);
+      ]).toEqual([404, 404, 404, 404, 404]);
       expect(config.body.plugins.map((plugin) => plugin.key)).not.toContain(
         PLUGIN,
       );
@@ -453,14 +473,57 @@ describe('the programme proposals plug-in', () => {
 
       expect([badStatus.status, badPage.status]).toEqual([400, 400]);
     });
+
+    it('counts each state for the dashboard section (E59)', async () => {
+      const counts = await summary();
+
+      // One approved and one rejected by the tests above, and nothing waiting.
+      // The zero is present rather than missing: `GROUP BY` answers with what
+      // is there, and a heading needs all three numbers.
+      expect(counts.body).toEqual({ pending: 0, approved: 1, rejected: 1 });
+      // And it is the same truth the list tells, counted in one statement
+      // rather than by fetching three pages for three numbers.
+      expect((await moderationList()).body.total).toBe(2);
+    });
+
+    it('moves those counts when a decision is corrected (E51)', async () => {
+      // Re-deciding rather than proposing again: a third row would change what
+      // the tests after this one were written against, and a correction is
+      // something FR 3.14 allows anyway — the instant moves with it.
+      expect((await decide(rejected.id, 'approval')).status).toBe(200);
+
+      expect((await summary()).body).toEqual({
+        pending: 0,
+        approved: 2,
+        rejected: 0,
+      });
+
+      expect((await decide(rejected.id, 'rejection')).status).toBe(200);
+      expect((await summary()).body).toEqual({
+        pending: 0,
+        approved: 1,
+        rejected: 1,
+      });
+    });
+
+    it('is behind the administrative session, like every organizer read', async () => {
+      // No cookie at all: the path is what puts it there (E16, E57), and a
+      // participant's session is not an organizer's.
+      const stranger = await summary({});
+
+      expect(stranger.status).toBe(401);
+    });
   });
 
   describe('switching it off again', () => {
     it('makes every route 404 and loses no row (E14)', async () => {
       expect((await toggle(PLUGIN, false)).status).toBe(200);
 
-      const gone = await moderationList();
-      expect(gone.status).toBe(404);
+      const [gone, countsGone] = await Promise.all([
+        moderationList(),
+        summary(),
+      ]);
+      expect([gone.status, countsGone.status]).toEqual([404, 404]);
 
       expect((await toggle(PLUGIN, true)).status).toBe(200);
       const back = await moderationList();

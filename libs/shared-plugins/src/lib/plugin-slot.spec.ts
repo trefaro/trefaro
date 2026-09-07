@@ -249,6 +249,27 @@ describe('PluginSlot', () => {
     });
   });
 
+  it('tells a plug-in which hook point is drawing it (1.2.0)', () => {
+    const fixture = render();
+    config.plugins.set([
+      descriptor('program-proposals', defineElement(), [
+        'event-detail',
+        'event-dashboard',
+      ]),
+    ]);
+    loader.ready.set(['program-proposals']);
+    fixture.componentInstance.mountPoint.set('event-dashboard');
+    fixture.detectChanges();
+
+    // One bundle, two audiences: the proposals draw a participant's panel at
+    // `event-detail` and the organization's moderation section here, and only
+    // the host knows which one it asked for.
+    const element = mounted(fixture)[0] as HTMLElement & {
+      mountPoint?: string;
+    };
+    expect(element.mountPoint).toBe('event-dashboard');
+  });
+
   it("hands a plug-in nothing of another plug-in's words", () => {
     const fixture = render();
     config.plugins.set([
@@ -297,15 +318,22 @@ describe('PluginSlot', () => {
     loader.ready.set(['room-planning']);
     // A page that still passes a locale of its own, the way the event landing
     // page did before 1.2.0.
-    fixture.componentInstance.context.set({ locale: 'fr', strings: {} });
+    fixture.componentInstance.context.set({
+      locale: 'fr',
+      strings: {},
+      mountPoint: 'navigation',
+    });
     fixture.detectChanges();
 
     const element = mounted(fixture)[0] as HTMLElement & {
       locale?: string;
       strings?: Record<string, string>;
+      mountPoint?: string;
     };
     expect(element.locale).toBe('en');
     expect(element.strings?.['title']).toBe('Room planning');
+    // The hook point least of all: the slot is the one that knows it.
+    expect(element.mountPoint).toBe('event-detail');
   });
 
   it('follows a change of hook point', () => {

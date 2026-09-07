@@ -166,4 +166,33 @@ besteht. Jede Zeile hier hat einmal einen halben Tag gekostet.
   `input()` und ein Satz. Zwei Bauteile wären zwei Orte für die Formulierung
   einer Einwilligung — und die driftet.
 
+- **Ein Plug-in-Bündel ist ein Web Component, kein zweiter Client** (AP 3 der
+  Phase 4, das erste Bündel mit Fachlichkeit). Was es vom Host bekommt, sind
+  genau die zugesagten Eigenschaften des Slots — `locale`, `strings`,
+  `mountPoint` — plus was der Einhängepunkt dazulegt (die Event-Id). Alles
+  andere holt es sich selbst, und zwar **schmal**: die vier Aufrufe der
+  Programmvorschläge sind `fetch` auf die eigenen Routen des Plug-ins, weil ein
+  Statuscode alles ist, was sie brauchen. Kein `ApiClient`, kein `HttpClient`,
+  kein `AppConfigService` — ein Client teilt mit einem Bündel die **Modelle**,
+  nie die Implementierung. Der `/api`-Präfix darf dabei fest im Bündel stehen:
+  die Zugangsstufe eines Plug-ins **ist** sein Pfad (E57), also ist er Vertrag
+  und nicht Deployment.
+- **Ein Bündel mit zwei Einhängepunkten braucht `mountPoint`, nicht Raten**
+  (F202). Der Vertrag gibt ein `elementName` und eine `bundleUrl`, also
+  entscheidet die dritte zugesagte Eigenschaft, welche Hälfte gezeichnet wird —
+  die Adresszeile zu lesen würde das Deployment der zwei Clients zum Vertrag
+  machen, und „welcher Aufruf antwortet 401" ist auch das Aussehen einer
+  abgelaufenen Sitzung.
+- **Ein Bündel hinter dem Login erfährt nicht, ob es eine Sitzung gibt.** Es
+  fragt und liest den 401 — für einen anonymen Besucher also eine
+  fehlgeschlagene Anfrage in der Konsole, die der **Host** sich mit F143 gerade
+  abgewöhnt hat. Der Hinweis im `localStorage` gehört einem der zwei Clients und
+  ist für ein Bündel, das in beiden läuft, keine Antwort. Ein 401 heißt in einem
+  Plug-in deshalb **Einladung, sich anzumelden**, und nie „Fehler" (E58).
+- **Eine Sprungmarke braucht `anchorScrolling`.** Beide Clients haben es jetzt
+  (`withInMemoryScrolling` in `provideRouter`); ohne das ändert
+  `[routerLink]="[]" [fragment]="…"` die Adresse und sonst nichts. Und immer
+  über den Router: beide Clients tragen ein `<base href>`, gegen das ein nacktes
+  `href="#ziel"` auflöst — und dann verlässt der Klick die Seite.
+
 Siehe auch: [Browsersuiten und E2E-Tests](e2e-tests.md), [Mehrsprachigkeit und Katalog](i18n.md), [Whitelabel und PWA](whitelabel-pwa.md).
