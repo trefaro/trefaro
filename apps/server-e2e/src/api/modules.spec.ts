@@ -35,6 +35,7 @@ interface ModuleSummary {
   version: string | null;
   bundleUrl: string | null;
   mountPoints: string[];
+  icon: string | null;
 }
 
 interface Series {
@@ -186,6 +187,15 @@ describe('the module administration', () => {
       enabled: true,
       enabledByDefault: true,
     });
+  });
+
+  it('carries the icon a plug-in names, and none for a core module (E49)', async () => {
+    // The clients draw it, this endpoint only passes it on — and it has to be
+    // here rather than only in `/api/config`, because a *disabled* plug-in
+    // appears in no other list.
+    expect((await find('room-planning')).icon).toBe('meeting_room');
+    // One shape for every row: "no icon" is `null`, not a missing field.
+    expect((await find('media-links')).icon).toBeNull();
   });
 
   it('names what a module needs before it can be switched on (E42)', async () => {

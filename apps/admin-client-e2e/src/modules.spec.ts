@@ -107,6 +107,12 @@ test.describe('the module administration in the browser', () => {
     await expect(row(page, 'media-links')).toContainText(
       t('admin.modules.core'),
     );
+
+    // And only a plug-in has an icon (E49, AP 1 of phase 4): the glyph its
+    // descriptor names, drawn from this instance's own files. A core module has
+    // no descriptor to name one, so its row shows none.
+    await expect(row(page, 'room-planning').locator('svg path')).toHaveCount(1);
+    await expect(row(page, 'media-links').locator('svg')).toHaveCount(0);
   });
 
   test('shows no module this version does not ship (E21)', async ({ page }) => {

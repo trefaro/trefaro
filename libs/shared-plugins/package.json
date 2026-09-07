@@ -4,6 +4,7 @@
   "peerDependencies": {
     "@angular/core": "^22.0.0",
     "@trefaro/shared-config": "0.0.1",
+    "@trefaro/shared-i18n": "0.0.1",
     "@trefaro/shared-models": "0.0.1"
   },
   "sideEffects": false

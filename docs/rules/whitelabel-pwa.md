@@ -43,6 +43,21 @@ Kontrast auf ihrem Startbildschirm landet.
 - **Ein Manifest hat keine Sprachwahl** (F104): der Browser holt es aus einem
   `<link>`, während jemand installiert → Vorgabesprache der Instanz + `lang`,
   genau wie bei einer Mail. Kein `?locale=`.
+- **Oberflächen-Icons kommen aus einem geschlossenen Satz** (E49, F188) und
+  haben mit dem App-Icon nichts zu tun: die erlaubten Namen sind `ICON_NAMES` in
+  `shared-models`, die Pfaddaten `ICON_PATHS` in `shared-theming`, gezeichnet von
+  `trefaro-icon` als eingebettetes SVG mit `currentColor` — also folgt ein Icon
+  der Textfarbe und braucht keine Theming-Regel. **Kein Eintrag ohne seine
+  Pfaddaten**, und das erzwingt der Compiler (ein vollständiger
+  `Record<IconName, string>`), nicht ein Test. Ein Name, den diese Version nicht
+  kennt, zeichnet **nichts** — keine Attrappe, kein Fehler, keine verschwundene
+  Kachel; wer einen Deskriptor mit einem unbekannten Namen sucht, findet ihn in
+  der Modulverwaltung, die es in der Zeile sagt. Wer einen Glyph hinzufügt,
+  nimmt ihn aus `@material-symbols/svg-400` (Apache-2.0, `outlined`), trägt
+  Namen **und** Pfad ein und aktualisiert
+  `libs/shared-theming/assets/icons/README.md`; das Paket bleibt bewusst keine
+  Abhängigkeit dieses Repositories, wie bei den Schriften.
+
 - **Ein hochgeladenes App-Icon ist nie `maskable`** (F105) — nur die
   mitgelieferten Icons tragen den Schutzrand, weil sie mit einem gezeichnet
   wurden. Es **ersetzt** sie nur, wenn ein Browser davon installieren kann:

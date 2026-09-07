@@ -7,6 +7,9 @@ import {
   fontFamilyStack,
   isFontFamilyKey,
 } from './fonts';
+import { ICON_NAMES, isIconName } from './icons';
+import { pluginCataloguePrefix, pluginElementId } from './plugin-descriptor';
+import { isTranslationKey } from '../i18n/catalogue';
 import { canonicalLocaleTag, isLocaleTag } from './app-config';
 import {
   BRANDING_IMAGE_KINDS,
@@ -174,5 +177,79 @@ describe('canonicalLocaleTag', () => {
     for (const value of ['en', 'de', 'de-AT', 'pt-BR', 'de_DE', 'x']) {
       expect(canonicalLocaleTag(value) === null).toBe(!isLocaleTag(value));
     }
+  });
+});
+
+describe('the icon catalogue (E49)', () => {
+  it('offers each name once, because a name is what a descriptor writes', () => {
+    expect(new Set(ICON_NAMES).size).toBe(ICON_NAMES.length);
+  });
+
+  it('uses the upstream spelling, which is what the glyph files are named', () => {
+    // `snake_case`, as Material Symbols writes it. Not a style preference: the
+    // names were copied out of the package together with the path data, and a
+    // name spelled our way would be one nobody could look up.
+    for (const name of ICON_NAMES) {
+      expect(name).toMatch(/^[a-z][a-z0-9_]*$/);
+    }
+  });
+
+  it('answers for a name it does not draw instead of assuming', () => {
+    for (const name of ICON_NAMES) {
+      expect(isIconName(name)).toBe(true);
+    }
+    // A withdrawn glyph, a typo in a descriptor, a name from a newer image —
+    // all the same answer, and all of them reach this from outside TypeScript.
+    for (const value of ['meeting-room', 'MEETING_ROOM', '', null, 42, {}]) {
+      expect(isIconName(value)).toBe(false);
+    }
+  });
+
+  /**
+   * The other half of "no entry without its glyph".
+   *
+   * `ICON_PATHS` is typed as a complete record over `IconName`, so the compiler
+   * already refuses a missing or a surplus name — but nothing type-checks the
+   * *content*, and an empty string would be a name that draws nothing while
+   * looking declared. Read as a file rather than imported, because this library
+   * may not depend on `shared-theming` (models pull in nothing).
+   */
+  it('has real path data behind every name it offers', () => {
+    const paths = readFileSync(
+      join(__dirname, '../../../../shared-theming/src/lib/icon-paths.ts'),
+      'utf8',
+    );
+
+    for (const name of ICON_NAMES) {
+      const declaration = new RegExp(`\\b${name}:\\s*\\n?\\s*'M`);
+      expect(declaration.test(paths)).toBe(true);
+    }
+  });
+});
+
+describe('a plug-in key and the words that belong to it', () => {
+  it('gives every plug-in a catalogue prefix of its own (E48)', () => {
+    expect(pluginCataloguePrefix('forum')).toBe('plugins.forum.');
+    expect(pluginCataloguePrefix('room-planning')).toBe(
+      'plugins.roomPlanning.',
+    );
+    expect(pluginCataloguePrefix('program-proposals')).toBe(
+      'plugins.programProposals.',
+    );
+  });
+
+  it('produces a legal translation key, which a dashed key would not', () => {
+    // The reason the prefix is camelCased at all (F70): `plugins.room-planning.`
+    // is not a key this application can store, translate or export.
+    for (const key of ['forum', 'room-planning', 'qr-checkin']) {
+      expect(isTranslationKey(`${pluginCataloguePrefix(key)}title`)).toBe(true);
+    }
+  });
+
+  it('keeps the jump target and the prefix independent of each other', () => {
+    // Two derived strings from one key, and they are deliberately not the same
+    // shape: the element id is a DOM id (dashes allowed), the prefix is a
+    // catalogue key (dashes not).
+    expect(pluginElementId('room-planning')).toBe('plugin-room-planning');
   });
 });

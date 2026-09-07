@@ -29,7 +29,7 @@ export type ModuleFamily = 'core' | 'plugin';
  * carries) cannot be the source for a page whose whole job is switching the
  * disabled ones on.
  *
- * The three plug-in fields are `null` / empty for a core module rather than
+ * The four plug-in fields are `null` / empty for a core module rather than
  * absent: one shape for both families keeps the table one table.
  */
 export interface ModuleSummary {
@@ -75,6 +75,16 @@ export interface ModuleSummary {
   readonly bundleUrl: string | null;
   /** Plug-ins only: where the web component mounts. */
   readonly mountPoints: readonly PluginMountPoint[];
+  /**
+   * Plug-ins only: the icon the descriptor names, `null` for a core module.
+   *
+   * Here rather than only in `/api/config`, because a *disabled* plug-in has an
+   * icon too and this list is the one place a disabled one appears at all. It is
+   * also where an organizer learns that a descriptor names a glyph this version
+   * does not draw (E49) — the module administration already carries the other
+   * thing that can be wrong with a plug-in, its bundle.
+   */
+  readonly icon: string | null;
 }
 
 /** The one thing a module administration writes. */

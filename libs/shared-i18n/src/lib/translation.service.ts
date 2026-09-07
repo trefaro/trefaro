@@ -136,6 +136,34 @@ export class TranslationService {
   }
 
   /**
+   * Every entry under a dotted prefix, keyed without it (E48).
+   *
+   * What a plug-in's web component is handed as `strings`: the host resolves the
+   * words and passes them on, so a bundle needs no Transloco of its own, no
+   * second load of `/api/i18n/:locale` and no cache that could disagree with
+   * this one. The prefix is stripped because a plug-in's key space is its own —
+   * it reads `strings['title']`, not `strings['plugins.roomPlanning.title']`.
+   *
+   * A selection by prefix rather than a subtree, because the catalogue is flat
+   * (F70): `plugins.roomPlanning.title` is one key with dots in it, not three
+   * levels of object.
+   *
+   * Read {@link locale} in the same `computed()` as this, the way
+   * {@link translate} needs — nothing else would make a caller recompute after
+   * a switch (F72).
+   */
+  stringsWithPrefix(prefix: string): Readonly<Record<string, string>> {
+    const catalogue = this.transloco.getTranslation(this.active());
+    const selected: Record<string, string> = {};
+    for (const [key, value] of Object.entries(catalogue)) {
+      if (!key.startsWith(prefix)) continue;
+      if (typeof value !== 'string') continue;
+      selected[key.slice(prefix.length)] = value;
+    }
+    return selected;
+  }
+
+  /**
    * The name of a language, in the language currently active.
    *
    * From `Intl.DisplayNames` and deliberately not from the catalogue. A

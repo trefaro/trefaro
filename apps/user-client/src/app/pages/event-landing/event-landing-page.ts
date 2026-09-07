@@ -537,9 +537,15 @@ export class EventLandingPage {
    * The locale is the *reader's*, not the instance's default: a plug-in renders
    * inside this page and would otherwise be the one English box on a German one.
    */
+  /**
+   * What this hook point adds to what every plug-in gets anyway.
+   *
+   * Only the event: the slot itself hands over `locale` and the plug-in's words
+   * since plug-in API 1.2.0 (E48), so a hook point cannot forget the language
+   * and no two of them can spell it differently.
+   */
   protected readonly pluginContext = computed(() => ({
     eventId: this.event()?.id ?? '',
-    locale: this.i18n.locale(),
   }));
 
   constructor() {

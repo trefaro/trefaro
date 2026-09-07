@@ -46,7 +46,17 @@ export interface PluginClientContribution {
    * lives in the clients' language files so organizations can maintain it.
    */
   readonly labelKey: string;
-  /** Material Symbols icon name for the navigation entry or dashboard tile. */
+  /**
+   * Icon for the tile or navigation entry the host draws for this plug-in.
+   *
+   * A name from `ICON_NAMES` in `@trefaro/shared-models` — the closed set of
+   * glyphs an instance ships (E49). Typed as a plain string rather than that
+   * union on purpose: a descriptor is a plug-in's own declaration, and a name
+   * this version does not draw has to be answerable at runtime, not only at
+   * compile time. It gets **no** icon, and the module administration says so.
+   * Read by both clients since AP 1 of phase 4; before that the field was a
+   * value nobody drew.
+   */
   readonly icon?: string;
 }
 

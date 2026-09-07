@@ -16,10 +16,12 @@ import { ROOM_PLANNING_PLUGIN_KEY } from './room-planning.plugin-key';
  * module carrying its API and business logic, and the entities and migrations
  * making up its data access contribution.
  *
- * Since AP 9 it also owns the link between a session and a room (F21) and reads
- * sessions through the host's port, so it declares plug-in API 1.1.0 by way of
- * {@link PLUGIN_API_VERSION} — a plug-in that did not need the port would still
- * be mounted while declaring 1.0.0.
+ * Since AP 9 of phase 1 it also owns the link between a session and a room (F21)
+ * and reads sessions through the host's port; since AP 1 of phase 4 its web
+ * component takes its words from the catalogue the slot hands over (E48). Both
+ * are reasons it declares the host's own version through
+ * {@link PLUGIN_API_VERSION} rather than a number of its own — a plug-in that
+ * needed neither would still be mounted while declaring 1.0.0.
  */
 export const roomPlanningPlugin: ServerPlugin = {
   key: ROOM_PLANNING_PLUGIN_KEY,

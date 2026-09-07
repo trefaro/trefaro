@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AppConfigService } from '@trefaro/shared-config';
+import { TranslationService } from '@trefaro/shared-i18n';
 import type {
   PluginDescriptor,
   PluginMountPoint,
@@ -46,6 +47,41 @@ class StubAppConfig {
   }
 }
 
+/**
+ * The catalogue, as far as the slot is concerned.
+ *
+ * A flat map per language and a prefix selection over it — the same shape the
+ * real service answers with (F70), so the stripping of the prefix is tested
+ * here rather than assumed.
+ */
+class StubTranslations {
+  readonly locale = signal('en');
+  private readonly catalogue: Record<string, Record<string, string>> = {
+    en: {
+      'plugins.roomPlanning.title': 'Room planning',
+      'plugins.roomPlanning.action': 'Interested in a room',
+      'plugins.forum.title': 'Forum',
+      'event.program': 'Programme',
+    },
+    de: {
+      'plugins.roomPlanning.title': 'Raumplanung',
+      'plugins.roomPlanning.action': 'Interesse an einem Raum',
+      'plugins.forum.title': 'Forum',
+      'event.program': 'Programm',
+    },
+  };
+
+  stringsWithPrefix(prefix: string): Readonly<Record<string, string>> {
+    const selected: Record<string, string> = {};
+    for (const [key, value] of Object.entries(
+      this.catalogue[this.locale()] ?? {},
+    )) {
+      if (key.startsWith(prefix)) selected[key.slice(prefix.length)] = value;
+    }
+    return selected;
+  }
+}
+
 class StubLoader {
   readonly ready = signal<readonly string[]>([]);
   loadResults(): readonly PluginLoadResult[] {
@@ -78,14 +114,17 @@ class HostComponent {
 describe('PluginSlot', () => {
   let config: StubAppConfig;
   let loader: StubLoader;
+  let i18n: StubTranslations;
 
   function render() {
     config = new StubAppConfig();
     loader = new StubLoader();
+    i18n = new StubTranslations();
     TestBed.configureTestingModule({
       providers: [
         { provide: AppConfigService, useValue: config },
         { provide: PluginLoaderService, useValue: loader },
+        { provide: TranslationService, useValue: i18n },
       ],
     });
     const fixture = TestBed.createComponent(HostComponent);
@@ -157,25 +196,26 @@ describe('PluginSlot', () => {
     loader.ready.set(['room-planning']);
     fixture.componentInstance.context.set({
       eventId: 'event-42',
-      locale: 'de',
+      seats: 40,
     });
     fixture.detectChanges();
 
     const element = mounted(fixture)[0] as HTMLElement & {
       eventId?: string;
-      locale?: string;
+      seats?: number;
     };
     expect(element.eventId).toBe('event-42');
-    expect(element.locale).toBe('de');
+    expect(element.seats).toBe(40);
   });
 
-  it('remounts with the new context when it changes', () => {
+  it('reassigns the context when it changes, keeping the element', () => {
     const fixture = render();
     const elementName = defineElement();
     config.plugins.set([descriptor('p', elementName, ['event-detail'])]);
     loader.ready.set(['p']);
     fixture.componentInstance.context.set({ eventId: 'first' });
     fixture.detectChanges();
+    const before = mounted(fixture)[0];
 
     fixture.componentInstance.context.set({ eventId: 'second' });
     fixture.detectChanges();
@@ -183,6 +223,89 @@ describe('PluginSlot', () => {
     const elements = mounted(fixture) as (HTMLElement & { eventId?: string })[];
     expect(elements).toHaveLength(1);
     expect(elements[0].eventId).toBe('second');
+    // The same element, not a fresh one: a plug-in holding what a visitor typed
+    // may not lose it to a property changing (plug-in API 1.2.0).
+    expect(elements[0]).toBe(before);
+  });
+
+  it('hands every plug-in the language and its own words (E48)', () => {
+    const fixture = render();
+    config.plugins.set([
+      descriptor('room-planning', defineElement(), ['event-detail']),
+    ]);
+    loader.ready.set(['room-planning']);
+    fixture.detectChanges();
+
+    const element = mounted(fixture)[0] as HTMLElement & {
+      locale?: string;
+      strings?: Record<string, string>;
+    };
+    expect(element.locale).toBe('en');
+    // Keyed without the prefix: a plug-in's key space is its own, and it reads
+    // `strings['title']`.
+    expect(element.strings).toEqual({
+      title: 'Room planning',
+      action: 'Interested in a room',
+    });
+  });
+
+  it("hands a plug-in nothing of another plug-in's words", () => {
+    const fixture = render();
+    config.plugins.set([
+      descriptor('room-planning', defineElement(), ['event-detail']),
+      descriptor('forum', defineElement(), ['event-detail']),
+    ]);
+    loader.ready.set(['room-planning', 'forum']);
+    fixture.detectChanges();
+
+    const [rooms, forum] = mounted(fixture) as (HTMLElement & {
+      strings?: Record<string, string>;
+    })[];
+    expect(Object.keys(rooms.strings ?? {}).sort()).toEqual([
+      'action',
+      'title',
+    ]);
+    expect(forum.strings).toEqual({ title: 'Forum' });
+  });
+
+  it('reassigns the words on a language switch, without remounting', () => {
+    const fixture = render();
+    config.plugins.set([
+      descriptor('room-planning', defineElement(), ['event-detail']),
+    ]);
+    loader.ready.set(['room-planning']);
+    fixture.detectChanges();
+    const before = mounted(fixture)[0];
+
+    i18n.locale.set('de');
+    fixture.detectChanges();
+
+    const element = mounted(fixture)[0] as HTMLElement & {
+      locale?: string;
+      strings?: Record<string, string>;
+    };
+    expect(element).toBe(before);
+    expect(element.locale).toBe('de');
+    expect(element.strings?.['title']).toBe('Raumplanung');
+  });
+
+  it('does not let a hook point shadow what the contract promises', () => {
+    const fixture = render();
+    config.plugins.set([
+      descriptor('room-planning', defineElement(), ['event-detail']),
+    ]);
+    loader.ready.set(['room-planning']);
+    // A page that still passes a locale of its own, the way the event landing
+    // page did before 1.2.0.
+    fixture.componentInstance.context.set({ locale: 'fr', strings: {} });
+    fixture.detectChanges();
+
+    const element = mounted(fixture)[0] as HTMLElement & {
+      locale?: string;
+      strings?: Record<string, string>;
+    };
+    expect(element.locale).toBe('en');
+    expect(element.strings?.['title']).toBe('Room planning');
   });
 
   it('follows a change of hook point', () => {

@@ -12,8 +12,20 @@ import { TranslationService } from './translation.service';
  * tells the truth.
  */
 const CATALOGUES: Record<string, Translation> = {
-  en: { 'language.switcher.label': 'Language' },
-  de: { 'language.switcher.label': 'Sprache' },
+  en: {
+    'language.switcher.label': 'Language',
+    'plugins.roomPlanning.title': 'Room planning',
+    'plugins.roomPlanning.action': 'Interested in a room',
+    'plugins.roomPlanningExtra.title': 'Not this one',
+    'plugins.forum.title': 'Forum',
+  },
+  de: {
+    'language.switcher.label': 'Sprache',
+    'plugins.roomPlanning.title': 'Raumplanung',
+    'plugins.roomPlanning.action': 'Interesse an einem Raum',
+    'plugins.roomPlanningExtra.title': 'Nicht dieser',
+    'plugins.forum.title': 'Forum',
+  },
   fr: { 'language.switcher.label': 'Langue' },
 };
 
@@ -269,6 +281,52 @@ describe('TranslationService', () => {
       await service.start();
 
       expect(service.languageName('zzz')).toBe('zzz');
+    });
+  });
+
+  describe('stringsWithPrefix', () => {
+    it("selects a plug-in's own words and strips the prefix (E48)", async () => {
+      await service.start();
+      // Explicitly, because the language a fresh service starts in is derived
+      // from the browser and the configuration — and this test is about the
+      // selection, not about that.
+      await service.use('en');
+
+      expect(service.stringsWithPrefix('plugins.roomPlanning.')).toEqual({
+        title: 'Room planning',
+        action: 'Interested in a room',
+      });
+    });
+
+    it('selects by prefix and not by segment, dot included', async () => {
+      await service.start();
+      await service.use('en');
+
+      // `plugins.roomPlanningExtra.title` starts with `plugins.roomPlanning` —
+      // which is exactly why the caller passes the trailing dot along and this
+      // test exists. A neighbouring plug-in's words are not this one's.
+      expect(
+        Object.keys(service.stringsWithPrefix('plugins.roomPlanning.')).sort(),
+      ).toEqual(['action', 'title']);
+    });
+
+    it('answers in the language that is active now', async () => {
+      await service.start();
+      await service.use('de');
+
+      expect(service.stringsWithPrefix('plugins.roomPlanning.')['title']).toBe(
+        'Raumplanung',
+      );
+    });
+
+    it('answers empty for a prefix nothing is filed under', async () => {
+      await service.start();
+      await service.use('en');
+
+      // What a plug-in whose catalogue keys are missing gets: nothing, rather
+      // than another plug-in's words or a throw. The bundle then shows its keys,
+      // the same as any untranslated screen.
+      expect(service.stringsWithPrefix('plugins.qrCheckin.')).toEqual({});
     });
   });
 

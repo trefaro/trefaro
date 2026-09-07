@@ -83,6 +83,18 @@ export class ModuleSummaryDto implements ModuleSummary {
     description: 'Where the web component mounts; empty for a core module.',
   })
   mountPoints!: readonly PluginMountPoint[];
+
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    example: 'meeting_room',
+    description:
+      'The icon the descriptor names, from the closed set `ICON_NAMES` ' +
+      'ships (E49); `null` for a core module and for a plug-in that names ' +
+      'none. Passed on as declared — a name this version cannot draw gets no ' +
+      'icon, and the module administration is where that is said.',
+  })
+  icon!: string | null;
 }
 
 /** The one thing this endpoint writes. */

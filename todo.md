@@ -321,6 +321,12 @@ answer, not an opinion.
       a question that no package can settle. Two callers in two applications is
       still not an argument; the third one is the trigger, and phase 4 builds
       four plug-ins that may well bring it.
+      **AP 1 of phase 4 did not answer it.** `trefaro-icon` went into
+      `shared-theming` rather than into a new interface library, because that is
+      where the brand already is (colours, fonts, `--trefaro-*`) and an icon
+      that inherits `currentColor` needs no component library to be themed. The
+      count for the question above is unchanged: two callers for the _upload
+      field_, and the third one is still the trigger.
 
 - [ ] **The navigation carries no unread counter.** The conversation list has
       one per conversation (E38) and it moves live, but somebody who is reading
@@ -855,7 +861,7 @@ entry, the answer is noted below rather than repeated.
       the fifth plug-in. Answered as predicted: a locale on the port plus
       `listForEvent`, not a second port (E56, F200, AP 9).
 
-- [ ] **The plug-in contract names an icon nobody draws.**
+- [x] **The plug-in contract names an icon nobody draws.**
       `PluginClientContribution.icon` carries a Material Symbols glyph name
       (`meeting_room` for the room plan), and neither client loads an icon font —
       fetching one from Google is out (NFR 9), so it would have to be
@@ -878,6 +884,19 @@ entry, the answer is noted below rather than repeated.
       self-hosted fonts, drawn by one component, with a closed catalogue of
       allowed names — so the field finally reads, and the contract stays 1.x
       (E49, F188, AP 1).
+      **Done in AP 1 of phase 4, and verified as this entry asked.** Seven
+      glyphs (Material Symbols, Apache-2.0, vendored like the fonts) as
+      `ICON_PATHS` in `shared-theming`, the allowed names as `ICON_NAMES` in
+      `shared-models`, drawn by `trefaro-icon` as inline SVG with
+      `currentColor`. A tile of the participant's event page shows the glyph its
+      plug-in names, from this instance's own files
+      (`apps/user-client-e2e/src/plugin-slot.spec.ts`), and the organizer's
+      module row shows it too. A name this version does not draw gets **no**
+      icon and is named in the module administration. One half of the entry was
+      not buildable and is not faked: there is no host-drawn navigation entry
+      per plug-in — at that hook point the plug-in's own element _is_ the entry,
+      and no plug-in of this phase mounts there. The reasoning is in
+      `docs/PHASE4.md` under _Fortschritt_.
 
 - [ ] **Build the four remaining curated plug-ins.**
       `apps/server/src/plugins/{forum,program-proposals,qr-checkin}` hold only a
@@ -921,6 +940,13 @@ entry, the answer is noted below rather than repeated.
       of every event, disabling it removes the tile and nothing else.
       (The messages tile of phase 3 is a core tile and needs no hook point: it is
       added to `EventDashboard` and to the tile grid.)
+      **The minor version step is already taken:** AP 1 of phase 4 put
+      `PLUGIN_API_VERSION` on 1.2.0 with a compatibility case (E46 — one step
+      for the whole phase). What is left for AP 3 is the value in
+      `PluginMountPoint` together with the slot that serves it; it deliberately
+      did **not** arrive in AP 1, because a value in the closed set that no host
+      serves is the decoy F47 warns about. The tile's icon comes from AP 1
+      (E49).
 
 ## Checkable after phase 5 — hardening and release
 

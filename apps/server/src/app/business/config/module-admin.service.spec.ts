@@ -82,6 +82,7 @@ const ROOM_PLANNING = {
     bundleUrl: '/api/plugins/room-planning/main.js',
     mountPoints: ['event-detail'],
     labelKey: 'plugins.roomPlanning.label',
+    icon: 'meeting_room',
   },
   enabledByDefault: false,
 } as unknown as ServerPlugin;
@@ -168,7 +169,7 @@ describe('ModuleAdminService', () => {
     expect(byKey.get('media-links')?.enabled).toBe(false);
   });
 
-  it('carries version, bundle and mount points for a plug-in and nothing for a core module', () => {
+  it('carries version, bundle, mount points and icon for a plug-in and nothing for a core module', () => {
     const { service } = harness();
     const byKey = new Map(service.list().map((module) => [module.key, module]));
 
@@ -176,6 +177,9 @@ describe('ModuleAdminService', () => {
       version: '0.1.0',
       bundleUrl: '/api/plugins/room-planning/main.js',
       mountPoints: ['event-detail'],
+      // Passed on as declared: whether this version draws `meeting_room` is a
+      // question the clients answer, and the module page shows the answer (E49).
+      icon: 'meeting_room',
     });
     // A core module ships inside the application: no version of its own, no
     // bundle a client could fail to load.
@@ -183,6 +187,7 @@ describe('ModuleAdminService', () => {
       version: null,
       bundleUrl: null,
       mountPoints: [],
+      icon: null,
     });
     // And a plug-in without a client contribution says so rather than inventing
     // a bundle URL.
@@ -190,6 +195,7 @@ describe('ModuleAdminService', () => {
       version: '2.0.0',
       bundleUrl: null,
       mountPoints: [],
+      icon: null,
     });
   });
 

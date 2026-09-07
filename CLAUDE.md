@@ -23,9 +23,9 @@ werden müssen:
 
 | Frage                                                     | Nachschlagen in                                                                           |
 | --------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Anforderungen, Use Cases, Prioritäten, DB-Schema, F1–F185 | **`docs/Anforderungsanalyse_und_Umsetzungsplan.md`** (maßgeblich)                         |
+| Anforderungen, Use Cases, Prioritäten, DB-Schema, F1–F188 | **`docs/Anforderungsanalyse_und_Umsetzungsplan.md`** (maßgeblich)                         |
 | Was in einer Phase passierte, E1–E45, _Was anders lief_   | `docs/PHASE1.md`, `docs/PHASE2.md`, `docs/PHASE3.md`, `docs/BOOTSTRAP.md`, `docs/spikes/` |
-| Was Phase 4 vorhat: Pakete, E46–E59, F186–F201            | **`docs/PHASE4.md`** (Plan, noch kein Protokoll)                                          |
+| Phase 4: Pakete, E46–E59, F186–F201, Stand je Paket       | **`docs/PHASE4.md`** (Plan oben, _Fortschritt_ unten)                                     |
 | Installation, TLS, Betrieb                                | `docs/INSTALL.md`                                                                         |
 | Offene Punkte, bekannte Lücken, Pilotpartner-Fragen       | `todo.md` (nach Phase gruppiert, nach jeder Phase durchgehen)                             |
 | Diagramme der Thesis                                      | `docs/thesis/`                                                                            |
@@ -160,17 +160,18 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    Abschnitt unter _Fortschritt_, dazu ein phasenweites _Was anders lief_.
    **Meilenstein M8 ist erreicht bis auf die Gerätematrix**, die nur mit Geräten
    in der Hand abzuhaken ist
-4. **Geplant am 04.09.2026** Plug-ins: Programmvorschläge, Forum, Raumplanung,
-   QR-Check-In und **individueller Programmplan** → `docs/PHASE4.md` (zehn
-   Pakete, M9–M12; der Plug-in-Vertrag wächst **einmal** von
-   `PLUGIN_API_VERSION` 1.1.0 auf 1.2.0). **Kein Paket ist freigegeben.**
+4. **In Arbeit** (Plan 04.09.2026) Plug-ins: Programmvorschläge, Forum,
+   Raumplanung, QR-Check-In und **individueller Programmplan** →
+   `docs/PHASE4.md` (zehn Pakete, M9–M12). **AP 1 erledigt am 07.09.2026:** der
+   Plug-in-Vertrag steht auf **1.2.0** — der eine Schritt dieser Phase —, ein
+   Einhängepunkt reicht Sprache und Worte durch, und die Icons kommen aus einem
+   geschlossenen Satz im Image. **AP 2 ist nicht freigegeben.**
 5. Härtung, Usability-Test mit Democracy International (Pilotpartner), Doku,
    Release v1.0 — hier auch: konfigurierbare Drosselung, `CONTRIBUTING.md`
 
-**Der Stand in Zahlen:** Entscheidungen **E1–E45** vergeben (Phasen 1–3),
-**E46–E59** im Plan der Phase 4 reserviert; Nachträge **F1–F185** stehen im
-Referenzdokument (F62 und F129–F131 bleiben unvergeben), **F186–F201** sind
-reserviert; Katalog **956** Schlüssel. Was in einem Paket tatsächlich passierte,
+**Der Stand in Zahlen:** Entscheidungen **E1–E59** vergeben (E46–E59 im Plan der
+Phase 4); Nachträge **F1–F188** stehen im Referenzdokument (F62 und F129–F131
+bleiben unvergeben), **F189–F201** sind reserviert; Katalog **962** Schlüssel. Was in einem Paket tatsächlich passierte,
 steht im Phasenprotokoll, und was man beim Bauen daraus braucht, in
 `docs/rules/` — **hier nicht noch einmal.**
 

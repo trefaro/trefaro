@@ -167,6 +167,7 @@ export class ModuleAdminService {
       version: null,
       bundleUrl: null,
       mountPoints: [],
+      icon: null,
     };
   }
 
@@ -182,6 +183,10 @@ export class ModuleAdminService {
       version: plugin.version,
       bundleUrl: plugin.client?.bundleUrl ?? null,
       mountPoints: plugin.client?.mountPoints ?? [],
+      // Passed on as declared, not validated here: whether this version can
+      // draw the name is a question the clients answer, and the one that shows
+      // the answer is the module administration (E49).
+      icon: plugin.client?.icon ?? null,
     };
   }
 }

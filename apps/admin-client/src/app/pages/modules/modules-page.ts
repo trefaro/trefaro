@@ -9,11 +9,12 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { AppConfigService } from '@trefaro/shared-config';
 import { problemOf, type Problem } from '@trefaro/shared-http';
 import { TranslationService } from '@trefaro/shared-i18n';
-import type { ModuleSummary } from '@trefaro/shared-models';
+import { isIconName, type ModuleSummary } from '@trefaro/shared-models';
 import {
   PluginLoaderService,
   type PluginLoadResult,
 } from '@trefaro/shared-plugins';
+import { TrefaroIcon } from '@trefaro/shared-theming';
 import { ModulesAdminService } from '../../features/modules/modules-admin.service';
 
 /** A confirmation that outlives the click that produced it. */
@@ -30,7 +31,7 @@ interface Notice {
  * The `family` column says which is which, since only a plug-in can fail to
  * appear after being switched on.
  *
- * Five decisions worth naming:
+ * Six decisions worth naming:
  *
  * 1. **The list comes from `/api/admin/modules`, not from the configuration.**
  *    `/api/config` carries the *enabled* modules; a page for switching the
@@ -50,7 +51,12 @@ interface Notice {
  *    409 that enforces it is a confirmation rather than a surprise. The
  *    server's own message names the missing **key** and is shown as it comes
  *    (F77) — the two together are what an organizer needs to act.
- * 5. **Names come from the catalogue, keys stay in the row.** Every module
+ * 5. **An icon is shown, and an unknown one is named** (E49, AP 1 of phase 4).
+ *    A plug-in's descriptor may name a glyph this version does not draw; it
+ *    then draws none, anywhere, and this row is where that is said. The second
+ *    thing this page knows and the server does not — the closed catalogue is a
+ *    client's, and the server passes the name on as declared.
+ * 6. **Names come from the catalogue, keys stay in the row.** Every module
  *    carries a `titleKey`, resolved here against the catalogue the server
  *    serves (E22) — so this list is in the organizer's language, including the
  *    plug-ins'. The key itself stays visible beside the name: it is what the
@@ -60,7 +66,7 @@ interface Notice {
 @Component({
   selector: 'trefaro-modules-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslocoPipe],
+  imports: [TranslocoPipe, TrefaroIcon],
   template: `
     <h1>{{ 'admin.modules.title' | transloco }}</h1>
     <p class="lead">{{ 'admin.modules.lead' | transloco }}</p>
@@ -93,8 +99,18 @@ interface Notice {
         @for (module of rows(); track module.key) {
           <tr>
             <td>
-              <strong>{{ module.name }}</strong>
+              <strong class="module">
+                @if (module.icon) {
+                  <trefaro-icon [name]="module.icon" />
+                }
+                {{ module.name }}
+              </strong>
               <br /><code>{{ module.key }}</code>
+              @if (module.unknownIcon; as icon) {
+                <br /><small class="failed">
+                  {{ 'admin.modules.iconUnknown' | transloco: { icon } }}
+                </small>
+              }
               @if (module.requiresNames) {
                 <!-- Before the click, not after it: an organizer who cannot
                      switch the search on has to be able to see why (E42). -->
@@ -199,6 +215,12 @@ interface Notice {
       vertical-align: top;
     }
 
+    .module {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
     .is-on {
       font-weight: 600;
       color: var(--trefaro-color-primary-strong);
@@ -274,6 +296,11 @@ export class ModulesPage {
       requiresNames: module.requires
         .map((key) => nameByKey.get(key) ?? key)
         .join(', '),
+      // `null` unless a descriptor names a glyph this version cannot draw —
+      // then it is the name itself, because that is what an organizer has to
+      // pass on to whoever wrote the plug-in.
+      unknownIcon:
+        module.icon !== null && !isIconName(module.icon) ? module.icon : null,
     }));
   });
 

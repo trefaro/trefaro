@@ -77,6 +77,7 @@ function camel(key: string): string {
 function descriptor(
   key: string,
   mountPoints: readonly PluginMountPoint[],
+  icon: string | null = 'meeting_room',
 ): PluginDescriptor {
   return {
     key,
@@ -85,7 +86,7 @@ function descriptor(
     elementName: `trefaro-plugin-${key}`,
     bundleUrl: `/api/plugins/${key}/main.js`,
     mountPoints,
-    icon: null,
+    icon,
   };
 }
 
@@ -176,6 +177,40 @@ describe('EventDetailTiles', () => {
     expect(tile.getAttribute('href')).toMatch(/#program$/);
     expect(tile.textContent).toContain('Programme');
     expect(tile.textContent).toContain('12 sessions');
+  });
+
+  it('draws the glyph each tile names (E49)', () => {
+    const fixture = render();
+    fixture.componentInstance.sessions.set(2);
+    fixture.componentInstance.mediaLinks.set(1);
+    config.plugins.set([descriptor('room-planning', ['event-detail'])]);
+    loader.ready.set(['room-planning']);
+    fixture.detectChanges();
+
+    // One per tile, and the plug-in's is the one its descriptor names — the
+    // field that had no reader at all until AP 1 of phase 4.
+    const drawn = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll(
+        'a.tile svg path',
+      ),
+    ].map((path) => path.getAttribute('d'));
+    expect(drawn).toHaveLength(3);
+    expect(new Set(drawn).size).toBe(3);
+  });
+
+  it('keeps a plug-in tile whose descriptor names a glyph nobody draws', () => {
+    const fixture = render();
+    config.plugins.set([
+      descriptor('room-planning', ['event-detail'], 'a_glyph_we_withdrew'),
+    ]);
+    loader.ready.set(['room-planning']);
+    fixture.detectChanges();
+
+    // The tile is the point, the icon is decoration: a misspelled name costs
+    // the glyph and nothing else, and the organizer's module page reports it.
+    const [tile] = tiles(fixture);
+    expect(tile.textContent).toContain('Room planning');
+    expect(tile.querySelector('svg')).toBeNull();
   });
 
   it('counts one session in the singular', () => {

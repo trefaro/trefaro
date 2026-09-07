@@ -90,10 +90,15 @@ function core(
     version: null,
     bundleUrl: null,
     mountPoints: [],
+    icon: null,
   };
 }
 
-function plugin(key: string, enabled: boolean): ModuleSummary {
+function plugin(
+  key: string,
+  enabled: boolean,
+  icon: string | null = 'meeting_room',
+): ModuleSummary {
   return {
     key,
     family: 'plugin',
@@ -106,6 +111,7 @@ function plugin(key: string, enabled: boolean): ModuleSummary {
     version: '0.1.0',
     bundleUrl: `/api/plugins/${key}/main.js`,
     mountPoints: ['event-detail'],
+    icon,
   };
 }
 
@@ -176,6 +182,8 @@ describe('ModulesPage', () => {
           'admin.modules.version': 'version {{version}}',
           'admin.modules.requires': 'Needs {{modules}}',
           'admin.modules.bundle.failed': 'failed',
+          'admin.modules.iconUnknown':
+            'Icon “{{icon}}” is not one this version draws.',
           'admin.modules.empty': 'This image ships no optional module.',
           'admin.modules.switchedOff':
             '{{name}} is switched off. Its data is untouched.',
@@ -259,6 +267,37 @@ describe('ModulesPage', () => {
     expect(page.text()).toContain('Core module');
     expect(page.text()).toContain('Plug-in');
     expect(page.text()).toContain('/api/plugins/room-planning/main.js');
+  });
+
+  it('draws the icon a plug-in names, and none for a core module', async () => {
+    const page = render({
+      modules: [core('media-links', true), plugin('room-planning', false)],
+    });
+    await page.settle();
+
+    const drawn = [
+      ...(page.fixture.nativeElement as HTMLElement).querySelectorAll(
+        'tbody svg',
+      ),
+    ];
+    expect(drawn).toHaveLength(1);
+  });
+
+  it('names an icon this version cannot draw, because nobody else will (E49)', async () => {
+    const page = render({
+      modules: [plugin('room-planning', false, 'a_glyph_we_withdrew')],
+    });
+    await page.settle();
+
+    // This page is the one place a plug-in's mistakes are reported, and it is
+    // the only side that knows the catalogue at all — the server passes the
+    // name on as declared.
+    expect(page.text()).toContain(
+      'Icon “a_glyph_we_withdrew” is not one this version draws.',
+    );
+    expect(
+      (page.fixture.nativeElement as HTMLElement).querySelector('tbody svg'),
+    ).toBeNull();
   });
 
   it('writes the flag and re-reads what this client itself offers', async () => {

@@ -79,6 +79,15 @@ test.describe('the installable client', () => {
     );
 
     await page.goto('/');
+    // The page has to be *there* before the connection is taken away: the
+    // assertion below passes on a blank document too, and a client that had not
+    // finished starting when it went offline never loads its catalogue at all —
+    // then the banner exists with an unresolved key in it and this test fails
+    // for a reason that has nothing to do with the banner. Seen twice under
+    // eight workers, never when the file runs alone.
+    await expect(
+      page.getByRole('heading', { name: t('start.title') }),
+    ).toBeVisible();
     await expect(
       page.getByText(t('app.offline.title'), { exact: true }),
     ).toBeHidden();

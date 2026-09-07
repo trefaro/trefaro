@@ -60,6 +60,15 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   nicht glaubt, fährt die Datei allein — passiert sie dort, ist es der Wettlauf
   und nicht die Zusicherung; und wer ihn abstellen will, sucht den geteilten
   Zustand, nicht den Timeout.
+- **„Nicht sichtbar" ist auf einer leeren Seite auch wahr.** Wer eine Abwesenheit
+  prüft und danach die Bedingung herstellt, hat keine Vorbedingung geprüft: der
+  Offline-Test des Nutzer-Clients bestand auf `toBeHidden()`, während die Seite
+  noch startete, nahm dann die Verbindung weg — und der Client hat seinen
+  Katalog nie geholt. Der Fehlschlag zeigte einen Banner mit einem rohen
+  Schlüssel und sah nach einem kaputten Banner aus. Zweimal unter acht Workern
+  gesehen, allein gefahren nie. Also: **erst auf etwas Sichtbares warten**
+  (eine Überschrift), dann die Abwesenheit prüfen, dann den Zustand ändern.
+
 - **Playwright emuliert Offline in WebKit nicht** — `context.setOffline()` wirkt in
   Chromium und Firefox; dort mit Begründung überspringen.
 

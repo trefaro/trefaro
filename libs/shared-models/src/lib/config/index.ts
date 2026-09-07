@@ -32,6 +32,11 @@ export {
   type FontFamilyOption,
 } from './fonts';
 export {
+  ICON_NAMES,
+  isIconName,
+  type IconName,
+} from './icons';
+export {
   PUSH_MODULE_KEY,
   type ModuleFamily,
   type ModuleSummary,
@@ -46,9 +51,11 @@ export {
   type WebManifestIcon,
 } from './pwa';
 export {
+  pluginCataloguePrefix,
   pluginElementId,
   type PluginDescriptor,
   type PluginMountPoint,
+  type PluginSlotContext,
 } from './plugin-descriptor';
 export {
   SETUP_TOKEN_HEADER,

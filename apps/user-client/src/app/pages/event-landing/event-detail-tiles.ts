@@ -9,14 +9,23 @@ import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AppConfigService } from '@trefaro/shared-config';
 import { TranslationService } from '@trefaro/shared-i18n';
-import { pluginElementId } from '@trefaro/shared-models';
+import { pluginElementId, type IconName } from '@trefaro/shared-models';
 import { PluginLoaderService } from '@trefaro/shared-plugins';
+import { TrefaroIcon } from '@trefaro/shared-theming';
 
 /** One tile: what it is called, where it leads, and how much is behind it. */
 interface DetailTile {
   readonly target: string;
   readonly label: string;
   readonly hint: string;
+  /**
+   * The glyph beside the label (E49).
+   *
+   * A plain string, because a plug-in's comes from its descriptor over HTTP; the
+   * two core tiles name theirs with `satisfies IconName`, so a typo in *our*
+   * literal is a compile error while a plug-in's stays a runtime answer.
+   */
+  readonly icon: string | null;
 }
 
 /**
@@ -24,7 +33,7 @@ interface DetailTile {
  *
  * The mockups put "Programmplan" on a tile beside the room plan, the forum and
  * the proposals, and show tiles only for modules the organization has enabled.
- * Three decisions turn that drawing into this component:
+ * Four decisions turn that drawing into this component:
  *
  * 1. **A tile is a jump link, not a route.** Everything it can lead to renders on
  *    the landing page itself — the programme as a timeline (AP 8 of phase 1), the
@@ -55,17 +64,26 @@ interface DetailTile {
  *    no pipe to do that for it (F72). Both core tiles deliberately share their
  *    key with the heading of the section they point at: a tile that said
  *    something else would look like a second place to go.
+ * 4. **Every tile carries an icon**, and a plug-in's is the one its descriptor
+ *    names (E49, AP 1 of phase 4). The two core tiles have one of their own, so
+ *    the row does not read as half-finished; a plug-in that names a glyph this
+ *    version does not draw gets the tile without it, which is the whole
+ *    behaviour of `trefaro-icon` and the reason the organizer's module page
+ *    reports the name.
  */
 @Component({
   selector: 'trefaro-event-detail-tiles',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslocoPipe],
+  imports: [RouterLink, TranslocoPipe, TrefaroIcon],
   template: `
     @if (tiles().length > 0) {
       <nav class="tiles" [attr.aria-label]="'event.tiles.label' | transloco">
         @for (tile of tiles(); track tile.target) {
           <a class="tile" [routerLink]="[]" [fragment]="tile.target">
-            <span class="tile__label">{{ tile.label }}</span>
+            <span class="tile__label">
+              <trefaro-icon [name]="tile.icon" />
+              {{ tile.label }}
+            </span>
             <span class="tile__hint">{{ tile.hint }}</span>
           </a>
         }
@@ -96,6 +114,9 @@ interface DetailTile {
     }
 
     .tile__label {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
       font-weight: 600;
     }
 
@@ -125,6 +146,7 @@ export class EventDetailTiles {
     if (this.sessions() > 0) {
       tiles.push({
         target: 'program',
+        icon: 'event' satisfies IconName,
         label: this.i18n.translate('event.program'),
         hint: this.i18n.translate(
           this.sessions() === 1
@@ -138,6 +160,7 @@ export class EventDetailTiles {
     if (this.mediaLinks() > 0) {
       tiles.push({
         target: 'media',
+        icon: 'link' satisfies IconName,
         label: this.i18n.translate('event.media'),
         hint: this.i18n.translate(
           this.mediaLinks() === 1
@@ -155,6 +178,7 @@ export class EventDetailTiles {
       if (!this.loader.isReady(plugin.key)) continue;
       tiles.push({
         target: pluginElementId(plugin.key),
+        icon: plugin.icon,
         label: this.i18n.translate(plugin.labelKey),
         hint: this.i18n.translate('event.tiles.onThisPage'),
       });

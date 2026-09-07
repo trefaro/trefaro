@@ -1,9 +1,10 @@
 # Phase 4 — Plug-ins: die fünf kuratierten Fachlichkeiten
 
-**Status: geplant** (04.09.2026). Kein Arbeitspaket ist begonnen. Dieses Dokument
-ist der **Plan**; er wird ab AP 1 nicht mehr rückwirkend korrigiert, sondern
-unten unter _Fortschritt_ fortgeschrieben — wie in [`PHASE1.md`](PHASE1.md),
-[`PHASE2.md`](PHASE2.md) und [`PHASE3.md`](PHASE3.md).
+**Status: in Arbeit** (Plan 04.09.2026, AP 1 erledigt am 07.09.2026). Alles über
+dem Abschnitt _Fortschritt_ ist der **Plan** und wird nicht rückwirkend
+korrigiert; was tatsächlich passierte — samt Abweichungen — steht unten, wie in
+[`PHASE1.md`](PHASE1.md), [`PHASE2.md`](PHASE2.md) und
+[`PHASE3.md`](PHASE3.md).
 
 Grundlage: Kapitel 6, Phase 4 in
 [`Anforderungsanalyse_und_Umsetzungsplan.md`](Anforderungsanalyse_und_Umsetzungsplan.md)
@@ -834,6 +835,124 @@ unvergeben (wie F62 und F129–F131).
 
 ## Fortschritt
 
-Noch kein Arbeitspaket begonnen. Je Paket kommt hier ein Abschnitt „erledigt"
-mit dem, was tatsächlich passierte — Abweichungen vom Plan stehen hier, damit
-AP 10 sie nicht rekonstruieren muss.
+Je Paket ein Abschnitt „erledigt" mit dem, was tatsächlich passierte —
+Abweichungen vom Plan stehen hier, damit AP 10 sie nicht rekonstruieren muss.
+
+### AP 1 — Icons, und der Vertrag lernt Sprache (erledigt, 07.09.2026)
+
+Umgesetzt:
+
+- **`shared-models`** — `lib/config/icons.ts` mit `ICON_NAMES` (sieben Namen),
+  `IconName` und `isIconName`; in `plugin-descriptor.ts` dazu
+  `pluginCataloguePrefix(key)` (aus `room-planning` wird
+  `plugins.roomPlanning.`) und `PluginSlotContext`, die zwei Eigenschaften, die
+  jedes montierte Element bekommt. `ModuleSummary` hat ein viertes Plug-in-Feld:
+  `icon`.
+- **`shared-theming`** — `icon-paths.ts` (`ICON_VIEW_BOX`, `ICON_PATHS` als
+  vollständiger `Record<IconName, string>`, `iconPath`) und `icon.ts` mit
+  `trefaro-icon`: eingebettetes SVG, `fill: currentColor`, Größe über
+  `--trefaro-icon-size`, `aria-hidden` — und **nichts** für einen unbekannten
+  Namen. Lizenz und Herkunft in `assets/icons/` neben den Schriftlizenzen
+  (Material Symbols, Apache-2.0, aus `@material-symbols/svg-400@0.47.1`, Stil
+  `outlined`; das Paket ist bewusst keine Abhängigkeit, wie bei den Schriften).
+- **`shared-plugins`** — `PluginSlot` reicht `locale` und `strings` durch,
+  **zuletzt** zugewiesen, damit ein Einhängepunkt sie nicht überschreiben kann,
+  und **reconciliert** statt neu zu montieren: die Kinder werden nur neu gebaut,
+  wenn sich die Liste der Plug-ins ändert; ein Sprachwechsel oder ein neuer
+  Kontext schreibt nur Eigenschaften. Die Bibliothek hängt dafür neu an
+  `shared-i18n` (`peerDependencies` ergänzt).
+- **`shared-i18n`** — `TranslationService.stringsWithPrefix(prefix)`: Auswahl
+  nach Präfix über den flachen Katalog (F70), Präfix in den Schlüsseln
+  abgeschnitten.
+- **Server** — `PLUGIN_API_VERSION` auf **1.2.0** mit der Begründung in der
+  Versionshistorie und zwei Fällen im Kompatibilitätstest (1.1 auf 1.2 wird
+  montiert, 1.2 auf 1.1 nicht); `PluginClientContribution.icon` ist
+  dokumentiert als Name aus dem geschlossenen Satz, bleibt aber ein `string` —
+  ein Deskriptor ist die Zusage eines Plug-ins, und ein unbekannter Name muss
+  zur Laufzeit beantwortbar sein. `ModuleAdminService` reicht ihn durch, das
+  DTO beschreibt ihn. Neu: `plugins/curated-plugins.spec.ts`, der Vertragstest
+  über `CURATED_PLUGINS` (ein Schlüssel je Plug-in, jeder Katalogschlüssel unter
+  dem eigenen Präfix, nur bekannte Icons, kompatible Vertragsversion, ab Werk
+  aus) — er wächst mit jedem Paket dieser Phase.
+- **Nutzer-Client** — jede Kachel der Event-Detailansicht trägt ihr Icon; die
+  zwei Kernkacheln nennen `event` und `link` mit `satisfies IconName`, die
+  Kachel eines Plug-ins nimmt, was der Deskriptor sagt. Der Einhängepunkt
+  übergibt nur noch `eventId`: die Sprache kommt jetzt vom Slot.
+- **Veranstalter-Client** — die Modulverwaltung zeichnet das Icon in der Zeile
+  und **nennt** einen Namen, den diese Version nicht kennt
+  (`admin.modules.iconUnknown`).
+- **Plug-in-Bundle** — das Raumplanungs-Element hat keinen eigenen Text mehr:
+  Titel, Beschriftungen, Hinweis und Knopf kommen aus `strings`, der Rückfall
+  ist der Schlüssel selbst. Der englische Text stand seit Phase 0 im Template.
+- **Katalog** — 956 auf **962** Schlüssel, Englisch und Deutsch:
+  `admin.modules.iconUnknown` und fünf `plugins.roomPlanning.*` (`title` und
+  `label` gab es schon).
+- **Referenzdokument** — F186, F187, F188; Anhangspunkt 11 um den zweiten
+  Vertragsschritt ergänzt. Neue Regeln in `docs/rules/i18n.md` (ein Plug-in
+  bekommt Worte, nie Text) und `docs/rules/whitelabel-pwa.md` (der geschlossene
+  Icon-Satz).
+
+Belegt: `nx run-many -t lint test build` grün (13 Projekte), Server-Unit-Tests
+1134, API-Vertragstests 587 (`modules.spec.ts` prüft `icon` jetzt mit), beide
+Browsersuiten grün — neu `apps/user-client-e2e/src/plugin-slot.spec.ts` (drei
+Tests × drei Engines): das Element wird montiert, zeigt die Worte der Instanz,
+bekommt seine Kachel **mit** Glyph, und ein Sprachwechsel erreicht es **ohne
+Neuladen und ohne Neumontage** (zwei Sentinel, einer am `window`, einer am
+Element). Die Konfiguration wird dafür abgefangen statt geschrieben — der Grund
+steht in `theming.spec.ts` und in `docs/rules/e2e-tests.md`: `module_config` ist
+instanzweiter Zustand, und `start-up.spec.ts` behauptet über dieselbe Instanz,
+dass am Einhängepunkt **nichts** montiert ist.
+
+Was anders lief als geplant:
+
+- **„Ein Navigationseintrag zeigt sein Icon" war nicht erfüllbar** und ist
+  nicht nachgebaut worden. Das Abnahmekriterium des Plans nennt Kachel **und**
+  Navigationseintrag; einen host-gezeichneten Navigationseintrag je Plug-in gibt
+  es aber nicht — am Einhängepunkt `navigation` montiert der Slot das Element,
+  und **das** ist der Eintrag. Dazu nennt die Schlüsseltabelle dieses Plans für
+  keines der fünf Plug-ins `navigation` als Einhängepunkt: in dieser Phase hat
+  also kein Plug-in einen. Beide Stellen, an denen der Host wirklich etwas über
+  ein Plug-in zeichnet, lesen `icon` (Event-Kachel, Modulzeile), und AP 3 nimmt
+  die Dashboard-Kachel dazu. Wer später einen Navigationseintrag mit Icon will,
+  entscheidet zuerst, wer ihn zeichnet — Host oder Bundle.
+- **Die zwei neuen Einhängepunkte sind nicht in AP 1 dazugekommen.** `1.2.0` ist
+  der eine Vertragsschritt der Phase (E46), aber `PluginMountPoint` wächst erst,
+  wenn der Host den Punkt bedient: `event-dashboard` in AP 3, `my-registration`
+  in AP 8, so wie die beiden Pakete es beschreiben. Ein Wert im geschlossenen
+  Satz, den kein Slot bedient, wäre genau die Attrappe, gegen die E46 geschrieben
+  ist.
+- **Vier der sieben Glyphen haben noch keinen Aufrufer** — `lightbulb`, `forum`,
+  `qr_code_2` und `event_note` warten auf AP 2 bis AP 9. Bewusst so: AP 3 nimmt
+  „ihr Icon aus AP 1", und ein Satz, der mit jedem Paket um eine Datei wächst,
+  wäre viermal dieselbe Entscheidung. Der Compiler hält die zwei Hälften
+  zusammen, und `curated-plugins.spec.ts` prüft die andere Richtung — kein
+  Deskriptor nennt einen Namen, den es nicht gibt.
+- **Zwei Kernkacheln haben Icons bekommen**, obwohl der Plan nur von der Kachel
+  eines Plug-ins sprach. Eine Reihe, in der eine von drei Kacheln ein Bild
+  trägt, sieht nach halb fertig aus; die Glyphen `event` und `link` sind zwei
+  Zeilen Pfaddaten, und das Risiko, das der Plan bei einem Icon-Satz sah (eine
+  Designentscheidung über beide Clients), liegt im Satz, nicht in der Zahl der
+  Aufrufer.
+- **Das `strings`-Präfix wird abgeleitet, nicht deklariert.** Ein Feld im
+  Deskriptor wäre eine Erweiterung mehr, und dieselbe Frage wie beim
+  `labelKey` — die Auflösung ist `pluginCataloguePrefix` **plus** ein Test, der
+  jedes deklarierte `titleKey`/`labelKey` unter dem abgeleiteten Präfix
+  verlangt. Abgeleitetes ohne Prüfung wäre der Fehler; geprüft ist es eine
+  Zeile.
+- **Der bisherige Slot montierte bei jeder Kontextänderung neu.** Das fiel erst
+  auf, als `locale` durch denselben Effekt lief: ein Sprachwechsel hätte jedes
+  Element abgebaut und neu aufgebaut, und Angular Elements baut die Komponente
+  dabei wirklich ab. Der Test „remounts with the new context" heißt jetzt
+  „reassigns … keeping the element" und vergleicht die Elementidentität.
+- **Zwei rote Läufe kamen aus der Suite, nicht aus dem Paket** — und der zweite
+  war ein echter Testfehler. `newsletter.spec.ts` fiel nach mehreren vollen
+  Läufen in wenigen Minuten aus (20 Anmeldungen je fünf Minuten und Adresse,
+  E4) und war allein gefahren grün: der Fall, den
+  `docs/rules/e2e-tests.md` beschreibt. `pwa.spec.ts` dagegen fiel **zweimal
+  reproduzierbar** im vollen Lauf und allein nie — Ursache war eine
+  Zusicherung, die auf einer leeren Seite auch wahr ist: der Test bestand auf
+  „kein Offline-Banner", während der Client noch startete, nahm dann die
+  Verbindung weg, und der Client holte seinen Katalog nie. Behoben, indem er
+  zuerst auf die Überschrift der Startseite wartet; die Regel steht jetzt in
+  `docs/rules/e2e-tests.md`. Der abschließende Lauf ist grün (231 Tests, neun
+  übersprungen).
