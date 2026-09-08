@@ -302,6 +302,7 @@ export {
   type ForumPost,
   type ForumPostPage,
   type ForumPostStatus,
+  type ForumSummary,
   type ForumThread,
   type ForumThreadPage,
   type ForumThreadReference,

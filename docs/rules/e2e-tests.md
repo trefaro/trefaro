@@ -395,6 +395,26 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   auseinanderliegen können, wenn Playwright die zwei Dateien lokal auf zwei
   Arbeiter verteilt. Allgemein: wer eine **vollständige Menge** vergleicht,
   vergleicht sie gegen den Zustand der Instanz und nicht gegen eine Konstante.
+- **`forum` ist der vierte Schalter, den eine Browsersuite umlegt** — wieder
+  in **zwei** Suiten, je eine pro Client. Und die Veranstaltersuite des Forums
+  legt als erste einen **fremden** Schalter mit um (`program-proposals`), weil
+  ihr Abnahmekriterium zwei Plug-in-Kacheln nebeneinander sind. Damit gilt
+  „wiederherstellen, was gefunden wurde" nur noch, wenn die zwei Dateien
+  **nacheinander** laufen — siehe den nächsten Punkt.
+- **Zwei Suiten, die denselben Schalter umlegen, teilen sich ein Schloss** (AP 5
+  der Phase 4). Lokal laufen acht Arbeiter, also lagen die beiden
+  Veranstaltersuiten der Plug-ins zeitweise übereinander: die eine schaltet
+  `program-proposals` in ihrem letzten Test aus und prüft die Abwesenheit, die
+  andere braucht es an — und was die eine „gefunden" hätte, wäre der Zustand
+  gewesen, den die andere gerade gesetzt hat. Das Schloss ist ein
+  **Advisory Lock der Datenbank** (`support/module-lock.ts`,
+  `pg_advisory_lock`, sitzungsweit auf einer eigenen Verbindung), genommen im
+  `beforeAll` **vor** dem ersten Lesen eines Schalters und freigegeben im
+  `afterAll` **nach** dem Zurückstellen. Ein abgestürzter Arbeiter verliert
+  seine Verbindung und damit das Schloss — nichts aufzuräumen. Wer wartet,
+  wartet gegen den Timeout des Hooks, also `test.setTimeout(180_000)` im
+  `beforeAll` zuerst. Nicht für Dateien, die nur **ihren** Schalter umlegen:
+  das Schloss serialisiert, und was es nicht braucht, soll parallel bleiben.
 - **Ein Plug-in prüft man mit gebautem Bündel.** `nx build plugin-<key>` gehört
   vor den E2E-Lauf (in der CI steht es so); ohne das Bündel definiert der
   Browser kein Custom Element, der Slot montiert nichts — und eine Suite, die

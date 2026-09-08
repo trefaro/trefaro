@@ -13,6 +13,7 @@ import {
   type ForumPost,
   type ForumPostPage,
   type ForumPostStatus,
+  type ForumSummary,
   type ForumThread,
   type ForumThreadPage,
   type ModeratedForumPost,
@@ -233,6 +234,29 @@ export class ForumService {
       total: slice.total,
       page: window.page,
       pageSize: window.pageSize,
+    };
+  }
+
+  /**
+   * How many posts of one event are in each state (E59).
+   *
+   * For the heading of the section the plug-in draws on the organizer's
+   * dashboard. Its own route rather than a field on the moderation list,
+   * because the list is narrowed to the queue there and a narrowed list can
+   * only count itself — and because the number belongs to the section, not to
+   * whichever page of the list happens to be open. Built now, in AP 5, because
+   * now a screen reads it (E21); AP 4 left it out for that reason.
+   *
+   * A state the event has no rows in is a zero rather than a missing key: SQL
+   * groups what is there, and a heading that showed nothing where it should
+   * show "0 rejected" would read as a broken heading.
+   */
+  async summarize(eventId: string): Promise<ForumSummary> {
+    const counts = await this.forum.countPostsByStatus(eventId);
+    return {
+      pending: counts.get('pending') ?? 0,
+      approved: counts.get('approved') ?? 0,
+      rejected: counts.get('rejected') ?? 0,
     };
   }
 

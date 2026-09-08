@@ -7,6 +7,10 @@ import {
 import { ADMIN_STORAGE_STATE, fixtureLabel } from './support/admin-session';
 import { expectNoRawKeys, t } from './support/catalogue';
 import {
+  lockModuleSwitches,
+  unlockModuleSwitches,
+} from './support/module-lock';
+import {
   closeProposalDatabase,
   proposalStates,
   removeProposals,
@@ -30,7 +34,10 @@ import {
  *
  * **Chromium only, and it restores what it found.** This file switches
  * `program-proposals`, and `module_config` belongs to the whole instance while
- * Playwright runs three engines (`docs/rules/e2e-tests.md`).
+ * Playwright runs three engines (`docs/rules/e2e-tests.md`). Since AP 5 the
+ * forum's suite switches this flag too — two tiles side by side are its
+ * criterion — so both files hold the module lock for their whole run
+ * (`support/module-lock.ts`) and "what was found" is the resting state.
  *
  * The two waiting proposals are seeded into the plug-in's own table — see
  * `support/proposal-fixtures.ts` for why, and where the submission itself is
@@ -73,6 +80,11 @@ test.describe('the programme proposals plug-in on the event dashboard', () => {
 
   test.beforeAll(async ({ browserName }) => {
     if (browserName !== 'chromium') return;
+    // Waiting for the lock counts against this hook's timeout, and the suite
+    // holding it needs about half a minute.
+    test.setTimeout(180_000);
+    await lockModuleSwitches();
+
     admin = await request.newContext({
       baseURL: CLIENT_URL,
       storageState: ADMIN_STORAGE_STATE,
@@ -88,11 +100,15 @@ test.describe('the programme proposals plug-in on the event dashboard', () => {
       if (seeded) await removeProposals(seeded);
       await closeProposalDatabase();
     } finally {
-      // In a `finally`: a cleanup that throws before restoring the flag leaves
-      // the plug-in on for every later suite, and two other suites ask what
-      // this instance mounts.
-      await setModule(admin, wasEnabled);
-      await admin.dispose();
+      try {
+        // In a `finally`: a cleanup that throws before restoring the flag
+        // leaves the plug-in on for every later suite, and two other suites
+        // ask what this instance mounts.
+        await setModule(admin, wasEnabled);
+        await admin.dispose();
+      } finally {
+        await unlockModuleSwitches();
+      }
     }
   });
 

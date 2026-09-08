@@ -120,10 +120,12 @@ jobs:
 
       # Playwright starts the server and the client itself, but the plug-in
       # bundles have to exist first: one test asserts the room planning bundle
-      # is served, and the proposal suites of AP 3 mount the real element and
-      # click its buttons — without its bundle they would test nothing and pass.
+      # is served, and the proposal and forum suites of AP 3 and AP 5 mount the
+      # real element and click its buttons — without its bundle they would test
+      # nothing and pass.
       - run: npx nx build plugin-room-planning
       - run: npx nx build plugin-program-proposals
+      - run: npx nx build plugin-forum
       - run: npx nx run-many -t e2e --parallel=1
 
       - if: failure()

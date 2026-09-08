@@ -28,6 +28,7 @@ import { FORUM_PLUGIN_KEY } from '../forum.plugin-key';
 import {
   ForumModerationPageDto,
   ForumModerationQueryDto,
+  ForumSummaryDto,
   ModeratedForumPostDto,
 } from './forum.dto';
 
@@ -53,8 +54,11 @@ import {
  *
  * Both decisions answer 200 with the row as it now is, rather than 204: the
  * organizer's list is the screen this is called from, and the answer is what it
- * redraws. The count for that section (`…/summary`) is AP 5's, and is not
- * built while nothing reads it (E21).
+ * redraws.
+ *
+ * The third read, `…/summary`, is the one AP 5 added — the counts above the
+ * queue in the section this plug-in draws on the organizer's dashboard (E59).
+ * AP 4 deliberately left it unbuilt while nothing read it (E21).
  */
 @ApiTags('plugin: discussion forum')
 @ApiNotFoundResponse({
@@ -89,6 +93,25 @@ export class AdminForumController {
       eventId,
       query,
     ) as Promise<ForumModerationPageDto>;
+  }
+
+  @Get('events/:eventId/summary')
+  @ApiOperation({
+    summary: 'How many posts of this event are in each state (E59)',
+    description:
+      'The heading of the section this plug-in renders on the organizer’s ' +
+      'dashboard — three numbers in one request, counted over the posts of ' +
+      'this event’s threads. The **tile** above that section carries no ' +
+      'number: it is a jump link with a label and an icon, because a count on ' +
+      'the tile would mean the host asking a plug-in a question, and the ' +
+      'contract has no capability pointing that way.',
+  })
+  @ApiOkResponse({ type: ForumSummaryDto })
+  @ApiUnauthorizedResponse({ description: 'No administrative session.' })
+  summary(
+    @Param('eventId', ParseUUIDPipe) eventId: string,
+  ): Promise<ForumSummaryDto> {
+    return this.forum.summarize(eventId) as Promise<ForumSummaryDto>;
   }
 
   @Post('posts/:postId/approval')

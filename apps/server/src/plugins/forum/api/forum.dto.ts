@@ -11,6 +11,7 @@ import {
   type ForumPost,
   type ForumPostPage,
   type ForumPostStatus,
+  type ForumSummary,
   type ForumThread,
   type ForumThreadPage,
   type ForumThreadReference,
@@ -202,6 +203,28 @@ export class ForumModerationPageDto implements ForumModerationPage {
 
   @ApiProperty()
   pageSize!: number;
+}
+
+/**
+ * The counts the organizer's dashboard section draws (E59).
+ *
+ * Three numbers and no rows: the queue itself arrives through the moderation
+ * list, and this is the heading above it. Posts, not threads — a thread has no
+ * state to count (F195).
+ */
+export class ForumSummaryDto implements ForumSummary {
+  @ApiProperty({ description: 'Waiting for a decision — the queue.' })
+  pending!: number;
+
+  @ApiProperty()
+  approved!: number;
+
+  @ApiProperty({
+    description:
+      'Rejected posts keep their row (E14), so this never becomes zero by a ' +
+      'decision being taken.',
+  })
+  rejected!: number;
 }
 
 /** What a participant sends to open a thread (FR 4.6). */

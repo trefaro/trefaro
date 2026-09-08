@@ -1,6 +1,6 @@
 # Phase 4 — Plug-ins: die fünf kuratierten Fachlichkeiten
 
-**Status: in Arbeit** (Plan 04.09.2026, AP 1 bis AP 3 erledigt am 07.09.2026 — **Meilenstein M9 erreicht**). Alles über
+**Status: in Arbeit** (Plan 04.09.2026, AP 1 bis AP 3 erledigt am 07.09.2026 — **Meilenstein M9 erreicht** —, AP 4 und AP 5 am 08.09.2026). Alles über
 dem Abschnitt _Fortschritt_ ist der **Plan** und wird nicht rückwirkend
 korrigiert; was tatsächlich passierte — samt Abweichungen — steht unten, wie in
 [`PHASE1.md`](PHASE1.md), [`PHASE2.md`](PHASE2.md) und
@@ -1356,3 +1356,132 @@ DESC, id) WHERE status = 'pending'` statt `(status, created_at) WHERE …` — i
   der Ursache: die zwei Auswahlfelder werden jetzt über ihre Rolle und einen am
   Anfang verankerten Namen gefunden, und die Falle steht als eigener Punkt in
   `docs/rules/e2e-tests.md`. Danach 299 grün.
+
+### AP 5 — Forum in beiden Clients (erledigt, 08.09.2026)
+
+Umgesetzt:
+
+- **Das Bündel** — `apps/plugins/forum` als drittes Web-Component-Bündel des
+  Repositories, `<trefaro-plugin-forum>`, gebaut wie die zwei davor und im
+  Image serviert (`/api/plugins/forum/main.js`; `server.Dockerfile` und
+  `ci.yml` bauen es mit). Der Deskriptor hat jetzt seinen `client`-Teil: zwei
+  Einhängepunkte, `labelKey`, und `forum` als Icon — der Name, den der
+  geschlossene Satz seit AP 1 für genau dieses Plug-in bereithielt (E49).
+- **Ein Bündel, zwei Hälften**, nach dem Muster aus AP 3: `forum-plugin.ts`
+  ist der Schalter über `mountPoint` (F202); darunter `participant-forum.ts`
+  und `organizer-forum.ts`, die Worte aus `plugin-words.ts`, die Modelle aus
+  `shared-models`, die acht Aufrufe in `forum-api.ts` mit `fetch`.
+- **Nutzer-Client** — der Teilnehmerabschnitt am `event-detail`-Einhängepunkt:
+  die Threadliste nach letzter veröffentlichter Aktivität, das Formular für
+  ein neues Thema, und **in demselben Element** die Threadansicht — Titel,
+  Eröffner, die Beiträge älteste zuerst, je eigenem Beitrag ein Statuszeichen,
+  die Antwort darunter. Ohne Sitzung die Anmeldeaufforderung (E58). Am Host
+  geändert: **nichts** — der Einhängepunkt und die Kachel dazu stehen seit
+  Phase 2, das ist der zweite Beweis dafür.
+- **Veranstalter-Client** — die **zweite** Kachel im Raster des Dashboards und
+  darunter der Abschnitt des Plug-ins: die drei Zahlen, die Warteschlange, je
+  Beitrag der Thread, in dem er steht („Im Thema: …"), und zwei Knöpfe. Auch
+  hier am Host **nichts** geändert: Kachel und Slot aus AP 3 nehmen das zweite
+  Plug-in in der Reihenfolge der Registrierung.
+- **Server** — die achte Route, `GET /api/admin/plugins/forum/events/:id/summary`:
+  drei Zustände in **einer** Anweisung über den Join zum Thread (`GROUP BY
+status`), ein fehlender Zustand als Null. Sie entsteht jetzt, weil sie jetzt
+  einen Leser hat (E21) — AP 4 hatte sie deshalb nicht gebaut. Migration:
+  **keine**.
+- **Katalog** — 989 auf **1019** Schlüssel: 30 neue unter `plugins.forum.*`
+  (Beschriftung, die zwei Formulare, die Statuswörter, die zwei Knöpfe, die
+  Leerzustände, der Satz über eine Freigabe und ihre Wirkung auf das Thema, die
+  Anmeldeaufforderung), Englisch und Deutsch. `plugins.forum.title` stand
+  schon seit AP 4.
+- **Referenzdokument** — kein neuer Nachtrag: die Entscheidungen dieses Pakets
+  (F195, F202, E51, E58, E59) waren getroffen, hier wurden sie gezeichnet.
+
+Belegt: `nx run-many -t lint test build` grün (**15** Projekte, das Bündel ist
+das neue), **31** Unit-Tests im Bündel (der Schalter, die Teilnehmerhälfte mit
+Liste, Thread, beiden Formularen und den Zuständen, die Veranstalterhälfte mit
+Zahlen, Warteschlange und Entscheidungen), Server-Unit-Tests **1192** (1189
+vorher; die drei neuen sind die Fälle der Zusammenfassung), API-Vertragstests
+**624** (623 vorher; der neue prüft, dass die Zahlen mit den Zeilen
+übereinstimmen, dass eine Korrektur sie bewegt und zurückbewegt, dass das
+andere Event bei Null steht und dass die Route hinter der Verwaltungssitzung
+liegt), Teilnehmersuite **241** (235 vorher), Veranstaltersuite **305** (299
+vorher).
+
+Die zwei Browsersuiten teilen sich das Abnahmekriterium wie in AP 3:
+`apps/user-client-e2e/src/plugin-forum.spec.ts` lässt **zwei** Teilnehmende
+einen Thread führen — die eine eröffnet ihn auf einem Telefon (390 × 844) und
+sieht ihren ersten Beitrag als ausstehend, die andere sieht den Thread erst
+nach der Freigabe, antwortet, und die Antwort ist wieder nur für sie sichtbar,
+bis auch sie freigegeben ist — Beitrag für Beitrag (F195, E51); dazu, dass der
+Einhängepunkt für **jedes** Plug-in, das die Konfiguration nennt, ein Element
+und eine Kachel montiert, und dass Abschalten Kachel und Abschnitt nimmt, ohne
+eine Zeile zu verlieren. `apps/admin-client-e2e/src/plugin-forum.spec.ts`
+schaltet **beide** Plug-ins ein, sieht die zwei Kacheln nebeneinander in der
+Reihenfolge der Registrierung, klickt die des Forums und landet an dessen
+Abschnitt, gibt einen Beitrag frei und lehnt den zweiten ab, liest den Zustand
+aus der Datenbank — und sieht beim Abschalten des Forums die Vorschläge
+stehen bleiben.
+
+Was anders lief als geplant:
+
+- **Zwei Suiten, ein Schalter — und ein Schloss.** Die Veranstaltersuite des
+  Forums braucht `program-proposals` **an** (zwei Kacheln sind das Kriterium),
+  die der Vorschläge schaltet denselben Schalter in ihrem letzten Test aus und
+  prüft die Abwesenheit. Lokal, auf acht Arbeitern, liefen die zwei Dateien
+  übereinander, und „wiederherstellen, was gefunden wurde" hätte den Zustand
+  der jeweils anderen zurückgeschrieben. Beide halten deshalb für ihre ganze
+  Laufzeit ein **Advisory Lock der Datenbank**
+  (`apps/admin-client-e2e/src/support/module-lock.ts`): genommen vor dem ersten
+  Lesen, freigegeben nach dem Zurückstellen, von PostgreSQL selbst gelöst, wenn
+  ein Arbeiter abstürzt. Die Regel steht in `docs/rules/e2e-tests.md`; die
+  Vorschlagssuite hat dafür zwei Zeilen in ihren Hooks bekommen und sonst
+  nichts. Eine Datei, die nur ihren eigenen Schalter umlegt, nimmt das Schloss
+  **nicht**.
+- **Der Thread öffnet sich im Element, nicht auf einer Route.** Ein Plug-in hat
+  keine Routen — es zeichnet, wo es montiert ist —, also ist die Threadansicht
+  eine zweite Ansicht desselben Elements, und die Liste bleibt dahinter stehen:
+  „Alle Themen" kostet keine Anfrage. Damit gibt es auch keinen Tiefenlink auf
+  einen Thread; die Adresszeile zu lesen wäre dieselbe Kopplung an das
+  Deployment, die F202 beim `mountPoint` vermieden hat. Wer die will, baut sie
+  als zugesagte Eigenschaft des Slots, nicht im Bündel.
+- **Kein `postCount` an der Threadliste**, obwohl AP 4 ihn für dieses Paket
+  offengelassen hatte. Eine Zahl der Beiträge, die **dieser** Leser sehen darf,
+  ist je Leser eine andere (die eigenen ausstehenden zählen mit, die fremden
+  nicht) — eine Zahl, die an derselben Liste für zwei Menschen zwei
+  Bedeutungen hat, ist keine Zahl für eine Liste. Der Thread ist einen Tipp
+  entfernt. Bleibt, bis jemand sie liest (E21).
+- **Was ein Leser schreibt, erscheint ohne zweites Lesen.** Ein neues Thema
+  steht oben in der Liste, aus der es kam, und öffnet sich sofort — Thread
+  **und** erster Beitrag kommen aus der einen Antwort des Eröffnens (F49) —;
+  eine Antwort wird an ihren Thread angehängt. Ein Neuladen hätte die schon
+  geöffneten Seiten verworfen. Der Veranstalterabschnitt liest dagegen nach
+  jeder Entscheidung neu, wie der der Vorschläge: eine Entscheidung bewegt
+  Warteschlange **und** drei Zahlen.
+- **Zeitpunkte mit Uhrzeit.** Die Vorschläge zeigen ein Datum; ein Forum ist
+  ein Gespräch, und „um neun" braucht eine Uhr. `Intl.DateTimeFormat` mit
+  `dateStyle` und `timeStyle`, in der Sprache und Zone des Lesers — keine
+  Ausnahme von E8, weil es keine Zeit eines Events ist.
+- **Zwei Kopien, mit Absicht — und die dritte zieht aus** (F138).
+  `plugin-words.ts` und der `fetch`-Helfer stehen jetzt in zwei Bündeln; die
+  Regel dazu (wohin sie ziehen, und warum nicht nach `shared-plugins`) steht
+  in `docs/rules/angular-clients.md`.
+- **Der erste Lauf der Teilnehmersuite war rot, ohne dass das Forum etwas damit
+  zu tun hatte:** während `nx e2e` den Server im Watch-Modus hochfuhr, kam die
+  README dieses Plug-ins unter `apps/server/` an, der Watch startete neu, und
+  das `globalSetup` der Suite traf auf `ECONNREFUSED`. Dieselbe Klasse wie der
+  Eintrag aus AP 4 in `tooling-traps.md`: während `nx serve` läuft, schreibt
+  man nicht in seinen Baum. Der zweite Lauf war grün.
+- **Der volle Lauf der Teilnehmersuite war einmal rot in einem Test, den
+  dieses Paket nicht anfasst** — `content-translations.spec.ts`, Firefox, „falls
+  back field by field": deutsche Oberfläche, englischer Event. `todo.md` führte
+  das seit dem 04.09.2026 als Wettlauf zweier Dateien um instanzweiten Zustand,
+  „eine Stunde wert, wenn die Browsersuiten das nächste Mal angefasst werden".
+  Das war jetzt, und die Erklärung war eine andere: der Test wechselt die
+  Sprache, bevor die Seite steht, also sind **zwei** Anfragen in Flug, und die
+  Landingpage schrieb, was zuletzt ankam — ein Fehler des Clients, den jeder
+  schnelle Sprachwechsel auf einer langsamen Verbindung auslöst, kein Fehler
+  der Suite. Behoben mit einer Ladefolge in `event-landing-page.ts` (eine späte
+  Antwort auf eine Frage, die niemand mehr stellt, wird verworfen) und einem
+  Unit-Test, der die zwei Antworten in der falschen Reihenfolge auflöst — die
+  ersten zwei Unit-Tests dieser Seite (Nutzer-Client 253 auf **255**). Vier Schwesterseiten mit derselben Bauweise
+  stehen in `todo.md` unter Phase 5; die Regel in `angular-clients.md`.

@@ -214,6 +214,26 @@ export class TypeormForumRepository implements ForumRepository {
     return { rows: rows.map(toModeratedRecord), total };
   }
 
+  async countPostsByStatus(
+    eventId: string,
+  ): Promise<ReadonlyMap<ForumPostStatus, number>> {
+    const rows = await this.posts
+      .createQueryBuilder('post')
+      .select('post.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      // The event is the thread's, so the count goes through the join like the
+      // moderation list does — another event's posts cannot be counted here.
+      .innerJoin(ThreadEntity, 'thread', 'thread.id = post.threadId')
+      .where('thread.eventId = :eventId', { eventId })
+      .groupBy('post.status')
+      .getRawMany<{ status: ForumPostStatus; count: string }>();
+
+    // `COUNT(*)` comes back as a string: PostgreSQL's `bigint` does not fit in
+    // a double, so the driver hands it over as text rather than silently
+    // rounding it. The number of posts of one event does fit.
+    return new Map(rows.map((row) => [row.status, Number(row.count)]));
+  }
+
   decide(
     postId: string,
     status: Exclude<ForumPostStatus, 'pending'>,

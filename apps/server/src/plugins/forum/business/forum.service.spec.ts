@@ -117,6 +117,17 @@ class FakeForumRepository implements ForumRepository {
     };
   }
 
+  async countPostsByStatus(
+    _eventId: string,
+  ): Promise<ReadonlyMap<ForumPostStatus, number>> {
+    // Like `GROUP BY`: only the states that have rows appear.
+    const counts = new Map<ForumPostStatus, number>();
+    for (const row of this.posts) {
+      counts.set(row.status, (counts.get(row.status) ?? 0) + 1);
+    }
+    return counts;
+  }
+
   async decide(
     postId: string,
     status: Exclude<ForumPostStatus, 'pending'>,
@@ -495,6 +506,48 @@ describe('ForumService', () => {
       await expect(service.approve('nothing', 'organizer-3')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('the counts above the queue (E59)', () => {
+    it('counts the posts of one event by state, in one question', async () => {
+      const { service, repository } = harness();
+      repository.posts.push(
+        post({ id: 'a', status: 'pending' }),
+        post({ id: 'b', status: 'pending' }),
+        post({ id: 'c', status: 'approved' }),
+        post({ id: 'd', status: 'rejected' }),
+      );
+
+      await expect(service.summarize('event-1')).resolves.toEqual({
+        pending: 2,
+        approved: 1,
+        rejected: 1,
+      });
+    });
+
+    it('says zero for a state with no rows, rather than leaving it out', async () => {
+      const { service, repository } = harness();
+      repository.posts.push(post({ id: 'a', status: 'pending' }));
+
+      // `GROUP BY` answers with what is there; a heading needs all three, and
+      // a missing number would read as a broken heading.
+      await expect(service.summarize('event-1')).resolves.toEqual({
+        pending: 1,
+        approved: 0,
+        rejected: 0,
+      });
+    });
+
+    it('asks for no names — a count has no authors', async () => {
+      const { service, repository, asked } = harness();
+      repository.posts.push(post({ id: 'a' }));
+
+      await service.summarize('event-1');
+
+      // The host port is the expensive part of a page (F49); a heading of
+      // three numbers must not pay for it.
+      expect(asked).toEqual([]);
     });
   });
 });

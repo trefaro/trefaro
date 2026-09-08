@@ -24,11 +24,14 @@ import { FORUM_PLUGIN_KEY } from './forum.plugin-key';
  * on without accounts is a 409 naming `profiles`, and switching `profiles` off
  * while this is on is a 409 naming this plug-in.
  *
- * **No `client` half yet.** The web component, its two hook points
- * (`event-detail`, `event-dashboard`) and its icon come in AP 5, together with
- * the screens they draw; a `bundleUrl` without a bundle would be a load error
- * the module administration reports to an organizer as a broken plug-in (F47).
- * Until then the plug-in is an API with a name in the module list.
+ * **Two hook points, one bundle** (AP 5). The web component renders a
+ * participant's forum at `event-detail` — the threads, one thread with its
+ * posts, and the two forms — and the organization's moderation section at
+ * `event-dashboard`, where the tile above it is a jump link (E59). Which of the
+ * two it is drawing arrives as `mountPoint` in the slot context (F202). AP 4
+ * shipped this descriptor without the `client` half on purpose: a `bundleUrl`
+ * without a bundle would have been a load error the module administration
+ * reports to an organizer as a broken plug-in (F47).
  */
 export const forumPlugin: ServerPlugin = {
   key: FORUM_PLUGIN_KEY,
@@ -46,6 +49,17 @@ export const forumPlugin: ServerPlugin = {
     migrations: [CreateForumSchema1787890000000],
   },
   requires: [PROFILES_MODULE_KEY],
+  client: {
+    elementName: 'trefaro-plugin-forum',
+    bundleUrl: '/api/plugins/forum/main.js',
+    // Both halves of FR 4.6 in one element: taking part is something a
+    // participant does while reading about an event, and moderating is
+    // something an organizer does on that event's dashboard.
+    mountPoints: ['event-detail', 'event-dashboard'],
+    labelKey: 'plugins.forum.label',
+    // The glyph the closed set has held for it since AP 1 (E49).
+    icon: 'forum',
+  },
   // Off by default like every curated plug-in: an instance offers what the
   // organization asked for (NFR 1). A forum is a decision about how an
   // organization talks with its participants, not a default.

@@ -87,7 +87,13 @@ dass das Werkzeug etwas anderes tut als erwartet.
   wartet auf den falschen Beweis: die Frage ist die Tabelle `migrations`
   (`docker exec trefaro-postgres psql -U trefaro -d trefaro -tAc "select name
 from migrations order by timestamp desc limit 1"`), nicht der Health-Endpunkt.
-  Abhilfe: den Serve-Prozess beenden und neu starten.
+  Abhilfe: den Serve-Prozess beenden und neu starten. **Und die Umkehrung**
+  (AP 5 der Phase 4): `nx e2e` fährt den Server als Abhängigkeit im Watch-Modus
+  hoch — wer währenddessen eine Datei unter `apps/server/` oder `libs/` schreibt
+  (es war eine README), löst einen Neustart aus, und das `globalSetup` der
+  Browsersuite läuft in `ECONNREFUSED`. Der Fehlschlag steht im Seed und sieht
+  nach einem kaputten Fixture aus. Solange eine Suite läuft, schreibt man nur
+  außerhalb des Baums, den ihr Server beobachtet (`docs/`, `todo.md`).
 
 - **`gh run watch --exit-status` ist kein Urteil.** Auf einen Lauf, der noch
   läuft, angesetzt, endete es mit **0**, während der Lauf als `failure`

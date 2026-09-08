@@ -915,14 +915,18 @@ entry, the answer is noted below rather than repeated.
       above room planning, in the order the plan fixes. **Milestone M9 is
       reached**: the first curated plug-in is complete and the 1.2.0 contract has
       a second implementer. Three plug-ins left.
-      **The forum’s server half is done (AP 4, 08.09.2026).**
-      `apps/server/src/plugins/forum` — two tables (`plugin_forum_thread`,
-      `plugin_forum_post`), one migration, two controllers, `requires: ['profiles']`, a decision per post and no status on the thread (F195).
-      It uses `PluginParticipantReads` exactly as the proposals do, and the
-      port was not touched — which is what AP 4 was meant to prove.
-      `CURATED_PLUGINS` has three entries, forum between proposals and room
-      planning. Only `qr-checkin` still holds a README alone. The forum’s
-      client half is AP 5; two plug-ins after that.
+      **Two of four are done, both halves: the forum followed (AP 4 and AP 5,
+      08.09.2026).** `apps/server/src/plugins/forum` — two tables
+      (`plugin_forum_thread`, `plugin_forum_post`), one migration, two
+      controllers, `requires: ['profiles']`, a decision per post and no status
+      on the thread (F195). It uses `PluginParticipantReads` exactly as the
+      proposals do, and the port was not touched — which is what AP 4 was meant
+      to prove. AP 5 added the bundle under `apps/plugins/forum` (threads, one
+      thread with its posts, the two forms at `event-detail`; counts and queue
+      at `event-dashboard`) and the eighth route, `…/summary`, once the section
+      read it (E21). `CURATED_PLUGINS` has three entries, forum between
+      proposals and room planning. Only `qr-checkin` still holds a README
+      alone; two plug-ins left.
 - [ ] **Implement the overbooking check** in the room planning plug-in: sign-ups
       per programme item against room capacity. Everything it needs exists since
       AP 9 — the room's capacity, the sessions assigned to it, and their sign-up
@@ -987,10 +991,15 @@ entry, the answer is noted below rather than repeated.
       number on it (E59, F193). Switching the plug-in on makes tile and section
       appear on every event's dashboard, switching it off removes both and
       nothing else, and no row is lost
-      (`apps/admin-client-e2e/src/plugin-program-proposals.spec.ts`). The forum
-      is the second filler, in AP 5. One thing the entry did not anticipate: a
-      bundle with two hook points has to be told **which one** is drawing it, so
-      the slot hands over `mountPoint` as well (F202).
+      (`apps/admin-client-e2e/src/plugin-program-proposals.spec.ts`). One thing
+      the entry did not anticipate: a bundle with two hook points has to be told
+      **which one** is drawing it, so the slot hands over `mountPoint` as well
+      (F202). **The second filler arrived in AP 5:** the forum's tile stands
+      beside the proposals' on the same dashboard, each jumps to its own
+      section, and the hook point mounts the two in the order the plug-ins are
+      registered — asserted in a browser with both switched on
+      (`apps/admin-client-e2e/src/plugin-forum.spec.ts`). Nothing in the host
+      changed for it, which is what "verify" here meant.
 
 - [ ] **A plug-in behind the login cannot tell whether there is a session.** The
       contract hands a mounted element `locale`, `strings` and `mountPoint` — not
@@ -1007,7 +1016,11 @@ entry, the answer is noted below rather than repeated.
       argument F187 and F202 use against exactly that shape. Decide it when the
       third filler exists: AP 5 (forum) and AP 9 (individual programme plan)
       mount participant-facing elements with the same question, which is E46's
-      condition for extending the contract.
+      condition for extending the contract. **The second filler is there
+      (AP 5):** the forum's participant half does exactly what the proposals'
+      does — asks, reads the 401, draws the invitation — and one more failed
+      request per anonymous visit went with it. Still one short of E46's
+      condition; AP 9 decides.
 
 ## Checkable after phase 5 — hardening and release
 
@@ -1224,6 +1237,20 @@ entry, the answer is noted below rather than repeated.
       the shared thing gets a per-file identity, or the two files get a serial
       lane. Until then a local red on these two is not news, and that is exactly
       the kind of sentence that hides a real defect one day.
+      **It did — half of it (AP 5 of phase 4).** The translations test was
+      **not** a shared-state race: it switches the language before the page
+      has finished its first load, so two requests are in flight and the
+      answers arrive in the network's order. The landing page wrote whichever
+      came last — a slow English answer under a German page, once in Firefox
+      in a full local run. Fixed in `event-landing-page.ts` with a load
+      sequence (a late answer to a question nobody is asking any more is
+      dropped) and a unit test that resolves the two answers out of order. The
+      same shape — `load(…, i18n.locale())` in an `effect`, writes after an
+      `await` without a guard — still stands in `series-detail-page.ts`,
+      `start-page.ts`, `event-registration-page.ts` and
+      `my-registration-page.ts`; nothing has caught them yet, and a quick
+      switch on a slow connection would. Phase 5, together, with one test
+      each. The newsletter half of this entry is untouched and unexplained.
 - [ ] **The three e2e projects share one server's rate limits.** CI runs them
       with `--parallel=1` against a single instance, so every limit that counts
       per client address is a budget for the whole run: sixty public

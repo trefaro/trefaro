@@ -169,6 +169,17 @@ export interface ForumRepository {
   ): Promise<ForumSlice<ModeratedPostRecord>>;
 
   /**
+   * How many posts of one event are in each state (E59).
+   *
+   * One statement over the join to the thread, grouped by status. A state with
+   * no rows is absent from the result and the caller fills in a zero — SQL
+   * groups what is there, not what could have been.
+   */
+  countPostsByStatus(
+    eventId: string,
+  ): Promise<ReadonlyMap<ForumPostStatus, number>>;
+
+  /**
    * Records one decision (E51) and moves the thread with it.
    *
    * `null` when the row was already gone. Writing an already-decided row again

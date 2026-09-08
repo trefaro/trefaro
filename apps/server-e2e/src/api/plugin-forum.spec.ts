@@ -28,6 +28,12 @@ import {
  * - **A disabled plug-in is absent, not forbidden**: every route 404, and no
  *   entry in `/api/config` — and switching it off keeps every row (E14).
  *
+ * AP 5 added the eighth route, `…/summary` — the three counts the section on
+ * the organizer's dashboard draws (E59) — and the tests for it are here for the
+ * same reason as the rest: what is worth deciding about a count is that it
+ * agrees with the rows, that it says zero rather than nothing, and that it
+ * moves when a decision does.
+ *
  * Instance-wide state, which is why it lives in `apps/server-e2e` and why every
  * test puts back what it found: `module_config` belongs to the instance.
  *
@@ -88,6 +94,12 @@ interface PostPage extends Page<Post> {
 interface OpenedThread {
   thread: Thread;
   post: Post;
+}
+
+interface ForumSummary {
+  pending: number;
+  approved: number;
+  rejected: number;
 }
 
 interface ModuleSummary {
@@ -193,6 +205,15 @@ describe('the discussion forum plug-in', () => {
       { headers: { cookie } },
     );
 
+  const summary = (
+    headers: Record<string, string> = { cookie },
+    eventId = event.id,
+  ) =>
+    api<ForumSummary>(
+      `/api/admin/plugins/${PLUGIN}/events/${eventId}/summary`,
+      { headers },
+    );
+
   const decide = (postId: string, decision: 'approval' | 'rejection') =>
     api<ModeratedPost>(
       `/api/admin/plugins/${PLUGIN}/posts/${postId}/${decision}`,
@@ -265,13 +286,14 @@ describe('the discussion forum plug-in', () => {
 
   describe('while the organization has it switched off', () => {
     it('answers 404 on every route and appears in no configuration', async () => {
-      const [threads, opened, posts, reply, queue, approval, config] =
+      const [threads, opened, posts, reply, queue, counts, approval, config] =
         await Promise.all([
           threadsAs(opener),
           open(opener, { title: 'Where to meet', body: 'At the entrance?' }),
           postsAs(opener, NOWHERE),
           replyAs(opener, NOWHERE, { body: 'Hello?' }),
           moderationList(),
+          summary(),
           decide(NOWHERE, 'approval'),
           api<PublicConfig>('/api/config'),
         ]);
@@ -284,8 +306,9 @@ describe('the discussion forum plug-in', () => {
         posts.status,
         reply.status,
         queue.status,
+        counts.status,
         approval.status,
-      ]).toEqual([404, 404, 404, 404, 404, 404]);
+      ]).toEqual([404, 404, 404, 404, 404, 404, 404]);
       expect(config.body.plugins.map((plugin) => plugin.key)).not.toContain(
         PLUGIN,
       );
@@ -562,6 +585,47 @@ describe('the discussion forum plug-in', () => {
       expect([badStatus.status, badPage.status]).toEqual([400, 400]);
     });
 
+    it('counts this event’s posts by state, and the count moves with a correction (E59)', async () => {
+      const everything = await moderationList();
+      const byStatus = (status: Status) =>
+        everything.body.rows.filter((row) => row.status === status).length;
+
+      // The heading agrees with the rows — all three numbers, none of them
+      // missing, and none of them the other event's.
+      const counts = await summary();
+      expect(counts.status).toBe(200);
+      expect(counts.body).toEqual({
+        pending: byStatus('pending'),
+        approved: byStatus('approved'),
+        rejected: byStatus('rejected'),
+      });
+      expect(
+        counts.body.pending + counts.body.approved + counts.body.rejected,
+      ).toBe(everything.body.total);
+      expect((await summary({ cookie }, otherEvent.id)).body).toEqual({
+        pending: 0,
+        approved: 0,
+        rejected: 0,
+      });
+
+      // A correction moves one post from one column to the other and nothing
+      // else — and back again, so the tests after this one find what they
+      // expect.
+      const row = everything.body.rows.find((one) => one.status !== 'pending');
+      if (!row) throw new Error('The fixture has no decided post to correct');
+      const flipped = row.status === 'approved' ? 'rejection' : 'approval';
+      const original = row.status === 'approved' ? 'approval' : 'rejection';
+      expect((await decide(row.id, flipped)).status).toBe(200);
+      const moved = (await summary()).body;
+      expect(moved).toEqual({
+        ...counts.body,
+        approved: counts.body.approved + (row.status === 'approved' ? -1 : 1),
+        rejected: counts.body.rejected + (row.status === 'approved' ? 1 : -1),
+      });
+      expect((await decide(row.id, original)).status).toBe(200);
+      expect((await summary()).body).toEqual(counts.body);
+    });
+
     it('answers 404 for a post that is not there', async () => {
       expect((await decide(NOWHERE, 'approval')).status).toBe(404);
     });
@@ -576,8 +640,11 @@ describe('the discussion forum plug-in', () => {
         `/api/admin/plugins/${PLUGIN}/events/${event.id}/posts`,
         asParticipant(opener),
       );
+      const counts = await summary({});
 
-      expect([stranger.status, participant.status]).toEqual([401, 401]);
+      expect([stranger.status, participant.status, counts.status]).toEqual([
+        401, 401, 401,
+      ]);
     });
   });
 

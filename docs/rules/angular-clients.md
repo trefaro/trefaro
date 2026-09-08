@@ -47,7 +47,17 @@ besteht. Jede Zeile hier hat einmal einen halben Tag gekostet.
   Entwurf baute sie in einer Template-Methode, und das Formular leerte sich
   zwischen zwei Tastenanschlägen.
 - **Eine Seite, deren Inhalt der Server übersetzt, lädt bei einem Sprachwechsel
-  neu** — `i18n.locale()` im `effect()`, nicht in `load()`.
+  neu** — `i18n.locale()` im `effect()`, nicht in `load()`. **Und sie verwirft
+  die Antwort auf die alte Frage** (AP 5 der Phase 4): zwei Ladevorgänge sind
+  in Flug, sobald jemand die Sprache wechselt, bevor die Seite steht, und die
+  Antworten kommen in der Reihenfolge des Netzes. Ohne Wächter malte eine späte
+  englische Antwort einen englischen Event unter eine deutsche Seite — genau
+  das, was `content-translations.spec.ts` unter acht Arbeitern zweimal fand
+  und allein gefahren nie. Die Event-Landingpage zählt deshalb ihre
+  Ladevorgänge (`loadSequence`) und schreibt nach einem `await` nur, wenn ihr
+  Lauf noch der jüngste ist. Dieselbe Bauweise fehlt noch an vier Seiten mit
+  demselben Effekt (Reihe, Startseite, Anmeldung, „meine Anmeldung"), siehe
+  `todo.md` unter Phase 5.
 - **Ein laufender Client wird nur von seiner eigenen Seite umgefärbt.** Die
   Design-Seite ruft `ThemeService.apply()` mit dem Entwurf; `DestroyRef` stellt
   beim Verlassen wieder her, `Discard` beim Klick. Nach jedem Schreiben wird
@@ -189,6 +199,14 @@ besteht. Jede Zeile hier hat einmal einen halben Tag gekostet.
   abgewöhnt hat. Der Hinweis im `localStorage` gehört einem der zwei Clients und
   ist für ein Bündel, das in beiden läuft, keine Antwort. Ein 401 heißt in einem
   Plug-in deshalb **Einladung, sich anzumelden**, und nie „Fehler" (E58).
+- **Zwei Bündel teilen Code durch Abschreiben, nicht durch Import** (F138, AP 5
+  der Phase 4). `plugin-words.ts` (Wort, Statuswort, Zeitpunkt) und der
+  `fetch`-Helfer mit `NotSignedInError` stehen im Vorschlags- und im
+  Forum-Bündel je einmal — absichtlich, denn ein Bündel importiert vom Host nur
+  `shared-models`, und eine Bibliothek „für Bündel" gibt es noch nicht. Das
+  dritte Bündel mit denselben Zeilen (AP 8 oder AP 9) ist der Moment, in dem
+  sie in eine solche Bibliothek ziehen — nicht in `shared-plugins`, das dem
+  Host gehört und Angular-Dienste des Hosts injiziert.
 - **Eine Sprungmarke braucht `anchorScrolling`.** Beide Clients haben es jetzt
   (`withInMemoryScrolling` in `provideRouter`); ohne das ändert
   `[routerLink]="[]" [fragment]="…"` die Adresse und sonst nichts. Und immer

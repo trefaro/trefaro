@@ -155,6 +155,22 @@ export interface ForumPostPage {
   readonly pageSize: number;
 }
 
+/**
+ * The counts above the organizer's queue (E59) — posts of one event by state.
+ *
+ * Three numbers for the heading of the section this plug-in draws on the
+ * event dashboard, and the same reasoning the proposals gave (E21, E59): the
+ * tile above that section carries no number, because a count on the tile
+ * would mean the host asking a plug-in a question; the moderation list's own
+ * `total` cannot serve, because narrowed to the queue it counts the queue and
+ * nothing else. Posts, not threads: a thread has no state to count (F195).
+ */
+export interface ForumSummary {
+  readonly pending: number;
+  readonly approved: number;
+  readonly rejected: number;
+}
+
 /** One page of the organizer's moderation list, newest first. */
 export interface ForumModerationPage {
   readonly rows: readonly ModeratedForumPost[];
