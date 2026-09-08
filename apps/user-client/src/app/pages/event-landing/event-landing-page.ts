@@ -612,17 +612,32 @@ export class EventLandingPage {
     }
   }
 
+  /**
+   * Which load is the current one.
+   *
+   * A language switch starts a second load while the first may still be in
+   * flight, and the two answers arrive in whichever order the network decides.
+   * Every write after an `await` checks that its load is still the latest, so a
+   * late answer to a question nobody is asking any more is dropped — without
+   * this, a slow first answer painted an English event under a German page,
+   * which is what the browser suite once caught under eight workers.
+   */
+  private loadSequence = 0;
+
   private async load(
     seriesSlug: string,
     eventSlug: string,
     locale: string,
   ): Promise<void> {
+    const run = ++this.loadSequence;
     this.error.set(null);
     this.items.set([]);
     this.links.set([]);
+    let event: PublicEvent;
     try {
-      this.event.set(await this.events.get(seriesSlug, eventSlug, locale));
+      event = await this.events.get(seriesSlug, eventSlug, locale);
     } catch (error: unknown) {
+      if (!this.isCurrent(run)) return;
       this.error.set(
         (error as ApiError)?.status === 404
           ? { key: 'event.errorMissing', detail: null }
@@ -630,25 +645,33 @@ export class EventLandingPage {
       );
       return;
     }
+    if (!this.isCurrent(run)) return;
+    this.event.set(event);
 
     // Both after the event and never before it: the programme's days are counted
     // in the event's zone. Either one failing leaves the page standing — the
     // event's own facts are the part somebody came for.
     await Promise.all([
-      this.loadProgram(seriesSlug, eventSlug, locale),
-      this.loadMediaLinks(seriesSlug, eventSlug),
+      this.loadProgram(run, seriesSlug, eventSlug, locale),
+      this.loadMediaLinks(run, seriesSlug, eventSlug),
     ]);
   }
 
+  private isCurrent(run: number): boolean {
+    return run === this.loadSequence;
+  }
+
   private async loadProgram(
+    run: number,
     seriesSlug: string,
     eventSlug: string,
     locale: string,
   ): Promise<void> {
     try {
-      this.items.set(await this.program.list(seriesSlug, eventSlug, locale));
+      const items = await this.program.list(seriesSlug, eventSlug, locale);
+      if (this.isCurrent(run)) this.items.set(items);
     } catch {
-      this.items.set([]);
+      if (this.isCurrent(run)) this.items.set([]);
     }
   }
 
@@ -659,6 +682,7 @@ export class EventLandingPage {
    * (F53), and a request whose answer is known is a request not worth making.
    */
   private async loadMediaLinks(
+    run: number,
     seriesSlug: string,
     eventSlug: string,
   ): Promise<void> {
@@ -667,9 +691,10 @@ export class EventLandingPage {
       return;
     }
     try {
-      this.links.set(await this.mediaLinks.list(seriesSlug, eventSlug));
+      const links = await this.mediaLinks.list(seriesSlug, eventSlug);
+      if (this.isCurrent(run)) this.links.set(links);
     } catch {
-      this.links.set([]);
+      if (this.isCurrent(run)) this.links.set([]);
     }
   }
 }
