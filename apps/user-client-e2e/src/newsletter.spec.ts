@@ -178,6 +178,12 @@ test.describe('the newsletter sign-up', () => {
     // list (E45).
     await page.goto('/');
     await page.locator('.series__link').first().click();
+    // The series page first, by its address: the start page carries the same
+    // newsletter region while the module is on (F182), and under eight
+    // workers the click's navigation is slow enough for the locator below to
+    // find — and fill — the start page's form, which the navigation then
+    // throws away. The submit landed on an empty form on the new page.
+    await expect(page).toHaveURL(/\/series\/[^/]+$/);
     const form = page.getByRole('region', { name: t('newsletter.title') });
     await expect(form).toBeVisible();
 
