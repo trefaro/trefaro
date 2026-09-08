@@ -18,6 +18,13 @@ import { ProgramPluginReads } from '../program/program-plugin-reads';
  * first (F21, FR 3.10) and an author's name the second (E58, F55, AP 2 of
  * phase 4). Nothing here goes the other way: the host asks a plug-in nothing
  * (E59).
+ *
+ * It imports no feature module — deliberately, and once by accident not: the
+ * programme adapter tried to reach `ProgramService` in AP 6, and
+ * `PluginHostModule → ProgramModule → EventsModule → PushModule → …` closed a
+ * cycle that left a module `undefined` at boot. The adapters read the ports of
+ * the global data access module instead, which is what a host module for
+ * plug-ins is: a seam over the data, not a client of the features.
  */
 @Global()
 @Module({

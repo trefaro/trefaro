@@ -1,91 +1,67 @@
 import { TestBed } from '@angular/core/testing';
+import { RoomPlanningApi } from './room-planning-api';
 import { RoomPlanningPlugin } from './room-planning-plugin';
+import { FakeApi, STRINGS, settle } from './testing';
 
-/** What the host hands over under `plugins.roomPlanning.`, prefix stripped. */
-const STRINGS: Record<string, string> = {
-  title: 'Raumplanung',
-  event: 'Veranstaltung',
-  language: 'Sprache',
-  note: 'Dieser Abschnitt kommt vom Raumplanungs-Plug-in.',
-  action: 'Interesse an einem Raum',
-  noEvent: 'nicht übergeben',
-};
-
+/**
+ * The switch (F202): which of the two halves the element draws depends on the
+ * hook point the slot names — the participant's plan at `event-detail`, the
+ * organizer's editor at `event-dashboard`.
+ */
 describe('RoomPlanningPlugin', () => {
-  function render(
-    inputs: Partial<{
-      eventId: string | null;
-      locale: string;
-      strings: Record<string, string>;
-    }> = {},
-  ) {
+  let api: FakeApi;
+
+  async function render(inputs: Record<string, unknown> = {}) {
+    TestBed.configureTestingModule({
+      providers: [{ provide: RoomPlanningApi, useValue: api }],
+    });
     const fixture = TestBed.createComponent(RoomPlanningPlugin);
+    fixture.componentRef.setInput('eventId', 'event-1');
+    fixture.componentRef.setInput('strings', STRINGS);
     for (const [name, value] of Object.entries(inputs)) {
       fixture.componentRef.setInput(name, value);
     }
     fixture.detectChanges();
+    await settle(fixture);
     return fixture;
   }
 
-  const text = (fixture: ReturnType<typeof render>): string =>
-    (fixture.nativeElement as HTMLElement).textContent ?? '';
+  const has = (fixture: { nativeElement: unknown }, selector: string) =>
+    (fixture.nativeElement as HTMLElement).querySelector(selector) !== null;
 
-  it('renders the context the host handed over', () => {
-    const fixture = render({ eventId: 'event-42', locale: 'de' });
-
-    expect(text(fixture)).toContain('event-42');
-    expect(text(fixture)).toContain('de');
+  beforeEach(() => {
+    api = new FakeApi();
   });
 
-  it('has no text of its own, only the words it was given (E48)', () => {
-    const fixture = render({ eventId: 'event-42', strings: STRINGS });
+  it("draws the participant's plan when the slot says event-detail", async () => {
+    const fixture = await render({ mountPoint: 'event-detail' });
 
-    expect(text(fixture)).toContain('Raumplanung');
-    expect(text(fixture)).toContain('Veranstaltung');
-    expect(text(fixture)).toContain('Interesse an einem Raum');
-    // The English that stood in this template from phase 0 until AP 1 of
-    // phase 4 — the E22 violation this bundle was carrying.
-    expect(text(fixture)).not.toContain('Room planning');
-    expect(text(fixture)).not.toContain('Interested in a room');
+    expect(has(fixture, 'trefaro-participant-rooms')).toBe(true);
+    expect(has(fixture, 'trefaro-organizer-rooms')).toBe(false);
   });
 
-  it('follows a language switch without being remounted', () => {
-    const fixture = render({ eventId: 'event-42', strings: STRINGS });
-    fixture.componentRef.setInput('strings', {
-      ...STRINGS,
-      title: 'Room planning',
-    });
-    fixture.detectChanges();
+  it("draws the organizer's editor when the slot says event-dashboard", async () => {
+    const fixture = await render({ mountPoint: 'event-dashboard' });
 
-    // The host reassigns the property rather than replacing the element, which
-    // is what lets this component keep what a visitor did to it.
-    expect(text(fixture)).toContain('Room planning');
+    expect(has(fixture, 'trefaro-organizer-rooms')).toBe(true);
+    expect(has(fixture, 'trefaro-participant-rooms')).toBe(false);
   });
 
-  it('shows the key when the host has no word for it', () => {
-    const fixture = render({ eventId: 'event-42' });
+  it("defaults to the participant's plan for a host that names no hook point", async () => {
+    // A host older than plug-in API 1.2.0 assigns nothing — and of the two
+    // halves, the public one is what an event page would have wanted.
+    const fixture = await render();
 
-    // What a missing translation looks like everywhere else in this
-    // application — and what a host older than plug-in API 1.2.0 produces.
-    expect(text(fixture)).toContain('plugins.roomPlanning.title');
+    expect(has(fixture, 'trefaro-participant-rooms')).toBe(true);
   });
 
-  it('says so when the host supplied no event', () => {
-    const fixture = render({ strings: STRINGS });
+  it('hands the event and the words down, so the half that draws asks about the right event', async () => {
+    api.rooms = [];
+    const fixture = await render({ mountPoint: 'event-detail', locale: 'de' });
 
-    expect(text(fixture)).toContain('nicht übergeben');
-  });
-
-  it('updates on interaction, which proves change detection works inside the element', () => {
-    const fixture = render({ eventId: 'event-42', strings: STRINGS });
-    const button = (fixture.nativeElement as HTMLElement).querySelector(
-      'button',
+    expect(api.publicReads).toEqual(['de']);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Raumplan',
     );
-
-    button?.dispatchEvent(new MouseEvent('click'));
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.interest()).toBe(1);
-    expect(text(fixture)).toContain('(1)');
   });
 });

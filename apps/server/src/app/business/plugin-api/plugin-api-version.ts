@@ -24,8 +24,10 @@
  *   from the catalogue (E48), and a client contribution's `icon` is finally
  *   read, from a closed set of names in the image (E49). Then, with their own
  *   packages, `ServerPlugin.requires` (E47), the host ports for participants
- *   and registrations, a locale on {@link PluginProgramReads} (E56), and the
- *   two further mount points `event-dashboard` and `my-registration` — each
+ *   and registrations, the title and `listForEvent` with a locale on
+ *   {@link PluginProgramReads} (E56 — filled in AP 6, where the room plan
+ *   turned out to be the first screen that names its sessions), and the two
+ *   further mount points `event-dashboard` and `my-registration` — each
  *   arriving with the code that uses it, because a capability nothing fills is
  *   one that only looks like a capability (F47).
  *

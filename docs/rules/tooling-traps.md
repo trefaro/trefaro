@@ -103,5 +103,11 @@ from migrations order by timestamp desc limit 1"`), nicht der Health-Endpunkt.
   **den Abschluss lesen** — `gh run view <id> --json conclusion,jobs`, oder
   dasselbe Kommando mit `--exit-status` —, und erst dann „grün" sagen. Genau so
   ist der rote Abschluss der Phase 3 einmal als grün gemeldet worden.
+- **„Cannot configure the test module when the test module has already been
+  instantiated"** — ein Angular-Unit-Test unter Vitest, der in **einem** `it`
+  zweimal rendert (zweimal `TestBed.configureTestingModule`). Ein `it`, ein
+  Render; wer zwei Zustände prüfen will, schreibt zwei Tests oder setzt am
+  einen Fixture einen Input neu. Zweimal hineingelaufen (AP 5 und AP 6 der
+  Phase 4), deshalb hier.
 
 Siehe auch: [Browsersuiten und E2E-Tests](e2e-tests.md), [Schichten und Ports im Server](server-layers.md).

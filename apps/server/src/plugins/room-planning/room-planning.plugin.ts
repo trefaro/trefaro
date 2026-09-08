@@ -18,10 +18,12 @@ import { ROOM_PLANNING_PLUGIN_KEY } from './room-planning.plugin-key';
  *
  * Since AP 9 of phase 1 it also owns the link between a session and a room (F21)
  * and reads sessions through the host's port; since AP 1 of phase 4 its web
- * component takes its words from the catalogue the slot hands over (E48). Both
- * are reasons it declares the host's own version through
- * {@link PLUGIN_API_VERSION} rather than a number of its own — a plug-in that
- * needed neither would still be mounted while declaring 1.0.0.
+ * component takes its words from the catalogue the slot hands over (E48), and
+ * since AP 6 it names its sessions through the port's `listForEvent` (E56) and
+ * draws an editor on the event dashboard. All are reasons it declares the
+ * host's own version through {@link PLUGIN_API_VERSION} rather than a number
+ * of its own — a plug-in that needed none of them would still be mounted while
+ * declaring 1.0.0.
  */
 export const roomPlanningPlugin: ServerPlugin = {
   key: ROOM_PLANNING_PLUGIN_KEY,
@@ -43,8 +45,11 @@ export const roomPlanningPlugin: ServerPlugin = {
     elementName: 'trefaro-plugin-room-planning',
     bundleUrl: '/api/plugins/room-planning/main.js',
     // Rooms are something a participant looks up while at the event, so the
-    // tile belongs on the event detail view rather than in the main navigation.
-    mountPoints: ['event-detail'],
+    // tile belongs on the event detail view rather than in the main navigation
+    // — and since AP 6 of phase 4 the organizer's editor draws on the event
+    // dashboard, the hook point AP 3 opened (F193). One bundle, two audiences,
+    // told apart by the `mountPoint` the slot hands over (F202).
+    mountPoints: ['event-detail', 'event-dashboard'],
     labelKey: 'plugins.roomPlanning.label',
     icon: 'meeting_room',
   },

@@ -260,7 +260,7 @@ describe('the module administration', () => {
       family: 'plugin',
       version: expect.stringMatching(/^\d+\.\d+\.\d+$/),
       bundleUrl: '/api/plugins/room-planning/main.js',
-      mountPoints: ['event-detail'],
+      mountPoints: ['event-detail', 'event-dashboard'],
     });
     expect(await find('media-links')).toMatchObject({
       family: 'core',

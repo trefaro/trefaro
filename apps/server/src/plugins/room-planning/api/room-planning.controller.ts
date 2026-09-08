@@ -7,14 +7,17 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Put,
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiConflictResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
@@ -24,10 +27,21 @@ import {
 } from '../../../app/business/plugin-api';
 import { RoomPlanningService } from '../business/room-planning.service';
 import { ROOM_PLANNING_PLUGIN_KEY } from '../room-planning.plugin-key';
-import { CreateRoomDto, RoomDto, RoomScheduleDto } from './room.dto';
+import {
+  CreateRoomDto,
+  RoomDto,
+  RoomPlanDto,
+  RoomScheduleDto,
+  UpdateRoomDto,
+} from './room.dto';
 
 /**
- * The plug-in's API implementation.
+ * The plug-in's API for the organizer (FR 3.11).
+ *
+ * Phase 1 gave it rooms, the assignment and one room's schedule; AP 6 of
+ * phase 4 adds changing and deleting a room and the plan of a whole event
+ * with both warnings (E50). The participant's reading is
+ * `PublicRoomPlanningController`, one prefix further out.
  *
  * `@PluginController` plus `PluginEnabledGuard` is the contract every plug-in
  * controller follows: while the organization has the plug-in switched off, these
@@ -79,13 +93,63 @@ export class RoomPlanningController {
     });
   }
 
+  @Patch('rooms/:roomId')
+  @ApiOperation({
+    summary: 'Change a room — name, seats, floor or description',
+    description:
+      'Only the fields given are written; `null` clears the floor or the ' +
+      'description. The same two rules as adding a room: a trimmed name that ' +
+      'no other room of the event has, and at least one seat.',
+  })
+  @ApiOkResponse({ type: RoomDto })
+  @ApiBadRequestResponse({
+    description: 'A name another room of this event has, or no seats.',
+  })
+  @ApiNotFoundResponse({ description: 'No room with that id.' })
+  updateRoom(
+    @Param('roomId', ParseUUIDPipe) roomId: string,
+    @Body() body: UpdateRoomDto,
+  ): Promise<RoomDto> {
+    return this.roomPlanning.updateRoom(roomId, body);
+  }
+
+  @Delete('rooms/:roomId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Remove a room',
+    description:
+      'Its assignments go with it through the cascade on the plug-in’s own ' +
+      'join table (F21); the sessions stay in the programme.',
+  })
+  @ApiNoContentResponse({ description: 'Removed.' })
+  @ApiNotFoundResponse({ description: 'No room with that id.' })
+  deleteRoom(@Param('roomId', ParseUUIDPipe) roomId: string): Promise<void> {
+    return this.roomPlanning.deleteRoom(roomId);
+  }
+
+  @Get('events/:eventId/schedule')
+  @ApiOperation({
+    summary: 'The whole plan of an event, with both warnings (E50)',
+    description:
+      'Every room with its sessions in clock order, each session with its ' +
+      'sign-ups through the plug-in port (F45) and the warnings computed from ' +
+      'them — more sign-ups than the chairs of the rooms it uses, or another ' +
+      'session in the same room at the same time. Plus every session of the ' +
+      'event, placed or not, so an editor can offer the ones without a room. ' +
+      'Nothing is stored and nothing is refused: the plan shows.',
+  })
+  @ApiOkResponse({ type: RoomPlanDto })
+  plan(@Param('eventId', ParseUUIDPipe) eventId: string): Promise<RoomPlanDto> {
+    return this.roomPlanning.plan(eventId) as Promise<RoomPlanDto>;
+  }
+
   @Get('rooms/:roomId/schedule')
   @ApiOperation({
     summary: 'What one room is used for, with the sign-up numbers (F21)',
     description:
       'The sessions assigned to this room, each with its sign-ups — read through ' +
-      'the versioned plug-in port (E12), never from a core table. The comparison ' +
-      'against the room’s capacity is the overbooking check of phase 4.',
+      'the versioned plug-in port (E12), never from a core table — and, since ' +
+      'AP 6 of phase 4, the same warnings the whole plan carries (E50).',
   })
   @ApiNotFoundResponse({ description: 'No room with that id.' })
   roomSchedule(

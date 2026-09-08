@@ -8,6 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import type { ProgramProposal, ProposalSummary } from '@trefaro/shared-models';
+import { day } from '@trefaro/shared-plugin-kit';
 import { word } from './plugin-words';
 import { ProposalsApi } from './proposals-api';
 
@@ -299,13 +300,7 @@ export class OrganizerProposals {
   }
 
   protected when(iso: string): string {
-    try {
-      return new Intl.DateTimeFormat(this.locale(), {
-        dateStyle: 'medium',
-      }).format(new Date(iso));
-    } catch {
-      return iso.slice(0, 10);
-    }
+    return day(this.locale(), iso);
   }
 
   protected approve(row: ProgramProposal): void {

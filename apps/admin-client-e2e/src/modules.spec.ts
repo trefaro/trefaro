@@ -1,6 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 import { ADMIN_STORAGE_STATE } from './support/admin-session';
 import { t } from './support/catalogue';
+import {
+  lockModuleSwitches,
+  unlockModuleSwitches,
+} from './support/module-lock';
 
 /**
  * The module administration in the browser (FR 1.5, UC 1) — phase 2, AP 4.
@@ -25,8 +29,27 @@ import { t } from './support/catalogue';
  * reaches the flag, and that the page says what happens next (E20 — a plug-in's
  * web component is fetched during the client start sequence, so it appears after
  * a reload).
+ *
+ * **It holds the module lock while it runs** (AP 6 of phase 4). Two of its
+ * tests assert that `room-planning` is *off* — the row with the "enable"
+ * button is the whole point of the page — and since AP 6 the room plan's own
+ * suite switches that flag on for a minute. A file that asserts the resting
+ * state of a plug-in flag needs the same lock as a file that flips one
+ * (`support/module-lock.ts`, `docs/rules/e2e-tests.md`); the flipping suites
+ * restore the resting state before they release it.
  */
 test.use({ storageState: ADMIN_STORAGE_STATE });
+
+test.beforeAll(async () => {
+  // Waiting for the lock counts against this hook's timeout, and a suite
+  // holding it needs about a minute.
+  test.setTimeout(180_000);
+  await lockModuleSwitches();
+});
+
+test.afterAll(async () => {
+  await unlockModuleSwitches();
+});
 
 interface Module {
   key: string;

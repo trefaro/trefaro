@@ -7,7 +7,9 @@ import { RoomPlanningPlugin } from './app/room-planning-plugin';
  *
  * Registers the component as a custom element instead of bootstrapping an
  * application: the clients' plug-in manager loads this bundle at runtime and
- * mounts `<trefaro-plugin-room-planning>` at the event detail hook point.
+ * mounts `<trefaro-plugin-room-planning>` at the event detail hook point of the
+ * participant client and, since AP 6 of phase 4, at the event dashboard of the
+ * organizer client — one element, told which half to draw (F202).
  *
  * The element name must match the descriptor in
  * `apps/server/src/plugins/room-planning/room-planning.plugin.ts` — the plug-in

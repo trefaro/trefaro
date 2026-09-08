@@ -1,6 +1,6 @@
 # Phase 4 — Plug-ins: die fünf kuratierten Fachlichkeiten
 
-**Status: in Arbeit** (Plan 04.09.2026, AP 1 bis AP 3 erledigt am 07.09.2026 — **Meilenstein M9 erreicht** —, AP 4 und AP 5 am 08.09.2026). Alles über
+**Status: in Arbeit** (Plan 04.09.2026, AP 1 bis AP 3 erledigt am 07.09.2026 — **Meilenstein M9 erreicht** —, AP 4 bis AP 6 am 08.09.2026 — **Meilenstein M10 erreicht**). Alles über
 dem Abschnitt _Fortschritt_ ist der **Plan** und wird nicht rückwirkend
 korrigiert; was tatsächlich passierte — samt Abweichungen — steht unten, wie in
 [`PHASE1.md`](PHASE1.md), [`PHASE2.md`](PHASE2.md) und
@@ -375,16 +375,16 @@ Alles in dieser Tabelle ist eine **Erweiterung** — ein Plug-in gegen 1.1.0
 bleibt montiert und fragt nicht. Die rechte Spalte ist die Bedingung aus E46:
 ohne Füller keine Erweiterung.
 
-| Erweiterung                                                                   | Warum                                                     | Gefüllt in |
-| ----------------------------------------------------------------------------- | --------------------------------------------------------- | ---------- |
-| Einhängepunkt `event-dashboard` (Veranstalter-Client)                         | F47: die Kacheln für Vorschläge und Forum aus den Mockups | AP 3, AP 5 |
-| Einhängepunkt `my-registration` (Nutzer-Client)                               | E54: die Ticketseite hinter dem Mail-Link                 | AP 8       |
-| Slot-Kontext `locale` und `strings`                                           | E48: Worte aus dem Katalog, von der Organisation pflegbar | AP 1       |
-| `PluginClientContribution.icon` wird gelesen, Namen aus geschlossenem Satz    | E49: das Feld liest endlich jemand                        | AP 1       |
-| `ServerPlugin.requires`                                                       | E47: drei Plug-ins brauchen Konten                        | AP 2       |
-| Port `PluginParticipantReads` — wer fragt, und wie ein Autor heißt            | E58: ein Beitrag gehört einem Menschen                    | AP 2, AP 4 |
-| Port `PluginRegistrationReads` — Anspruch auflösen, bestätigte Anmeldungen    | E53/E54: Ticket und Einlassliste                          | AP 7       |
-| `PluginProgramReads.listForEvent(eventId, locale)` und `locale` an `findItem` | E56: ein Teilnehmender liest seinen Plan                  | AP 9       |
+| Erweiterung                                                                   | Warum                                                                                                                                                                 | Gefüllt in |
+| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| Einhängepunkt `event-dashboard` (Veranstalter-Client)                         | F47: die Kacheln für Vorschläge und Forum aus den Mockups                                                                                                             | AP 3, AP 5 |
+| Einhängepunkt `my-registration` (Nutzer-Client)                               | E54: die Ticketseite hinter dem Mail-Link                                                                                                                             | AP 8       |
+| Slot-Kontext `locale` und `strings`                                           | E48: Worte aus dem Katalog, von der Organisation pflegbar                                                                                                             | AP 1       |
+| `PluginClientContribution.icon` wird gelesen, Namen aus geschlossenem Satz    | E49: das Feld liest endlich jemand                                                                                                                                    | AP 1       |
+| `ServerPlugin.requires`                                                       | E47: drei Plug-ins brauchen Konten                                                                                                                                    | AP 2       |
+| Port `PluginParticipantReads` — wer fragt, und wie ein Autor heißt            | E58: ein Beitrag gehört einem Menschen                                                                                                                                | AP 2, AP 4 |
+| Port `PluginRegistrationReads` — Anspruch auflösen, bestätigte Anmeldungen    | E53/E54: Ticket und Einlassliste                                                                                                                                      | AP 7       |
+| `PluginProgramReads.listForEvent(eventId, locale)` und `locale` an `findItem` | E56: ein Teilnehmender liest seinen Plan — `listForEvent` mit Titel kam in **AP 6** (vorgezogen: der Raumplan brauchte es zuerst), `locale` an `findItem` bleibt AP 9 | AP 6, AP 9 |
 
 Was **nicht** dazukommt, und warum es genannt wird, damit es nicht nachträglich
 hineinwächst:
@@ -1485,3 +1485,201 @@ Was anders lief als geplant:
   Unit-Test, der die zwei Antworten in der falschen Reihenfolge auflöst — die
   ersten zwei Unit-Tests dieser Seite (Nutzer-Client 253 auf **255**). Vier Schwesterseiten mit derselben Bauweise
   stehen in `todo.md` unter Phase 5; die Regel in `angular-clients.md`.
+
+### AP 6 — Raumplanung wird echt (erledigt, 08.09.2026) → M10
+
+Umgesetzt:
+
+- **Server** — was Phase 1 offen ließ: `PATCH` und `DELETE` auf
+  `…/rooms/:id` (umbenennen, Plätze ändern, Etage und Beschreibung mit `null`
+  leeren; dieselben zwei Regeln wie beim Anlegen — getrimmter Name ohne
+  Doppelgänger im Event, mindestens ein Platz; ein Name aus Leerzeichen ist
+  jetzt auch beim Anlegen ein 400), und `GET …/events/:id/schedule`: **der ganze
+  Plan** mit beiden Warnungen aus E50, beim Lesen gerechnet, nirgends
+  gespeichert. Überbucht heißt mehr Anmeldungen als die Stühle **aller** Räume
+  einer Session zusammen; doppelt belegt heißt eine zweite Session im selben
+  Raum, deren Zeit sich überschneidet — zwei, die sich nur berühren, nicht.
+  Beides steht an der Session **und** am Raum, und **abgelehnt wird nichts**:
+  `PUT …/program-items/:id/rooms/:id` hat weiter genau zwei Regeln (die Session
+  gibt es, sie gehört zum Event des Raums). Der Plan trägt außerdem **jede**
+  Session des Events, platziert oder nicht, damit der Editor die ohne Raum
+  anbieten kann (F49, eine Anfrage je Bildschirm). `GET …/rooms/:id/schedule`
+  aus Phase 1 bleibt und ist jetzt eine Scheibe dieses Plans — eine Session in
+  zwei Räumen wird so gegen beide gerechnet. Dazu die **öffentliche** Route
+  `GET /api/user/plugins/room-planning/events/:id/rooms?locale=` (E58, FR 3.6):
+  Räume nach Namen, je Raum die Sessions in Uhrzeitfolge mit Titel — und
+  **keine Zahl über Menschen**, keine Anmeldezahl, keine Warnung. Ob das Event
+  veröffentlicht ist, prüft sie nicht (kein Port dafür, wie beim Forum).
+  Migration: **keine**.
+- **Vertrag** — `PluginProgramReads` bekommt den **Titel** je Programmpunkt und
+  `listForEvent(eventId, locale?)`: alle Sessions eines Events in
+  Programmreihenfolge, ohne Sprache die Originale, mit Sprache die Übersetzung
+  wo es eine gibt und sonst das Original (F95). Die E56 zugedachte Erweiterung,
+  vorgezogen aus AP 9 — siehe _Was anders lief_. Dazu reisen `LocaleQueryPipe`
+  und `ApiLocaleQuery` durch `plugin-api` (F94, wie `pageWindow`), damit ein
+  Plug-in `?locale=` mit den drei Antworten des Hosts liest. Version bleibt
+  **1.2.0**; der Kompatibilitätsfall dafür stand seit AP 1.
+- **Das Bündel** — `apps/plugins/room-planning` neu geschrieben nach dem
+  Muster aus AP 3 und AP 5: `room-planning-plugin.ts` ist der Schalter über
+  `mountPoint` (F202), darunter `participant-rooms.ts` und
+  `organizer-rooms.ts`, die sieben Aufrufe in `room-planning-api.ts`. Der
+  Deskriptor hat den zweiten Einhängepunkt `event-dashboard`. Die Demo aus
+  Phase 0 — Kontext und Zähler — ist weg; was sie bewies, beweisen die
+  Abschnitte selbst.
+- **Nutzer-Client** — der Raumplan am `event-detail`-Einhängepunkt, ohne
+  Anmeldung, für alle: je Raum Name, Etage, Plätze, Beschreibung, darunter die
+  Sessions mit Zeit und Titel. Bei einem Sprachwechsel **fragt der Abschnitt
+  neu** (die Titel übersetzt der Server, E56) und verwirft eine späte Antwort
+  auf die alte Frage — die Bauweise aus AP 5 (`loadSequence`), diesmal von
+  Anfang an. Am Host geändert: **nichts**.
+- **Veranstalter-Client** — der Raum-Editor am `event-dashboard`-Einhängepunkt,
+  als dritte Plug-in-Kachel: Raum anlegen, ändern, löschen, je Raum eine
+  Auswahl der Sessions, die noch nicht darin sind, „In diesen Raum legen" und
+  „Herausnehmen", je Session die Anmeldezahl, und die Warnungen als Wörter an
+  Session und Raum. Jeder Schreibvorgang liest den Plan danach neu — die
+  Warnungen rechnet der Server aus Zahlen, die das Bündel nicht hat. Formulare
+  werden beim Absenden gelesen (`FormData`), ein laufender Vorgang sperrt das
+  `fieldset`, ein gescheiterter lässt das Getippte stehen; ein leeres
+  optionales Feld reist als `null`. Am Host geändert: **nichts**.
+- **`libs/shared-plugin-kit`** — die neue geteilte Bibliothek für Bündel, die
+  `docs/rules/angular-clients.md` seit AP 5 für das dritte Bündel angekündigt
+  hatte (F138): `wordsOf(key)` (Wort mit Rückfall auf den vollen Schlüssel,
+  Statuswort), `when`/`day`/`clock` (Zeitpunkt in Sprache und Zone des Lesers)
+  und `readJson`/`sendJson` mit `NotSignedInError` und `PluginRequestError`.
+  Framework-frei, hängt nur an `shared-models`, **nicht** `shared-plugins`
+  (das gehört dem Host). Forum- und Vorschlagsbündel importieren jetzt daraus;
+  ihre `plugin-words.ts` sind auf die Bindung an den eigenen Schlüssel
+  geschrumpft, die zwei Fehlerklassen und die `fetch`-Helfer sind weg.
+- **Katalog** — 1019 auf **1038** Schlüssel: die fünf Demo-Schlüssel der
+  Raumplanung (`action`, `event`, `language`, `noEvent`, `note`) sind weg, 24
+  neue unter `plugins.roomPlanning.*` dazu (Formularbeschriftungen, die fünf
+  Knöpfe, die Leerzustände, die zwei Warnungen als Wörter, der Satz über das
+  Löschen), `label` und `title` bleiben — `title` heißt jetzt „Raumplan" statt
+  „Raumplanung", weil es die Überschrift beider Abschnitte ist.
+- **Suiten** — `apps/server-e2e/src/api/plugin-room-planning.spec.ts` (elf
+  Fälle, die erste Vertragssuite dieses Plug-ins überhaupt),
+  `apps/admin-client-e2e/src/plugin-room-planning.spec.ts` mit
+  `support/room-fixtures.ts`, `apps/user-client-e2e/src/plugin-room-planning.spec.ts`
+  mit `support/room-plan-fixtures.ts`. Drei bestehende Dateien mussten
+  mitziehen: `modules.spec.ts` des Veranstalter-Clients nimmt jetzt das
+  Modulschloss (sie behauptet, `room-planning` sei **aus**),
+  `plugin-slot.spec.ts` des Nutzer-Clients ersetzt einen Deskriptor, den die
+  Instanz schon liefert, statt ihn zu verdoppeln, und `modules.spec.ts` der
+  Vertragssuite kennt den zweiten Einhängepunkt.
+- **README** des Plug-ins unter `apps/server/src/plugins/room-planning/` — die
+  Form, die Vertragsnutzung, die nicht offensichtlichen Entscheidungen.
+- **Referenzdokument** — kein neuer Nachtrag; F196 (E50) war reserviert und
+  ist mit diesem Paket gefüllt, F45s „kein Titel" weicht E56.
+
+Belegt: `nx run-many -t lint test build` grün (**16** Projekte, die Bibliothek
+ist das neue), Bündel-Unit-Tests **23** (Raumplanung; 6 vorher, die Demo),
+**12** in `shared-plugin-kit`, Forum **31** und Vorschläge **24** unverändert
+nach dem Umzug, Server-Unit-Tests **1222** (1192 vorher: fünf für den
+Port-Adapter — Titel, Sprache, Originale ohne Sprache —, 25 für Ändern,
+Löschen, den Plan mit beiden Warnungen, den öffentlichen Plan), API-Vertragstests
+**635** (624 vorher; die elf neuen decken das Abnahmekriterium: 404 auf allen
+neun Routen im Aus-Zustand, Anlegen mit den drei Ablehnungen, Ändern, drei
+Zuordnungen von denen zwei warnen und keine abgelehnt wird, der Plan mit
+beiden Warnungen aus Anmeldungen, die per SQL in Kerntabellen liegen und nur
+über den Port ankommen, die Warnung wandert mit den Plätzen, der öffentliche
+Plan ohne Sitzung in drei Sprachen und ohne Zahlen über Menschen, Löschen
+nimmt die Zuordnungen und nicht die Sessions, 401 auf jeder Veranstalterroute,
+Aus und wieder An ohne verlorene Zeile), Teilnehmersuite **245** (241 vorher),
+Veranstaltersuite **311** (305 vorher).
+
+Die zwei Browsersuiten teilen sich das Abnahmekriterium wie in AP 3 und AP 5:
+die des Veranstalter-Clients legt einen Raum mit zwei Plätzen an, legt die
+Session mit drei Anmeldungen hinein und sieht „Überbucht" an Session und Raum,
+legt zwei sich überschneidende Sessions in den zweiten Raum und sieht
+„Doppelbelegung" an beiden und am Raum, benennt den ersten Raum um und
+verbreitert ihn — die Warnung ist weg —, nimmt eine Session heraus, löscht den
+zweiten Raum und zählt in der Datenbank nach: ein Raum, eine Zuordnung, drei
+Sessions. Die des Nutzer-Clients liest den Plan **ohne Sitzung** auf einem
+Telefon, sieht die zwei Räume mit ihren Sessions und kein Wort über Menschen,
+wechselt die Sprache und bekommt den übersetzten Titel zurück, ohne Neuladen
+und ohne Neumontage.
+
+Was anders lief als geplant:
+
+- **E56 kam in AP 6, nicht in AP 9.** Der Plan sah den Port für dieses Paket
+  unverändert vor. Aber ein Editor, der einen Raum füllt, muss die Sessions des
+  Events **auflisten** können, und ein Plan, der Zeitfenster zeigt, braucht
+  einen Titel — beides gibt `findItem` je Id nicht her, und F45s „kein Titel"
+  war eine Entscheidung gegen Personen, nicht gegen Titel. Die Alternative wäre
+  gewesen, dass das Bündel die Kernroute des Programms ruft — eine Kopplung,
+  die der Vertrag nirgends kennt. Also `listForEvent(eventId, locale?)` und der
+  Titel jetzt, im Rahmen von 1.2.0, wo E56 ohnehin stand; `locale` an
+  `findItem` bleibt AP 9, weil niemand es braucht. Die Zeile in der Tabelle der
+  Vertragserweiterungen ist umgeschrieben.
+- **Der Plug-in-Host darf kein Feature-Modul importieren.** Der erste Adapter
+  holte sich `ProgramService` für den Übersetzungsrückfall (F95) — und
+  `PluginHostModule → ProgramModule → EventsModule → PushModule` schloss einen
+  Kreis, an dem der Server nicht mehr startete (`imports[0]` undefined). Die
+  Unit-Tests sahen das nicht, der erste Lauf der Vertragssuite sofort. Jetzt
+  liest der Adapter den Übersetzungsport der globalen Datenzugriffsschicht
+  selbst und wendet die eine Zeile Rückfall ein zweites Mal an (F138: die
+  zweite Kopie bleibt, die dritte zieht). Regel in `server-layers.md`.
+- **Das dritte Bündel kam früher als gedacht.** Die Regel aus AP 5 nannte AP 8
+  oder AP 9 als den Moment, in dem die abgeschriebenen Helfer in eine
+  Bibliothek ziehen — sie hatte übersehen, dass die Raumplanung in AP 6 zum
+  dritten Bündel mit Fachlichkeit wird. Also jetzt `shared-plugin-kit`, mit
+  eigenen Tests, und der Umzug der zwei bestehenden Bündel im selben Paket.
+- **Zeiten in der Uhr des Lesers, nicht der des Events.** Der Slot übergibt
+  einem Plug-in keine Zeitzone, und der Vertrag hat keinen Port für den Event.
+  Für einen Teilnehmenden im Saal ist das dieselbe Uhr; für jemanden, der den
+  Plan von woanders liest, weicht sie vom Programm darüber ab (E8). Als Lücke
+  in `todo.md` unter Phase 4 festgehalten: die nächste Eigenschaft des Slots
+  oder das nächste Feld des Ports — nicht in diesem Paket erfunden.
+- **Ein Schloss auch für eine Datei, die nur liest.** `modules.spec.ts` des
+  Veranstalter-Clients behauptet, `room-planning` sei aus — der eine
+  ausgeschaltete Plug-in-Schalter, an dem sie die Modulverwaltung zeigt. Sobald
+  eine Suite denselben Schalter für eine Minute einschaltet, ist das auf acht
+  Arbeitern ein Wettlauf. Sie hält jetzt das Advisory Lock aus AP 5 wie eine
+  Datei, die schaltet; die Regel in `e2e-tests.md` ist entsprechend erweitert.
+  Und `plugin-slot.spec.ts` des Nutzer-Clients, die den Deskriptor der
+  Raumplanung in `/api/config` **einschleust**, hätte ihn verdoppelt, wenn die
+  Instanz ihn gerade selbst liefert — zwei Elemente, jeder Locator mehrdeutig.
+  Sie ersetzt ihn jetzt.
+- **Die Überbuchung rechnet mit allen Räumen einer Session.** Der Plan sprach
+  von „mehr Anmeldungen als Stühle"; eine Session darf seit AP 9 der Phase 1
+  zwei Räume nutzen, und ein Plenum, das in den Nebensaal überträgt, ist in
+  keinem der beiden überbucht. Also die Summe. Und zwei Sessions, von denen
+  eine in der Minute beginnt, in der die andere endet, sind keine
+  Doppelbelegung.
+- **Löschen ohne Rückfrage.** Ein Klick, der Satz darüber steht sichtbar im
+  Abschnitt („nimmt seine Zuordnungen mit, nicht die Sessions"), und ein
+  `confirm()` in einem Web Component wäre ein Dialog des Browsers in der
+  Oberfläche einer Organisation. Ob das reicht, ist eine Frage an den
+  Pilotpartner (`todo.md`).
+- **Der öffentliche Plan hat keine Warnungen.** Der Plan nannte „Warnungen am
+  Raum und an der Session" für den Veranstalter-Client und „der Raumplan" für
+  den Nutzer-Client; das Bündel zieht die Linie scharf: ein Besucher sieht
+  keine Anmeldezahl und keine Warnung, weil beides sagt, wie voll ein Workshop
+  ist, bevor jemand sich entschieden hat zu kommen.
+- **Der erste volle Lauf der Vertragssuite war rot durch einen abgebrochenen
+  Browserlauf.** Die Teilnehmersuite war einmal zwischen Einschalten und
+  Zurückstellen gestoppt worden (ein Hintergrundprozess, den ich beendete, um
+  einen Fehler in der Suite zu korrigieren) — `room-planning` blieb an, eine
+  Reihe „E2E rooms …" blieb liegen, und drei Vertragstests, die „das Plug-in ist
+  aus" behaupten (zwei alte, einer neu), fanden es an. Flagge und Reihe per SQL
+  zurückgesetzt, der zweite Lauf grün; die Vertragssuite der Raumplanung schaltet
+  seither in ihrem `beforeAll` **aus**, bevor sie den Aus-Zustand prüft, und
+  stellt am Ende wieder her, was sie fand. Regel in `e2e-tests.md`.
+- **Der volle Lauf der Teilnehmersuite war einmal rot in zwei Tests, die dieses
+  Paket nicht anfasst** — und beide waren echte Fehler der Suiten, keine
+  Zufälle. `start-up.spec.ts` verglich die montierten Plug-ins mit einer
+  **frisch** gelesenen Konfiguration; mit drei schaltenden Plug-in-Suiten
+  nannte die Sekunden später eine andere Menge als die, die die Seite
+  montiert hatte — beide zu Recht. Sie fängt jetzt die Antwort auf
+  `/api/config` ab, die **diese** Seite bekam, und pollt nur das DOM. Und
+  `newsletter.spec.ts` — die „unerklärte" Hälfte des Eintrags aus AP 5 in
+  `todo.md` — füllte nach dem Klick auf eine Reihe das Newsletter-Formular der
+  **Startseite** aus, das die Navigation dann wegwarf: die Region gibt es auf
+  beiden Seiten (F182), und unter acht Arbeitern war der Klick langsam genug.
+  Ein `toHaveURL` auf die Reihenseite vor dem Locator; Regel in
+  `e2e-tests.md`. Der zweite Lauf war grün.
+- **Eine Hälfte des ersten Veranstalter-Suitenlaufs war rot durch die Suite
+  selbst:** im Bearbeitungsmodus ersetzte das Formular die Überschrift des
+  Raums, und der Locator, der den Raum über seinen Namen fand, verlor ihn.
+  Das Formular steht jetzt **unter** der Überschrift — was auch für den
+  Menschen davor besser ist, der sieht, welchen Raum er ändert.

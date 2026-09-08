@@ -395,6 +395,13 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   auseinanderliegen können, wenn Playwright die zwei Dateien lokal auf zwei
   Arbeiter verteilt. Allgemein: wer eine **vollständige Menge** vergleicht,
   vergleicht sie gegen den Zustand der Instanz und nicht gegen eine Konstante.
+  **Und gegen den Zustand, den die Seite selbst geladen hat** (AP 6): mit drei
+  schaltenden Plug-in-Suiten nannte eine Konfiguration, die Sekunden nach dem
+  Seitenaufruf frisch gelesen wurde, eine andere Menge als die, die die Seite
+  montiert hatte — beide zu Recht. Die Suite fängt seither die Antwort auf
+  `/api/config` ab, die **diese** Seite bekommen hat (`page.waitForResponse`
+  vor `goto`), und pollt nur noch das DOM, weil die Bündel nach der
+  Konfiguration ankommen.
 - **`forum` ist der vierte Schalter, den eine Browsersuite umlegt** — wieder
   in **zwei** Suiten, je eine pro Client. Und die Veranstaltersuite des Forums
   legt als erste einen **fremden** Schalter mit um (`program-proposals`), weil
@@ -415,6 +422,50 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   wartet gegen den Timeout des Hooks, also `test.setTimeout(180_000)` im
   `beforeAll` zuerst. Nicht für Dateien, die nur **ihren** Schalter umlegen:
   das Schloss serialisiert, und was es nicht braucht, soll parallel bleiben.
+- **`room-planning` ist der fünfte Schalter, den eine Browsersuite umlegt**
+  (AP 6 der Phase 4), wieder je eine pro Client — und der erste, den eine
+  **lesende** Suite voraussetzt: `modules.spec.ts` des Veranstalter-Clients
+  zeigt die Modulverwaltung an genau diesem ausgeschalteten Plug-in („bietet
+  auch die abgeschalteten an"). Deshalb gilt für das Schloss seit AP 6: **wer
+  den Ruhezustand eines Plug-in-Schalters behauptet, hält es wie eine Datei,
+  die ihn umlegt.** Die schaltenden Suiten stellen den Ruhezustand her, bevor
+  sie es freigeben; die lesende wartet höchstens eine Minute.
+- **Eine Suite, die einen Deskriptor in `/api/config` einschleust, ersetzt
+  ihn, statt ihn anzuhängen** (`plugin-slot.spec.ts` des Nutzer-Clients).
+  Sobald eine andere Suite dasselbe Plug-in wirklich einschaltet, liefert die
+  Instanz den Deskriptor selbst — angehängt wären es zwei, der Slot montierte
+  zwei Elemente, und jeder Locator auf das Element wäre mehrdeutig.
+- **Anmeldezahlen für ein Plug-in werden in Kerntabellen gesät, und das ist
+  der Beweis.** `support/room-fixtures.ts` schreibt `registration` und
+  `program_item_signup` per SQL; dass die Zahl anschließend im Abschnitt des
+  Plug-ins steht, zeigt, dass sie über den Port kam (F45) — das Plug-in liest
+  diese Tabellen nicht, und die Suite kann das nur so zeigen.
+- **Ein Bauteil, das auf zwei Seiten steht, braucht nach einer Navigation eine
+  Wartebedingung für die neue Seite** (AP 6, F182). `newsletter.spec.ts`
+  klickte von der Startseite auf eine Reihe und suchte dann die Region
+  „Newsletter" — die es auf **beiden** Seiten gibt. Unter acht Arbeitern war
+  die Navigation langsam genug, dass der Locator das Formular der Startseite
+  fand, es ausfüllte, und der Klick auf „Absenden" das leere Formular der
+  Reihenseite traf („Bitte eine E-Mail-Adresse eingeben"). Der Fehler stand
+  seit AP 5 als „unerklärt" in `todo.md`; er ist ein `toHaveURL` auf die
+  Reihenseite **vor** dem Locator. Allgemein: nach einem Klick, der navigiert,
+  erst die neue Adresse oder die Überschrift der neuen Seite abwarten, dann
+  suchen — ein Locator, der auf der alten Seite schon trifft, wartet nicht.
+- **Eine abgebrochene Browsersuite lässt ihren Schalter an** (AP 6). Wer einen
+  Playwright-Lauf zwischen `beforeAll` und `afterAll` abbricht (Strg-C, ein
+  gestoppter Hintergrundprozess), hat `module_config` im Zustand, den die Suite
+  gerade gesetzt hat, und ihre Fixtures in der Datenbank — und der nächste
+  volle Lauf der Vertragssuite ist an drei Stellen rot, die alle „das Plug-in
+  ist aus" behaupten. Nach einem Abbruch also **zuerst** die Flagge und die
+  Fixtures zurücksetzen (per SQL, der Server liest die Flaggen alle 15 s neu).
+  Und eine Vertragssuite, deren erste Tests den Aus-Zustand behaupten,
+  **stellt ihn her**, statt ihn vorauszusetzen — sie liest, was sie fand,
+  schaltet aus, und stellt am Ende das Gefundene wieder her.
+- **Ein Locator, der ein Ding über seinen Namen findet, verliert es, wenn die
+  Oberfläche den Namen ersetzt.** Das Bearbeitungsformular eines Raums stand
+  zuerst **statt** seiner Überschrift, und `roomNamed('Saal A')` fand nach dem
+  Klick auf „Bearbeiten" nichts mehr. Behoben im Bündel, nicht in der Suite:
+  ein Formular steht unter dem, was es ändert — der Mensch davor will das auch.
 - **Ein Plug-in prüft man mit gebautem Bündel.** `nx build plugin-<key>` gehört
   vor den E2E-Lauf (in der CI steht es so); ohne das Bündel definiert der
   Browser kein Custom Element, der Slot montiert nichts — und eine Suite, die

@@ -106,7 +106,8 @@ Regel steht in `docs/rules/README.md`.
    werden zur Laufzeit per Konfiguration aktiviert/deaktiviert. Keine
    Fremdinstallation zur Laufzeit; Deaktivieren löscht nie Daten.
 7. **Geteilte Client-Libs:** HTTP, Umgebungskonfiguration, Design-/Modul-Abfrage,
-   Models — dazu `shared-plugins` und `shared-i18n`. Client-Code nach
+   Models — dazu `shared-plugins`, `shared-i18n` und (seit AP 6 der Phase 4)
+   `shared-plugin-kit` für die Bündel. Client-Code nach
    MVC-Gedanken strukturieren (Models über Ansichten wiederverwendbar).
 
 ## Produktregeln, die nicht verloren gehen dürfen
@@ -170,14 +171,19 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    erreicht.** **AP 4 und AP 5 erledigt am 08.09.2026:** das
    Diskussionsforum steht vollständig — Server (Threads, Beiträge, Freigabe je
    Beitrag, kein Status am Thread, F195), Bündel und beide Clients; am
-   Dashboard stehen zwei Plug-in-Kacheln nebeneinander. **AP 6 ist nicht
-   freigegeben.**
+   Dashboard stehen zwei Plug-in-Kacheln nebeneinander. **AP 6 erledigt am
+   08.09.2026:** die Raumplanung ist echt — Ändern und Löschen, der Plan mit
+   beiden Warnungen (E50: gezeigt, nichts abgelehnt), der öffentliche Raumplan,
+   der Editor als dritte Kachel am Dashboard; der Port liest seit AP 6 die
+   Sessions eines Events mit Titel (E56, vorgezogen), und die drei Bündel
+   teilen ihre Helfer über `shared-plugin-kit`. **Meilenstein M10 ist
+   erreicht.** **AP 7 ist nicht freigegeben.**
 5. Härtung, Usability-Test mit Democracy International (Pilotpartner), Doku,
    Release v1.0 — hier auch: konfigurierbare Drosselung, `CONTRIBUTING.md`
 
 **Der Stand in Zahlen:** Entscheidungen **E1–E59** vergeben (E46–E59 im Plan der
 Phase 4); Nachträge **F1–F195** und **F202** stehen im Referenzdokument (F62 und
-F129–F131 bleiben unvergeben), **F196–F201** sind reserviert; Katalog **1019**
+F129–F131 bleiben unvergeben), **F196–F201** sind reserviert; Katalog **1038**
 Schlüssel. Was in einem Paket tatsächlich passierte,
 steht im Phasenprotokoll, und was man beim Bauen daraus braucht, in
 `docs/rules/` — **hier nicht noch einmal.**

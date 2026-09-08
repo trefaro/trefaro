@@ -36,6 +36,29 @@ Link.
   freigibt. `plugins/plugin-controllers.spec.ts` läuft über **alle** montierten
   Plug-in-Controller und hält Präfix, Schlüssel und Guard fest — und dass der
   Switch-Guard der einzige ist.
+- **Ein Plug-in darf eine öffentliche Route haben, wenn ihre Antwort keine
+  Person enthält** (E58, F192, AP 6 der Phase 4):
+  `GET /api/user/plugins/room-planning/events/:id/rooms?locale=` — Räume nach
+  Namen, je Raum die Sessions mit Titel und Zeit, **keine** Anmeldezahl,
+  **keine** Warnung. Ein Raumname ist keine Person; wie voll ein Workshop ist,
+  wäre eine Information über Menschen, bevor jemand sich entschieden hat zu
+  kommen. `?locale=` mit den drei Antworten von F94, über den durch `plugin-api`
+  re-exportierten Pipe; ob das Event veröffentlicht ist, prüft die Route nicht
+  — der Vertrag hat keinen Port dafür, wie beim Forum.
+- **Warnungen sind gerechnet, nicht gespeichert, und lehnen nichts ab** (E50,
+  F196). `GET …/events/:id/schedule` trägt je Session `warnings`
+  (`overbooked`, `double-booked`) und je Raum die Vereinigung, dazu **jede**
+  Session des Events für den Editor (F49, eine Anfrage je Bildschirm);
+  `PUT …/program-items/:id/rooms/:id` hat zwei Regeln — die Session gibt es und
+  gehört zum Event des Raums — und keine dritte. `GET …/rooms/:id/schedule`
+  aus Phase 1 ist eine Scheibe dieses Plans, damit eine Session in zwei Räumen
+  gegen beide gerechnet wird.
+- **`PATCH` an einem Raum schreibt nur, was kommt, und `null` leert** (Etage,
+  Beschreibung) — dieselbe Lesart wie bei jedem `PATCH` dieser Anwendung, mit
+  denselben zwei Regeln wie beim Anlegen (getrimmter Name ohne Doppelgänger im
+  Event, mindestens ein Platz). `DELETE` nimmt die Zuordnungen über die Kaskade
+  der eigenen Join-Tabelle (F21) und lässt die Sessions stehen; ein zweites
+  `DELETE` ist ein 404, wie bei einer Session.
 - **Eine Zählroute entsteht, wenn ein Abschnitt sie liest** (E21, E59, F193).
   `GET …/events/:id/summary` gibt die drei Zustände in **einer** Anweisung
   (`GROUP BY status`), mit einer Null für einen Zustand ohne Zeilen — sie kam

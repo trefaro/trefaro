@@ -1,0 +1,19 @@
+{
+  "name": "shared-plugin-kit",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/shared-plugin-kit/src",
+  "projectType": "library",
+  "tags": ["scope:shared", "type:util"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/shared-plugin-kit",
+        "main": "libs/shared-plugin-kit/src/index.ts",
+        "tsConfig": "libs/shared-plugin-kit/tsconfig.lib.json",
+        "assets": ["libs/shared-plugin-kit/*.md"]
+      }
+    }
+  }
+}

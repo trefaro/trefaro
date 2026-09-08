@@ -36,3 +36,20 @@ export {
   type ProposalStatus,
   type ProposalSummary,
 } from './program-proposals';
+export {
+  MAX_ROOM_CAPACITY,
+  MAX_ROOM_DESCRIPTION_LENGTH,
+  MAX_ROOM_FLOOR_LENGTH,
+  MAX_ROOM_NAME_LENGTH,
+  ROOM_PLANNING_MODULE_KEY,
+  ROOM_WARNINGS,
+  type NewRoom,
+  type PlannedRoom,
+  type PlannedSession,
+  type PublicRoom,
+  type Room,
+  type RoomBooking,
+  type RoomChanges,
+  type RoomPlan,
+  type RoomWarning,
+} from './room-planning';

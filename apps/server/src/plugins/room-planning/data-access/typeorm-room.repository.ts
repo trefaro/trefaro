@@ -4,6 +4,7 @@ import { QueryFailedError, Repository } from 'typeorm';
 import {
   UnknownEventError,
   type CreateRoomInput,
+  type RoomChanges,
   type RoomRecord,
   type RoomRepository,
 } from '../business/ports/room.repository';
@@ -44,6 +45,26 @@ export class TypeormRoomRepository implements RoomRepository {
       if (!isForeignKeyViolation(error)) throw error;
       throw new UnknownEventError(input.eventId);
     }
+  }
+
+  async update(id: string, changes: RoomChanges): Promise<RoomRecord | null> {
+    // Only what was given: an `undefined` in an UPDATE would be a column
+    // written to NULL, which is the opposite of "leave it alone".
+    const written = Object.fromEntries(
+      Object.entries(changes).filter(([, value]) => value !== undefined),
+    );
+    if (Object.keys(written).length > 0) {
+      const result = await this.repository.update({ id }, written);
+      if ((result.affected ?? 0) === 0) return null;
+    }
+    return this.findById(id);
+  }
+
+  async delete(id: string): Promise<boolean> {
+    // The assignments go through the cascade on the join table (F21); nothing
+    // here has to know they exist.
+    const result = await this.repository.delete({ id });
+    return (result.affected ?? 0) > 0;
   }
 }
 

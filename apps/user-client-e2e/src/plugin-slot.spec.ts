@@ -35,21 +35,40 @@ const ROOM_PLANNING = {
   labelKey: 'plugins.roomPlanning.label',
   elementName: 'trefaro-plugin-room-planning',
   bundleUrl: '/api/plugins/room-planning/main.js',
-  mountPoints: ['event-detail'],
+  mountPoints: ['event-detail', 'event-dashboard'],
   icon: 'meeting_room',
 } as const;
 
-/** Serves the instance's own configuration with the plug-in switched on. */
+/**
+ * Serves the instance's own configuration with the plug-in switched on.
+ *
+ * Without a second copy of it: since AP 6 the plug-in's own suite switches
+ * `room-planning` on for real for a minute, and eight workers mean this file
+ * may run inside that minute. An entry that is already there is replaced, not
+ * doubled — two descriptors with one key would mount two elements and make
+ * every locator below ambiguous.
+ */
 async function withRoomPlanning(page: Page): Promise<void> {
   await page.route('**/api/config', async (route) => {
     const response = await route.fetch();
-    const config = await response.json();
+    const config: {
+      enabledModules: string[];
+      plugins: { key: string }[];
+    } = await response.json();
     await route.fulfill({
       response,
       json: {
         ...config,
-        enabledModules: [...config.enabledModules, ROOM_PLANNING.key],
-        plugins: [...config.plugins, ROOM_PLANNING],
+        enabledModules: [
+          ...config.enabledModules.filter((key) => key !== ROOM_PLANNING.key),
+          ROOM_PLANNING.key,
+        ],
+        plugins: [
+          ...config.plugins.filter(
+            (plugin) => plugin.key !== ROOM_PLANNING.key,
+          ),
+          ROOM_PLANNING,
+        ],
       },
     });
   });

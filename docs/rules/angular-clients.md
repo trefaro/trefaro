@@ -199,14 +199,40 @@ besteht. Jede Zeile hier hat einmal einen halben Tag gekostet.
   abgewöhnt hat. Der Hinweis im `localStorage` gehört einem der zwei Clients und
   ist für ein Bündel, das in beiden läuft, keine Antwort. Ein 401 heißt in einem
   Plug-in deshalb **Einladung, sich anzumelden**, und nie „Fehler" (E58).
-- **Zwei Bündel teilen Code durch Abschreiben, nicht durch Import** (F138, AP 5
-  der Phase 4). `plugin-words.ts` (Wort, Statuswort, Zeitpunkt) und der
-  `fetch`-Helfer mit `NotSignedInError` stehen im Vorschlags- und im
-  Forum-Bündel je einmal — absichtlich, denn ein Bündel importiert vom Host nur
-  `shared-models`, und eine Bibliothek „für Bündel" gibt es noch nicht. Das
-  dritte Bündel mit denselben Zeilen (AP 8 oder AP 9) ist der Moment, in dem
-  sie in eine solche Bibliothek ziehen — nicht in `shared-plugins`, das dem
-  Host gehört und Angular-Dienste des Hosts injiziert.
+- **Drei Bündel teilen Code über `shared-plugin-kit`, nicht durch Abschreiben**
+  (F138, AP 6 der Phase 4). Zwei Kopien waren erlaubt (AP 5); das dritte Bündel
+  mit denselben Zeilen war die Raumplanung — früher als die Regel dachte —, und
+  die Zeilen zogen in `libs/shared-plugin-kit`: `wordsOf(key)` (Wort mit
+  Rückfall auf den vollen Schlüssel, Statuswort), `when`/`day`/`clock`
+  (Zeitpunkt in Sprache und Zone des Lesers) und `readJson`/`sendJson` mit
+  `NotSignedInError` und `PluginRequestError` (der 401 als Zustand, E58).
+  Framework-frei, nur an `shared-models` hängend, und **nicht** `shared-plugins`
+  — das gehört dem Host und injiziert dessen Angular-Dienste. Ein Bündel
+  importiert vom Host genau zwei Bibliotheken: `shared-models` und
+  `shared-plugin-kit`. Je Bündel bleibt eine `plugin-words.ts` mit einer
+  Zeile: der Bindung an den eigenen Schlüssel.
+- **`*ngTemplateOutlet` in einem Standalone-Bauteil braucht `NgTemplateOutlet`
+  in `imports`.** Der Build sagt nichts; der Unit-Test meldet NG0303 („Can't
+  bind to 'ngTemplateOutlet'") — an einer Stelle, die nach einem falschen
+  Selektor klingt.
+- **Ein Formular in einem Bündel wird beim Absenden gelesen, nicht gebunden**
+  (AP 6). `FormData` aus dem `submit`, ein laufender Vorgang sperrt das
+  `fieldset`, ein gescheiterter lässt das Getippte stehen (nichts wurde
+  geschrieben, also darf nichts geschrieben aussehen), und ein leeres
+  optionales Feld reist als `null` — das ist, was eine Etage leert; ein leerer
+  String scheiterte am `Length(1, …)` des DTOs. Kein `[value]` an einem
+  `<select>` aus `@for`, siehe oben; das Bündel liest die Auswahl aus dem
+  Formular.
+- **Ein Formular steht unter dem, was es ändert, nicht an dessen Stelle.** Das
+  Bearbeitungsformular eines Raums ersetzte zuerst die Überschrift — der Mensch
+  davor sah nicht mehr, welchen Raum er änderte, und der Locator der
+  Browsersuite, der den Raum über seinen Namen fand, verlor ihn.
+- **Ein Abschnitt, dessen Titel der Server übersetzt, lädt bei einem
+  Sprachwechsel neu und zählt seine Ladevorgänge** — die Regel der Landingpage
+  (oben, AP 5) gilt für ein Bündel genauso: `participant-rooms.ts` liest
+  `locale()` im `effect()` und verwirft eine späte Antwort auf die alte Frage.
+  Dort von Anfang an, mit dem Test, der die zwei Antworten in der falschen
+  Reihenfolge auflöst.
 - **Eine Sprungmarke braucht `anchorScrolling`.** Beide Clients haben es jetzt
   (`withInMemoryScrolling` in `provideRouter`); ohne das ändert
   `[routerLink]="[]" [fragment]="…"` die Adresse und sonst nichts. Und immer

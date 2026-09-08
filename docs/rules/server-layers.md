@@ -233,4 +233,32 @@ diese Eigenschaft.
   also ändert sich für keinen Aufrufer etwas) — mit einem Unit-Test, weil drei
   Aufrufer die Antwort als Kontrollfluss benutzen.
 
+- **Der Plug-in-Host importiert kein Feature-Modul** (AP 6 der Phase 4).
+  `PluginHostModule` ist global und veröffentlicht Ports; als sein
+  Programm-Adapter `ProgramService` für den Übersetzungsrückfall (F95) holen
+  wollte, schloss `PluginHostModule → ProgramModule → EventsModule →
+PushModule` einen Kreis, und der Server startete nicht mehr („The module at
+  index [0] of the PushModule imports array is undefined"). Kein Unit-Test
+  sieht das — die Vertragssuite sofort, weil sie den Server bootet. Ein
+  Adapter liest die Ports der globalen Datenzugriffsschicht und wendet eine
+  Regel des Features notfalls ein zweites Mal an (F138: die zweite Kopie
+  bleibt, die dritte zieht).
+- **E56 ist gefüllt, in AP 6 statt AP 9:** `PluginProgramReads.listForEvent(eventId, locale?)`
+  und der **Titel** je Programmpunkt — ein Editor, der einen Raum füllt, muss
+  die Sessions eines Events auflisten, und ein Plan, der Zeitfenster zeigt,
+  braucht einen Titel; beides gibt `findItem` je Id nicht her. F45s „kein
+  Titel" war eine Entscheidung gegen Personen, nicht gegen Titel. Ohne Sprache
+  die Originale und **keine** Frage an den Übersetzungsport; mit Sprache die
+  Übersetzung, wo es eine gibt (F95), in **einer** Anfrage für die Liste (F49).
+  Seither reisen auch `LocaleQueryPipe` und `ApiLocaleQuery` durch `plugin-api`
+  (F94), wie `pageWindow`: ein Plug-in liest `?locale=` mit den drei Antworten
+  des Hosts und erfindet keine vierte.
+- **Eine Warnung eines Plug-ins ist ein Ergebnis, keine Spalte** (E50, F196).
+  Beide Warnungen des Raumplans werden beim Lesen aus den Zahlen des Ports und
+  der eigenen Join-Tabelle gerechnet — vier Lesezugriffe für den ganzen Plan
+  (Räume, Sessions über den Port, alle Zuordnungen auf einmal, alle
+  Anmeldezahlen auf einmal; F49) —, keine Migration, und kein `assign`, das
+  wegen einer Warnung ablehnt: ein Plan, der einen Raum verweigert, wird
+  umgangen, und dann steht die Wahrheit nicht mehr drin.
+
 Siehe auch: [Verträge der Endpunkte](api-contracts.md), [Regeln des Datenmodells](data-model.md).

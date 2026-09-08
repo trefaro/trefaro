@@ -17,6 +17,13 @@ export interface ProgramItemRoomRecord {
 export interface ProgramItemRoomRepository {
   /** The sessions assigned to one room, oldest assignment first. */
   findByRoom(roomId: string): Promise<readonly ProgramItemRoomRecord[]>;
+  /**
+   * Every assignment of several rooms in one query — the whole plan of an
+   * event is one read, not one per room (F49). Empty for no rooms.
+   */
+  findByRooms(
+    roomIds: readonly string[],
+  ): Promise<readonly ProgramItemRoomRecord[]>;
   /** Every assignment of one session — a session may use more than one room. */
   findByProgramItem(
     programItemId: string,

@@ -291,6 +291,11 @@ answer, not an opinion.
       through the plug-in's read port — and `GET …/rooms/:id/schedule` reports them
       side by side and decides nothing. Whether an organizer wants a warning, a
       refusal or a hint, and where they should see it, is what the answer decides.
+      **AP 6 of phase 4 built the shape the plan fixed (E50, F196):** both are
+      **warnings**, computed when the plan is read, shown at the session and at
+      the room, in both clients — and nothing is refused. What stays open for
+      the pilot partner is the other half: whether an organizer wants a hard
+      limit at all, and whether deleting a room should ask first.
 
 - [ ] **A device without an account hears about every public event's changes.**
       The price E43 accepts: a browser has no address and has said nothing
@@ -915,6 +920,15 @@ entry, the answer is noted below rather than repeated.
       above room planning, in the order the plan fixes. **Milestone M9 is
       reached**: the first curated plug-in is complete and the 1.2.0 contract has
       a second implementer. Three plug-ins left.
+      **Three of four are done: the room plan became real in AP 6
+      (08.09.2026).** It was registered since phase 0 and had rooms and the
+      session link since AP 9 of phase 1; AP 6 added changing and deleting a
+      room, the plan of a whole event with both warnings (E50), the public
+      plan for participants (E58), the editor at `event-dashboard` — the third
+      tile there — and, on the contract, `listForEvent` with a title (E56,
+      pulled forward from AP 9). **Milestone M10 is reached.** `CURATED_PLUGINS`
+      is unchanged at three entries; `qr-checkin` and `personal-program` are
+      left.
       **Two of four are done, both halves: the forum followed (AP 4 and AP 5,
       08.09.2026).** `apps/server/src/plugins/forum` — two tables
       (`plugin_forum_thread`, `plugin_forum_post`), one migration, two
@@ -927,7 +941,7 @@ entry, the answer is noted below rather than repeated.
       read it (E21). `CURATED_PLUGINS` has three entries, forum between
       proposals and room planning. Only `qr-checkin` still holds a README
       alone; two plug-ins left.
-- [ ] **Implement the overbooking check** in the room planning plug-in: sign-ups
+- [x] **Implement the overbooking check** in the room planning plug-in: sign-ups
       per programme item against room capacity. Everything it needs exists since
       AP 9 — the room's capacity, the sessions assigned to it, and their sign-up
       counts through the plug-in's read port (F45), which is why the plug-in still
@@ -942,10 +956,42 @@ entry, the answer is noted below rather than repeated.
       refuses a room gets worked around ("Saal A (2)") and then the truth is no
       longer in it. Whether an organizer wants a hard limit stays the pilot
       partner's question.
-- [ ] **Two sessions in one room at the same time** is not refused either, for
+      **Done in AP 6 (08.09.2026).** `GET …/events/:id/schedule` computes
+      `overbooked` per session — more sign-ups than the chairs of **every** room
+      the session uses, added up — and per room, on read, stored nowhere; the
+      editor on the event dashboard shows it as a word at both, and nothing is
+      refused. The sign-ups still reach the plug-in through the port alone
+      (F45): the contract suite seeds them into the core tables and reads the
+      warning off the plug-in's answer.
+- [x] **Two sessions in one room at the same time** is not refused either, for
       the same reason: the schedule carries `startsAt`/`endsAt` per booking, and
       what a double booking should _do_ is a product decision, not a phase-4
       implementation detail.
+      **Done in AP 6 as `double-booked`**, the second warning of E50: two
+      sessions in one room whose times overlap, on both and on the room; two
+      that merely touch are not. Still nothing refused.
+- [ ] **The slot hands a plug-in no time zone.** The room plan shows its slots
+      in the reader's clock, because `PluginSlotContext` carries `locale`,
+      `strings` and `mountPoint` and nothing about the event, and the server
+      port has no field for the event's zone either. For a participant in the
+      venue that is the venue's clock; read from abroad, the plan disagrees with
+      the programme above it, which the host renders in the event's zone (E8).
+      Not invented inside a plug-in in AP 6: the fix is the next promised
+      property of the slot (or the next field of `PluginProgramReads`), a
+      contract step — AP 10 weighs it, or phase 5.
+- [ ] **Deleting a room is one click.** The consequence stands beside the
+      button ("takes its assignments with it, not the sessions"), and a
+      `confirm()` inside a web component would be the browser's dialog in an
+      organization's own design. Whether that is enough is a question for the
+      pilot partner, next to the hard limit under _Questions for the pilot
+      partner_.
+- [ ] **`shared-plugin-kit` is where a bundle's shared lines live** (F138,
+      AP 6). The fourth and fifth bundle (AP 8, AP 9) import `wordsOf`,
+      `when`/`day`/`clock` and `readJson`/`sendJson` from it; a helper copied
+      into a bundle from now on is a regression, not a second copy. And the
+      library is a new entry in the architecture's list of shared libs (F145
+      said that list comes from the thesis) — noted for AP 10 to record in the
+      reference document.
 - [ ] **Room planning stays structured for now.** An OpenStreetMap/Leaflet floor
       plan is the later stage (F14) — and never a Google map (NFR 9).
 - [ ] **Each new plug-in proves the contract.** Verify per plug-in: own tables
@@ -1021,6 +1067,10 @@ entry, the answer is noted below rather than repeated.
       does — asks, reads the 401, draws the invitation — and one more failed
       request per anonymous visit went with it. Still one short of E46's
       condition; AP 9 decides.
+      **The third filler arrived in AP 6:** the room plan's editor at
+      `event-dashboard`, three plug-in tiles side by side in registration
+      order. The condition is met three times over; what AP 9 decides is only
+      whether the hint is worth a contract step.
 
 ## Checkable after phase 5 — hardening and release
 
@@ -1250,7 +1300,12 @@ entry, the answer is noted below rather than repeated.
       `start-page.ts`, `event-registration-page.ts` and
       `my-registration-page.ts`; nothing has caught them yet, and a quick
       switch on a slow connection would. Phase 5, together, with one test
-      each. The newsletter half of this entry is untouched and unexplained.
+      each. **The newsletter half followed in AP 6** and was not a race
+      either: after the click on a series, the test found the newsletter
+      region of the **start page** — the same component stands on both pages
+      (F182) — filled it, and the navigation threw it away; the submit landed
+      on the empty form of the series page. A `toHaveURL` on the series page
+      before the locator; the rule is in `docs/rules/e2e-tests.md`.
 - [ ] **The three e2e projects share one server's rate limits.** CI runs them
       with `--parallel=1` against a single instance, so every limit that counts
       per client address is a budget for the whole run: sixty public

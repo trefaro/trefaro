@@ -46,11 +46,35 @@ export class UnknownEventError extends Error {
   }
 }
 
+/**
+ * What a change to a room may touch (AP 6 of phase 4).
+ *
+ * Only the fields given are written: `undefined` leaves a column alone, `null`
+ * clears one of the two that may be empty. The event a room belongs to is not
+ * here — a room does not move between events.
+ */
+export interface RoomChanges {
+  readonly name?: string;
+  readonly capacity?: number;
+  readonly floor?: string | null;
+  readonly description?: string | null;
+}
+
 export interface RoomRepository {
+  /** By name — the order a plan is read in. */
   findByEvent(eventId: string): Promise<readonly RoomRecord[]>;
   findById(id: string): Promise<RoomRecord | null>;
   /** @throws UnknownEventError */
   create(input: CreateRoomInput): Promise<RoomRecord>;
+  /** `null` when no room has that id. */
+  update(id: string, changes: RoomChanges): Promise<RoomRecord | null>;
+  /**
+   * False when the room was already gone.
+   *
+   * Its assignments go with it through the cascade on the join table (F21);
+   * the sessions stay — a room that is gone is a room, not a programme.
+   */
+  delete(id: string): Promise<boolean>;
 }
 
 export const ROOM_REPOSITORY = Symbol('TREFARO_ROOM_REPOSITORY');

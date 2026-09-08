@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { PublicRoomPlanningController } from './api/public-room-planning.controller';
 import { RoomPlanningController } from './api/room-planning.controller';
 import { PROGRAM_ITEM_ROOM_REPOSITORY } from './business/ports/program-item-room.repository';
 import { ROOM_REPOSITORY } from './business/ports/room.repository';
@@ -23,7 +24,9 @@ import { TypeormRoomRepository } from './data-access/typeorm-room.repository';
  */
 @Module({
   imports: [TypeOrmModule.forFeature([RoomEntity, ProgramItemRoomEntity])],
-  controllers: [RoomPlanningController],
+  // Two controllers for two access levels (E57): the organizer's routes and
+  // the plan a participant reads without a login (E58).
+  controllers: [RoomPlanningController, PublicRoomPlanningController],
   providers: [
     RoomPlanningService,
     TypeormRoomRepository,

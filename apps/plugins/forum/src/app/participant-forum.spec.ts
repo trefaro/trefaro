@@ -8,7 +8,8 @@ import type {
   NewForumThread,
   OpenedForumThread,
 } from '@trefaro/shared-models';
-import { ForumApi, NotSignedInError } from './forum-api';
+import { NotSignedInError } from '@trefaro/shared-plugin-kit';
+import { ForumApi } from './forum-api';
 import { ParticipantForum } from './participant-forum';
 
 /** What the host hands over under `plugins.forum.`, prefix stripped. */

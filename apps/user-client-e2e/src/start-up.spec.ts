@@ -70,11 +70,17 @@ test.describe('participant client startup', () => {
     page,
     request,
   }) => {
+    // The configuration **this page** loads, caught on its way in: what the
+    // slot must mount is what the instance said at that moment — not what it
+    // says a few seconds later, when another suite has switched a plug-in.
+    const configLoaded = page.waitForResponse('**/api/config');
     // The real landing page carries the hook point since AP 3; the phase-0
     // placeholder page it used to live on is gone.
     await page.goto(
       `/series/${PUBLISHED_SERIES.slug}/events/${UPCOMING_EVENT.slug}`,
     );
+    const config: { plugins: { key: string; mountPoints: string[] }[] } =
+      await (await configLoaded).json();
 
     await expect(
       page.getByRole('heading', { name: UPCOMING_EVENT.name }),
@@ -90,16 +96,23 @@ test.describe('participant client startup', () => {
      * slot mounts what the instance says and nothing else. Zero was the same
      * sentence while every curated plug-in was off, and it stopped being one in
      * AP 3 of phase 4, when `plugin-program-proposals.spec.ts` began switching
-     * one on for its own tests. Two files against one `module_config` is the
-     * flake `docs/rules/e2e-tests.md` is mostly about; asking the instance
-     * makes both of them true at once.
+     * one on for its own tests. Several files against one `module_config` is
+     * the flake `docs/rules/e2e-tests.md` is mostly about.
      *
-     * Polled, because the other file switches its plug-in on and off again
-     * while this one runs: locally Playwright hands the two files to different
-     * workers, so the DOM and a freshly read configuration can be one moment
-     * apart. What must hold is that they agree — and the message says which
-     * two lists did not, rather than "expected true".
+     * Against the configuration the page itself received, not a fresh read:
+     * with three plug-in suites switching flags on eight workers (AP 6), a
+     * configuration read a few seconds after the page loaded named a different
+     * set than the one the page had mounted — correctly so, on both sides. The
+     * DOM is still polled, because the bundles arrive after the configuration
+     * does; and the message says which two lists did not agree, rather than
+     * "expected true".
      */
+    const configured = config.plugins
+      .filter((plugin) => plugin.mountPoints.includes('event-detail'))
+      .map((plugin) => plugin.key)
+      .sort()
+      .join(', ');
+
     const mounted = async (): Promise<string> =>
       (
         await slot
@@ -111,22 +124,12 @@ test.describe('participant client startup', () => {
         .sort()
         .join(', ');
 
-    const configured = async (): Promise<string> => {
-      const config: { plugins: { key: string; mountPoints: string[] }[] } =
-        await (await request.get('/api/config')).json();
-      return config.plugins
-        .filter((plugin) => plugin.mountPoints.includes('event-detail'))
-        .map((plugin) => plugin.key)
-        .sort()
-        .join(', ');
-    };
-
     await expect
       .poll(async () => {
-        const [inDom, inConfig] = await Promise.all([mounted(), configured()]);
-        return inDom === inConfig
+        const inDom = await mounted();
+        return inDom === configured
           ? 'the hook point mounts what the configuration names'
-          : `mounted [${inDom}] while the configuration names [${inConfig}]`;
+          : `mounted [${inDom}] while the configuration named [${configured}]`;
       })
       .toBe('the hook point mounts what the configuration names');
   });

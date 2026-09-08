@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import type {
   ProgramItemRoomRecord,
   ProgramItemRoomRepository,
@@ -18,6 +18,18 @@ export class TypeormProgramItemRoomRepository implements ProgramItemRoomReposito
   async findByRoom(roomId: string): Promise<readonly ProgramItemRoomRecord[]> {
     return this.repository.find({
       where: { roomId },
+      order: { createdAt: 'ASC', programItemId: 'ASC' },
+    });
+  }
+
+  async findByRooms(
+    roomIds: readonly string[],
+  ): Promise<readonly ProgramItemRoomRecord[]> {
+    // `IN ()` is not SQL; the plan of an event without rooms is empty here
+    // rather than in the driver's error.
+    if (roomIds.length === 0) return [];
+    return this.repository.find({
+      where: { roomId: In([...roomIds]) },
       order: { createdAt: 'ASC', programItemId: 'ASC' },
     });
   }

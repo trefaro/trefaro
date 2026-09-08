@@ -12,8 +12,10 @@ import {
   MAX_PROPOSAL_TITLE_LENGTH,
   type ProgramProposal,
 } from '@trefaro/shared-models';
+import { day } from '@trefaro/shared-plugin-kit';
 import { word, statusWord } from './plugin-words';
-import { NotSignedInError, ProposalsApi } from './proposals-api';
+import { NotSignedInError } from '@trefaro/shared-plugin-kit';
+import { ProposalsApi } from './proposals-api';
 
 /** What the panel is doing, so the template has one thing to switch on. */
 type PanelState = 'loading' | 'signedOut' | 'ready' | 'failed';
@@ -387,14 +389,7 @@ export class ParticipantProposals {
   }
 
   protected when(iso: string): string {
-    try {
-      return new Intl.DateTimeFormat(this.locale(), {
-        dateStyle: 'medium',
-      }).format(new Date(iso));
-    } catch {
-      // An unknown language tag must not empty the row.
-      return iso.slice(0, 10);
-    }
+    return day(this.locale(), iso);
   }
 
   protected value(event: Event): string {

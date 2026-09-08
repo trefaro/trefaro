@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import type { ProgramProposal, ProposalPage } from '@trefaro/shared-models';
 import { ParticipantProposals } from './participant-proposals';
-import { NotSignedInError, ProposalsApi } from './proposals-api';
+import { NotSignedInError } from '@trefaro/shared-plugin-kit';
+import { ProposalsApi } from './proposals-api';
 
 /** What the host hands over under `plugins.programProposals.`, prefix stripped. */
 const STRINGS: Record<string, string> = {

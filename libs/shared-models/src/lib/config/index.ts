@@ -31,11 +31,7 @@ export {
   isFontFamilyKey,
   type FontFamilyOption,
 } from './fonts';
-export {
-  ICON_NAMES,
-  isIconName,
-  type IconName,
-} from './icons';
+export { ICON_NAMES, isIconName, type IconName } from './icons';
 export {
   PUSH_MODULE_KEY,
   type ModuleFamily,

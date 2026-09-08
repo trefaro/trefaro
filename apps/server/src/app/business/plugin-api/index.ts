@@ -27,6 +27,15 @@ export {
   type PageRequest,
   type PageWindow,
 } from '../common/page-window';
+/**
+ * The reading of `?locale=` (F94), reached through the contract for the same
+ * reason: three answers, and only one of them an error — the originals when
+ * the parameter is missing, no error for a well-formed language nobody
+ * translated into, a 400 for what is not a language tag. A plug-in that reads
+ * translated content for a participant (E56) declares the parameter with
+ * these two, so the rule is the host's and not a plug-in's second reading.
+ */
+export { ApiLocaleQuery, LocaleQueryPipe } from '../common/locale-query.pipe';
 export {
   CurrentPluginOrganizer,
   CurrentPluginParticipant,

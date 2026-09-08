@@ -13,7 +13,8 @@ import {
   type ForumPost,
   type ForumThread,
 } from '@trefaro/shared-models';
-import { ForumApi, NotSignedInError } from './forum-api';
+import { NotSignedInError } from '@trefaro/shared-plugin-kit';
+import { ForumApi } from './forum-api';
 import { statusWord, when, word } from './plugin-words';
 
 /** What the panel is doing, so the template has one thing to switch on. */
