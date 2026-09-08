@@ -1,4 +1,5 @@
 import type { ServerPlugin } from '../app/business/plugin-api';
+import { forumPlugin } from './forum/forum.plugin';
 import { programProposalsPlugin } from './program-proposals/program-proposals.plugin';
 import { roomPlanningPlugin } from './room-planning/room-planning.plugin';
 
@@ -17,9 +18,10 @@ import { roomPlanningPlugin } from './room-planning/room-planning.plugin';
  * and the sections under them in (E59). Registered rather than discovered means
  * sorted rather than incidental, so it is worth being deliberate about: the
  * reference plug-in moved down a line when the first plug-in of phase 4 arrived
- * above it.
+ * above it, and another when the forum followed.
  */
 export const CURATED_PLUGINS: readonly ServerPlugin[] = [
   programProposalsPlugin,
+  forumPlugin,
   roomPlanningPlugin,
 ];

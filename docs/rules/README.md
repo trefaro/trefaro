@@ -13,13 +13,14 @@ ausführlich woanders und wird hier nur mit ihrer Nummer zitiert:
   sind unvergeben** — AP 6 hat sie als schon getroffene Entscheidungen
   wiedererkannt. **F134 und F135** kamen mit AP 11, **F136 und F179–F183** mit
   AP 12, **F184 und F185** mit AP 13; **F186–F188** mit AP 1,
-  **F189–F192** mit AP 2 und **F193, F194 sowie F202** mit AP 3 der Phase 4.)
+  **F189–F192** mit AP 2, **F193, F194 sowie F202** mit AP 3 und **F195** mit
+  AP 4 der Phase 4.)
 - **E1–E16** — Phase 1, [`docs/PHASE1.md`](../PHASE1.md).
 - **E17–E30** — Phase 2, [`docs/PHASE2.md`](../PHASE2.md) (die Zählung läuft über
   die Phasen weiter).
 - **E31–E45** — Phase 3, [`docs/PHASE3.md`](../PHASE3.md).
 - **E46–E59** — Phase 4, [`docs/PHASE4.md`](../PHASE4.md) (im Plan festgelegt;
-  jedes Paket prüft die seinen gegen die Umsetzung). **F195–F201** sind dort
+  jedes Paket prüft die seinen gegen die Umsetzung). **F196–F201** sind dort
   reserviert und noch nicht vergeben; **F202** ist ein Nachtrag aus AP 3,
   weil der reservierte Block schon belegt war.
 - **NFR / FR** — nummeriert wie im Anforderungsdokument.

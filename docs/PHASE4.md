@@ -1208,3 +1208,151 @@ Was anders lief als geplant:
   Die Browsersuiten wurden deshalb gegen selbst gestartete Server auf 4210 und
   4300 gefahren (`playwright test -c …` direkt, `BASE_URL` gesetzt) — dieselbe
   Kette, nur andere Zahlen; in der CI startet Nx sie wie immer.
+
+### AP 4 — Diskussionsforum: Server (erledigt, 08.09.2026)
+
+Umgesetzt:
+
+- **Das Plug-in** — `apps/server/src/plugins/forum/` nach dem Muster der
+  Programmvorschläge: `api/` (zwei Controller, je Zugangsstufe einer, plus
+  DTOs), `business/` (Service und **ein** Repository-Port über beide Tabellen,
+  weil ein Thread mit seinem ersten Beitrag in einer Transaktion entsteht),
+  `data-access/` (zwei Entities, TypeORM-Repository, **eine** Migration),
+  Deskriptor mit `requires: ['profiles']` und `enabledByDefault: false` — noch
+  **ohne** `client`-Teil, der kommt mit den Bildschirmen in AP 5.
+  `CURATED_PLUGINS` hat drei Einträge in der Reihenfolge des Plans: Vorschläge,
+  Forum, Raumplanung. Das README des Verzeichnisses ist weg; das Plug-in
+  beschreibt sich in seinem Deskriptor.
+- **Die Tabellen** — `plugin_forum_thread` und `plugin_forum_post`, eine
+  Migration (`CreateForumSchema1787890000000`, nach den Vorschlägen gestempelt),
+  explizites SQL, `down` mitgeschrieben und **wirklich gefahren**: beide
+  Tabellen von Hand gedroppt, die Zeile aus `migrations` gelöscht, der nächste
+  Start hat `up` erneut angewandt. Prüfbedingungen tragen Entscheidungen: die
+  drei Zustände (E51), `(status = 'pending') = (decided_at IS NULL)`,
+  `btrim(body) <> ''` — und `btrim(title) <> ''` am Thread. Der Thread hat
+  **keine** Statusspalte (F195). Fünf echte Fremdschlüssel: Event und Autoren
+  mit `CASCADE`, `decided_by` mit `SET NULL`, der Beitrag auf seinen Thread mit
+  `CASCADE`; keine Kerntabelle angefasst (F21).
+- **Die Routen** — genau die sieben Zeilen der API-Oberfläche für AP 4: vier
+  unter `participant/plugins/forum/…` (Threads eines Events, Thread eröffnen,
+  Beiträge eines Threads, antworten), drei unter `admin/plugins/forum/…`
+  (Moderationsliste je Event mit `?status=`, Freigabe, Ablehnung — je eine
+  Route, E51). `…/summary` gehört zu AP 5 und ist nicht gebaut (E21).
+- **Die Sichtbarkeitsregel steht einmal, in der SQL** (F152, F195): „ein
+  Beitrag des Threads ist freigegeben **oder** stammt vom Leser" — dieselbe
+  Bedingung an der Threadliste, an der Beitragsliste und vor der Antwort. Damit
+  sind „nicht sichtbar" und „gibt es nicht" dieselbe 404 mit demselben Satz, und
+  in einen Thread, den man nicht lesen kann, kann man nicht schreiben. Die
+  Beiträge selbst: freigegebene plus eigene, älteste zuerst; die Moderationsliste
+  neueste zuerst, wie die der Vorschläge; Threads nach `last_post_at`.
+- **Der Host-Port blieb, wie er war.** `PluginParticipantReads.findAuthors`
+  liefert die Namen für Threads und Beiträge — einmal je Seite, Thread-Autor und
+  Beitragsautoren in **einem** Aufruf (F49) —, und in `plugin-api` hat sich
+  keine Zeile geändert. Das ist die Probe, die der Plan von diesem Paket
+  verlangt hat: AP 2 hat nichts gebaut, das nur für Vorschläge passt.
+- **Nutzlasten in `shared-models`** — `lib/plugins/forum.ts` mit dem Schlüssel,
+  den drei Zuständen, den Längen (Titel 200, Beitrag 4 000 wie eine
+  Chatnachricht), `ForumThread`, `ForumPost`, `ModeratedForumPost` (der Beitrag
+  mit seinem Thread), `OpenedForumThread`, drei Seitentypen und zwei
+  Query-Typen. Die DTOs des Plug-ins implementieren sie.
+- **Katalog** — 988 auf **989** Schlüssel: `plugins.forum.title`, der Name in
+  der Modulverwaltung, Englisch und Deutsch. Mehr braucht ein Paket ohne
+  Bildschirm nicht.
+- **Referenzdokument** — F195; Version 1.44.
+
+Belegt: `nx run-many -t lint test build` grün (14 Projekte), Server-Unit-Tests
+**1189** (1170 vorher; neu die 19 Fälle des Forum-Service — die drei
+Vertragstests über `CURATED_PLUGINS` decken die zwei neuen Controller und den
+Deskriptor ab, **ohne dass eine Zeile in ihnen geändert wurde**),
+API-Vertragstests **623** (604 vorher; neu
+`apps/server-e2e/src/api/plugin-forum.spec.ts` mit 19 Tests), Teilnehmersuite
+**235** und Veranstaltersuite **299** grün — unverändert in der Zahl, dieses
+Paket hat keinen Bildschirm; die drei E2E-Projekte sind nacheinander gefahren,
+wie die CI es tut. Die Vertragssuite entscheidet, was nur eine echte Datenbank
+entscheiden kann: dass ein zweiter Teilnehmender einen Thread ohne
+freigegebenen Beitrag weder in der Liste sieht noch lesen noch beantworten kann
+(dieselbe 404 wie eine unbekannte Id), dass die Freigabe des ersten Beitrags
+den Thread veröffentlicht, dass eine abgelehnte Antwort ihrem Autor und der
+Moderationsliste bleibt und dem Eröffner fehlt, dass die Moderationsliste eines
+zweiten Events leer bleibt, dass `last_post_at` dem jüngsten veröffentlichten
+Beitrag folgt und bei einer Korrektur zurückgeht, dass ein Beitrag aus
+Leerzeichen ein 400 ist, und dass Abschalten 404 gibt, ohne eine Zeile zu
+verlieren. Die Migration ist gegen die laufende Instanz gefahren — und ihr
+`down` von Hand, mit Neustart danach; `\d plugin_forum_thread` und
+`\d plugin_forum_post` zeigen die vier Prüfbedingungen, die fünf Fremdschlüssel
+und den partiellen Index.
+
+Was anders lief als geplant:
+
+- **Der Plan nennt `last_post_at`, aber nicht, wessen Zeit es ist.** Zwei
+  Lesarten: der jüngste Beitrag überhaupt, oder der jüngste **freigegebene**.
+  Die erste hätte einen Thread für alle nach oben springen lassen wegen eines
+  Beitrags, den nur sein Autor lesen darf — ein Signal über etwas Unsichtbares.
+  Also die zweite, und die Spalte wird bei jeder Entscheidung aus den Zeilen
+  **neu gerechnet** (`COALESCE(MAX(created_at) der freigegebenen, created_at
+des Threads)`) statt beim Eintreffen hochgezählt: eine Korrektur von
+  „freigegeben" auf „abgelehnt" nimmt die Bewegung zurück, und die Vertragssuite
+  prüft genau das. Solange nichts veröffentlicht ist, ist die Aktivität die
+  Erstellung des Threads — derselbe Augenblick, weil die Datenbank beide
+  Spalten in einer Anweisung schreibt.
+- **Die Beitragsliste bringt ihren Thread mit.** `GET threads/:id/posts`
+  antwortet mit dem Thread dazu (Titel, Eröffner, Aktivität) — die Thread-Ansicht
+  ist ein Bildschirm (F49), und einen `GET threads/:id` hat die API-Oberfläche
+  des Plans nicht. Ein Tiefenlink in AP 5 braucht so keine zweite Route. Aus
+  demselben Grund antwortet **Eröffnen** mit Thread **und** erstem Beitrag: der
+  Bildschirm danach zeigt beide, mit dem Status am Beitrag.
+- **Ein Thread, den man nicht sehen darf, ist beim Schreiben derselbe 404 wie
+  beim Lesen** — kein 403. Dieselbe Bauweise wie beim Chat (F157): „nicht deins"
+  und „gibt es nicht" sind eine Antwort, und die Suite vergleicht die Sätze.
+- **`btrim(title) <> ''` auch am Thread**, das das Schema des Plans nicht
+  hatte — wie bei den Vorschlägen dieselbe Rückfallebene unter dem Service, der
+  zuerst ablehnt.
+- **Der partielle Index trägt den Zustand nicht im Schlüssel:** `(created_at
+DESC, id) WHERE status = 'pending'` statt `(status, created_at) WHERE …` — in
+  einem Index, dessen `WHERE` den Zustand festlegt, wäre die Spalte im Schlüssel
+  eine Konstante.
+- **Der Teilnehmerpfad nimmt kein `?status=`.** AP 2 hängt dasselbe Query-DTO
+  an beide Listen, und der Teilnehmerpfad ignoriert den Parameter; hier sind es
+  zwei DTOs, und `?status=` an der Threadliste ist ein 400 — die Regel „ein
+  Parameter, der nichts ändert, wird nicht deklariert" aus `api-contracts.md`.
+  Rückwirkend an AP 2 nichts geändert.
+- **Zwei Kopien, mit Absicht** (F138): `isForeignKeyViolation` steht jetzt
+  zweimal unter `src/plugins/`, und `ForumAuthor` neben `ProposalAuthor` in
+  `shared-models`. Der dritte Aufrufer zieht aus — und der ist nicht in Sicht:
+  Check-In und Programmplan haben weder Autoren noch Moderation.
+- **Die Voraussetzung ist hier in einer Richtung geprüft**, nicht in beiden wie
+  in AP 2: `profiles` aus unter laufendem Forum ist ein 409 mit `forum`, und die
+  Modulzeile nennt `profiles`. Die Kette in die andere Richtung (`chat`,
+  `profile-search`, `profiles` aus, dann Einschalten) hat AP 2 für die
+  **Mechanik** bewiesen; hier ging es um die Verdrahtung eines Deskriptors, und
+  eine zweite Kette hätte denselben instanzweiten Zustand ein zweites Mal
+  umgelegt.
+- **Kein `postCount` an der Threadliste.** Naheliegend, aber niemand liest ihn
+  (E21); AP 5 bringt ihn, wenn die Liste ihn zeichnet — so wie `…/summary` in
+  AP 3 kam und nicht in AP 2.
+- **Die Kaskade am Eröffner steht wie im Plan, mit einer offenen Frage.**
+  `created_by → user_profile ON DELETE CASCADE` nimmt mit dem Konto des
+  Eröffners den ganzen Thread — samt der veröffentlichten Antworten anderer.
+  Für einen **Beitrag** ist die Kaskade richtig (E58); ein Thread ist ein
+  Behälter. Bis Phase 5 kann niemand ein Konto löschen, also blieb das Schema
+  des Plans; die Entscheidung steht in `todo.md` unter Phase 5, wo die Löschung
+  gebaut wird.
+- **Der Watch-Modus von `nx serve server` blieb stehen**, nachdem zwei
+  Änderungen kurz nacheinander ankamen: Nx meldete „Recursive task invocation
+  detected" und danach „Build failed, waiting for changes to restart", obwohl
+  webpack „compiled successfully" gesagt hatte — und der **alte** Prozess
+  antwortete auf `/api/health` weiter mit `up`, während die Migration nie lief.
+  Abhilfe war ein Neustart des Serve; die Falle steht jetzt in
+  `docs/rules/tooling-traps.md`.
+
+- **Die Veranstaltersuite war einmal rot, in allen drei Engines, ohne dass das
+  Forum etwas damit zu tun hatte.** `messages.spec.ts` fand mit
+  `getByLabel('Event')` **zwei** Auswahlfelder: das Label eines `<select>`
+  umschließt es, sein Text ist also die Beschriftung plus alle Optionen — und
+  in der Reihenauswahl stand gerade „E2E Series Events …", das Fixture von
+  `events.spec.ts` auf einem anderen der acht lokalen Arbeiter. Ein Wettlauf
+  zwischen zwei Dateien, den die CI mit einem Arbeiter nie sieht; die Regel
+  über Teilstring-Treffer in `e2e-tests.md` beschreibt die Klasse. Behoben an
+  der Ursache: die zwei Auswahlfelder werden jetzt über ihre Rolle und einen am
+  Anfang verankerten Namen gefunden, und die Falle steht als eigener Punkt in
+  `docs/rules/e2e-tests.md`. Danach 299 grün.

@@ -13,6 +13,16 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   `exact: true`. Ebenso: `getByText('0%')` trifft die Null in „20 %", und zwei
   Tabellen auf einer Seite brauchen `aria-label`, sonst trifft ein
   Zeilen-Locator die Kopfzeile der anderen.
+- **`getByLabel` auf ein `<select>` in seinem `<label>` liest auch die
+  Optionen.** Der Text eines umschließenden Labels ist die Beschriftung **plus
+  alles darunter**, also jede `<option>` — und die Optionen einer Reihenauswahl
+  sind die Fixtures aller gerade laufenden Dateien. `getByLabel('Event')` traf
+  in `messages.spec.ts` beide Auswahlfelder, weil `events.spec.ts` auf einem
+  anderen Arbeiter gerade „E2E Series Events …" angelegt hatte: ein Wettlauf,
+  den die CI mit einem Arbeiter nie sieht (AP 4 der Phase 4, einmal rot in
+  allen drei Engines). Ein Auswahlfeld findet man deshalb über
+  `getByRole('combobox', { name: /^Beschriftung\b/ })` — der zugängliche Name
+  beginnt mit der Beschriftung, was auch immer darunter gewählt ist.
 - **Fixture-Namen tragen keine Uhrzeit.** `fixtureLabel()` bildet
   `<scope>-<pid>-<n>`; ein Playwright-Arbeiter ist ein Prozess, seine pid trennt
   ihn von allen anderen. `Date.now()` kollidierte am eindeutigen Slug-Index.

@@ -115,12 +115,17 @@ test.describe('the organization’s messages', () => {
     const panel = page.getByRole('region', {
       name: t('admin.messages.group.title'),
     });
-    await panel
-      .getByLabel(t('admin.messages.group.series'))
-      .selectOption({ label: seeded.seriesName });
-    await panel
-      .getByLabel(t('admin.messages.group.event'))
-      .selectOption({ index: 1 });
+    // By role and an anchored name, not `getByLabel`: each select sits inside
+    // its `<label>`, so the label's text is the caption **plus the options** —
+    // and another worker's fixture series ("E2E Series Events …") in the series
+    // dropdown made `getByLabel('Event')` match both selects. The accessible
+    // name starts with the caption whatever is chosen below it.
+    const select = (key: string) =>
+      panel.getByRole('combobox', { name: new RegExp(`^${t(key)}\\b`) });
+    await select('admin.messages.group.series').selectOption({
+      label: seeded.seriesName,
+    });
+    await select('admin.messages.group.event').selectOption({ index: 1 });
 
     // The people the event confirmed *and* who have an account. Somebody
     // without one is absent: a membership points at a profile, and they are

@@ -915,6 +915,14 @@ entry, the answer is noted below rather than repeated.
       above room planning, in the order the plan fixes. **Milestone M9 is
       reached**: the first curated plug-in is complete and the 1.2.0 contract has
       a second implementer. Three plug-ins left.
+      **The forum’s server half is done (AP 4, 08.09.2026).**
+      `apps/server/src/plugins/forum` — two tables (`plugin_forum_thread`,
+      `plugin_forum_post`), one migration, two controllers, `requires: ['profiles']`, a decision per post and no status on the thread (F195).
+      It uses `PluginParticipantReads` exactly as the proposals do, and the
+      port was not touched — which is what AP 4 was meant to prove.
+      `CURATED_PLUGINS` has three entries, forum between proposals and room
+      planning. Only `qr-checkin` still holds a README alone. The forum’s
+      client half is AP 5; two plug-ins after that.
 - [ ] **Implement the overbooking check** in the room planning plug-in: sign-ups
       per programme item against room capacity. Everything it needs exists since
       AP 9 — the room's capacity, the sessions assigned to it, and their sign-up
@@ -948,6 +956,11 @@ entry, the answer is noted below rather than repeated.
       own. A plug-in written in AP 4, AP 7 or AP 9 cannot ship without them.
       Since AP 2 the rule "a plug-in imports from `plugin-api` and nothing else
       in the server" is an ESLint rule as well.
+      **Proven for the second one, without touching the proof** (AP 4):
+      `apps/server-e2e/src/api/plugin-forum.spec.ts` asserts the same three
+      things for the forum, and `plugin-controllers.spec.ts` covered its two
+      controllers the moment the descriptor was registered — no line of the
+      test changed.
 - [ ] **The dashboard needs a hook point for plug-in tiles** (F47). The mockups
       put programme proposals and forum posts on KPI tiles of the event
       dashboard; both are plug-ins, and both arrive in this phase. AP 10
@@ -997,6 +1010,17 @@ entry, the answer is noted below rather than repeated.
       condition for extending the contract.
 
 ## Checkable after phase 5 — hardening and release
+
+- [ ] **A deleted account takes the threads it opened — replies of others
+      included.** `plugin_forum_thread.created_by` cascades, as the plan’s
+      schema says (AP 4 of phase 4), and for a **post** that is right: a post
+      is attributed by nature (E58). A thread is different — it is a container
+      for other people’s posts, and the cascade would delete their published
+      replies along with the opener’s account. Nothing can delete an account
+      yet, so AP 4 kept the plan; decide it when erasure is built: a nullable
+      `created_by` with `SET NULL` keeps the thread (the first post cascades
+      either way, and a thread with no published post is invisible), and the
+      thread’s `author` is already nullable in the payload.
 
 - [ ] **Resetting a forgotten participant password.** Deliberately left out of
       phase 3 (AP 1): FR 4.3 asks for changing the password _in_ the profile,

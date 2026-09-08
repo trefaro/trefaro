@@ -831,6 +831,7 @@
   "people.searching": "Searching…",
   "people.submit": "Search",
   "people.title": "Find participants",
+  "plugins.forum.title": "Discussion forum",
   "plugins.programProposals.approvalNote": "Approving publishes a proposal. Creating the session from it stays your own step in the programme editor.",
   "plugins.programProposals.approve": "Approve",
   "plugins.programProposals.descriptionLabel": "What would it be about?",

@@ -77,6 +77,18 @@ dass das Werkzeug etwas anderes tut als erwartet.
   zweite ist ein Defekt. Der Grund gehört ins Log; ohne ihn wäre in AP 11 der
   TLS-Fund oben eine Stunde Rätselraten geblieben.
 
+- **`nx serve server` im Watch-Modus kann stehen bleiben, und `/api/health`
+  sagt es nicht.** Zwei Dateiänderungen kurz nacheinander (AP 4 der Phase 4:
+  ein Import und die Registrierung im selben Verzeichnis) ließen Nx „Recursive
+  task invocation detected" melden und mit „Build failed, waiting for changes to
+  restart…" stehen — **nachdem** webpack „compiled successfully" gemeldet
+  hatte. Danach startet nichts mehr neu, aber der **alte** Prozess läuft weiter
+  und antwortet auf `/api/health` mit `up`. Wer so auf eine Migration wartet,
+  wartet auf den falschen Beweis: die Frage ist die Tabelle `migrations`
+  (`docker exec trefaro-postgres psql -U trefaro -d trefaro -tAc "select name
+from migrations order by timestamp desc limit 1"`), nicht der Health-Endpunkt.
+  Abhilfe: den Serve-Prozess beenden und neu starten.
+
 - **`gh run watch --exit-status` ist kein Urteil.** Auf einen Lauf, der noch
   läuft, angesetzt, endete es mit **0**, während der Lauf als `failure`
   abschloss: GitHub setzt `status: completed`, bevor `conclusion` steht, und wer

@@ -167,13 +167,16 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    dieser Phase), Icons und Worte kommen aus der Instanz, und die
    Programmvorschläge stehen vollständig — Server, Bündel und beide Clients,
    mit dem dritten Einhängepunkt `event-dashboard`. **Meilenstein M9 ist
-   erreicht. AP 4 ist nicht freigegeben.**
+   erreicht.** **AP 4 erledigt am 08.09.2026:** der Server des
+   Diskussionsforums steht — Threads, Beiträge, Freigabe je Beitrag, kein
+   Status am Thread (F195) — als zweiter Nutzer desselben Host-Ports.
+   **AP 5 ist nicht freigegeben.**
 5. Härtung, Usability-Test mit Democracy International (Pilotpartner), Doku,
    Release v1.0 — hier auch: konfigurierbare Drosselung, `CONTRIBUTING.md`
 
 **Der Stand in Zahlen:** Entscheidungen **E1–E59** vergeben (E46–E59 im Plan der
-Phase 4); Nachträge **F1–F194** und **F202** stehen im Referenzdokument (F62 und
-F129–F131 bleiben unvergeben), **F195–F201** sind reserviert; Katalog **988**
+Phase 4); Nachträge **F1–F195** und **F202** stehen im Referenzdokument (F62 und
+F129–F131 bleiben unvergeben), **F196–F201** sind reserviert; Katalog **989**
 Schlüssel. Was in einem Paket tatsächlich passierte,
 steht im Phasenprotokoll, und was man beim Bauen daraus braucht, in
 `docs/rules/` — **hier nicht noch einmal.**
