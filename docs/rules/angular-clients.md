@@ -179,7 +179,9 @@ besteht. Jede Zeile hier hat einmal einen halben Tag gekostet.
 - **Ein Plug-in-Bündel ist ein Web Component, kein zweiter Client** (AP 3 der
   Phase 4, das erste Bündel mit Fachlichkeit). Was es vom Host bekommt, sind
   genau die zugesagten Eigenschaften des Slots — `locale`, `strings`,
-  `mountPoint` — plus was der Einhängepunkt dazulegt (die Event-Id). Alles
+  `mountPoint` — plus was der Einhängepunkt dazulegt (die Event-Id, und an
+  `my-registration` seit AP 8 der Phase 4 `token` **oder** `registrationId`,
+  je nachdem, womit dieser Besuch die Seite geöffnet hat). Alles
   andere holt es sich selbst, und zwar **schmal**: die vier Aufrufe der
   Programmvorschläge sind `fetch` auf die eigenen Routen des Plug-ins, weil ein
   Statuscode alles ist, was sie brauchen. Kein `ApiClient`, kein `HttpClient`,
@@ -233,6 +235,32 @@ besteht. Jede Zeile hier hat einmal einen halben Tag gekostet.
   `locale()` im `effect()` und verwirft eine späte Antwort auf die alte Frage.
   Dort von Anfang an, mit dem Test, der die zwei Antworten in der falschen
   Reihenfolge auflöst.
+- **Ein Bündel, das eine Bibliothek nur für eine Hälfte braucht, lädt sie
+  nach** (AP 8 der Phase 4). Der Dekoder des Check-Ins (`jsqr`) wiegt ein
+  Drittel des Bündels, und die Hälfte, die ein Teilnehmender auf einem Telefon
+  lädt, **zeichnet** Codes und liest keine — also steht er hinter einem
+  `await import(…)` im Moment des Einschaltens der Kamera. Der Brocken landet
+  neben `main.js` im selben Verzeichnis, und der Server liefert dieses
+  Verzeichnis statisch aus (`useStaticAssets` auf `/api/plugins/`), also
+  stimmt der relative Pfad in beiden Betriebsarten. Statisch importiert wären
+  es 314 kB gewesen — über der Budgetwarnung von 250 kB — und die Teilnehmer
+  hätten einen Scanner geladen, um ein Bild anzusehen.
+- **Ein Element, das man selbst anhängt, trägt keine
+  Encapsulation-Attribute.** Emulierte Kapselung wählt über ein `_ngcontent`
+  am Element aus; ein per `DOMParser` gebautes `<svg>` hat keines, also greift
+  keine Regel des Bauteils darauf zu. Größe und Attribute gehören deshalb an
+  das Element selbst (`element.style.width = '100%'`), nicht in `styles`. Der
+  Umweg über `innerHTML` mit `bypassSecurityTrustHtml` wäre die andere Lösung
+  gewesen — ein Sanitizer, dem man zuredet, für etwas, das man selbst erzeugt
+  hat.
+- **Ein Abstand zwischen Zeichen ist ein `margin`, kein Leerzeichen** (AP 8).
+  Der Check-in-Code steht in Vierergruppen, damit man ihn vorlesen kann; die
+  Gruppen sind eigene `<span>` mit `margin-inline-start`, also ist der
+  Textinhalt der Zeile **exakt** der Code. Wer stattdessen Leerzeichen
+  einsetzt, gibt jedem, der die Zeile kopiert, etwas, das die Tür ablehnt —
+  und Angulars Umgang mit Leerraum im Template ist keine Zusicherung, auf die
+  man das stützt. Ein Unit-Test bewacht den Textinhalt, weil das nächste
+  Umformatieren des Templates es sonst still ändert.
 - **Eine Sprungmarke braucht `anchorScrolling`.** Beide Clients haben es jetzt
   (`withInMemoryScrolling` in `provideRouter`); ohne das ändert
   `[routerLink]="[]" [fragment]="…"` die Adresse und sonst nichts. Und immer

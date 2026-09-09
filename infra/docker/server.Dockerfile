@@ -16,7 +16,8 @@ COPY . .
 RUN npx nx build server --configuration=production \
  && npx nx build plugin-room-planning --configuration=production \
  && npx nx build plugin-program-proposals --configuration=production \
- && npx nx build plugin-forum --configuration=production
+ && npx nx build plugin-forum --configuration=production \
+ && npx nx build plugin-qr-checkin --configuration=production
 
 # ---------------------------------------------------------------------------
 

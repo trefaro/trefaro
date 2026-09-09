@@ -1,6 +1,6 @@
 # Phase 4 — Plug-ins: die fünf kuratierten Fachlichkeiten
 
-**Status: in Arbeit** (Plan 04.09.2026, AP 1 bis AP 3 erledigt am 07.09.2026 — **Meilenstein M9 erreicht** —, AP 4 bis AP 6 am 08.09.2026 — **Meilenstein M10 erreicht** —, AP 7 am 09.09.2026). Alles über
+**Status: in Arbeit** (Plan 04.09.2026, AP 1 bis AP 3 erledigt am 07.09.2026 — **Meilenstein M9 erreicht** —, AP 4 bis AP 6 am 08.09.2026 — **Meilenstein M10 erreicht** —, AP 7 und AP 8 am 09.09.2026 — **Meilenstein M11 erreicht**). Alles über
 dem Abschnitt _Fortschritt_ ist der **Plan** und wird nicht rückwirkend
 korrigiert; was tatsächlich passierte — samt Abweichungen — steht unten, wie in
 [`PHASE1.md`](PHASE1.md), [`PHASE2.md`](PHASE2.md) und
@@ -1860,3 +1860,173 @@ Was anders lief als geplant:
   angefasst; der Lauf lag direkt hinter einem `run-many -t build`, und die
   wahrscheinliche Ursache ist der Serve-Prozess dazwischen. Festgehalten statt
   weggelassen.
+
+### AP 8 — QR-Check-In in beiden Clients (erledigt, 09.09.2026) → **Meilenstein M11**
+
+Die Tür funktioniert, mit Kamera und ohne — und die Kamera ist ausdrücklich
+nicht die Hälfte, auf die es ankommt.
+
+- **Der vierte Einhängepunkt: `my-registration`.** Der geschlossene Satz in
+  `shared-models` und der gleichnamige in `plugin-api` wachsen um einen Wert,
+  und damit ist die Erweiterungstabelle von 1.2.0 **vollständig gefüllt** —
+  keine Zeile ohne ihren Füller (E46). Der Punkt sitzt in
+  `MyRegistrationPage`, direkt unter den Eckdaten: wer den Link aus seiner
+  Empfangsbestätigung an einer Tür öffnet, kam für das, was dort montiert ist.
+  Er reicht **zwei Werte** durch, `token` und `registrationId`, und genau einer
+  von beiden ist je Besuch gesetzt — ein Besuch über einen Link hat keine Id im
+  Pfad, einer über eine Sitzung kein Token in der Adresse. Übergeben statt aus
+  der Adresszeile gelesen, aus dem Grund, aus dem `mountPoint` übergeben wird
+  (F202). Dass ein Token dabei ein Beleg ist, ist bedacht: es steht ohnehin in
+  der Adresse dieser Seite, und der Code, den das Plug-in daraus zeichnet, kann
+  nichts stornieren (E53).
+- **Das Bündel** — `apps/plugins/qr-checkin`, das **vierte**, nach dem Muster
+  der drei davor: `main.ts` registriert `trefaro-plugin-qr-checkin`,
+  `qr-checkin-plugin.ts` ist nur der Schalter über `mountPoint`, darunter
+  `participant-ticket.ts` und `organizer-door.ts`. Eine `plugin-words.ts` mit
+  einer Zeile, die Anfragen über `shared-plugin-kit` (F138), die Modelle aus
+  `shared-models` — zwei Bibliotheken vom Host und keine dritte.
+  **Voreinstellung des Schalters ist die Ticketseite**, anders als bei den
+  anderen Bündeln: ein Host ohne 1.2.0 setzt nichts, und von diesen zwei
+  Hälften ist die Tür die, die niemals versehentlich erscheinen darf.
+- **Der QR-Code wird im Browser gezeichnet**, als SVG, **schwarz auf weiß** —
+  das eine Bauteil dieser Anwendung, das dem Whitelabel nicht folgt, weil ein
+  eingefärbter Code an einer Tür nicht gelesen wird. Die weiße Karte darunter
+  gilt auch für ein dunkles Theme: eine getönte Ruhezone ist ein Code ohne
+  Rand.
+- **Die Zeichen stehen darunter, in Vierergruppen** — und die Gruppen sind
+  eigene Elemente mit einem Abstand, **keine Leerzeichen**: der Textinhalt der
+  Zeile ist exakt der Code, also ist abgeschrieben oder kopiert immer etwas,
+  das die Tür annimmt. Ein Unit-Test bewacht genau das, weil es beim nächsten
+  Umformatieren des Templates sonst still verschwindet.
+- **Die Tür hat drei Wege und eine Route** (F199): die Kamera, das Feld daneben
+  und einen Knopf in jeder Zeile der Einlassliste. Der Knopf schickt den Code
+  der Zeile — den AP 7 dafür schon ausgibt. Getipptes wird von Leerzeichen
+  befreit, weil die Zeichen in Gruppen gedruckt sind. Eine Antwort ersetzt den
+  Spruch über der Liste und **markiert die Zeile an Ort und Stelle**: vor dem
+  Bildschirm steht jemand, und eine Liste, die auf ihre erste Seite
+  zurückspringt, hat dessen Platz verloren.
+- **Die Entscheidung über die Dekodier-Bibliothek** — `jsqr`, **Apache-2.0**
+  (verträglich mit AGPL-3.0-or-later), **ohne eigene Abhängigkeiten**, im
+  Bündel. Das waren die zwei Kriterien des Plans. Gezeichnet wird mit `qrcode`
+  (MIT), wie der Plan es nannte. Beide reisen im Bündel, keines aus einem Netz
+  (NFR 9).
+- **Der Dekoder wird erst beim Einschalten der Kamera geladen.** Er ist ein
+  Drittel des Gewichts, und die Hälfte, die ein Teilnehmender auf einem Telefon
+  lädt, **zeichnet** Codes und liest keine. Ergebnis: 183,69 kB im Bündel
+  (55,34 kB übertragen) plus ein eigener Brocken von 130,53 kB, den nur die Tür
+  je anfordert — ohne die Trennung wären es 314,52 kB gewesen und damit über der
+  Budgetwarnung von 250 kB.
+- **Die Kamera gibt die Linse wieder her.** `stop()` beendet jede Spur, nicht
+  nur den Zeitgeber: die Lampe neben der Linse ist das einzige Signal aus
+  Hardware, das ein Mensch dafür hat, dass ein Browser zusieht. Und
+  `ngOnDestroy` ruft es auch.
+- **Der Deskriptor bekam seinen `client`-Teil** — `mountPoints:
+['my-registration', 'event-dashboard']`, `labelKey`, und als Icon `qr_code_2`,
+  einer der vier Glyphen, die AP 1 ohne Aufrufer angelegt hat. Das Plug-in ist
+  damit das einzige der fünf, das auf der **öffentlichen** Eventseite nichts
+  zeichnet: eine Eintrittskarte gehört zu einer Anmeldung, eine Einlassliste zu
+  dem, der die Tür hält.
+- **Katalog** — 1039 auf **1065** Schlüssel, 26 neue unter
+  `plugins.qrCheckin.*`, Englisch und Deutsch.
+- **Image und CI** — `plugin-qr-checkin` in `infra/docker/server.Dockerfile`
+  und in `.github/workflows/ci.yml`; ohne den Build stünde eine Browsersuite vor
+  einem Einhängepunkt, an dem nichts montiert ist, und wäre grün.
+- **Referenzdokument** — **F198** (E54) und **F199**, Version 1.46; dazu
+  Anhangspunkt 11 um den vierten Einhängepunkt und F202 um AP 8 ergänzt.
+
+Belegt: `nx run-many -t lint test build` grün (**17** Projekte — das Bündel ist
+das neue), Server-Unit-Tests **1252** (unverändert: dieses Paket ändert am
+Server nur den Deskriptor), Nutzer-Client **258** (255 vorher: drei Tests für
+den Einhängepunkt), das neue Bündel **34**, API-Vertragstests **662**
+(unverändert, ein Test umgeschrieben), Teilnehmersuite **251** (245 vorher, 6
+neu), Veranstaltersuite **317** (311 vorher, 6 neu). Jede der drei Suiten ist
+für sich grün gefahren; die Bündel waren vorher gebaut.
+
+**Nicht grün ist der gemeinsame Lauf** `nx run-many -t e2e --parallel=1` auf
+dieser Maschine, und das ist keine Folge dieses Pakets: `server-e2e` scheitert
+darin an **429** auf der öffentlichen Registrierungsroute — das Budget aus E4
+(60 je 5 min und Client-Adresse) ist aufgebraucht, bevor die Vertragssuite an
+die Reihe kommt, weil alle drei Projekte in **einem** Serverprozess laufen und
+die Browsersuiten sich vorher registriert haben. Gemessen statt vermutet: der
+Lauf wurde mit der neuen Teilnehmersuite (`server-e2e` rot, drei bis dreizehn
+Tests je nach Reihenfolge) und **ohne** sie wiederholt (`server-e2e` rot,
+zwei Tests) — dieselbe Route, derselbe Statuscode. Allein gefahren ist die
+Vertragssuite zweimal **662 von 662**. Festgehalten in `todo.md` unter _Known
+gaps_ und als Regel in `docs/rules/e2e-tests.md`, weil die CI genau dieses
+Kommando fährt.
+
+Die zwei Browsersuiten entscheiden, was nur ein Browser entscheiden kann. Auf
+der Teilnehmerseite: dass eine **echte** Empfangsbestätigung (angemeldet über
+das öffentliche Formular, bestätigt, Mail aus Mailpit gelesen) auf eine Seite
+führt, auf der ein `<svg>` mit einem Symbol steht — schwarz auf weiß —, dass
+die Zeichen darunter dem Muster von Crockfords Base32 folgen, dass ein zweites
+Öffnen denselben Code zeigt, dass dieselbe Seite über eine **Sitzung** die
+Karte **dieser** Anmeldung zeigt und nicht die einer anderen, dass ein
+Sprachwechsel die Worte erreicht, ohne neu zu laden oder das Element zu
+ersetzen, dass die Seite auf ein Telefon passt, und dass Abschalten den
+Abschnitt nimmt, die Seite aber stehen lässt — und Einschalten denselben Code
+zurückbringt (E14). Auf der Veranstalterseite: dass die vierte Kachel im Raster
+steht und auf ihren Abschnitt springt, dass die Liste die **bestätigten**
+Anmeldungen zeigt und weder die ausstehende noch die stornierte, dass der Knopf
+neben einer Zeile einlässt und die Zeile umspringt, dass ein **getippter** Code
+— kleingeschrieben — dasselbe tut, dass ein zweites Einlesen „schon da seit …"
+sagt und **nicht** als Fehler gezeichnet wird, dass der Zeitpunkt der erste
+bleibt, dass ein unbekannter Code nichts über die Erwarteten verrät und das
+Getippte stehen lässt, und dass Abschalten Kachel und Abschnitt nimmt, ohne
+eine Anwesenheit zu verlieren.
+
+Was anders lief als geplant:
+
+- **Die Ticketseite braucht über eine Sitzung mehr als einen Aufruf.** Die
+  Route der Sitzung ist **plural** (F148: ein Mensch ist keine Anmeldung), die
+  Seite handelt von **einer** Anmeldung, und der Port kann eine Anmeldung
+  eines Kontos nicht direkt nachschlagen — er löst einen Anspruch zu einer
+  Seite auf. Also läuft das Bündel die Seiten durch, die größte Seitengröße
+  zuerst, begrenzt durch das `total` der Antwort: ein Aufruf für jeden, der
+  nicht Stammgast einer wöchentlichen Reihe ist. Die Alternative — ein Filter
+  `?registrationId=` an der Route — hätte dasselbe Durchlaufen auf den Server
+  verschoben, nur mit einer zusätzlichen Zeile im Vertrag; der Port hat aus
+  gutem Grund keine Adresse, mit der er eine fremde Anmeldung einem Konto
+  zuordnen könnte.
+- **Der Renderer bekam `type: 'svg'` ausgeschrieben**, obwohl die Browser-Hälfte
+  von `qrcode` nichts anderes kann. Ihr Node-Einstiegspunkt zeichnet
+  standardmäßig ein Bild aus **Blockzeichen für ein Terminal**, und welchen
+  Einstiegspunkt ein Testläufer auflöst, ist seine Sache. Der erste Unit-Test
+  fand deshalb kein `<svg>` — eine Zeile Option, und beide Wege liefern
+  dasselbe.
+- **Ein Fixture, das eine eigene Reihe anlegt, muss seine Anmeldungen selbst
+  löschen.** `DELETE /api/admin/series/:id` verweigert eine Reihe mit
+  bestätigten Anmeldungen (E14, „Archivieren ist die Regel") — richtig für
+  einen Veranstalter, falsch für ein Fixture, das sich Leute für seine Tür
+  angelegt hat. Der erste Lauf ließ die Reihe stehen und meldete es nur als
+  `409` in einer Serverzeile. Jetzt löscht der Aufräumer erst die Anmeldungen
+  (`deleteRegistrationsOfEvent`, neu in `registration-seed.ts`), dann die Reihe;
+  die Raumplanung machte das auf ihrer Seite schon so, und die Regel steht jetzt
+  in `docs/rules/e2e-tests.md`.
+- **Derselbe Platzhalter kann nicht Enum und Vergleichswert sein.** Das Seed des
+  Veranstalterfixtures schrieb `VALUES (…, $5, CASE WHEN $5 = 'pending' …)` und
+  bekam von PostgreSQL `inconsistent types deduced for parameter $5`.
+  Entschieden wird jetzt in TypeScript, was `confirmed_at` sein soll —
+  `null` nur für die ausstehende Anmeldung, denn wer storniert hat, hatte vorher
+  bestätigt.
+- **Die Veranstaltersuite nimmt die Modulsperre**, obwohl kein anderer Lauf
+  `qr-checkin` schaltet. Der Grund ist die **Nachbarschaft**: die Forumssuite
+  zählt die Plug-in-Kacheln auf einem Dashboard (`toHaveCount(2)`), und eine
+  vierte, die mitten in ihrer Zusicherung erscheint, wäre ihr Fehlschlag und
+  nicht der dieser Datei. Die Regel aus AP 5 heißt damit ab jetzt: die Sperre
+  nimmt, wer einen Schalter umlegt, den ein anderer Lauf **sieht** — nicht nur,
+  wer denselben Schalter umlegt.
+- **Der flaky-Lauf aus AP 7 ist nicht wiedergekommen.** Die Veranstaltersuite
+  lief in diesem Paket viermal vollständig, jedes Mal grün (317). Der Eintrag
+  in `todo.md` bleibt trotzdem stehen, bis er einen Namen hat.
+- **Der gemeinsame E2E-Lauf ist an einem Budget gescheitert, nicht an diesem
+  Paket.** Die Vertragssuite läuft in `nx run-many -t e2e --parallel=1` als
+  letztes Projekt im selben Serverprozess wie die zwei Browsersuiten, und die
+  60 Registrierungen je 5 Minuten (E4) sind bis dahin verbraucht: sie bekommt
+  429, wo sie 202 erwartet. Der Verdacht lag zuerst bei der neuen
+  Teilnehmersuite, die **eine** echte Registrierung durch das öffentliche
+  Formular ausgibt — das ist der Preis des Abnahmekriteriums, „den Link aus
+  seiner Empfangsbestätigung öffnen". Also wurde gemessen: derselbe Lauf ohne
+  diese Datei scheitert genauso, an derselben Route. Nicht repariert, weil die
+  Abhilfe entweder an der Drosselung liegt (verboten) oder daran, wie die drei
+  Projekte gefahren werden — beides gehört nicht in ein Plug-in-Paket.

@@ -177,19 +177,22 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    der Editor als dritte Kachel am Dashboard; der Port liest seit AP 6 die
    Sessions eines Events mit Titel (E56, vorgezogen), und die drei Bündel
    teilen ihre Helfer über `shared-plugin-kit`. **Meilenstein M10 ist
-   erreicht.** **AP 7 erledigt am 09.09.2026:** der QR-Check-In steht auf dem
-   Server — `PluginRegistrationReads` als dritter Host-Port, eine eigene
-   Eintrittskarte je Anmeldung (E53), drei Controller für drei Zugangsstufen,
-   und die Tür antwortet zweimal 200 auf denselben Code. **AP 8 ist nicht
+   erreicht.** **AP 7 und AP 8 erledigt am 09.09.2026:** der QR-Check-In
+   steht — Server (`PluginRegistrationReads` als dritter Host-Port, eine eigene
+   Eintrittskarte je Anmeldung, drei Controller für drei Zugangsstufen, zweimal
+   200 auf denselben Code) und beide Bildschirme: der vierte Einhängepunkt
+   `my-registration` mit dem QR-Code, schwarz auf weiß im Browser gezeichnet
+   (E54), und die Tür am Dashboard mit Kamera, Eingabefeld und einem Knopf je
+   Zeile (F199). **Meilenstein M11 ist erreicht.** **AP 9 ist nicht
    freigegeben.**
 5. Härtung, Usability-Test mit Democracy International (Pilotpartner), Doku,
    Release v1.0 — hier auch: konfigurierbare Drosselung, `CONTRIBUTING.md`
 
 **Der Stand in Zahlen:** Entscheidungen **E1–E59** vergeben (E46–E59 im Plan der
-Phase 4); Nachträge **F1–F195**, **F197** und **F202** stehen im
+Phase 4); Nachträge **F1–F195**, **F197–F199** und **F202** stehen im
 Referenzdokument (F62 und F129–F131 bleiben unvergeben), **F196** und
-**F198–F201** sind reserviert — F196 gehört zu AP 6 und ist dort nicht
-geschrieben worden (`todo.md`); Katalog **1039** Schlüssel. Was in einem Paket tatsächlich passierte,
+**F200–F201** sind reserviert — F196 gehört zu AP 6 und ist dort nicht
+geschrieben worden (`todo.md`); Katalog **1065** Schlüssel. Was in einem Paket tatsächlich passierte,
 steht im Phasenprotokoll, und was man beim Bauen daraus braucht, in
 `docs/rules/` — **hier nicht noch einmal.**
 

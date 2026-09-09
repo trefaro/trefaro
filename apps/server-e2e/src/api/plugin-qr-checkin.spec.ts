@@ -330,21 +330,26 @@ describe('the QR check-in plug-in', () => {
       expect((await toggle(true)).status).toBe(200);
     });
 
-    it('answers, and still hands the clients no descriptor (F47)', async () => {
+    it('answers, and hands the clients its two hook points (AP 8)', async () => {
       const [row, config] = await Promise.all([
         moduleRow(PLUGIN),
         api<PublicConfig>('/api/config'),
       ]);
 
       // On for the organizer, and its routes answer — the tests below are the
-      // proof of that. What `/api/config` carries is the **client** half, and
-      // this plug-in deliberately has none until AP 8: a `bundleUrl` without a
-      // bundle would be a load error an organizer reads as a broken plug-in.
-      // The same state the forum shipped in after AP 4.
+      // proof of that. What `/api/config` carries is the **client** half, which
+      // this plug-in gained with its screens: the ticket at `my-registration`,
+      // the hook point it brought with it (E54), and the door at
+      // `event-dashboard`. Nothing on the public event page: a ticket belongs
+      // to one registration and an admission list to whoever holds the door.
       expect(row.enabled).toBe(true);
-      expect(config.body.plugins.map((plugin) => plugin.key)).not.toContain(
-        PLUGIN,
+      const descriptor = config.body.plugins.find(
+        (plugin) => plugin.key === PLUGIN,
       );
+      expect(descriptor?.mountPoints).toEqual([
+        'my-registration',
+        'event-dashboard',
+      ]);
     });
   });
 

@@ -96,11 +96,30 @@ an instance were exposed today.
       a logo uploaded on a series shows up on the start page —
       `apps/user-client-e2e/src/event-series.spec.ts`.
 
+- [ ] **The combined E2E run cannot be read any more.**
+      `nx run-many -t e2e --parallel=1` — which is exactly what
+      `.github/workflows/ci.yml` runs — starts **one** `server:serve` for all
+      three projects, and the registration budget of E4 (60 per five minutes
+      and client address) is shared across them. The two browser suites
+      register through the public form; by the time `server-e2e` runs, the
+      budget is gone and the contract suite gets **429** where it expects 202.
+      Measured in AP 8 of phase 4, twice, with and without that package's new
+      participant suite — the same route, the same status either way, so it is
+      not one suite's doing. Each project on its own is green (662 / 251 /
+      317). What it costs today is honesty about "green": nobody can read the
+      combined run's result, and a real failure in it would be invisible among
+      the 429s. Three ways out, none of them free: a fresh server per project,
+      a `--parallel=1` that waits five minutes between projects, or a way to
+      let a suite spend a registration without a mail. **Not** raising the
+      limit — that is the one thing `docs/rules/decisions.md` rules out, and
+      the budget is a feature. Decide it in phase 5, where the CI job that
+      starts the whole stack already lives.
+
 ---
 
 ## On a device — waiting for Marius
 
-Three checks cannot be run from this repository **at all**, and no future phase
+Four checks cannot be run from this repository **at all**, and no future phase
 changes that: they need a production build, HTTPS and hardware in somebody's
 hand. Everything else in this file waits for a work package; these wait for a
 person. They are collected here because inside a phase list they read like
@@ -124,6 +143,26 @@ by a suite.
         this is the case the decision to make Web Push the only channel (F7)
         depends on. It does not work in a normal Safari tab; the client says so
         rather than showing nothing (`push.installFirst`).
+
+- [ ] **A camera reads a check-in code at a door.** AP 8 of phase 4 built the
+      half a suite can prove — the field beside the camera and the button in
+      every row of the admission list, which reach the same route with the same
+      code (F199) — and that is the half a door depends on. The camera itself
+      needs a lens, a permission dialog and a secure context, so no engine
+      Playwright drives can decide it. The walk: switch `qr-checkin` on, open a
+      participant's ticket page from the link in their receipt on one device,
+      open the event dashboard on another, press **Use the camera**, allow it,
+      and hold the first screen in front of the second. Then the same code
+      again — it must say "already here since …" and not refuse.
+      **A failure is a result too** — record the date and the device either
+      way. Matrix:
+  - [ ] desktop Chrome, built-in webcam — decodes, admits, names the person
+  - [ ] desktop Firefox — same
+  - [ ] Android Chrome over HTTPS, rear camera — same
+  - [ ] iOS Safari over HTTPS — same; `playsinline` is set for this case, so
+        the video must stay in the page rather than opening full screen
+  - [ ] **A refused permission leaves the door working**: the sentence appears
+        and the field beside it still admits somebody
 
 - [ ] **A reinstall picks up a newly uploaded app icon.** The manifest is built
       from `app_config` since AP 12 of phase 2 and an uploaded icon replaces the
@@ -954,6 +993,16 @@ entry, the answer is noted below rather than repeated.
       (`ProfileDirectory.addressOf`, `RegistrationsOfAddress.status`).
       `CURATED_PLUGINS` has four entries; only `personal-program` is missing,
       and the check-in's screens (AP 8) are what is left of this one.
+      **Four of five are done, both halves: the check-in's screens followed
+      (AP 8, 09.09.2026).** `apps/plugins/qr-checkin` is the fourth bundle —
+      one element, two halves, told apart by `mountPoint` (F202): the ticket at
+      the **new** `my-registration` hook point, where it draws the code as an
+      SVG in the browser, black on white (E54, F198), and the door at
+      `event-dashboard`, which reaches one route three ways — camera, field,
+      and a button in every row (F199). Two libraries in the bundle and none
+      from a network: `qrcode` (MIT) draws, `jsqr` (Apache-2.0) reads, the
+      second one loaded only when the camera is switched on. **Milestone M11 is
+      reached.** Only `personal-program` is left (AP 9).
 - [x] **Implement the overbooking check** in the room planning plug-in: sign-ups
       per programme item against room capacity. Everything it needs exists since
       AP 9 — the room's capacity, the sessions assigned to it, and their sign-up
@@ -1005,6 +1054,11 @@ entry, the answer is noted below rather than repeated.
       library is a new entry in the architecture's list of shared libs (F145
       said that list comes from the thesis) — noted for AP 10 to record in the
       reference document.
+      **Held for the fourth bundle (AP 8):** the check-in imports `wordsOf`,
+      `when` and `readJson`/`sendJson` from the kit and copied nothing. What it
+      did **not** need was `day` or `statusWord` — a door has states, but they
+      are two and they are not E51's three. Only the reference document's entry
+      is left, which is AP 10's.
 - [ ] **F196 is missing from the reference document.** AP 6 recorded it as
       "filled" (E50, warnings show and refuse nothing) but wrote no row: the
       table jumps from F195 to F202, and the version line does not mention
@@ -1017,6 +1071,8 @@ entry, the answer is noted below rather than repeated.
       the run sat directly behind a `run-many -t build`, and the likely cause
       is the serve process between the two. Watch for it — if it comes back
       with an actual failing test name, that name goes here.
+      **It did not come back in AP 8**: that suite ran twice in full, both
+      times green (317). Left open, because two green runs are not a diagnosis.
 - [ ] **Room planning stays structured for now.** An OpenStreetMap/Leaflet floor
       plan is the later stage (F14) — and never a Google map (NFR 9).
 - [ ] **Each new plug-in proves the contract.** Verify per plug-in: own tables

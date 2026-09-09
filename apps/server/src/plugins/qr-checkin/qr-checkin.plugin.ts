@@ -22,10 +22,12 @@ import { QR_CHECKIN_PLUGIN_KEY } from './qr-checkin.plugin-key';
  * one, and it answers 401 without accounts exactly as any participant route
  * does.
  *
- * **No `client` half yet.** The ticket page and the door arrive in AP 8, with
- * the `my-registration` hook point (E54) — and a `bundleUrl` without a bundle
- * would be a load error the module administration reports to an organizer as a
- * broken plug-in (F47). The same order the forum shipped in.
+ * **Two hook points, two audiences.** The ticket page draws at
+ * `my-registration` — the hook point this plug-in brought with it, because a
+ * core mail may carry no plug-in content, so the receipt links the
+ * self-service page and the code is rendered there (E54, F198) — and the door
+ * draws at `event-dashboard`, beside the three sections of AP 3 to AP 6. One
+ * bundle, told apart by the `mountPoint` the slot hands over (F202).
  */
 export const qrCheckinPlugin: ServerPlugin = {
   key: QR_CHECKIN_PLUGIN_KEY,
@@ -42,6 +44,17 @@ export const qrCheckinPlugin: ServerPlugin = {
     // `admin_user`: both streams are ordered together by timestamp, and a
     // reference cannot precede the table it points at.
     migrations: [CreateQrCheckinSchema1787900000000],
+  },
+  client: {
+    elementName: 'trefaro-plugin-qr-checkin',
+    bundleUrl: '/api/plugins/qr-checkin/main.js',
+    // The one plug-in of the five that draws nothing on the public event page:
+    // a ticket belongs to one registration, and the admission list belongs to
+    // whoever is holding the door. `my-registration` is the participant's
+    // self-service page (E54), `event-dashboard` the organizer's event (E59).
+    mountPoints: ['my-registration', 'event-dashboard'],
+    labelKey: 'plugins.qrCheckin.label',
+    icon: 'qr_code_2',
   },
   // Off by default like every curated plug-in: an instance offers what the
   // organization asked for (NFR 1). A door with a scanner at it is a decision

@@ -53,6 +53,21 @@ export async function seedConfirmedRegistration(
 }
 
 /**
+ * Removes every registration of one event, whatever state it is in.
+ *
+ * By SQL, and before the series that holds it is deleted: the endpoint refuses
+ * to delete a series with confirmed registrations under it (E14, "archiving is
+ * the rule"), which is right for an organizer and wrong for a fixture that
+ * created its own event to have people at. Deleting them takes whatever a
+ * plug-in hung off them with it, through the plug-in's own foreign key (F21).
+ */
+export async function deleteRegistrationsOfEvent(
+  eventId: string,
+): Promise<void> {
+  await db().query('DELETE FROM registration WHERE event_id = $1', [eventId]);
+}
+
+/**
  * Removes the participant accounts a run created (FR 4.1, E31).
  *
  * By SQL, because there is no endpoint for it: an organizer cannot delete

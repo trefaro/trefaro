@@ -482,6 +482,33 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   (`searchable` false). Damit prüft jeder Lauf mit, dass der Namens-Port des
   Vertrags kein Opt-in verlangt (E37) — mit einem eingetragenen Konto würde
   niemand merken, wenn sich das änderte.
+- **Drei E2E-Projekte in einem Lauf teilen sich einen Serverprozess — und
+  damit die Drosselzähler** (gemessen in AP 8 der Phase 4). `nx run-many -t e2e
+--parallel=1` startet **einen** `server:serve` für alle drei; die zwei
+  Browsersuiten registrieren sich durch das öffentliche Formular, und wenn
+  `server-e2e` als letztes an die Reihe kommt, sind die 60 Registrierungen je
+  5 Minuten (E4) aufgebraucht: die Vertragssuite bekommt **429**, wo sie 202
+  erwartet, und der Fehlschlag sieht nach einem kaputten Endpunkt aus. Die
+  Suite allein ist dann grün — das ist die Probe. **Nicht die Drosselung
+  anfassen** (`decisions.md`): entweder je Projekt fahren
+  (`nx e2e server-e2e`), oder zwischen den Projekten einen frischen Server
+  nehmen. Verwandt mit dem stehen gebliebenen Server unten, aber nicht
+  dasselbe: hier reicht **ein** Lauf.
+- **Ein Fixture mit eigener Reihe löscht seine Anmeldungen selbst** (AP 8 der
+  Phase 4). `DELETE /api/admin/series/:id` verweigert eine Reihe, unter der
+  bestätigte Anmeldungen hängen — richtig für einen Veranstalter (E14,
+  „Archivieren ist die Regel"), falsch für ein Fixture, das sich für seine
+  Tür Leute angelegt hat. Der Aufräumer löscht die Anmeldungen per SQL
+  (`deleteRegistrationsOfEvent`, `removeDoor`) und **dann** die Reihe. Wer es
+  vergisst, sieht keinen roten Test: die Reihe bleibt stehen, und die
+  Ablehnung steht als `409` in einer Serverzeile, die niemand liest.
+- **Die Modulsperre nimmt, wer einen Schalter umlegt, den ein anderer Lauf
+  _sieht_** — nicht nur, wer denselben Schalter umlegt (Erweiterung der Regel
+  aus AP 5). Die Forumssuite zählt die Plug-in-Kacheln eines Dashboards
+  (`toHaveCount(2)`); eine vierte, die mitten in dieser Zusicherung erscheint,
+  weil ein anderer Worker gerade das Check-In eingeschaltet hat, ist **deren**
+  Fehlschlag. Deshalb hält auch `plugin-qr-checkin.spec.ts` die Sperre über
+  seinen Lauf, obwohl kein zweiter Lauf `qr-checkin` schaltet.
 - **Ist ein Port belegt, weil auf der Maschine etwas anderes läuft**, startet man
   die Server selbst (`nx run server:serve:development`,
   `nx run <client>:serve:development --port=…`) und fährt Playwright direkt

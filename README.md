@@ -73,7 +73,7 @@ there has gone wrong at least once.
 npm ci
 cp .env.example .env
 docker compose -f infra/docker-compose.dev.yml up -d   # PostgreSQL + Mailpit
-npx nx build plugin-room-planning                      # plug-in web components
+npx nx run-many -t build -p 'plugin-*'                  # plug-in web components
 npx nx run server:serve                                # http://localhost:3000/api
 npx nx run user-client:serve                           # http://localhost:4200
 npx nx run admin-client:serve                          # http://localhost:4300

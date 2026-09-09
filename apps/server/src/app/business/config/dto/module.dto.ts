@@ -80,7 +80,7 @@ export class ModuleSummaryDto implements ModuleSummary {
 
   @ApiProperty({
     isArray: true,
-    enum: ['navigation', 'event-detail', 'event-dashboard'],
+    enum: ['navigation', 'event-detail', 'event-dashboard', 'my-registration'],
     description: 'Where the web component mounts; empty for a core module.',
   })
   mountPoints!: readonly PluginMountPoint[];

@@ -3,11 +3,10 @@
 A code somebody brings from their inbox, read at a door with a camera — or
 typed in, because a door may not depend on a camera driver (F199).
 
-Built in **AP 7 of phase 4** (the server, here). The ticket page and the door
-screen follow in AP 8, with the `my-registration` hook point (E54); until then
-this plug-in ships **without** a `client` half, in the order the forum used —
-a `bundleUrl` without a bundle would be a load error the module administration
-reports to an organizer as a broken plug-in (F47).
+Built in **AP 7 of phase 4** (the server, here) and **AP 8** (the two screens,
+in `apps/plugins/qr-checkin`). The bundle draws at two hook points: the ticket
+at `my-registration`, the hook point this plug-in brought with it (E54, F198),
+and the door at `event-dashboard`.
 
 ## Shape
 
@@ -92,6 +91,34 @@ NULL`) and reports whether it touched a row, so two phones scanning at once
   because they attribute something to a person; a check-in reads a
   registration, and the whole point of E11 is that somebody who never made an
   account still reaches their own page.
-- **No `summary` route.** The counts above a section are built when a section
-  reads them (E21) — that is AP 8, as it was AP 3 for the proposals and AP 5
-  for the forum.
+- **No `summary` route, and AP 8 did not add one.** The counts above a section
+  are built when a section reads them (E21) — and the admission list already
+  carries every row's state, so a second route would have been a second answer
+  to a question one read answers.
+- **The tile carries no number.** For the same reason: the list is the
+  section's, and a count on a tile would be a second read of the same table
+  (E59, F193).
+
+## The two screens (AP 8)
+
+The bundle is `apps/plugins/qr-checkin`, one custom element
+(`trefaro-plugin-qr-checkin`) told which half to draw by the `mountPoint` the
+slot hands over (F202). Its default is the **ticket**: a host older than
+plug-in API 1.2.0 names no hook point, and of these two halves the one that
+must never appear by accident is the door.
+
+- **The ticket** renders the code as an SVG in the browser, black on white —
+  the one component of this application that does not follow the instance's
+  colours, because a tinted code is one a scanner argues with. The characters
+  are printed underneath in groups of four, and the groups are separate
+  elements with a margin rather than spaces: the text of that line is exactly
+  the code, so whoever copies it copies something the door accepts.
+- **The door** has three ways to the same route (F199): the camera where the
+  browser offers one, the field beside it, and a button in every row. The
+  decoder (`jsqr`, Apache-2.0, no dependencies) is loaded when the camera is
+  switched on — it is a third of the bundle's weight, and the ticket half
+  draws codes rather than reading them.
+- **Two libraries, both in the bundle and neither from a network** (NFR 9):
+  `qrcode` (MIT) draws, `jsqr` (Apache-2.0) reads. Both licences are compatible
+  with AGPL-3.0-or-later, which was one of the two criteria the plan set; the
+  other was that they ship here rather than being fetched.

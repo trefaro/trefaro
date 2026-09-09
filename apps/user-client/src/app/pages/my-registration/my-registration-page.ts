@@ -27,6 +27,7 @@ import {
   registrationStatusKey,
   seatsLeft,
 } from '@trefaro/shared-models';
+import { PluginSlot } from '@trefaro/shared-plugins';
 import {
   SelfServiceService,
   byLink,
@@ -66,7 +67,7 @@ import {
 @Component({
   selector: 'trefaro-my-registration-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslocoPipe],
+  imports: [PluginSlot, RouterLink, TranslocoPipe],
   template: `
     @if (!access()) {
       <h1>{{ 'mine.title' | transloco }}</h1>
@@ -115,6 +116,16 @@ import {
           <dt>{{ 'mine.registered' | transloco }}</dt>
           <dd>{{ statusKey(mine) | transloco }}</dd>
         </dl>
+
+        <!-- Plug-in hook point four: this page, about this one registration
+             (plug-in API 1.2.0). It is here because a core mail may carry no
+             plug-in content: the receipt links this page, and the check-in
+             draws its code on it (E54, F198). High up on purpose — whoever
+             opened this link at a door came for what is mounted here. -->
+        <trefaro-plugin-slot
+          mountPoint="my-registration"
+          [context]="pluginContext()"
+        />
 
         @if (answers(mine).length > 0) {
           <section aria-labelledby="answers-heading">
@@ -354,6 +365,27 @@ export class MyRegistrationPage {
 
   /** The token, when this visit came from a mail — for the two link-only parts. */
   protected readonly linkToken = computed(() => this.token() ?? '');
+
+  /**
+   * What this hook point hands a plug-in: the two credentials, and nothing
+   * else.
+   *
+   * The same pair {@link access} is built from, spelled as element properties —
+   * exactly one of them is ever set, because a page reached by a link has no id
+   * in its path and a page reached by a session has no token in its query. A
+   * plug-in mounted here could read the address bar for either, and it must not
+   * (F202): what a bundle knows about a page comes from the host, or the two
+   * clients' routing becomes part of the plug-in contract.
+   *
+   * The token is a credential, and handing it over is deliberate. It is in this
+   * page's address either way, and a plug-in that had to scrape it out of there
+   * would be doing the same thing less honestly — while the code it renders
+   * from it is its own, and can cancel nothing (E53).
+   */
+  protected readonly pluginContext = computed(() => ({
+    token: this.token() ?? null,
+    registrationId: this.id() ?? null,
+  }));
 
   private readonly selfService = inject(SelfServiceService);
   private readonly i18n = inject(TranslationService);

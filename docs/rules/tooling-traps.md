@@ -109,5 +109,25 @@ from migrations order by timestamp desc limit 1"`), nicht der Health-Endpunkt.
   Render; wer zwei Zustände prüfen will, schreibt zwei Tests oder setzt am
   einen Fixture einen Input neu. Zweimal hineingelaufen (AP 5 und AP 6 der
   Phase 4), deshalb hier.
+- **Ein npm-Paket kann sich im Browser anders verhalten als in Node**, und ein
+  Testläufer entscheidet, welche Hälfte er auflöst. `qrcode` zeichnet über
+  seinen Browser-Einstiegspunkt SVG und über seinen Node-Einstiegspunkt
+  standardmäßig ein Bild aus **Blockzeichen für ein Terminal**; der Unit-Test
+  des Bündels fand deshalb kein `<svg>`, während der echte Build eines
+  lieferte. Abhilfe ist nicht, den Läufer zu konfigurieren, sondern die
+  Absicht auszuschreiben (`type: 'svg'`) — eine Zeile, und beide Wege liefern
+  dasselbe. Allgemein: was ein `browser`-Feld in der `package.json` umbiegt,
+  ist eine Verzweigung, die kein Typ zeigt.
+- **Ein CommonJS-Paket in einem Angular-Bündel braucht
+  `allowedCommonJsDependencies`.** Sonst warnt der Build je Import über
+  „optimization bailouts" — kein Fehler, aber eine Warnung, die bei jedem
+  Bauen mitläuft und die nächste echte verdeckt. Der Eintrag steht in den
+  `options` des Build-Targets, nicht in der Konfiguration.
+- **Derselbe Platzhalter kann in PostgreSQL nicht Enum und Vergleichswert
+  sein.** `VALUES (…, $5, CASE WHEN $5 = 'pending' THEN NULL ELSE now() END)`
+  scheitert mit `inconsistent types deduced for parameter $5`: einmal soll er
+  der Enum-Typ der Spalte sein, einmal `text`. Entweder casten
+  (`$5::text = 'pending'`) oder — besser in einem Fixture — die Entscheidung im
+  aufrufenden Code treffen und den Wert als eigenen Parameter schicken.
 
 Siehe auch: [Browsersuiten und E2E-Tests](e2e-tests.md), [Schichten und Ports im Server](server-layers.md).

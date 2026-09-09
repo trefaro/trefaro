@@ -1,15 +1,26 @@
 /**
  * The places a plug-in's web component may be mounted in a client.
  *
- * A **closed** set, and extending it is a contract step (plug-in API 1.2.0
- * added `event-dashboard`, and `my-registration` arrives with the ticket page
- * in AP 8 of phase 4). One hook point per screen that shows plug-in content —
- * not one per screen — because a name in here is a promise both clients keep:
- * whoever adds a value builds the host side that serves it, or a plug-in
- * declares a place that never draws it.
+ * A **closed** set, and extending it is a contract step: plug-in API 1.2.0
+ * added `event-dashboard` and `my-registration`, the last of the eight
+ * extensions of that one step (E46, F186). One hook point per screen that shows
+ * plug-in content — not one per screen — because a name in here is a promise
+ * both clients keep: whoever adds a value builds the host side that serves it,
+ * or a plug-in declares a place that never draws it.
+ *
+ * The two arrived in the packages that fill them rather than in the package
+ * that raised the version — `event-dashboard` in AP 3 of phase 4,
+ * `my-registration` in AP 8 — because a value no slot serves is exactly the
+ * pretence E46 was written against.
+ *
+ * `my-registration` is the participant client's self-service page, and it is
+ * the one hook point that is about a **single registration** rather than an
+ * event: the check-in draws its code there because a core mail may carry no
+ * plug-in content, so the receipt links the page and the plug-in renders on it
+ * (E54, F198).
  */
 export type PluginMountPoint =
-  'navigation' | 'event-detail' | 'event-dashboard';
+  'navigation' | 'event-detail' | 'event-dashboard' | 'my-registration';
 
 /**
  * An enabled plug-in as announced to the clients.

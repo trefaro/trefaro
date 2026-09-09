@@ -58,6 +58,15 @@ Kontrast auf ihrem Startbildschirm landet.
   `libs/shared-theming/assets/icons/README.md`; das Paket bleibt bewusst keine
   Abhängigkeit dieses Repositories, wie bei den Schriften.
 
+- **Der QR-Code ist die eine Ausnahme vom Whitelabel** (AP 8 der Phase 4).
+  Jedes Bauteil dieser Anwendung nimmt seine Farben aus den
+  `--trefaro-*`-Eigenschaften; der Check-in-Code nicht. Er wird **schwarz auf
+  weiß** gezeichnet, auf einer weißen Karte, die auch in einem dunklen Theme
+  weiß bleibt, samt der Ruhezone um ihn herum — ein eingefärbter Code verliert
+  seinen Kontrast, und ein Scanner, der an einer Tür jedes zweite Ticket
+  ablehnt, ist schlimmer als drei Zentimeter Seite, die fremd aussehen. Wer
+  eine weitere Ausnahme will, braucht denselben Nachweis: ein Gerät liest es
+  sonst nicht.
 - **Ein hochgeladenes App-Icon ist nie `maskable`** (F105) — nur die
   mitgelieferten Icons tragen den Schutzrand, weil sie mit einem gezeichnet
   wurden. Es **ersetzt** sie nur, wenn ein Browser davon installieren kann:

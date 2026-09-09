@@ -1,15 +1,19 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { AppConfigService } from '@trefaro/shared-config';
 import {
   provideTranslationsForTest,
   TranslationService,
 } from '@trefaro/shared-i18n';
 import type {
   MyRegistration,
+  PluginDescriptor,
+  PluginMountPoint,
   PublicEvent,
   RegistrationStatus,
 } from '@trefaro/shared-models';
+import { PluginLoaderService } from '@trefaro/shared-plugins';
 import {
   SelfServiceService,
   type SelfServiceAccess,
@@ -64,6 +68,39 @@ class FakeSelfService {
   }
 }
 
+/** The plug-in host, with nothing switched on unless a test says otherwise. */
+class StubAppConfig {
+  readonly plugins = signal<readonly PluginDescriptor[]>([]);
+  pluginsAt(mountPoint: PluginMountPoint): readonly PluginDescriptor[] {
+    return this.plugins().filter((plugin) =>
+      plugin.mountPoints.includes(mountPoint),
+    );
+  }
+  isModuleEnabled(): boolean {
+    return false;
+  }
+}
+
+class StubLoader {
+  readonly ready = signal<readonly string[]>([]);
+  loadResults(): readonly unknown[] {
+    return this.ready();
+  }
+  isReady(key: string): boolean {
+    return this.ready().includes(key);
+  }
+}
+
+const CHECKIN: PluginDescriptor = {
+  key: 'qr-checkin',
+  version: '0.1.0',
+  labelKey: 'plugins.qrCheckin.label',
+  elementName: 'trefaro-plugin-qr-checkin',
+  bundleUrl: '/api/plugins/qr-checkin/main.js',
+  mountPoints: ['my-registration'],
+  icon: 'qr_code_2',
+};
+
 /**
  * "My registration", which since AP 4 is reached in two ways (E11).
  *
@@ -73,13 +110,19 @@ class FakeSelfService {
  */
 describe('MyRegistrationPage', () => {
   let selfService: FakeSelfService;
+  let config: StubAppConfig;
+  let loader: StubLoader;
 
   async function render(inputs: { token?: string; id?: string }) {
     selfService = new FakeSelfService();
+    config = new StubAppConfig();
+    loader = new StubLoader();
 
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
+        { provide: AppConfigService, useValue: config },
+        { provide: PluginLoaderService, useValue: loader },
         provideTranslationsForTest({
           'mine.title': 'My registration',
           'mine.cancel': 'Cancel my registration',
@@ -89,7 +132,13 @@ describe('MyRegistrationPage', () => {
         { provide: SelfServiceService, useValue: selfService },
         {
           provide: TranslationService,
-          useValue: { locale: signal('en'), translate: (key: string) => key },
+          useValue: {
+            locale: signal('en'),
+            translate: (key: string) => key,
+            // The slot resolves a plug-in's words against the catalogue it
+            // already has; nothing is switched on here unless a test says so.
+            stringsWithPrefix: () => ({}),
+          },
         },
       ],
     });
@@ -158,6 +207,51 @@ describe('MyRegistrationPage', () => {
     expect(selfService.cancelled).toEqual([
       { kind: 'session', registrationId: 'registration-1' },
     ]);
+  });
+
+  it('offers the hook point about this registration (plug-in API 1.2.0, E54)', async () => {
+    const { fixture } = await render({ token: 'signed.token' });
+    config.plugins.set([CHECKIN]);
+    loader.ready.set(['qr-checkin']);
+    fixture.detectChanges();
+
+    const element = (fixture.nativeElement as HTMLElement).querySelector(
+      'trefaro-plugin-qr-checkin',
+    );
+    expect(element).not.toBeNull();
+    // The credential this visit has, handed over rather than scraped out of
+    // the address bar (F202) — the token here, the id in the other case.
+    expect((element as unknown as Record<string, unknown>)['token']).toBe(
+      'signed.token',
+    );
+    expect(
+      (element as unknown as Record<string, unknown>)['registrationId'],
+    ).toBeNull();
+  });
+
+  it('hands the registration over when a session is what opened the page', async () => {
+    const { fixture } = await render({ id: 'registration-1' });
+    config.plugins.set([CHECKIN]);
+    loader.ready.set(['qr-checkin']);
+    fixture.detectChanges();
+
+    const element = (fixture.nativeElement as HTMLElement).querySelector(
+      'trefaro-plugin-qr-checkin',
+    ) as unknown as Record<string, unknown>;
+    expect(element['registrationId']).toBe('registration-1');
+    expect(element['token']).toBeNull();
+    // And the hook point cannot forget what the contract promises.
+    expect(element['mountPoint']).toBe('my-registration');
+  });
+
+  it('mounts nothing at the hook point while the plug-in is off (E21)', async () => {
+    const { fixture } = await render({ token: 'signed.token' });
+
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector(
+        '.trefaro-plugin-slot > *',
+      ),
+    ).toBeNull();
   });
 
   it('warns about the link only when there is one', async () => {

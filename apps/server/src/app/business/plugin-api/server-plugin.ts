@@ -5,9 +5,11 @@ import type { DynamicModule, Type } from '@nestjs/common';
  *
  * The set stays closed: adding one is a versioned change to this contract, not
  * an ad-hoc extension. The thesis fixed two hook points; plug-in API 1.2.0
- * adds the organizer's event dashboard, because the mockups draw the tiles for
- * the proposals and the forum there (E59, F47), and `my-registration` follows
- * with the ticket page in AP 8 of phase 4.
+ * adds two more — the organizer's event dashboard, because the mockups draw
+ * the tiles for the proposals and the forum there (E59, F47), and
+ * `my-registration`, the participant's self-service page, because the ticket
+ * code travels as a page rather than as an attachment (E54, F198). Both
+ * arrived in the package that filled them, AP 3 and AP 8 of phase 4.
  *
  * Spelled here as well as in `@trefaro/shared-models`, on purpose: this is what
  * a **plug-in** declares, and the clients read the other one. A plug-in gets
@@ -16,7 +18,7 @@ import type { DynamicModule, Type } from '@nestjs/common';
  * through `ModuleAdminService` into `PluginDescriptorDto`.
  */
 export type PluginMountPoint =
-  'navigation' | 'event-detail' | 'event-dashboard';
+  'navigation' | 'event-detail' | 'event-dashboard' | 'my-registration';
 
 /**
  * The plug-in's persistence contribution: its own entities and its own
