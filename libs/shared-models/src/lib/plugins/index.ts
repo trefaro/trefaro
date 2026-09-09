@@ -37,6 +37,22 @@ export {
   type ProposalSummary,
 } from './program-proposals';
 export {
+  CHECKIN_CODE_LENGTH,
+  DEFAULT_ADMISSION_PAGE_SIZE,
+  DEFAULT_TICKET_PAGE_SIZE,
+  MAX_ADMISSION_PAGE_SIZE,
+  MAX_CHECKIN_CODE_LENGTH,
+  MAX_TICKET_PAGE_SIZE,
+  QR_CHECKIN_MODULE_KEY,
+  type AdmissionPage,
+  type AdmissionRow,
+  type CheckinPageQuery,
+  type CheckinResult,
+  type CheckinScan,
+  type CheckinTicket,
+  type CheckinTicketPage,
+} from './qr-checkin';
+export {
   MAX_ROOM_CAPACITY,
   MAX_ROOM_DESCRIPTION_LENGTH,
   MAX_ROOM_FLOOR_LENGTH,

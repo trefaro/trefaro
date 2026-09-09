@@ -22,6 +22,17 @@ Entscheidungsprotokoll (`docs/Anforderungsanalyse_und_Umsetzungsplan.md`).
   nicht mit ihr (`SET NULL`) — sonst schreibt das Schließen eines
   Veranstalterkontos Geschichte um. Eine Migration je Arbeitspaket, explizites
   SQL, `down` mitgeschrieben und einmal wirklich ausgeführt.
+- **Eine Eintrittskarte hat die Anmeldung als Primärschlüssel** (E53, F197).
+  `plugin_qr_checkin_ticket` — eine Anmeldung, ein Code, ein Zustand; ein
+  Surrogatschlüssel erlaubte zwei Karten für einen Menschen an einer Tür und
+  keine Antwort auf „welche gilt". `code` ist **instanzweit** unique, damit ein
+  Scan auflöst, ohne zu wissen, zu welchem Event er gehört (zwei Events an
+  einem Tag), und `checked_in_at IS NULL` heißt „noch nicht da", dieselbe
+  Gestalt wie `confirmed_at` (E32) — zwei Tabellen für Code und Anwesenheit
+  wären zwei Wahrheiten über einen Menschen an einer Tür. Der Code wird
+  **gespeichert** und nicht abgeleitet: das ist kein Widerspruch zu F23 (dort
+  geht es um den Nachweis einer Einwilligung), und ein abgeleiteter wäre mit
+  einer Rotation von `AUTH_SECRET` bei allen zugleich tot.
 - **Zeiten sind absolute Zeitpunkte, die Zone hängt am Event** (E8). Formatiert
   wird ausschließlich über die Helfer in `shared-models`, auch beim Aggregieren
   (F33). Ein Programmpunkt hat keine eigene Zone; Timeline-Tage über

@@ -64,6 +64,10 @@ class FakeDirectory implements ProfileDirectory {
     this.asked.push(email);
     return this.locales.get(email) ?? null;
   }
+
+  async addressOf(): Promise<string | null> {
+    throw new Error('not used in this suite — that is the plug-in host’s side');
+  }
 }
 
 describe('MailCatalogue', () => {

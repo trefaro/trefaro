@@ -145,14 +145,24 @@ export class TypeormRegistrationRepository
   async searchByAddress(
     query: RegistrationsOfAddress,
   ): Promise<RegistrationSlice> {
-    const [rows, total] = await this.repository
+    const builder = this.repository
       .createQueryBuilder('registration')
       .innerJoin('event', 'event', 'event.id = registration.event_id')
       // The same comparison the unique index uses (E10): one address is one
       // person however it was typed.
       .where('lower(registration.email) = lower(:email)', {
         email: query.email,
-      })
+      });
+
+    // Narrowed only when the caller says so: "my registrations" lists every
+    // state, the plug-in registration port asks for the confirmed ones.
+    if (query.status) {
+      builder.andWhere('registration.status = :status', {
+        status: query.status,
+      });
+    }
+
+    const [rows, total] = await builder
       .orderBy('event.starts_at', 'DESC')
       // A unique tie-breaker, always last: two events starting in the same
       // minute must not swap places between two pages.

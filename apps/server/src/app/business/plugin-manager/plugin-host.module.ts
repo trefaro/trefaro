@@ -1,7 +1,13 @@
 import { Global, Module } from '@nestjs/common';
-import { PLUGIN_PARTICIPANT_READS, PLUGIN_PROGRAM_READS } from '../plugin-api';
+import {
+  PLUGIN_PARTICIPANT_READS,
+  PLUGIN_PROGRAM_READS,
+  PLUGIN_REGISTRATION_READS,
+} from '../plugin-api';
 import { ProfilePluginReads } from '../profiles/profile-plugin-reads';
 import { ProgramPluginReads } from '../program/program-plugin-reads';
+import { RegistrationPluginReads } from '../registration/registration-plugin-reads';
+import { SecurityModule } from '../security';
 
 /**
  * What the host offers its plug-ins (E12).
@@ -19,6 +25,12 @@ import { ProgramPluginReads } from '../program/program-plugin-reads';
  * phase 4). Nothing here goes the other way: the host asks a plug-in nothing
  * (E59).
  *
+ * It imports exactly one module, and `SecurityModule` is not a feature: it
+ * holds the token signer and imports nothing itself, so it cannot close a
+ * cycle. The registration adapter needs it because resolving a self-service
+ * claim is checking a signature (E11) — and a second implementation of "is
+ * this token valid" is the one that would outlive a rotated secret.
+ *
  * It imports no feature module — deliberately, and once by accident not: the
  * programme adapter tried to reach `ProgramService` in AP 6, and
  * `PluginHostModule → ProgramModule → EventsModule → PushModule → …` closed a
@@ -28,12 +40,22 @@ import { ProgramPluginReads } from '../program/program-plugin-reads';
  */
 @Global()
 @Module({
+  imports: [SecurityModule],
   providers: [
     ProgramPluginReads,
     { provide: PLUGIN_PROGRAM_READS, useExisting: ProgramPluginReads },
     ProfilePluginReads,
     { provide: PLUGIN_PARTICIPANT_READS, useExisting: ProfilePluginReads },
+    RegistrationPluginReads,
+    {
+      provide: PLUGIN_REGISTRATION_READS,
+      useExisting: RegistrationPluginReads,
+    },
   ],
-  exports: [PLUGIN_PROGRAM_READS, PLUGIN_PARTICIPANT_READS],
+  exports: [
+    PLUGIN_PROGRAM_READS,
+    PLUGIN_PARTICIPANT_READS,
+    PLUGIN_REGISTRATION_READS,
+  ],
 })
 export class PluginHostModule {}

@@ -45,6 +45,31 @@ Link.
   kommen. `?locale=` mit den drei Antworten von F94, über den durch `plugin-api`
   re-exportierten Pipe; ob das Event veröffentlicht ist, prüft die Route nicht
   — der Vertrag hat keinen Port dafür, wie beim Forum.
+- **Ein Plug-in darf drei Zugangsstufen haben, wenn es drei Zielgruppen hat**
+  (E57, AP 7 der Phase 4). Das Check-In ist der Fall und deshalb das Beispiel:
+  `GET /api/user/plugins/qr-checkin/ticket?token=` ist anonym und über die
+  **Signatur** autorisiert (E11, E54) — Token in der **Query**, weil das der
+  Link in der Mail trägt (F44) —, `GET /api/participant/plugins/qr-checkin/tickets`
+  über die Sitzung (F148, Plural: ein Mensch ist keine Anmeldung), und die Tür
+  liegt unter `admin/`. Der anonyme Controller trägt als einziger eine eigene
+  Drosselung (60 je 5 min, E4); hinter einer Sitzung greift die globale.
+- **Ein Code am Einlass reist im Rumpf, und ein zweiter Scan ist kein Fehler**
+  (E53, F197). `POST …/checkins` mit `{ code }` — nichts, das den Zustand
+  ändert, ist ein GET, und ein Code in einer URL landet im Log und in der
+  Chronik eines geteilten Bildschirms. Zweimal derselbe Code ergibt **zweimal
+  200** mit **demselben** Zeitpunkt und `alreadyCheckedIn`; die Bedingung steht
+  im `UPDATE … WHERE checked_in_at IS NULL`, und das Statement sagt zurück, ob
+  es geschrieben hat. Ein unbekannter Code ist eine **404, die nichts über
+  Anmeldungen sagt**, und jede Art, an einem Ticket zu scheitern — gefälscht,
+  abgelaufen, gelöscht, nie bestätigt —, ist wortgleich dieselbe 404.
+- **Die Einlassliste trägt den Code je Zeile** (F199). Ein Knopf neben einer
+  Zeile schickt genau das, was die Kamera gelesen hätte, also hat die Tür
+  **eine** Route — die Alternative wäre ein zweiter Einlassweg über die
+  Anmelde-Id gewesen, und dann liefen „mit Kamera" und „ohne Kamera"
+  auseinander. Der Code entsteht **beim ersten Lesen**, und das gilt für die
+  Liste des Veranstalters wie für die Ticketseite; dass ein `GET` dabei eine
+  Zeile anlegt, ist idempotent (`INSERT … ON CONFLICT DO NOTHING`) und für
+  niemanden sichtbar.
 - **Warnungen sind gerechnet, nicht gespeichert, und lehnen nichts ab** (E50,
   F196). `GET …/events/:id/schedule` trägt je Session `warnings`
   (`overbooked`, `double-booked`) und je Raum die Vereinigung, dazu **jede**

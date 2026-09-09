@@ -1,6 +1,6 @@
 # Phase 4 — Plug-ins: die fünf kuratierten Fachlichkeiten
 
-**Status: in Arbeit** (Plan 04.09.2026, AP 1 bis AP 3 erledigt am 07.09.2026 — **Meilenstein M9 erreicht** —, AP 4 bis AP 6 am 08.09.2026 — **Meilenstein M10 erreicht**). Alles über
+**Status: in Arbeit** (Plan 04.09.2026, AP 1 bis AP 3 erledigt am 07.09.2026 — **Meilenstein M9 erreicht** —, AP 4 bis AP 6 am 08.09.2026 — **Meilenstein M10 erreicht** —, AP 7 am 09.09.2026). Alles über
 dem Abschnitt _Fortschritt_ ist der **Plan** und wird nicht rückwirkend
 korrigiert; was tatsächlich passierte — samt Abweichungen — steht unten, wie in
 [`PHASE1.md`](PHASE1.md), [`PHASE2.md`](PHASE2.md) und
@@ -383,7 +383,7 @@ ohne Füller keine Erweiterung.
 | `PluginClientContribution.icon` wird gelesen, Namen aus geschlossenem Satz    | E49: das Feld liest endlich jemand                                                                                                                                    | AP 1       |
 | `ServerPlugin.requires`                                                       | E47: drei Plug-ins brauchen Konten                                                                                                                                    | AP 2       |
 | Port `PluginParticipantReads` — wer fragt, und wie ein Autor heißt            | E58: ein Beitrag gehört einem Menschen                                                                                                                                | AP 2, AP 4 |
-| Port `PluginRegistrationReads` — Anspruch auflösen, bestätigte Anmeldungen    | E53/E54: Ticket und Einlassliste                                                                                                                                      | AP 7       |
+| Port `PluginRegistrationReads` — Anspruch auflösen, bestätigte Anmeldungen    | E53/E54: Ticket und Einlassliste — dazu `findRegistration` je Id, weil die Tür einen **Namen** zeigen muss (AP 7)                                                     | AP 7       |
 | `PluginProgramReads.listForEvent(eventId, locale)` und `locale` an `findItem` | E56: ein Teilnehmender liest seinen Plan — `listForEvent` mit Titel kam in **AP 6** (vorgezogen: der Raumplan brauchte es zuerst), `locale` an `findItem` bleibt AP 9 | AP 6, AP 9 |
 
 Was **nicht** dazukommt, und warum es genannt wird, damit es nicht nachträglich
@@ -1683,3 +1683,180 @@ Was anders lief als geplant:
   Raums, und der Locator, der den Raum über seinen Namen fand, verlor ihn.
   Das Formular steht jetzt **unter** der Überschrift — was auch für den
   Menschen davor besser ist, der sieht, welchen Raum er ändert.
+
+### AP 7 — QR-Check-In: Server (erledigt, 09.09.2026)
+
+Umgesetzt:
+
+- **Der Vertrag** — `PluginRegistrationReads`, der dritte Host-Port, mit drei
+  Fragen und keiner vierten: einen **Selbstbedienungsanspruch auflösen**
+  (`resolveClaim`, Token **oder** Sitzung, dieselbe Regelstrecke wie F148),
+  die **bestätigten Anmeldungen eines Events** seitenweise nach Namen lesen
+  (`findForEvent`), und eine **Id auflösen, die das Plug-in schon gespeichert
+  hat** (`findRegistration`) — Letzteres nicht im Plan, aber unvermeidlich,
+  siehe _Was anders lief_. Herausgegeben werden fünf Felder: Id, Event, Vor-
+  und Nachname, Zeitpunkt des Double-Opt-Ins. **Keine Adresse** (F55), **keine
+  Formularantworten** (F12), keine Suche. Version bleibt **1.2.0**; der
+  Kompatibilitätsfall stand seit AP 1 und nennt den Port jetzt beim Namen.
+- **Der Adapter** — `RegistrationPluginReads` in `business/registration/`, vom
+  globalen `PluginHostModule` bereitgestellt, wie die zwei davor. Er liest
+  Ports der globalen Datenzugriffsschicht und **kein Feature-Modul** (die
+  Lehre aus AP 6). Drei Regeln stehen in seinen Anweisungen, nicht in einem
+  Aufrufer (F152): **nur bestätigt** in beiden Lesezugriffen und in
+  `findRegistration`, **eine Regelstrecke für beide Ansprüche**, und **keine
+  Adresse verlässt ihn** — der Kontoanspruch löst sie drinnen auf und gibt
+  Namen heraus. `PluginHostModule` importiert dafür als einziges Modul
+  `SecurityModule` (der Token-Signierer, importiert selbst nichts, kann also
+  keinen Kreis schließen): einen Anspruch aufzulösen heißt eine Signatur zu
+  prüfen, und eine zweite Implementierung davon wäre die, die ein rotiertes
+  Geheimnis überlebt.
+- **Zwei schmale Erweiterungen am Kern**, beide notwendig und beide klein:
+  `ProfileDirectory.addressOf(participantId)` — die Umkehrung von
+  `withAccount`, nur bestätigte Konten, in der Anweisung (E32, F152); und
+  `RegistrationsOfAddress.status`, geschrieben wie `RegistrationSearch.status`
+  es schon war. „Meine Anmeldungen" übergibt `null` und zeigt weiter **jeden**
+  Zustand, der Port fragt nach `confirmed`.
+- **Das Plug-in** — `apps/server/src/plugins/qr-checkin/` nach dem Muster der
+  drei davor: `api/` (**drei** Controller, je Zugangsstufe einer, plus DTOs),
+  `business/` (Service, Repository-Port, Code-Erzeuger), `data-access/`
+  (Entity, TypeORM-Repository, **eine** Migration), Deskriptor **ohne**
+  `requires` (E47: eine Tür liest eine Anmeldung, und die braucht kein Konto)
+  und **ohne** `client`-Teil, der kommt mit den Bildschirmen in AP 8.
+  `CURATED_PLUGINS` hat vier Einträge; das Check-In steht unten, weil FR 3.16
+  P3 ist. Das README des Verzeichnisses ist ersetzt — vorher eine Notiz „noch
+  nicht gebaut".
+- **Drei Controller sind einer mehr als bei jedem anderen Plug-in dieser
+  Phase**, und genau das macht dieses Paket zum Beispiel für E57: die
+  Ticketseite hinter dem Mail-Link ist anonym und über eine Signatur
+  autorisiert (E11, E54), die eigene Ticketliste braucht eine Sitzung (F148),
+  die Tür einen Veranstalter. Der anonyme Controller trägt als einziger eine
+  eigene Drosselung (60 je 5 min, E4).
+- **Die Tabelle** — `plugin_qr_checkin_ticket`, eine Migration
+  (`CreateQrCheckinSchema1787900000000`, nach dem Forum gestempelt), explizites
+  SQL, `down` mitgeschrieben und **wirklich gefahren**: Tabelle von Hand
+  gedroppt, die Zeile aus `migrations` gelöscht, der nächste Start hat `up`
+  erneut angewandt. **Die Anmeldung ist der Primärschlüssel** — eine Anmeldung,
+  ein Code, ein Zustand; ein Surrogatschlüssel erlaubte zwei Karten für einen
+  Menschen an einer Tür. `code` ist instanzweit **unique**, damit ein Scan
+  auflöst, ohne zu wissen, zu welchem Event er gehört. Zwei echte
+  Fremdschlüssel: die Anmeldung mit `CASCADE`, `checked_in_by` mit `SET NULL`;
+  keine Kerntabelle angefasst (F21).
+- **Die Routen** — genau die vier Zeilen der API-Oberfläche für AP 7:
+  `GET /api/user/plugins/qr-checkin/ticket?token=`,
+  `GET /api/participant/plugins/qr-checkin/tickets`,
+  `POST /api/admin/plugins/qr-checkin/checkins` (Code im **Rumpf**, kein GET)
+  und `GET /api/admin/plugins/qr-checkin/events/:id/checkins`. `…/summary`
+  gehört zu AP 8 und ist nicht gebaut (E21).
+- **Der Code** — 26 Zeichen aus **Crockfords Base32** (ohne `I`, `L`, `O`,
+  `U`), 130 Bit, erzeugt beim ersten Lesen und danach unverändert. Gelesen wird
+  er getrimmt und großgeschrieben, weil eine Kamera und ein Mensch sich über
+  beides uneinig sind. Ausgegeben wird er **auch an die Einlassliste**, je
+  Zeile: der Knopf neben einer Zeile schickt denselben Code, den die Kamera
+  läse, also hat die Tür **eine** Route (F199) — das ist die Entscheidung, die
+  AP 8 hier vorfindet statt sie zu erfinden.
+- **Ein zweiter Scan ist eine Antwort, kein Fehler** (E53): 200 mit dem
+  **ersten** Zeitpunkt und `alreadyCheckedIn`. Die Bedingung steht im
+  `UPDATE … WHERE checked_in_at IS NULL`, und das Statement sagt zurück, ob
+  **es** geschrieben hat — zwei Telefone, die gleichzeitig scannen, können
+  nicht beide „zuerst" hören.
+- **Nutzlasten in `shared-models`** — `lib/plugins/qr-checkin.ts` mit dem
+  Schlüssel, den zwei Längen, den vier Seitengrößen, `CheckinTicket`,
+  `AdmissionRow`, `CheckinResult`, `CheckinScan` und den Seitentypen. Die DTOs
+  des Plug-ins implementieren sie.
+- **Katalog** — 1038 auf **1039** Schlüssel: `plugins.qrCheckin.title`, der
+  Name in der Modulverwaltung, Englisch und Deutsch. Mehr braucht ein Paket
+  ohne Bildschirm nicht.
+- **Werkzeug** — `tools/spike-verification/verify-plugin-toggle.mjs` kannte in
+  seiner `SHIPPED`-Liste die Plug-ins der Phase 4 nicht; sie stand seit Phase 2
+  auf `room-planning` allein. Jetzt vollständig (`program-proposals`, `forum`,
+  `room-planning`, `qr-checkin`), mit dem Satz im Kopf, dass sie mit
+  `CURATED_PLUGINS` mitwandert. Die weitere Ausbaustufe — der 409 der
+  Voraussetzung, fünf Plug-ins — bleibt AP 10.
+- **README** des Plug-ins unter `apps/server/src/plugins/qr-checkin/` — die
+  Form, die drei Zugangsstufen als Tabelle, die Vertragsnutzung, die nicht
+  offensichtlichen Entscheidungen.
+- **Referenzdokument** — **F197** (E53), Version 1.45.
+
+Belegt: `nx run-many -t lint test build` grün (16 Projekte), Server-Unit-Tests
+**1252** (1222 vorher: 17 für den Check-In-Service, 13 für den Port-Adapter),
+API-Vertragstests **662** (635 vorher; neu
+`apps/server-e2e/src/api/plugin-qr-checkin.spec.ts` mit 27 Tests),
+Teilnehmersuite **245** und Veranstaltersuite **311** grün — unverändert in der
+Zahl, dieses Paket hat keinen Bildschirm; die drei E2E-Projekte sind
+nacheinander gefahren, wie die CI es tut. Die Migration ist gegen die laufende
+Instanz gefahren — und ihr `down` von Hand, mit Neustart danach;
+`\d plugin_qr_checkin_ticket` zeigt die zwei Prüfbedingungen, die zwei
+Fremdschlüssel und den Unique-Index.
+
+Die Vertragssuite entscheidet, was nur eine echte Datenbank entscheiden kann:
+dass ein Token aus einer **echten** Empfangsbestätigung (angemeldet, bestätigt,
+Mail gelesen) einen Code liefert und beim zweiten Lesen denselben; dass ein
+gefälschtes und ein verfälschtes Token **wortgleich** dieselbe 404 bekommen;
+dass eine Sitzung genau ihre zwei bestätigten Anmeldungen als Karten sieht und
+die unbestätigte und die stornierte Zeile nicht; dass derselbe Code zweimal
+200 mit demselben Zeitpunkt ergibt; dass ein unbekannter Code eine 404 ist,
+in der weder „registration" noch „event" vorkommt; dass die Einlassliste die
+zwei bestätigten Anmeldungen eines Events nach Namen zeigt und die
+stornierte und die ausstehende nicht — die Zeilen sind per SQL in
+`registration` geschrieben, das Plug-in liest diese Tabelle nicht, also können
+sie nur über den Port gekommen sein (E53); dass der Code aus einer Listenzeile
+an derselben Tür funktioniert (F199); dass eine Stornierung die Tür **schließt**
+und eine Wiederherstellung denselben Code und dieselbe Anwesenheit
+zurückbringt; und dass Abschalten 404 gibt, ohne eine Zeile zu verlieren.
+
+Was anders lief als geplant:
+
+- **Der Port bekam eine dritte Methode: `findRegistration(id)`.** Der Plan
+  nannte zwei Fähigkeiten — Anspruch auflösen, Anmeldungen eines Events lesen.
+  Beim Bauen der Tür fehlte die dritte: ein Scan löst einen Code zu einer
+  **Anmelde-Id** auf, und was der Mensch am Einlass braucht, ist ein
+  **Name** — ein Code allein sagt ihm nicht, ob der Mensch davor der Mensch auf
+  der Karte ist, und genau das ist FR 3.16. Die Alternative wäre gewesen, die
+  Antwort auf die Id zu beschränken und den Client die Liste neu laden zu
+  lassen: an einer Tür, mit einer Schlange davor, ist das keine. Die Methode
+  ist auch keine neue Fähigkeit — sie löst eine Id auf, die das Plug-in
+  **selbst gespeichert** hat, dieselbe Gestalt und dieselbe Begründung wie
+  `PluginParticipantReads.findAuthors`, und jede Id, die es hält, kam aus einer
+  der beiden anderen Methoden, die den Namen ohnehin tragen. Nebenwirkung, und
+  eine gute: sie ist auf `confirmed` gefiltert, also schließt eine Stornierung
+  die Tür, ohne dass das Plug-in die Regel besitzt.
+- **Die Einlassliste gibt Codes aus.** Der Plan sagt „erzeugt beim ersten
+  Lesen" für die Ticketseite; für die Liste stand es nicht da. Ohne Code je
+  Zeile hätte AP 8 für den Knopf aus F199 entweder eine zweite Route (Einlass
+  über die Anmelde-Id) oder eine zweite Regel gebraucht — beides ist eine
+  Gestalt, in der „mit Kamera" und „ohne Kamera" auseinanderlaufen. Also ist
+  „erstes Lesen" auch das Lesen des Veranstalters, und die Tür hat **eine**
+  Route. Dass ein `GET` dabei eine Zeile anlegt, ist dieselbe Idempotenz wie
+  auf der Ticketseite: `INSERT … ON CONFLICT DO NOTHING`, kein für den Menschen
+  sichtbarer Zustand.
+- **Zwei Kernports mussten wachsen, und beide um genau ein Feld.**
+  `ProfileDirectory` hatte keine Antwort auf „welche Adresse ist dieses Konto",
+  und ohne sie ist der Kontoanspruch von außerhalb des Profilmoduls nicht
+  auflösbar (E31: es gibt kein `user_id` an der Anmeldung). Der naheliegende
+  Weg — `UserProfileRepository` an ein drittes Modul — ist der, den E33
+  verbietet: der kann ein ganzes Konto lesen **und** schreiben. Also die
+  schmale Frage am schmalen Port, bestätigte Konten in der Anweisung. Und
+  `RegistrationsOfAddress` bekam `status`, wortgleich zu dem, was
+  `RegistrationSearch` seit Phase 1 hat.
+- **`PluginHostModule` importiert jetzt ein Modul.** Bis AP 6 stand dort „kein
+  Feature-Modul", und das gilt weiter; `SecurityModule` ist keines — es hält
+  den Signierer und importiert selbst nichts, kann also den Kreis nicht
+  schließen, an dem AP 6 der Server nicht mehr startete. Der Satz im Kopf des
+  Moduls nennt beides, damit die nächste Erweiterung die Unterscheidung
+  vorfindet.
+- **`/api/config` erwähnt das Plug-in auch eingeschaltet nicht**, und der erste
+  Vertragstest behauptete das Gegenteil. `enabledModules` sind die
+  **Kernmodule**, und `plugins` ist die Liste der **Client**-Deskriptoren — ein
+  Plug-in ohne `client`-Teil steht in keiner von beiden. Das ist genau der
+  Zustand, in dem das Forum nach AP 4 war; der Test sagt ihn jetzt so.
+- **F196 fehlt im Referenzdokument.** AP 6 hat es als „gefüllt" protokolliert,
+  aber keine Zeile geschrieben — die Tabelle springt von F195 auf F202, und die
+  Versionszeile nennt F196 nicht. Nicht in diesem Paket nachgetragen, weil es
+  zu AP 6 gehört; als offener Punkt für AP 10 festgehalten, das die Vollzahl
+  F186–F201 ohnehin prüft.
+- **Der erste Lauf der Veranstalter-Browsersuite war rot**, die zwei danach
+  grün mit derselben Zahl (311) — Nx selbst hat den Lauf als _flaky task_
+  markiert. Dieses Paket hat keinen Bildschirm und keine Datei der Suite
+  angefasst; der Lauf lag direkt hinter einem `run-many -t build`, und die
+  wahrscheinliche Ursache ist der Serve-Prozess dazwischen. Festgehalten statt
+  weggelassen.

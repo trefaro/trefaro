@@ -152,6 +152,9 @@ export class SelfServiceService {
 
     const slice = await this.registrations.searchByAddress({
       email: email.trim().toLowerCase(),
+      // Every state, on purpose: `pending` and `cancelled` are exactly the two
+      // that make somebody come here and ask.
+      status: null,
       offset,
       limit: pageSize,
     });

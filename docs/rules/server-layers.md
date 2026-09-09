@@ -54,12 +54,14 @@ diese Eigenschaft.
   Port (`RegistrationTally`, `ProgramTally`) statt Zugriff auf die Zeilen. Einen
   zählenden Port bekommt, was groß oder unbegrenzt ist; dreißig winzige
   Felddefinitionen werden in der Geschäftslogik gezählt (F49). Dasselbe Muster
-  für eine **Frage über eine Adresse**: `ProfileDirectory` in
-  `business/common/ports/` beantwortet genau zwei — hat diese Adresse ein
-  bestätigtes Konto (Teilnehmerübersicht, F149) und in welcher Sprache wird ihr
-  geschrieben (Mail, F125). Nicht `UserProfileRepository` an zwei weitere
-  Module: der kann ein ganzes Konto lesen **und** schreiben, und das darf das
-  Modul, dem die Konten gehören (E33). Der Weg über einen Port ist hier nicht
+  für eine **Frage über ein Konto**: `ProfileDirectory` in
+  `business/common/ports/` beantwortet genau drei — hat diese Adresse ein
+  bestätigtes Konto (Teilnehmerübersicht, F149), in welcher Sprache wird ihr
+  geschrieben (Mail, F125) und — seit AP 7 der Phase 4 — welche Adresse **ist**
+  dieses Konto (Plug-in-Host, E31, F197; bestätigte Konten in der Anweisung).
+  Nicht `UserProfileRepository` an drei weitere Module: der kann ein ganzes
+  Konto lesen **und** schreiben, und das darf das Modul, dem die Konten gehören
+  (E33). Der Weg über einen Port ist hier nicht
   Geschmack — `MailModule` kann `ProfilesModule` nicht importieren, weil dieses
   Mail verschickt.
 - **Ein Modul, das eine Authentifizierung braucht, importiert sie** — es baut
@@ -152,9 +154,30 @@ diese Eigenschaft.
 - **Ein Plug-in liest Kerndaten nur über den Vertrag** (E12, F45).
   `PluginProgramReads` liefert fünf Felder je Programmpunkt und Anmeldezahlen,
   `PluginParticipantReads` den **Namen** eines Autors samt Bildadresse und
-  ausdrücklich keine E-Mail-Adresse (E58, F55, F192); beide vom globalen
-  `PluginHostModule`. Neue Fähigkeit = Minor am `PLUGIN_API_VERSION` **plus**
-  ein Fall im Kompatibilitätstest.
+  ausdrücklich keine E-Mail-Adresse (E58, F55, F192), `PluginRegistrationReads`
+  seit AP 7 der Phase 4 einen aufgelösten **Selbstbedienungsanspruch**, die
+  bestätigten Anmeldungen eines Events und eine Id, die das Plug-in selbst
+  gespeichert hat (E53, F197) — fünf Felder, **keine Adresse**, **keine
+  Formularantworten**, keine Suche; alle drei vom globalen `PluginHostModule`.
+  Neue Fähigkeit = Minor am `PLUGIN_API_VERSION` **plus** ein Fall im
+  Kompatibilitätstest.
+- **Ein Host-Port beantwortet drei Gestalten von Frage und keine vierte**
+  (F197, wie F152): einen **Anspruch** auflösen, **eine Liste** zu einem
+  Elternteil lesen, oder **eine Id auflösen, die das Plug-in selbst
+  gespeichert hat**. `findAuthors` und `findRegistration` sind dieselbe dritte
+  Gestalt: sie geben nichts heraus, was der Aufrufer nicht schon über eine der
+  ersten beiden bekommen hätte. Was es nicht gibt, ist eine **Suche** — die
+  wäre der Schritt, mit dem ein Port zum Teilnehmerverzeichnis wird.
+- **Zwei Ansprüche, eine Regelstrecke — auch im Vertrag** (F148, F197). Der
+  Plug-in-Port nimmt einen `PluginRegistrationClaim` (Token **oder**
+  Teilnehmer-Id) und löst **im Adapter** auf; ein Plug-in bekommt keine Adresse
+  und baut deshalb den Kontoanspruch nicht selbst. Ab der Statusprüfung ist es
+  derselbe Code, wie im Kern seit AP 4 der Phase 3.
+- **`PluginHostModule` importiert kein Feature-Modul — `SecurityModule` ist
+  keines.** Es hält den Token-Signierer und importiert selbst nichts, kann also
+  den Kreis aus AP 6 nicht schließen. Einen Anspruch aufzulösen heißt eine
+  Signatur zu prüfen, und die zweite Implementierung davon wäre die, die ein
+  rotiertes `AUTH_SECRET` überlebt.
 - **„Ein Plug-in importiert nur aus `plugin-api`" ist eine ESLint-Regel**, seit
   AP 2 der Phase 4 — und sie hat beim Einschalten sofort den Verstoß gefunden,
   der schon dastand: das Referenz-Plug-in holte Dekorator und Guard aus

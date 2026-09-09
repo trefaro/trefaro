@@ -7,9 +7,12 @@ import { UserProfileEntity } from '../entities';
 /**
  * PostgreSQL implementation of {@link ProfileDirectory}.
  *
- * Both queries compare `lower(email)`, which is what the functional unique
- * index of the table is built on (E31) — so the lookup and the constraint agree
- * on what "the same address" means, and neither of them has to be told twice.
+ * The two queries that take an address compare `lower(email)`, which is what
+ * the functional unique index of the table is built on (E31) — so the lookup
+ * and the constraint agree on what "the same address" means, and neither of
+ * them has to be told twice. The third takes an id and hands the address back
+ * as it was typed: the registration side lower-cases what it compares, and a
+ * port that pre-normalized would be normalizing for a caller it cannot see.
  */
 @Injectable()
 export class TypeormProfileDirectory implements ProfileDirectory {
@@ -41,6 +44,20 @@ export class TypeormProfileDirectory implements ProfileDirectory {
     // Answered in the caller's spelling, so a page of registrations can be
     // matched against this set without normalizing a second time.
     return new Set(rows.map((row) => wanted.get(row.email)).filter(isAddress));
+  }
+
+  async addressOf(participantId: string): Promise<string | null> {
+    const row = await this.repository
+      .createQueryBuilder('profile')
+      .select('profile.email', 'email')
+      .where('profile.id = :id', { id: participantId })
+      // Confirmed only, and in the statement (F152, E32): the caller that
+      // forgot it would be handing out registrations to an address nobody has
+      // proven they hold.
+      .andWhere('profile.confirmed_at IS NOT NULL')
+      .getRawOne<{ email: string }>();
+
+    return row?.email ?? null;
   }
 
   async localeFor(email: string): Promise<string | null> {

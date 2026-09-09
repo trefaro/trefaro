@@ -109,13 +109,21 @@ export interface RegistrationSearch {
  *
  * By address and across events, because that is what a person is here: the
  * registrations of somebody are the ones carrying their address, and there is
- * no `user_id` to join on — deliberately (E31). No status filter: every state
- * is listed, since the two that make somebody ask "am I registered?" are
- * exactly `pending` and `cancelled`.
+ * no `user_id` to join on — deliberately (E31).
+ *
+ * `status` is spelled the way {@link RegistrationSearch} spells it, and for the
+ * same reason: two readers of the same rows want two different subsets. "My
+ * registrations" passes `null` and lists **every** state, since the two that
+ * make somebody ask "am I registered?" are exactly `pending` and `cancelled`;
+ * the plug-in registration port passes `'confirmed'`, because a ticket for a
+ * registration nobody confirmed would be an admission granted by an unverified
+ * address (E53, AP 7 of phase 4).
  */
 export interface RegistrationsOfAddress {
   /** Already normalized by the service; compared case-insensitively. */
   readonly email: string;
+  /** `null` lists every state. */
+  readonly status: RegistrationStatus | null;
   readonly offset: number;
   readonly limit: number;
 }

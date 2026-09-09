@@ -60,6 +60,16 @@ export {
   type PluginProgramItem,
   type PluginProgramReads,
 } from './program-reads';
+export {
+  PLUGIN_REGISTRATION_READS,
+  byPluginAccount,
+  byPluginLink,
+  type PluginRegistration,
+  type PluginRegistrationClaim,
+  type PluginRegistrationReads,
+  type PluginRegistrationSlice,
+  type PluginRegistrationWindow,
+} from './registration-reads';
 export type {
   PluginClientContribution,
   PluginMountPoint,

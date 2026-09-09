@@ -941,6 +941,19 @@ entry, the answer is noted below rather than repeated.
       read it (E21). `CURATED_PLUGINS` has three entries, forum between
       proposals and room planning. Only `qr-checkin` still holds a README
       alone; two plug-ins left.
+      **Three of four are done on the server, and the fourth is half done: the
+      QR check-in server followed (AP 7, 09.09.2026).**
+      `apps/server/src/plugins/qr-checkin` — one table
+      (`plugin_qr_checkin_ticket`, the registration as its primary key), one
+      migration, **three** controllers (one per access level, which is what
+      makes this plug-in the example for E57), no `requires` (a door reads a
+      registration, and a registration needs no account) and no `client` half
+      until AP 8. On the contract it added `PluginRegistrationReads` — resolve
+      a self-service claim, read an event's confirmed registrations, resolve an
+      id it already stored — and two one-field extensions in the core
+      (`ProfileDirectory.addressOf`, `RegistrationsOfAddress.status`).
+      `CURATED_PLUGINS` has four entries; only `personal-program` is missing,
+      and the check-in's screens (AP 8) are what is left of this one.
 - [x] **Implement the overbooking check** in the room planning plug-in: sign-ups
       per programme item against room capacity. Everything it needs exists since
       AP 9 — the room's capacity, the sessions assigned to it, and their sign-up
@@ -992,6 +1005,18 @@ entry, the answer is noted below rather than repeated.
       library is a new entry in the architecture's list of shared libs (F145
       said that list comes from the thesis) — noted for AP 10 to record in the
       reference document.
+- [ ] **F196 is missing from the reference document.** AP 6 recorded it as
+      "filled" (E50, warnings show and refuse nothing) but wrote no row: the
+      table jumps from F195 to F202, and the version line does not mention
+      F196. Not written in AP 7, because it belongs to AP 6 and is that
+      package's sentence to write — noted here because AP 10 checks that
+      F186–F201 are all there, and it will find exactly this.
+- [ ] **The first run of the organizer browser suite was red once in AP 7**,
+      the two after it green with the same count (311), and Nx itself marked
+      the task flaky. The package touched no screen and no file of that suite;
+      the run sat directly behind a `run-many -t build`, and the likely cause
+      is the serve process between the two. Watch for it — if it comes back
+      with an actual failing test name, that name goes here.
 - [ ] **Room planning stays structured for now.** An OpenStreetMap/Leaflet floor
       plan is the later stage (F14) — and never a Google map (NFR 9).
 - [ ] **Each new plug-in proves the contract.** Verify per plug-in: own tables
@@ -1011,6 +1036,14 @@ entry, the answer is noted below rather than repeated.
       things for the forum, and `plugin-controllers.spec.ts` covered its two
       controllers the moment the descriptor was registered — no line of the
       test changed.
+      **Proven for the fourth, and it was the hardest one to prove** (AP 7):
+      `apps/server-e2e/src/api/plugin-qr-checkin.spec.ts` asserts the three for
+      the check-in, and `plugin-controllers.spec.ts` again changed by no line
+      while covering **three** controllers instead of two. What the suite has
+      to show beyond that is that the registrations reached the plug-in
+      **through the port**: they are written straight into `registration` by
+      SQL, the plug-in queries no core table, and the admission list names
+      them anyway.
 - [ ] **The dashboard needs a hook point for plug-in tiles** (F47). The mockups
       put programme proposals and forum posts on KPI tiles of the event
       dashboard; both are plug-ins, and both arrive in this phase. AP 10

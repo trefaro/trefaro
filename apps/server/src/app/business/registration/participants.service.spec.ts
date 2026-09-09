@@ -235,6 +235,10 @@ class RecordingProfileDirectory implements ProfileDirectory {
       'not used in this suite — that is the mail composer’s side',
     );
   }
+
+  async addressOf(): Promise<string | null> {
+    throw new Error('not used in this suite — that is the plug-in host’s side');
+  }
 }
 
 /** The files of one registration, as the detail panel asks for them (E9). */

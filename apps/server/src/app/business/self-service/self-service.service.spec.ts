@@ -394,11 +394,13 @@ describe('SelfServiceService', () => {
       overrides: Partial<RegistrationRecord> = {},
     ): RegistrationRecord => ({ ...CONFIRMED, id, ...overrides });
 
-    it('asks for the address, the first page and the default size', async () => {
+    it('asks for the address, every state, the first page and the default size', async () => {
       await service.listFor('Amina@Example.org', {});
 
+      // `status: null` is the point of this screen: the two states that make
+      // somebody ask "am I registered?" are exactly the ones it must show.
       expect(addressQueries).toEqual([
-        { email: 'amina@example.org', offset: 0, limit: 10 },
+        { email: 'amina@example.org', status: null, offset: 0, limit: 10 },
       ]);
     });
 

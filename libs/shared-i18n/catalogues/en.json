@@ -887,6 +887,7 @@
   "plugins.programProposals.title": "Programme proposals",
   "plugins.programProposals.titleLabel": "Title",
   "plugins.programProposals.unknownAuthor": "Account closed",
+  "plugins.qrCheckin.title": "QR code check-in",
   "plugins.roomPlanning.cancel": "Cancel",
   "plugins.roomPlanning.capacityLabel": "Seats",
   "plugins.roomPlanning.chooseSession": "Choose a session",

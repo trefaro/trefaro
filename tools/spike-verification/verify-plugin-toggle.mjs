@@ -432,6 +432,11 @@ check(
  * the check failed for the right reason on the wrong grounds. `newsletter` is
  * the one key that never comes back (F8, F63) — FR 4.8 is an opt-in
  * administration and got `newsletter-opt-in` of its own in AP 12.
+ *
+ * Phase 4 adds one key per plug-in, and this list is where it has to be said:
+ * `program-proposals` (AP 2), `forum` (AP 4) and `qr-checkin` (AP 7) —
+ * `personal-program` follows in AP 9. Keeping it in step with
+ * `CURATED_PLUGINS` is the maintenance this literal is for.
  */
 const SHIPPED = [
   'profiles',
@@ -440,7 +445,10 @@ const SHIPPED = [
   'media-links',
   'push',
   'newsletter-opt-in',
+  'program-proposals',
+  'forum',
   'room-planning',
+  'qr-checkin',
 ];
 check(
   'and only modules that exist (E21)',
