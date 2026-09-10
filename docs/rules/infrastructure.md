@@ -55,15 +55,43 @@ Datenschutzbruch, bei der Plug-in-Aktivierung Datenverlust.
   (E21, F63). Zwei unabhängige Bedingungen, und beide müssen erfüllt sein: das
   Modul **und** ein VAPID-Paar in der Umgebung. Aus heißt: die Abonnements
   bleiben liegen, es geht nur nichts raus.
-- **Sechs geteilte Bibliotheken:** `shared-http`, `shared-config`,
+- **Sieben geteilte Bibliotheken:** `shared-http`, `shared-config`,
   `shared-models`, `shared-theming` (die vier des Ursprungsplans),
   `shared-plugins` (Client-Plug-in-Manager + Einhängepunkt-Komponente, seit
-  Phase 0) und `shared-i18n` (mitgelieferte Kataloge + Transloco-Verkabelung +
-  Sprachumschalter + `TrefaroTitleStrategy`, seit AP 6 der Phase 2). Ein
-  Plug-in-Bündel darf davon genau eine benutzen: **`shared-models`**. Ein Client
-  teilt mit einem Bündel die **Modelle**, nie die Implementierung — der Rest
-  wäre ein zweiter HTTP-Stapel, eine zweite Übersetzungskette oder ein zweiter
-  Konfigurationszustand in etwas, das zur Laufzeit nachgeladen wird.
+  Phase 0), `shared-i18n` (mitgelieferte Kataloge + Transloco-Verkabelung +
+  Sprachumschalter + `TrefaroTitleStrategy`, seit AP 6 der Phase 2) und
+  `shared-plugin-kit` (seit AP 6 der Phase 4). Ein Plug-in-Bündel darf davon
+  genau **zwei** benutzen: `shared-models` und `shared-plugin-kit`. Bis AP 6
+  der Phase 4 war es genau eine, und die Regel stimmt weiter in ihrem Kern —
+  ein Client teilt mit einem Bündel die **Modelle**, nie die Implementierung,
+  denn der Rest wäre ein zweiter HTTP-Stapel, eine zweite Übersetzungskette
+  oder ein zweiter Konfigurationszustand in etwas, das zur Laufzeit
+  nachgeladen wird. `shared-plugin-kit` ist die Ausnahme, die das bestätigt:
+  sie ist die einzige Bibliothek, die **kein Client** benutzt (der Host hat
+  seine eigenen Wege), sie hängt nur an `shared-models`, sie bringt kein
+  Framework mit, und sie enthält genau die Zeilen, die sonst in jedem Bündel
+  ein zweites Mal stünden — `wordsOf`, `when`/`day`/`clock` und
+  `readJson`/`sendJson` mit den zwei Fehlerklassen (F138). Ein Helfer, der ab
+  jetzt in ein Bündel kopiert wird, ist ein Rückschritt und keine zweite
+  Kopie.
+- **Der Plug-in-Vertrag steht nach Phase 4 auf 1.2.0, und das ist der Stand,
+  von dem die nächste Erweiterung ausgeht** (E46, geprüft in AP 10): **fünf**
+  kuratierte Plug-ins (`program-proposals`, `forum`, `room-planning`,
+  `qr-checkin`, `personal-program` — in dieser Reihenfolge registriert, und
+  die Reihenfolge ist auch die der Kacheln), **vier** Einhängepunkte in einem
+  geschlossenen Satz (`navigation`, `event-detail`, `event-dashboard`,
+  `my-registration`), drei zugesagte Eigenschaften an jedem montierten Element
+  (`locale`, `strings`, `mountPoint`) und drei Lese-Ports
+  (`PluginProgramReads`, `PluginParticipantReads`, `PluginRegistrationReads`).
+  Zwei Regeln daraus überleben die Phase, und beide sind einmal wehgetan:
+  **eine Erweiterung ohne Füller wird nicht gebaut** — die für AP 9 geplante
+  Sprache an `findItem` wurde gestrichen, weil ihr einziger Aufrufer sie nicht
+  gelesen hätte (F200, E21) —, und **ein Feld, ohne das ein Bildschirm etwas
+  Falsches behauptet, wird gebaut, auch wenn es im Plan nicht steht**
+  (`registrationEnabled`, F201). Was der Vertrag weiterhin **nicht** hat:
+  einen Schreib-Port in Kerntabellen (E52), eine Fähigkeit in umgekehrter
+  Richtung (E59) und Mail (die Sprachwahl je Mail ist eine Maschinerie, die
+  ein Plug-in nicht zur Hälfte benutzen kann).
 - **Ein zweiter Server-Container braucht einen socket.io-Adapter.** Räume
   leben im Speicher **eines** Prozesses, also erreicht eine Nachricht bei zwei
   Containern nur die Hälfte der Sockets. Für die Zielgruppe (eine Instanz je

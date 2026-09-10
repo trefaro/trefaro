@@ -14,6 +14,13 @@ import { execFileSync } from 'node:child_process';
  *    the link between a session and a room (F21) and reads sessions through the
  *    host's versioned port (E12). Those are its whole reason to exist, and both
  *    of them cross the seam between core and plug-in.
+ * 3. **That the image really ships five of them** (AP 10 of phase 4). One
+ *    plug-in is asserted in depth above; all five are then walked shallowly —
+ *    off is a 404 and an absent descriptor, on is a descriptor a client can
+ *    load and an API that answers — plus the prerequisite three of them
+ *    declare: switching one on without `profiles` is a 409 that names the
+ *    missing key, and `profiles` cannot be withdrawn under a running dependant
+ *    (E47, E42).
  *
  *   node tools/spike-verification/verify-plugin-toggle.mjs
  *
@@ -111,13 +118,15 @@ const send = (method, path, payload) =>
   });
 
 /** The server re-reads the flags on a timer; wait for it rather than restarting. */
-async function waitForPluginVisibility(shouldBeVisible, timeoutMs = 30_000) {
+async function waitForPluginVisibility(
+  key,
+  shouldBeVisible,
+  timeoutMs = 30_000,
+) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const config = await call('/api/config');
-    const visible = (config.body?.plugins ?? []).some(
-      (p) => p.key === 'room-planning',
-    );
+    const visible = (config.body?.plugins ?? []).some((p) => p.key === key);
     if (visible === shouldBeVisible) return true;
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
@@ -223,7 +232,7 @@ console.log(
   '--- enabling room-planning in module_config, server keeps running ---',
 );
 setEnabled('room-planning', true);
-const appeared = await waitForPluginVisibility(true);
+const appeared = await waitForPluginVisibility('room-planning', true);
 check(
   'the plug-in becomes live without restarting the server',
   appeared,
@@ -249,8 +258,10 @@ check(
   descriptor?.bundleUrl,
 );
 check(
-  'the descriptor declares its mount point',
-  JSON.stringify(descriptor?.mountPoints) === JSON.stringify(['event-detail']),
+  'the descriptor declares both of its mount points',
+  JSON.stringify(descriptor?.mountPoints) ===
+    JSON.stringify(['event-detail', 'event-dashboard']),
+  JSON.stringify(descriptor?.mountPoints),
 );
 check(
   'enabling a plug-in does not add it to the core module list',
@@ -383,7 +394,7 @@ check(
 
 console.log('--- disabling it again ---');
 setEnabled('room-planning', false);
-const disappeared = await waitForPluginVisibility(false);
+const disappeared = await waitForPluginVisibility('room-planning', false);
 check('the plug-in disappears from the configuration again', disappeared);
 
 const blocked = await call(
@@ -434,9 +445,10 @@ check(
  * administration and got `newsletter-opt-in` of its own in AP 12.
  *
  * Phase 4 adds one key per plug-in, and this list is where it has to be said:
- * `program-proposals` (AP 2), `forum` (AP 4) and `qr-checkin` (AP 7) —
- * `personal-program` follows in AP 9. Keeping it in step with
- * `CURATED_PLUGINS` is the maintenance this literal is for.
+ * `program-proposals` (AP 2), `forum` (AP 4), `qr-checkin` (AP 7) and
+ * `personal-program` (AP 9). Keeping it in step with `CURATED_PLUGINS` is the
+ * maintenance this literal is for — and AP 10 found it one key short, which is
+ * exactly the failure it was written to produce.
  */
 const SHIPPED = [
   'profiles',
@@ -449,6 +461,7 @@ const SHIPPED = [
   'forum',
   'room-planning',
   'qr-checkin',
+  'personal-program',
 ];
 check(
   'and only modules that exist (E21)',
@@ -491,6 +504,256 @@ check(
   'a key this image does not ship is refused rather than stored',
   (await send('PATCH', '/api/admin/modules/not-a-module', { enabled: true }))
     .status === 404,
+);
+
+// --- every curated plug-in of this image (AP 10, phase 4) ----------------
+//
+// The section above proves the mechanism on one plug-in and reaches deep into
+// it — rooms, assignments, cascades. This one is the other axis: **all five**,
+// shallow, in the order `CURATED_PLUGINS` registers them, and only the three
+// promises every plug-in makes (F6, F21, E21):
+//
+//   off  → its API is a 404 and `/api/config` does not mention it,
+//   on   → the descriptor a client needs is there and the API answers,
+//   off  → 404 again.
+//
+// Written in AP 10 because that is the package that has five of them. Through
+// the administration endpoint rather than the table, so the run costs no
+// waiting; the timer path stays asserted once, above.
+const CURATED = [
+  {
+    key: 'program-proposals',
+    element: 'trefaro-plugin-program-proposals',
+    mountPoints: ['event-detail', 'event-dashboard'],
+    icon: 'lightbulb',
+    probe: () =>
+      `/api/admin/plugins/program-proposals/events/${EVENT}/proposals`,
+    off: 404,
+    enabled: 200,
+  },
+  {
+    key: 'forum',
+    element: 'trefaro-plugin-forum',
+    mountPoints: ['event-detail', 'event-dashboard'],
+    icon: 'forum',
+    probe: () => `/api/admin/plugins/forum/events/${EVENT}/posts`,
+    off: 404,
+    enabled: 200,
+  },
+  {
+    key: 'room-planning',
+    element: 'trefaro-plugin-room-planning',
+    mountPoints: ['event-detail', 'event-dashboard'],
+    icon: 'meeting_room',
+    probe: () => `/api/admin/plugins/room-planning/events/${EVENT}/rooms`,
+    off: 404,
+    enabled: 200,
+  },
+  {
+    key: 'qr-checkin',
+    element: 'trefaro-plugin-qr-checkin',
+    mountPoints: ['my-registration', 'event-dashboard'],
+    icon: 'qr_code_2',
+    probe: () => `/api/admin/plugins/qr-checkin/events/${EVENT}/checkins`,
+    off: 404,
+    enabled: 200,
+  },
+  {
+    // The one route this plug-in has belongs to a **participant**, and this
+    // script holds an organizer's session — so both answers here are 401, and
+    // that is the finding rather than a gap. The session guard hangs on the
+    // path prefix (E16, E57) and speaks **before** the plug-in's own guard:
+    // somebody without a participant session is told to sign in whether the
+    // plug-in is on or off. Which is the right way round, and worth asserting
+    // as such — the two answers are **identical**, so a caller who cannot use
+    // the route learns nothing about whether this organization runs this
+    // plug-in. That a session gets a 404 while it is off is asserted where a
+    // session exists: `plugin-personal-program.spec.ts`.
+    key: 'personal-program',
+    element: 'trefaro-plugin-personal-program',
+    mountPoints: ['event-detail'],
+    icon: 'event_note',
+    probe: () =>
+      `/api/participant/plugins/personal-program/events/${EVENT}/plan`,
+    off: 401,
+    enabled: 401,
+  },
+];
+
+console.log('--- all five curated plug-ins, one promise each ---');
+const announced = async () =>
+  ((await call('/api/config')).body?.plugins ?? []).map((p) => p.key);
+
+check(
+  'a resting instance announces no plug-in at all (enabledByDefault: false)',
+  (await announced()).length === 0,
+  JSON.stringify(await announced()),
+);
+
+for (const plugin of CURATED) {
+  const off = await call(plugin.probe());
+  check(
+    `${plugin.key}: switched off, its API answers ${plugin.off}`,
+    off.status === plugin.off,
+    `got ${off.status}`,
+  );
+
+  const on = await send('PATCH', `/api/admin/modules/${plugin.key}`, {
+    enabled: true,
+  });
+  check(
+    `${plugin.key}: it switches on at runtime`,
+    on.status === 200 && on.body?.enabled === true,
+    `got ${on.status}`,
+  );
+
+  const descriptor = ((await call('/api/config')).body?.plugins ?? []).find(
+    (p) => p.key === plugin.key,
+  );
+  check(
+    `${plugin.key}: the clients are told what to load and where to mount it`,
+    descriptor?.elementName === plugin.element &&
+      descriptor?.bundleUrl === `/api/plugins/${plugin.key}/main.js` &&
+      JSON.stringify(descriptor?.mountPoints) ===
+        JSON.stringify(plugin.mountPoints),
+    JSON.stringify(descriptor),
+  );
+  check(
+    `${plugin.key}: and the icon it names, from the closed set (E49)`,
+    descriptor?.icon === plugin.icon,
+    descriptor?.icon,
+  );
+
+  const live = await call(plugin.probe());
+  check(
+    plugin.off === plugin.enabled
+      ? `${plugin.key}: switched on it answers ${plugin.enabled} as well — the same either way, so nothing leaks`
+      : `${plugin.key}: its API answers ${plugin.enabled} once enabled`,
+    live.status === plugin.enabled,
+    `got ${live.status}, expected ${plugin.enabled}`,
+  );
+
+  await send('PATCH', `/api/admin/modules/${plugin.key}`, { enabled: false });
+  const again = await call(plugin.probe());
+  check(
+    `${plugin.key}: switched off again, it is absent from the configuration`,
+    again.status === plugin.off && !(await announced()).includes(plugin.key),
+    `got ${again.status}`,
+  );
+}
+
+check(
+  'and no plug-in table was created for a plug-in that is off',
+  psql(
+    "select count(*) from information_schema.tables where table_name like 'plugin!_%' escape '!'",
+  ) === '7',
+  `${psql(
+    "select count(*) from information_schema.tables where table_name like 'plugin!_%' escape '!'",
+  )} tables — the schema belongs to the image, not to the switch`,
+);
+
+// --- a plug-in may have a prerequisite (E47, F190) -----------------------
+//
+// Three of the five write something down that belongs to a **person**, and a
+// person needs an account, which only `profiles` makes. The rule is E42's,
+// applied to plug-ins, and it is refused in both directions **before** writing
+// — which is the half that is easy to get wrong, so it is asserted here on a
+// live instance and not only in a unit test.
+//
+// The order below is the one the rule itself forces, and writing it the other
+// way round is what taught it: `profiles` cannot simply be switched off, because
+// two **core** modules stand on it as well (`profile-search` and `chat`, E42),
+// and both are on by default. So the dependants come off first — read out of
+// the module list rather than named here, so that a module that declares the
+// prerequisite later is included without anybody remembering to.
+console.log('--- what a plug-in needs (E47) ---');
+const PREREQUISITE = 'profiles';
+
+const moduleList = async () => (await call('/api/admin/modules')).body ?? [];
+const dependants = (await moduleList()).filter((module) =>
+  (module.requires ?? []).includes(PREREQUISITE),
+);
+check(
+  'the module list says which modules need which',
+  dependants.length > 0,
+  `${dependants.length} declare "${PREREQUISITE}"`,
+);
+const pluginsThatNeedIt = dependants
+  .filter((module) => module.family === 'plugin')
+  .map((module) => module.key);
+check(
+  'and three of the five plug-ins are among them',
+  pluginsThatNeedIt.length === 3,
+  JSON.stringify(pluginsThatNeedIt),
+);
+
+const wereEnabled = dependants
+  .filter((module) => module.enabled)
+  .map((module) => module.key);
+const heldBack = await send('PATCH', `/api/admin/modules/${PREREQUISITE}`, {
+  enabled: false,
+});
+check(
+  'it cannot be withdrawn under the modules that are running on it',
+  heldBack.status === 409 &&
+    wereEnabled.every((key) => String(heldBack.body?.message).includes(key)),
+  `got ${heldBack.status} ${JSON.stringify(heldBack.body?.message)}`,
+);
+check(
+  'and it is still on, because the refusal came before the write',
+  psql(
+    `select enabled from module_config where module_key = '${PREREQUISITE}'`,
+  ) === 't',
+);
+
+for (const key of wereEnabled)
+  await send('PATCH', `/api/admin/modules/${key}`, { enabled: false });
+const withdrawn = await send('PATCH', `/api/admin/modules/${PREREQUISITE}`, {
+  enabled: false,
+});
+check(
+  'with nothing standing on it, it switches off',
+  withdrawn.status === 200,
+  `got ${withdrawn.status}`,
+);
+
+for (const key of pluginsThatNeedIt) {
+  const refused = await send('PATCH', `/api/admin/modules/${key}`, {
+    enabled: true,
+  });
+  check(
+    `${key}: switching it on without ${PREREQUISITE} is a 409 naming the missing key`,
+    refused.status === 409 &&
+      String(refused.body?.message).includes(PREREQUISITE),
+    `got ${refused.status} ${JSON.stringify(refused.body?.message)}`,
+  );
+  check(
+    `${key}: and the refusal wrote nothing`,
+    psql(`select enabled from module_config where module_key = '${key}'`) !==
+      't',
+  );
+  check(
+    `${key}: nor did it appear in the configuration`,
+    !((await call('/api/config')).body?.plugins ?? []).some(
+      (p) => p.key === key,
+    ),
+  );
+}
+
+// Back to how the instance was found: the prerequisite first, then everything
+// that was standing on it.
+await send('PATCH', `/api/admin/modules/${PREREQUISITE}`, { enabled: true });
+for (const key of wereEnabled)
+  await send('PATCH', `/api/admin/modules/${key}`, { enabled: true });
+const restored = await moduleList();
+check(
+  'and this section leaves the instance as it found it',
+  wereEnabled.every(
+    (key) => restored.find((module) => module.key === key)?.enabled,
+  ) && restored.find((module) => module.key === PREREQUISITE)?.enabled,
+  JSON.stringify(
+    restored.filter((module) => module.enabled).map((module) => module.key),
+  ),
 );
 
 console.log('--- cleaning up ---');

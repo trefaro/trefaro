@@ -49,7 +49,7 @@ the other one.
 ```bash
 docker compose -f infra/docker-compose.dev.yml up -d
 cp .env.example .env                    # the defaults match the dev stack
-npx nx build plugin-room-planning
+npx nx run-many -t build -p 'plugin-*'   # all five curated bundles
 npx nx build server
 node dist/apps/server/main.js           # in its own shell
 

@@ -50,14 +50,28 @@ notifies the phones that care about it, and an address can ask for news without
 registering for anything (opt-in administration only — Trefaro sends no
 newsletters). The record is in [`docs/PHASE3.md`](docs/PHASE3.md).
 
-**Not built yet:** the five curated plug-ins — programme proposals, forum, room
-planning, QR check-in and an individual programme plan — which
-[`docs/PHASE4.md`](docs/PHASE4.md) plans package by package (phase 4); and the
-hardening round — configurable
-throttling, a participant password reset, erasure, the usability test with the
-pilot partner (phase 5). What is deferred and why is in [`todo.md`](todo.md),
-including the one check no test suite can make: push notifications on four real
-devices.
+**Phase 4 is complete** (10.09.2026): the plug-ins. Five of them ship in the
+image, and each organization decides at runtime which of them it wants —
+switched on they appear in both clients, switched off their API is a plain 404
+and nothing in either client mentions them, and switching one off never loses a
+row. Participants **propose sessions** for a programme and **discuss** an event
+in a forum per event, with the organizer approving each contribution before it
+is public — both moderated from the same event dashboard. Organizers **plan
+rooms**: what happens where, with more sign-ups than chairs and two sessions in
+one room at the same time shown as warnings and nothing refused, and the room
+plan visible to participants. Everybody who registered gets a **QR code** of
+their own on their self-service page, which the door reads with a camera or
+takes typed in when there is none, and a second scan says "already here, since
+…" rather than failing. And anybody with an account can put an event's sessions
+into a **programme plan of their own**, in their own language, which reserves
+nothing and says where reserving actually happens. The record, package by
+package, is in [`docs/PHASE4.md`](docs/PHASE4.md).
+
+**Not built yet:** the hardening round — configurable throttling, a participant
+password reset, erasure, the usability test with the pilot partner (phase 5).
+What is deferred and why is in [`todo.md`](todo.md), including the two checks no
+test suite can make: push notifications on four real devices, and a camera at a
+door.
 
 [`docs/INSTALL.md`](docs/INSTALL.md) installs an instance;
 `docs/BOOTSTRAP.md` sets up a development environment.

@@ -7,22 +7,26 @@ einmal schiefgegangen.**
 Das ist keine zweite Anforderungsanalyse. Die Begründung jeder Entscheidung steht
 ausführlich woanders und wird hier nur mit ihrer Nummer zitiert:
 
-- **F1–F194 und F202** — Entscheidungsprotokoll in
+- **F1–F202** — Entscheidungsprotokoll in
   [`docs/Anforderungsanalyse_und_Umsetzungsplan.md`](../Anforderungsanalyse_und_Umsetzungsplan.md)
   (F62 wurde nie vergeben; F70 beantwortet, was für sie geplant war. **F129–F131
   sind unvergeben** — AP 6 hat sie als schon getroffene Entscheidungen
   wiedererkannt. **F134 und F135** kamen mit AP 11, **F136 und F179–F183** mit
   AP 12, **F184 und F185** mit AP 13; **F186–F188** mit AP 1,
-  **F189–F192** mit AP 2, **F193, F194 sowie F202** mit AP 3 und **F195** mit
-  AP 4 der Phase 4.)
+  **F189–F192** mit AP 2, **F193, F194 sowie F202** mit AP 3, **F195** mit
+  AP 4, **F197** mit AP 7, **F198 und F199** mit AP 8, **F200 und F201** mit
+  AP 9 und **F196** — nachgetragen — mit AP 10 der Phase 4.)
 - **E1–E16** — Phase 1, [`docs/PHASE1.md`](../PHASE1.md).
 - **E17–E30** — Phase 2, [`docs/PHASE2.md`](../PHASE2.md) (die Zählung läuft über
   die Phasen weiter).
 - **E31–E45** — Phase 3, [`docs/PHASE3.md`](../PHASE3.md).
-- **E46–E59** — Phase 4, [`docs/PHASE4.md`](../PHASE4.md) (im Plan festgelegt;
-  jedes Paket prüft die seinen gegen die Umsetzung). **F196–F201** sind dort
-  reserviert und noch nicht vergeben; **F202** ist ein Nachtrag aus AP 3,
-  weil der reservierte Block schon belegt war.
+- **E46–E59** — Phase 4, [`docs/PHASE4.md`](../PHASE4.md) (im Plan festgelegt,
+  in AP 10 gegen die Umsetzung geprüft). **F186–F202 sind vergeben**;
+  **F202** ist ein Nachtrag aus AP 3, weil der reservierte Block schon belegt
+  war, und **F196** ist in AP 10 nachgetragen worden — AP 6 hatte die
+  Entscheidung umgesetzt und die Zeile nicht geschrieben. Das ist die Lehre,
+  die den Block überlebt: eine reservierte Nummer ist keine geschriebene, und
+  wer ein Paket abschließt, zählt nach.
 - **NFR / FR** — nummeriert wie im Anforderungsdokument.
 
 ## Vor der Arbeit an … zuerst lesen

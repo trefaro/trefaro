@@ -161,45 +161,28 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    Abschnitt unter _Fortschritt_, dazu ein phasenweites _Was anders lief_.
    **Meilenstein M8 ist erreicht bis auf die Gerätematrix**, die nur mit Geräten
    in der Hand abzuhaken ist
-4. **In Arbeit** (Plan 04.09.2026) Plug-ins: Programmvorschläge, Forum,
-   Raumplanung, QR-Check-In und **individueller Programmplan** →
-   `docs/PHASE4.md` (zehn Pakete, M9–M12). **AP 1 bis AP 3 erledigt am
-   07.09.2026:** der Plug-in-Vertrag steht auf **1.2.0** (der eine Schritt
-   dieser Phase), Icons und Worte kommen aus der Instanz, und die
-   Programmvorschläge stehen vollständig — Server, Bündel und beide Clients,
-   mit dem dritten Einhängepunkt `event-dashboard`. **Meilenstein M9 ist
-   erreicht.** **AP 4 und AP 5 erledigt am 08.09.2026:** das
-   Diskussionsforum steht vollständig — Server (Threads, Beiträge, Freigabe je
-   Beitrag, kein Status am Thread, F195), Bündel und beide Clients; am
-   Dashboard stehen zwei Plug-in-Kacheln nebeneinander. **AP 6 erledigt am
-   08.09.2026:** die Raumplanung ist echt — Ändern und Löschen, der Plan mit
-   beiden Warnungen (E50: gezeigt, nichts abgelehnt), der öffentliche Raumplan,
-   der Editor als dritte Kachel am Dashboard; der Port liest seit AP 6 die
-   Sessions eines Events mit Titel (E56, vorgezogen), und die drei Bündel
-   teilen ihre Helfer über `shared-plugin-kit`. **Meilenstein M10 ist
-   erreicht.** **AP 7 und AP 8 erledigt am 09.09.2026:** der QR-Check-In
-   steht — Server (`PluginRegistrationReads` als dritter Host-Port, eine eigene
-   Eintrittskarte je Anmeldung, drei Controller für drei Zugangsstufen, zweimal
-   200 auf denselben Code) und beide Bildschirme: der vierte Einhängepunkt
-   `my-registration` mit dem QR-Code, schwarz auf weiß im Browser gezeichnet
-   (E54), und die Tür am Dashboard mit Kamera, Eingabefeld und einem Knopf je
-   Zeile (F199). **Meilenstein M11 ist erreicht.** **AP 9 erledigt am
-   10.09.2026:** der individuelle Programmplan steht, Server und Bündel in
-   einem Paket — eine Tabelle, ein Controller, eine Zielgruppe, und das
-   fünfte Bündel am `event-detail`. Damit stehen **alle fünf** kuratierten
-   Plug-ins; der Vertrag hat dafür genau ein Feld dazubekommen
-   (`registrationEnabled`, E55) und einen geplanten Parameter **nicht** (F200).
-   **AP 10 ist nicht freigegeben.**
+4. **✅ 10.09.2026, M12** Plug-ins: Programmvorschläge, Diskussionsforum,
+   Raumplanung, QR-Check-In und individueller Programmplan → `docs/PHASE4.md` —
+   zehn Pakete, je eines mit einem Abschnitt unter _Fortschritt_, dazu ein
+   phasenweites _Was anders lief_. **Fünf kuratierte Plug-ins sind zur Laufzeit
+   schaltbar**; der Vertrag ist genau **einen** Schritt gegangen
+   (`PLUGIN_API_VERSION` **1.2.0**: vier Einhängepunkte, drei Lese-Ports,
+   Sprache und Worte am Slot), und der Fünf-Container-Stack ist aus leerem
+   Volume gefahren worden. **M9 bis M12 sind erreicht.** Offen bleiben zwei
+   Dinge, beide benannt: eine Zeile der Gerätematrix (eine Kamera am Einlass)
+   und ein Flackern in der Veranstaltersuite, das seit AP 10 einen Testnamen
+   hat.
 5. Härtung, Usability-Test mit Democracy International (Pilotpartner), Doku,
-   Release v1.0 — hier auch: konfigurierbare Drosselung, `CONTRIBUTING.md`
+   Release v1.0 — hier auch: konfigurierbare Drosselung, `CONTRIBUTING.md`.
+   **Phase 5 ist nicht freigegeben** und hat noch keinen Plan; was ihr schon
+   zugeordnet ist, steht in `todo.md` unter _Checkable after phase 5_.
 
-**Der Stand in Zahlen:** Entscheidungen **E1–E59** vergeben (E46–E59 im Plan der
-Phase 4); Nachträge **F1–F195**, **F197–F202** stehen im Referenzdokument
-(F62 und F129–F131 bleiben unvergeben), **F196** ist reserviert — es gehört zu
-AP 6 und ist dort nicht geschrieben worden (`todo.md`); Katalog **1080**
-Schlüssel. Was in einem Paket tatsächlich passierte,
-steht im Phasenprotokoll, und was man beim Bauen daraus braucht, in
-`docs/rules/` — **hier nicht noch einmal.**
+**Der Stand in Zahlen:** Entscheidungen **E1–E59** vergeben (E46–E59 in Phase 4,
+in AP 10 gegen die Umsetzung geprüft); Nachträge **F1–F202** stehen vollständig
+im Referenzdokument (F62 und F129–F131 bleiben unvergeben); Katalog **1080**
+Schlüssel. Was in einem Paket tatsächlich passierte, steht im Phasenprotokoll,
+und was man beim Bauen daraus braucht, in `docs/rules/` — **hier nicht noch
+einmal.**
 
 **Wo die offenen Punkte liegen:** in `todo.md`, nach Phase gruppiert und nach
 jeder Phase durchgegangen. Zwei Abschnitte braucht man öfter als die anderen —

@@ -105,8 +105,9 @@ an instance were exposed today.
       budget is gone and the contract suite gets **429** where it expects 202.
       Measured in AP 8 of phase 4, twice, with and without that package's new
       participant suite — the same route, the same status either way, so it is
-      not one suite's doing. Each project on its own is green (662 / 251 /
-      317). What it costs today is honesty about "green": nobody can read the
+      not one suite's doing. Each project on its own is green — 687 / 258 /
+      317 after AP 9, and AP 10 confirmed the split is still exactly this:
+      alone green, together unreadable. What it costs today is honesty about "green": nobody can read the
       combined run's result, and a real failure in it would be invisible among
       the 429s. Three ways out, none of them free: a fresh server per project,
       a `--parallel=1` that waits five minutes between projects, or a way to
@@ -335,6 +336,17 @@ answer, not an opinion.
       the room, in both clients — and nothing is refused. What stays open for
       the pilot partner is the other half: whether an organizer wants a hard
       limit at all, and whether deleting a room should ask first.
+      **AP 10 moved the deletion half in here, with what was built instead**
+      (10.09.2026): deleting a room is **one click**, and what it costs stands
+      beside the button rather than in front of it — "takes its assignments
+      with it, not the sessions". No confirmation step, on purpose: the only
+      one available inside a web component is the browser's own `confirm()`,
+      which is an operating-system dialog in the middle of an application that
+      carries an organization's colours and font, in the browser's language
+      rather than the reader's. A dialog of the plug-in's own is a screen, and
+      no screen was asked for. If the pilot partner says a room deletion needs
+      a second beat, that is what it costs; nothing else about the plan
+      changes.
 
 - [ ] **A device without an account hears about every public event's changes.**
       The price E43 accepts: a browser has no address and has said nothing
@@ -1053,22 +1065,7 @@ entry, the answer is noted below rather than repeated.
       **Done in AP 6 as `double-booked`**, the second warning of E50: two
       sessions in one room whose times overlap, on both and on the room; two
       that merely touch are not. Still nothing refused.
-- [ ] **The slot hands a plug-in no time zone.** The room plan shows its slots
-      in the reader's clock, because `PluginSlotContext` carries `locale`,
-      `strings` and `mountPoint` and nothing about the event, and the server
-      port has no field for the event's zone either. For a participant in the
-      venue that is the venue's clock; read from abroad, the plan disagrees with
-      the programme above it, which the host renders in the event's zone (E8).
-      Not invented inside a plug-in in AP 6: the fix is the next promised
-      property of the slot (or the next field of `PluginProgramReads`), a
-      contract step — AP 10 weighs it, or phase 5.
-- [ ] **Deleting a room is one click.** The consequence stands beside the
-      button ("takes its assignments with it, not the sessions"), and a
-      `confirm()` inside a web component would be the browser's dialog in an
-      organization's own design. Whether that is enough is a question for the
-      pilot partner, next to the hard limit under _Questions for the pilot
-      partner_.
-- [ ] **`shared-plugin-kit` is where a bundle's shared lines live** (F138,
+- [x] **`shared-plugin-kit` is where a bundle's shared lines live** (F138,
       AP 6). The fourth and fifth bundle (AP 8, AP 9) import `wordsOf`,
       `when`/`day`/`clock` and `readJson`/`sendJson` from it; a helper copied
       into a bundle from now on is a regression, not a second copy. And the
@@ -1080,12 +1077,31 @@ entry, the answer is noted below rather than repeated.
       did **not** need was `day` or `statusWord` — a door has states, but they
       are two and they are not E51's three. Only the reference document's entry
       is left, which is AP 10's.
-- [ ] **F196 is missing from the reference document.** AP 6 recorded it as
+      **Closed in AP 10 (10.09.2026).** The fifth bundle imported `wordsOf`,
+      `day` and `readJson`/`sendJson` and copied nothing either, so the rule
+      held for two packages after it was written. The library is now in the
+      reference document twice: in chapter 5 beside the six it joins — where
+      the point worth keeping is that it is the **only** shared library no
+      client uses — and in `docs/rules/infrastructure.md`, which said "a bundle
+      may use exactly one of them" and was wrong from AP 6 onwards. It is two
+      now, and the reason the rule survives the correction is that the second
+      one holds no framework, no HTTP stack and no state: it holds the lines
+      that would otherwise be in five places.
+- [x] **F196 is missing from the reference document.** AP 6 recorded it as
       "filled" (E50, warnings show and refuse nothing) but wrote no row: the
       table jumps from F195 to F202, and the version line does not mention
       F196. Not written in AP 7, because it belongs to AP 6 and is that
       package's sentence to write — noted here because AP 10 checks that
       F186–F201 are all there, and it will find exactly this.
+      **Written in AP 10 (10.09.2026), and it found it exactly there.** F196
+      now answers what a room plan does when more people are signed up than
+      there are chairs: it shows it and refuses nothing — two warnings computed
+      on read, at the session and at the room, nothing stored, and the write
+      route still has its two rules, neither about capacity. The hard limit
+      stays the pilot partner's question. What this entry is really about is
+      the bookkeeping: a **reserved** number is not a written one, and the only
+      thing that tells the two apart is somebody counting at the end of a
+      phase. F186–F202 are all there now.
 - [ ] **The first run of the organizer browser suite was red once in AP 7**,
       the two after it green with the same count (311), and Nx itself marked
       the task flaky. The package touched no screen and no file of that suite;
@@ -1094,9 +1110,54 @@ entry, the answer is noted below rather than repeated.
       with an actual failing test name, that name goes here.
       **It did not come back in AP 8**: that suite ran twice in full, both
       times green (317). Left open, because two green runs are not a diagnosis.
-- [ ] **Room planning stays structured for now.** An OpenStreetMap/Leaflet floor
-      plan is the later stage (F14) — and never a Google map (NFR 9).
-- [ ] **Each new plug-in proves the contract.** Verify per plug-in: own tables
+      **AP 9 produced the diagnosis, by reproducing it much worse.** That
+      package ran the same suite while a `nx run-many -t lint test build` was
+      running beside it and got **146 failures** — none in Chromium, 54 in
+      Firefox, 92 in WebKit, every page stuck at "Loading Trefaro…", 11.6
+      minutes instead of 2.1. Run alone immediately afterwards, with nothing
+      changed: 317 passed, 82 skipped, zero failures. So the cause is the one
+      this entry guessed and could not prove: a build next to a browser suite
+      starves the Angular dev server the suite is talking to, and the engines
+      that start later pay for it — which is exactly why AP 7 saw it in the
+      **first** run and not the two after. It is a scheduling fault, not a
+      test, and there is no failing test name to write here because no test is
+      wrong. It is a rule now instead (`docs/rules/e2e-tests.md`: never build
+      next to a browser suite), which is the only form in which it can stop
+      happening again.
+      **And in AP 10 it came back with a name — so this entry closes only
+      half.** The 146 failures are explained and will not recur under the rule
+      above. The **single** sporadic failure this entry started with is a
+      different animal, and AP 10 ran into it with nothing else running at
+      all: three full runs of the organizer suite, one of them red with
+      exactly one test, the other two green with 317.
+      The name, which is what AP 7 asked for:
+      `apps/admin-client-e2e/src/participants.spec.ts:224` — _participant
+      overview › opens one registration, cancels it, and puts it back_, in
+      **firefox**. It accepts the confirmation dialog, sees the detail switch
+      to "cancelled", and then waits ten seconds for the status filter to read
+      `Cancelled (2)`; the button never appears.
+      What has been ruled out, so the next person does not re-derive it: it is
+      **not** two tests racing over one fixture. The fixture seeds exactly one
+      cancelled registration and this test makes the second; no other test in
+      the file changes a status; each engine seeds its own event, and because
+      `fixtureLabel` carries `process.pid`, each Playwright **worker** seeds
+      its own too — which matters, because the suite runs `fullyParallel`, so
+      `beforeAll` runs per worker and not per file. What is left is the one
+      thing the assertion actually waits for: the count on that filter button
+      is re-read from the server after the cancel, and under three engines on
+      one development server it did not arrive inside ten seconds once in
+      three runs. That is a suspicion, not a diagnosis — the next run that
+      catches it should keep the trace (`trace: 'on-first-retry'` produces
+      none at `retries: 0`), which is the cheapest next step.
+      **A second, weaker sighting the same day, in the other suite:** the
+      first of five runs of the participant suite failed and the four after it
+      passed with 258. Its output was discarded before it was read — the
+      command was tailed — so there is no test name for it, and two targeted
+      attempts to reproduce the sequence that preceded it failed. It is
+      recorded here as an observation rather than a finding, and the lesson is
+      the mechanical one: **capture a suite's output to a file, then read it.**
+      Tailing a run throws away the only evidence a flake ever produces.
+- [x] **Each new plug-in proves the contract.** Verify per plug-in: own tables
       only, prefixed `plugin_<key>_`; disabled means 404 and absent from
       `/api/config`; disabling keeps its data.
       **Proven for the first one, and the proof is now mechanical for the next.**
@@ -1121,7 +1182,21 @@ entry, the answer is noted below rather than repeated.
       **through the port**: they are written straight into `registration` by
       SQL, the plug-in queries no core table, and the admission list names
       them anyway.
-- [ ] **The dashboard needs a hook point for plug-in tiles** (F47). The mockups
+      **Proven for the fifth, and then counted for all of them (AP 9, AP 10).**
+      `apps/server-e2e/src/api/plugin-personal-program.spec.ts` asserts the
+      three for the individual programme plan, and `plugin-controllers.spec.ts`
+      again changed by no line. AP 10 closed it from the other end, against a
+      running five-container stack rather than a suite: seven tables, every one
+      of them prefixed `plugin_<key>_` and none of them a core table; all five
+      plug-ins walked off → on → off through the administration endpoint, each
+      answering 404 and appearing in no configuration while off; and the
+      prerequisite three of them declare refused in both directions before
+      writing (E47). That walk is in `verify-plugin-toggle.mjs` now, so it is
+      re-run rather than re-argued — and writing it found two things the suites
+      cannot see, both of them staleness: the script still expected the room
+      plan to declare **one** mount point, which stopped being true in AP 6,
+      and its list of what the image ships was missing `personal-program`.
+- [x] **The dashboard needs a hook point for plug-in tiles** (F47). The mockups
       put programme proposals and forum posts on KPI tiles of the event
       dashboard; both are plug-ins, and both arrive in this phase. AP 10
       deliberately did not add an `event-dashboard` mount point to the plug-in
@@ -1156,6 +1231,11 @@ entry, the answer is noted below rather than repeated.
       registered — asserted in a browser with both switched on
       (`apps/admin-client-e2e/src/plugin-forum.spec.ts`). Nothing in the host
       changed for it, which is what "verify" here meant.
+      **Closed in AP 10**, with the third and fourth fillers on the board: the
+      room plan's editor (AP 6) and the door (AP 8) mount at the same hook
+      point, so four of the five plug-ins draw a tile there, in registration
+      order, and the fifth deliberately does not — a personal plan is nobody's
+      dashboard. The tile never grew a number (E59): label, icon, jump mark.
 
 - [x] **A plug-in behind the login cannot tell whether there is a session.** The
       contract hands a mounted element `locale`, `strings` and `mountPoint` — not
@@ -1194,6 +1274,8 @@ entry, the answer is noted below rather than repeated.
       same bundle runs in both. What is left is console noise on a page that
       works, which is not worth the first context value that can be wrong.
 
+## Checkable after phase 5 — hardening and release
+
 - [ ] **A personal plan does not say where I hold a seat.** E55 has two halves:
       putting a session in a plan books nothing (built, F201) — and "the plan
       shows where I have a seat", which AP 9 did **not** build. The reason is
@@ -1211,7 +1293,32 @@ entry, the answer is noted below rather than repeated.
       port capabilities, or whether the programme's own timeline — where the
       seat is taken — is the right and only place to see it.
 
-## Checkable after phase 5 — hardening and release
+- [ ] **A plug-in draws its times in the reader's clock, not the event's**
+      (moved out of phase 4 by AP 10, 10.09.2026). `PluginSlotContext` carries
+      `locale`, `strings` and `mountPoint` and nothing about the event, and
+      `PluginProgramReads` has no field for the event's zone, so the room plan
+      and the personal programme render their slots in whatever zone the
+      browser is in. For somebody at the venue that is the venue's clock and
+      the bug is invisible; read from abroad, a plug-in's section disagrees
+      with the programme **above it on the same page**, which the host renders
+      in the event's zone (E8). AP 10 weighed it and did not build it, for one
+      reason and with one answer.
+      **Why not now:** it is a contract step, and E46 spends exactly one per
+      phase — 1.2.0 was it. Adding a second in the package whose job is to
+      check that the first one is honest would be the phase auditing itself
+      into an extension.
+      **Which carrier, so phase 5 does not re-derive it: the port, not the
+      slot.** The slot looks cheaper — a fourth promised property beside
+      `locale` — but it fails the same test the `signedIn` hint failed in AP 9:
+      only the **page** can supply an event's zone, so a hook point could
+      forget it, and `my-registration` and `navigation` have no event to
+      forget. A property that is sometimes legitimately absent is one every
+      plug-in must handle absent, and the fallback would be the browser's
+      zone — which is the bug. The port already answers **per event** and
+      already carries the times, so the zone belongs beside them: one field on
+      `PluginProgramItem`, or one small read of the event. Cost: a minor step
+      of `PLUGIN_API_VERSION` with its compatibility case, and one line in each
+      of the two bundles that render a time.
 
 - [ ] **A deleted account takes the threads it opened — replies of others
       included.** `plugin_forum_thread.created_by` cascades, as the plan’s
@@ -1556,6 +1663,14 @@ Bonn` is diagnostics rather than a fact about anybody.
 
 Decisions only — the work they imply stays in the phase sections above.
 
+- [x] **A room plan is a structure, not a map** — moved out of phase 4 by
+      AP 10 (10.09.2026), because it was never a task: F14 decided in phase 1
+      that v1 manages rooms as data (name, floor, seats, which session is in
+      which), and that an OpenStreetMap/Leaflet floor plan is a later stage.
+      Phase 4 built exactly that structure and nothing map-shaped, so the entry
+      has no work behind it and no open question in it — only the standing
+      rule for whenever the stage arrives: **OpenStreetMap/Leaflet, never a
+      Google map** (NFR 9).
 - [x] **F21, the room link** — decided 2026-08-26: a plug-in-owned join table,
       not a `room_id` column in `program_item`. Recorded as F21 in the
       requirements document, whose §5.3 schema draft is corrected; reasoning and

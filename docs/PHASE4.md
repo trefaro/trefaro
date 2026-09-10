@@ -1,6 +1,10 @@
 # Phase 4 — Plug-ins: die fünf kuratierten Fachlichkeiten
 
-**Status: in Arbeit** (Plan 04.09.2026, AP 1 bis AP 3 erledigt am 07.09.2026 — **Meilenstein M9 erreicht** —, AP 4 bis AP 6 am 08.09.2026 — **Meilenstein M10 erreicht** —, AP 7 und AP 8 am 09.09.2026 — **Meilenstein M11 erreicht** —, AP 9 am 10.09.2026: **alle fünf Plug-ins stehen**). Alles über
+**Status: abgeschlossen am 10.09.2026 — Meilenstein M12 erreicht** (Plan
+04.09.2026; AP 1 bis AP 3 am 07.09.2026 — **M9** —, AP 4 bis AP 6 am 08.09.2026
+— **M10** —, AP 7 und AP 8 am 09.09.2026 — **M11** —, AP 9 und AP 10 am
+10.09.2026). Fünf kuratierte Plug-ins stehen und lassen sich zur Laufzeit
+schalten; der Vertrag ist einen Schritt gegangen, auf **1.2.0**. Alles über
 dem Abschnitt _Fortschritt_ ist der **Plan** und wird nicht rückwirkend
 korrigiert; was tatsächlich passierte — samt Abweichungen — steht unten, wie in
 [`PHASE1.md`](PHASE1.md), [`PHASE2.md`](PHASE2.md) und
@@ -2156,3 +2160,254 @@ lint test build`, das nebenher lief: der Entwicklungs-Server der Clients
   ein `undefined` statt eines Fehlers. Mit `as const satisfies Record<string,
 string>` ist der Punktzugriff erlaubt und ein falscher Schlüssel ein
   Build-Fehler; die Regel steht in `docs/rules/tooling-traps.md`.
+
+### AP 10 — Abschluss der Phase (erledigt, 10.09.2026) → **Meilenstein M12**
+
+Umgesetzt:
+
+- **E46–E59 gegen die Umsetzung geprüft — zwei Abweichungen, beide schon
+  protokolliert, keine nachgebaut.** Vierzehn Entscheidungen, jede an dem
+  geprüft, was sie behauptet, und die mechanisch prüfbaren auch mechanisch:
+  sieben Plug-in-Tabellen, alle mit dem Präfix `plugin_<key>_` und keine davon
+  eine Kerntabelle (F21); Kerntabellen kommen in Plug-in-Code **nur** in
+  Kommentaren vor und in den Fremdschlüsseln der eigenen Migrationen, wo sie
+  hingehören; zehn Controller in drei Zugangsstufen, jeder mit dem Präfix seines
+  Schlüssels (E57); `enabledByDefault: false` fünfmal; kein Schreib-Port und
+  keine Rückwärtsfähigkeit im Vertrag (E52, E59); kein `transloco` und kein
+  Katalogabruf in einem Bündel (E48); keine einzige externe URL in Bündeln oder
+  im Theming (E49, NFR 9); eine Route je Entscheidung bei beiden
+  Freigabe-Plug-ins (E51); und die Kachel am Dashboard trägt Beschriftung, Icon
+  und eine Sprungmarke — **keine Zahl** (E59). Die zwei Abweichungen sind die,
+  die AP 9 aufgeschrieben hat: die Sprache an `findItem` (E56) ist nicht gebaut
+  worden, weil sie keinen Leser hatte (F200), und die zweite Hälfte von E55
+  („der Plan zeigt an, wo ich einen Platz habe") braucht zwei Fähigkeiten, die
+  der Vertrag nicht hat. Beide stehen dort, wo eine Abweichung hingehört, und
+  keine ist in diesem Paket nachgebaut worden.
+- **`todo.md` unter _Checkable after phase 4_ durchgearbeitet.** **Fünfzehn**
+  Einträge standen dort, neun davon offen. Am Ende sind **vier** umgezogen,
+  **zehn** stehen geschlossen da und **einer** bleibt offen — und der offene ist
+  der einzige, der es sein darf, weil er ein Ereignis beschreibt und keine
+  Aufgabe. Die vier sind in den Abschnitt gezogen, dem sie gehören: die
+  fehlende Zeitzone am Slot und die fehlende zweite Hälfte von E55 nach
+  **Phase 5**, die Frage nach der Rückfrage beim Löschen eines Raums zum
+  **Pilotpartner** (neben die harte Grenze, die dort schon steht), und „ein
+  Raumplan ist eine Struktur, keine Karte" nach **_Decided_**, weil F14 das in
+  Phase 1 entschieden hat und nie Arbeit dahinterstand. Jeder Umzug trägt
+  seinen Grund.
+- **F196 nachgetragen — das, was dieses Paket finden sollte, hat es gefunden.**
+  Die Tabelle sprang von F195 auf F197: AP 6 hatte die Entscheidung umgesetzt
+  und als „gefüllt" protokolliert, aber die Zeile nicht geschrieben. Sie steht
+  jetzt da, mit beiden Warnungen, dem Grund aus F41 und der harten Grenze als
+  Frage an den Pilotpartner. Damit sind **F186–F202 vollständig**; die
+  Versionszeile geht auf **1.48**.
+- **`verify-plugin-toggle.mjs` auf fünf Plug-ins erweitert** — von 39 auf 56
+  Prüfstellen, 86 Zusicherungen in einem Lauf. Der bisherige Teil bleibt (ein
+  Plug-in in der Tiefe, mit dem Timer, den nur eine laufende Instanz hat);
+  dazu kommt die Breite: **alle fünf** durch die Modulverwaltung geschaltet,
+  je Plug-in aus → an → aus, mit Deskriptor, Bündeladresse, Einhängepunkten und
+  Icon, und die Voraussetzung aus E47 in **beide** Richtungen. Das Schreiben
+  hat zwei Dinge gefunden, die keine Suite sehen kann, beide Altlasten: das
+  Skript erwartete von der Raumplanung **einen** Einhängepunkt (seit AP 6
+  falsch), und seine Liste dessen, was das Image mitbringt, kannte
+  `personal-program` nicht.
+- **Der Fünf-Container-Stack aus leerem Volume**, als eigenes Compose-Projekt
+  (`-p trefaro-ap10`), damit „leer" nicht heißt, etwas zu löschen: **29**
+  Migrationen laufen beim ersten Start durch, **sechs** davon aus Plug-ins und
+  **vier** davon neu in dieser Phase (Vorschläge, Forum, Check-In, individueller
+  Plan — die Raumplanung brauchte tatsächlich keine, wie geplant, ihre zweite
+  ist aus Phase 1). 34 Tabellen, davon **sieben** mit Plug-in-Präfix. Neun
+  Prüfskripte gegen genau diese Instanz, **257** Prüfungen, null Fehlschläge:
+  `verify-proxy` 44, `verify-api` 18, `verify-plugin-toggle` 86, `verify-i18n`
+  25, `verify-admin-access` 12, `verify-mail` 33, `verify-contact` 11,
+  `verify-chat` 13, `verify-push` 15. Das zehnte, `verify-setup.mjs`, braucht
+  eine Instanz **ohne** Administrator und ist damit definitionsgemäß nicht
+  diese; es steht in den Protokollen von AP 13 der Phasen 2 und 3.
+- **Die Definition of Done Punkt 3 bis 6 am laufenden Stack durchgespielt**,
+  nicht gegen einen Entwicklungsserver: ein Mensch macht ein Konto (Double
+  Opt-In über Mailpit), schlägt eine Session vor, der Veranstalter gibt sie mit
+  **einer** Entscheidung frei und es entsteht **kein** Programmpunkt daraus
+  (E52); derselbe Mensch eröffnet einen Thread, der Veranstalter gibt den
+  **Beitrag** frei und der Thread wird dadurch sichtbar (F195); ein Raum mit
+  **einem** Stuhl nimmt zwei sich überschneidende Sessions auf — beide 204,
+  **nichts abgelehnt** —, und der Plan meldet `overbooked` und `double-booked`
+  an Session **und** Raum, gerechnet beim Lesen, in keiner Spalte gespeichert
+  (E50); die Einlassliste trägt je bestätigter Anmeldung einen eigenen Code, der
+  erste Scan lässt herein und der zweite antwortet mit **demselben** Zeitpunkt
+  (E53); und ein Plan liest den Titel auf Deutsch, während der Raumplan
+  daneben weiter das Original bekommt, ohne dass eine Zeile in
+  `program_item_signup` entsteht (E55, E56). 39 Prüfungen, alle grün. Das
+  Skript dafür ist bewusst **nicht** eingecheckt: die Logik gehört den Suiten,
+  diese Frage gehört dem Abschluss.
+- **Nachgezogen:** die **README** (der Absatz „Not built yet: the five curated
+  plug-ins" war seit AP 9 falsch und ist jetzt der Absatz „Phase 4 is
+  complete"; offen bleibt nur die Härtungsrunde), `docs/rules/infrastructure.md`
+  (**sieben** geteilte Bibliotheken statt sechs — und die Regel „ein Bündel darf
+  genau **eine** benutzen" stimmte seit AP 6 nicht mehr, es sind
+  `shared-models` **und** `shared-plugin-kit`; dazu der Ruhezustand des
+  Vertrags nach dieser Phase), `docs/rules/README.md` (F1–F202 vergeben, keine
+  reservierte Nummer mehr offen), das Referenzdokument (F196, Versionszeile
+  1.48, `shared-plugin-kit` in Kapitel 5, Anhangspunkt 11 abgeschlossen), die
+  README der Prüfskripte (fünf Bündel bauen statt einem) und `CLAUDE.md` — dort
+  **eine Zeile in der Phasenliste und die Zahlen darunter**, kein Absatz.
+- **Katalog: 1080 Schlüssel, unverändert** — dieses Paket hat keinen Bildschirm
+  gebaut. Englisch und Deutsch tragen dieselben Schlüssel, geprüft Schlüssel für
+  Schlüssel; 124 davon unter `plugins.*`, verteilt auf die fünf Plug-ins
+  (Forum 31, Check-In 27, Raumplanung 26, Vorschläge 25, individueller Plan 15).
+
+**Belegt.** `nx run-many -t lint test build --skip-nx-cache` grün für **18**
+Projekte; Server-Unit-Tests **1267** in 81 Suiten; API-Vertragstests **687** in
+**38** Suiten, viermal gefahren, viermal grün; Nutzer-Browsersuite **258**
+bestanden / 63 übersprungen; Veranstalter-Browsersuite **317** / 82. Dazu die
+Zahlen am Container-Stack oben: 257 Prüfungen aus neun Skripten und 39 aus dem
+Durchspielen der Definition of Done. Beide Datenbanken danach im Ruhezustand —
+alle fünf Plug-ins aus, keine übriggebliebene Reihe, kein Profil, keine
+Plug-in-Zeile.
+
+**Was anders lief in diesem Paket:**
+
+- **Eine Browsersuite ist rot geworden, allein gefahren, mit einem Namen.**
+  `participants.spec.ts:224` — _opens one registration, cancels it, and puts it
+  back_, in Firefox: nach dem Abbrechen wartet der Test zehn Sekunden auf den
+  Statusfilter „Cancelled (2)", der nicht kommt. Ein Lauf von dreien; die
+  anderen beiden grün mit 317. Das ist genau der Eintrag, den AP 7 offen
+  gelassen hat („wenn er mit einem Testnamen wiederkommt, kommt der Name
+  hierher") — also ist er **nicht** geschlossen worden, sondern zur Hälfte:
+  die 146 Fehlschläge aus AP 9 sind erklärt, dieser eine ist es nicht.
+  Ausgeschlossen ist immerhin, was am nächsten lag: zwei Tests, die sich um
+  eine Fixture streiten. Jede Engine sät ihr eigenes Event, und weil
+  `fixtureLabel` die Prozess-Id trägt, sät auch **jeder Playwright-Worker**
+  sein eigenes — was zählt, weil die Suite `fullyParallel` läuft und `beforeAll`
+  deshalb je Worker läuft und nicht je Datei.
+- **Ein Lauf, dessen Ausgabe man wegwirft, hat nie stattgefunden.** Der erste
+  von sechs Läufen der Nutzer-Browsersuite war rot — und weil der Befehl
+  `| tail` trug, ist die einzige Spur, die ein Flackern je hinterlässt, im
+  Nichts gelandet; die fünf danach waren grün mit derselben Zahl. Gefunden
+  wurde es nur, weil Nx die Aufgabe als flaky markierte und seine
+  Aufgabenhistorie eine SQLite-Datei ist, in der der Fehlschlag stand. Seitdem
+  läuft in diesem Paket jede Suite `> datei.log` und wird **danach** gelesen.
+- **Ein Prüfskript veraltet leiser als Code.** Zwei der drei Dinge, die AP 10
+  gefunden hat, standen in `verify-plugin-toggle.mjs` und nicht im Server: ein
+  Einhängepunkt, der seit AP 6 zu zweit ist, und eine Liste des Ausgelieferten,
+  die ein Plug-in zu wenig kannte. Beides hätte jeder Lauf gegen eine echte
+  Instanz sofort gezeigt — nur lief seit AP 6 keiner. Das ist das Argument für
+  den Punkt „die Prüfskripte laufen gegen genau diese Instanz" in der
+  Definition of Done, und es ist stärker geworden.
+- **Zwei falsche Annahmen im eigenen neuen Prüfteil, und beide waren
+  lehrreich.** Erstens: der individuelle Programmplan antwortet **abgeschaltet**
+  nicht 404, sondern **401**, wenn niemand angemeldet ist — der Sitzungsguard
+  hängt am Pfadpräfix (E16, E57) und spricht vor dem Plug-in-Guard. Das ist die
+  richtige Reihenfolge und die bessere Zusicherung: an und aus antworten
+  **identisch**, also erfährt jemand ohne Sitzung nicht, ob diese Organisation
+  das Plug-in betreibt. Zweitens: `profiles` lässt sich nicht einfach
+  abschalten, um die Voraussetzung zu prüfen — zwei **Kernmodule** stehen auch
+  darauf (E42). Das Skript liest die Abhängigen jetzt aus der Modulliste, statt
+  sie zu benennen.
+- **E14 hat beim Aufräumen zurückgeschlagen, und das war richtig.** Das
+  Durchspielen wollte seine Reihe am Ende über die API löschen und bekam 409 —
+  eine Reihe mit bestätigten Anmeldungen wird nicht gelöscht. Dieselbe Lehre wie
+  in AP 13 der Phase 3, wo `invitations.spec.ts` sie zum ersten Mal gelernt
+  hat: was eine Suite oder ein Skript aufräumt, räumt es mit einer Anweisung
+  auf, und das Nein der Anwendung ist die Zusicherung, nicht das Hindernis.
+- **Und einmal die Drossel, wie vorgesehen nicht angefasst.**
+  `verify-admin-access.mjs` sperrt den Login absichtlich für fünfzehn Minuten;
+  das Durchspielen danach bekam 429. Behoben durch einen Neustart des
+  Server-Containers, nicht durch eine Zeile in der Konfiguration
+  (`docs/rules/decisions.md`).
+
+**Die Definition of Done, Punkt für Punkt:**
+
+| Nr. | Zusage                                                                        | Beleg                                                                                                                                                                                                                    |
+| --- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | Jedes Paket hat sein Abnahmekriterium erfüllt; alle Suiten grün, nacheinander | Je Paket ein Abschnitt oben; zuletzt 18 Projekte, 1267 Unit-, 687 Vertrags-, 258 + 317 Browsertests — nacheinander gefahren, nie zusammen (E4)                                                                           |
+| 2   | Fünf Plug-ins zur Laufzeit schaltbar, aus heißt 404 und keine verlorene Zeile | `verify-plugin-toggle.mjs`, 86 Prüfungen am Container-Stack: je Plug-in aus → an → aus, Deskriptor, Bündel, Einhängepunkte, Icon; sieben Tabellen mit Präfix; „switching all five off loses no row"                      |
+| 3   | Teilnehmender beteiligt sich und diskutiert, Veranstalter moderiert beides    | Durchspielen am Stack, Abschnitt 3: Vorschlag → Freigabe → kein Programmpunkt (E52); Thread → Freigabe des **Beitrags** → sichtbar (F195)                                                                                |
+| 4   | Raumplan zeigt Überbuchung und Doppelbelegung, lehnt nichts ab                | Durchspielen, Abschnitt 4: ein Stuhl, zwei überlappende Sessions, beide 204; `overbooked` und `double-booked` an Session und Raum; keine Spalte dafür                                                                    |
+| 5   | Ein Einlass funktioniert, mit Kamera abgehakt oder protokolliert              | Durchspielen, Abschnitt 5: eigener Code je Anmeldung, erster Scan lässt herein, zweiter nennt denselben Zeitpunkt. **Die Kamera bleibt offen** — eine Zeile in `todo.md` unter _On a device_, wie AP 8 es festgelegt hat |
+| 6   | Ein individueller Plan steht in der Sprache seines Menschen, ohne Platz       | Durchspielen, Abschnitt 6: deutscher Titel im Plan, Original im Raumplan daneben, `program_item_signup` unverändert                                                                                                      |
+| 7   | `todo.md` durchgearbeitet, F186–F201 stehen                                   | Zehn von elf geschlossen, vier umgezogen mit Begründung, einer offen (der benannte Flake); F196 nachgetragen, F186–F202 vollständig                                                                                      |
+| 8   | Dieses Dokument von Plan auf Protokoll, mit phasenweitem _Was anders lief_    | Zehn Abschnitte „erledigt" und der Abschnitt unten                                                                                                                                                                       |
+
+Punkt 5 ist der einzige mit einer offenen Hälfte, und das ist keine Abweichung,
+sondern die Formulierung der Zusage selbst: „auf einem echten Gerät mit Kamera
+abgehakt **oder** mit Gerät und Datum als gescheitert protokolliert". Protokolliert
+ist sie — in `todo.md` unter _On a device — waiting for Marius_, neben der
+Gerätematrix aus Phase 3. Was eine Suite prüfen kann, ist die Tür ohne Kamera,
+und die ist geprüft (F199).
+
+---
+
+## Was anders lief — über die ganze Phase
+
+Je Paket steht es oben; das hier sind die sechs Dinge, die man erst sieht, wenn
+man zehn Pakete nebeneinanderlegt.
+
+**Der Vertrag ist in beide Richtungen gewachsen, und die Richtung nach unten war
+die schwerere.** E46 verlangt: keine Erweiterung ohne das Paket, das sie füllt.
+Was der Plan nicht vorhergesehen hat, ist, dass diese Regel auch **rückwärts**
+angewendet werden muss. Die Sprache an `findItem` stand in der Tabelle, mit AP 9
+in der rechten Spalte — und als AP 9 kam, hatte `findItem` genau einen Aufrufer,
+der keinen Titel braucht, sondern eine Existenz. Sie ist gestrichen worden, und
+die Tabellenzeile trägt seitdem einen Durchstrich statt eines Hakens. Umgekehrt
+kam ein Feld dazu, das nirgends geplant war (`registrationEnabled`), weil ein
+Häkchen im Plan sonst wie eine Buchung ausgesehen hätte. Beides zusammen ist der
+eigentliche Beweis für E46: **die Bedingung ist kein Formular, das man am Ende
+abhakt, sondern eine Frage, die beim Bauen gestellt wird.** Acht geplante
+Erweiterungen, sieben gebaut, eine zurückgezogen, eine ungeplante dazu — und
+`PLUGIN_API_VERSION` steht immer noch bei genau **einem** Schritt.
+
+**Fünf Plug-ins, und am Host hat sich viermal nichts geändert.** Die Einhängepunkte
+sind in AP 3 (`event-dashboard`) und AP 8 (`my-registration`) dazugekommen, und
+danach nicht mehr. AP 4, AP 6 und AP 9 haben ihre Abschnitte in Client-Seiten
+gezeichnet, die kein Wort von ihnen wussten, und in ihren Protokollen steht
+jeweils derselbe Satz: **„Am Host geändert: nichts."** Das ist die Zusage, die
+die Phase eigentlich schuldete — nicht fünf Fachlichkeiten, sondern ein
+Mechanismus, der die fünfte trägt, ohne für sie gebaut worden zu sein. Der Satz
+gilt bis in die Reihenfolge: `CURATED_PLUGINS` ist auch die Reihenfolge der
+Kacheln, und als das Check-In dazukam, ist keine Kachel umgezogen.
+
+**Drei Host-Ports, drei Mal derselbe Auslöser.** `PluginParticipantReads` (AP 2),
+`PluginRegistrationReads` (AP 7) und die Erweiterungen an `PluginProgramReads`
+(AP 6, AP 9) sind alle entstanden, weil ein Plug-in etwas über einen Menschen,
+eine Anmeldung oder das Programm brauchte und der Linter keinen Import zulässt.
+Kein einziges Mal ist die Regel gelockert worden; jedes Mal wurde ein Port
+eingezogen. Was dabei auffällt: **jeder Port ist schmaler geworden, als der
+naheliegende Entwurf war** — `countSignups` gibt eine Zahl statt einer Liste,
+`PluginAuthor` einen Namen ohne Adresse, `PluginRegistration` keine Antworten
+aus dem Anmeldeformular. Die Schmalheit ist kein Geiz, sondern die Antwort auf
+dieselbe Frage wie in Phase 3: was ein Port kann, kann jeder spätere Aufrufer.
+
+**Die geteilte Bibliothek kam spät und trotzdem rechtzeitig.**
+`shared-plugin-kit` entstand in AP 6, nach dem dritten Bündel — genau nach der
+Regel aus F138, dass die dritte Kopie auszieht, und nicht die zweite. Das vierte
+und fünfte Bündel haben daraus importiert und nichts kopiert, was der Beweis
+ist, den die Regel braucht. Was dabei aufgefallen ist und in
+`docs/rules/infrastructure.md` steht: sie ist die **einzige** geteilte
+Bibliothek, die kein Client benutzt. Ein Bündel darf jetzt zwei von sieben
+benutzen statt einer von sechs, und die alte Formulierung („genau eine") war
+seit AP 6 falsch — gefunden hat das erst der Abschluss.
+
+**Was diese Phase über ihre eigenen Tests gelernt hat, steht in keinem Test.**
+Drei Sätze, alle teuer bezahlt: die drei E2E-Projekte sind **zusammen** nicht
+lesbar, weil sie sich ein Anmeldebudget teilen (E4, seit AP 8 als bekannte Lücke
+notiert und nach Phase 5 vertagt); **neben einer Browsersuite darf nicht gebaut
+werden**, sonst verhungert der Entwicklungsserver und zwei von drei Engines
+zahlen dafür (AP 9, 146 Fehlschläge, die keiner Zeile Code gehörten); und ein
+Lauf, dessen Ausgabe man wegwirft, hat nie stattgefunden (AP 10). Alle drei
+stehen jetzt in `docs/rules/e2e-tests.md`. Die Suiten selbst sind in dieser
+Phase kräftig gewachsen: **587 → 687** Vertragstests (gemessen ab AP 1),
+**1134 → 1267** Server-Unit-Tests, **13 → 18** Projekte, und die
+Veranstaltersuite von 311 auf 317. Der einzige Test, der am Ende noch flackert,
+hat seit AP 10 einen Namen.
+
+**Dreimal hat der Plan etwas vorgesehen, und die Antwort war Nein.** Die Sprache
+an `findItem` (E56, kein Leser). Der Hinweis am Slot, ob eine Sitzung besteht
+(seit AP 3 offen, in AP 9 entschieden: eine Eigenschaft, die nur die Seite
+liefern kann, ist eine, die ein Einhängepunkt vergessen kann — und ein
+vergessenes `signedIn` ist `false`, also zeichnete ein Plug-in „bitte anmelden"
+für jemanden, der angemeldet ist). Und die zweite Hälfte von E55, die zwei
+weitere Fähigkeiten gekostet hätte, von denen die zweite eine Teilnehmerliste
+Zeile für Zeile gewesen wäre. Drei Neins in zehn Paketen, jedes mit seinem
+Grund an der Stelle, an der jemand danach sucht — das ist der Unterschied
+zwischen einer Entscheidung und einer Auslassung, und er ist der Grund, warum
+`todo.md` am Ende dieser Phase kürzer ist als am Anfang und trotzdem nichts
+fehlt.
