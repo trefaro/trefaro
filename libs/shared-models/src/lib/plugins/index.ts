@@ -22,6 +22,10 @@ export {
   type OpenedForumThread,
 } from './forum';
 export {
+  PERSONAL_PROGRAM_MODULE_KEY,
+  type PersonalProgramItem,
+} from './personal-program';
+export {
   DEFAULT_PROPOSAL_PAGE_SIZE,
   MAX_PROPOSAL_DESCRIPTION_LENGTH,
   MAX_PROPOSAL_PAGE_SIZE,

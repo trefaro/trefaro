@@ -91,6 +91,10 @@ export class ProgramPluginReads implements PluginProgramReads {
  * Picked field by field rather than spread: the record carries the abstract,
  * the speaker and two timestamps, and none of them is promised by the
  * contract. What the contract does not name, a plug-in must not receive.
+ *
+ * `registrationEnabled` joined the list in AP 9 of phase 4, and it is about the
+ * session rather than about anybody who signed up for it: whether a seat is
+ * booked here at all (E55, F42).
  */
 function toPluginItem(
   item: ProgramItemRecord,
@@ -102,6 +106,7 @@ function toPluginItem(
     title,
     startsAt: item.startsAt.toISOString(),
     endsAt: item.endsAt.toISOString(),
+    registrationEnabled: item.registrationEnabled,
     capacity: item.capacity,
   };
 }

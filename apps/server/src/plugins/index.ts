@@ -1,5 +1,6 @@
 import type { ServerPlugin } from '../app/business/plugin-api';
 import { forumPlugin } from './forum/forum.plugin';
+import { personalProgramPlugin } from './personal-program/personal-program.plugin';
 import { programProposalsPlugin } from './program-proposals/program-proposals.plugin';
 import { qrCheckinPlugin } from './qr-checkin/qr-checkin.plugin';
 import { roomPlanningPlugin } from './room-planning/room-planning.plugin';
@@ -20,11 +21,14 @@ import { roomPlanningPlugin } from './room-planning/room-planning.plugin';
  * sorted rather than incidental, so it is worth being deliberate about: the
  * reference plug-in moved down a line when the first plug-in of phase 4 arrived
  * above it, and another when the forum followed — and the check-in came in
- * below it, because FR 3.16 is P3 and the plan orders these by priority.
+ * below it, because FR 3.16 is P3 and the plan orders these by priority. The
+ * personal programme is last for the same reason: FR 3.17 is P3 as well, and
+ * of the two it is the one nothing else waits on.
  */
 export const CURATED_PLUGINS: readonly ServerPlugin[] = [
   programProposalsPlugin,
   forumPlugin,
   roomPlanningPlugin,
   qrCheckinPlugin,
+  personalProgramPlugin,
 ];

@@ -129,5 +129,13 @@ from migrations order by timestamp desc limit 1"`), nicht der Health-Endpunkt.
   der Enum-Typ der Spalte sein, einmal `text`. Entweder casten
   (`$5::text = 'pending'`) oder — besser in einem Fixture — die Entscheidung im
   aufrufenden Code treffen und den Wert als eigenen Parameter schicken.
+- **`noPropertyAccessFromIndexSignature` macht ein `Record<string, string>` im
+  Test unbenutzbar mit Punktzugriff.** Die Wortsammlung eines Bündels als
+  `Record<string, string>` zu typisieren zwingt jeden Test zu
+  `STRINGS['remove']` — und dabei ist ein Tippfehler `undefined` statt eines
+  Fehlers, also ein Test, der aus dem falschen Grund grün wird. Die Sammlung
+  wird deshalb als Literal geschrieben und mit `as const satisfies
+Record<string, string>` festgenagelt: der Punktzugriff funktioniert, und ein
+  Schlüssel, den es nicht gibt, ist ein Build-Fehler.
 
 Siehe auch: [Browsersuiten und E2E-Tests](e2e-tests.md), [Schichten und Ports im Server](server-layers.md).

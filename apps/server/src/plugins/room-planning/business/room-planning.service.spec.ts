@@ -172,6 +172,7 @@ const session = (
   title: `Session ${id}`,
   startsAt: at(from),
   endsAt: at(to),
+  registrationEnabled: false,
   capacity: null,
   ...overrides,
 });

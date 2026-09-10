@@ -893,7 +893,7 @@ program-item-signup,user-profile,registration,registration-field}`. The
 plug-ins, ten packages, decisions E46–E59). Where the plan already answers an
 entry, the answer is noted below rather than repeated.
 
-- [ ] **A plug-in reads the originals, not the translations.** `PluginProgramReads`
+- [x] **A plug-in reads the originals, not the translations.** `PluginProgramReads`
       (E12, F45) hands a plug-in five fields of a programme item, and since AP 11
       of phase 2 those are the untranslated ones. Right for the room planning
       plug-in, which an organizer uses in the instance's own language; wrong for
@@ -904,6 +904,15 @@ entry, the answer is noted below rather than repeated.
       **It exists in this phase** — the individual programme plan (FR 3.17) is
       the fifth plug-in. Answered as predicted: a locale on the port plus
       `listForEvent`, not a second port (E56, F200, AP 9).
+      **Closed in AP 9 (10.09.2026), with one correction to the prediction.**
+      `listForEvent(eventId, locale?)` came early, in AP 6, because the room
+      plan needed the list; AP 9 used it for the participant's own plan and
+      proved the other half — an organizer's read of the same port still gets
+      the originals. The `locale` on `findItem` that the plan also promised was
+      **not** built: when the package arrived, `findItem`'s only caller was a
+      write that checks a session exists and answers 204, and a parameter
+      nobody passes is the pretence E21 was written against (F200). No version
+      bump either — 1.2.0 was already the step this phase spends.
 
 - [x] **The plug-in contract names an icon nobody draws.**
       `PluginClientContribution.icon` carries a Material Symbols glyph name
@@ -942,7 +951,7 @@ entry, the answer is noted below rather than repeated.
       and no plug-in of this phase mounts there. The reasoning is in
       `docs/PHASE4.md` under _Fortschritt_.
 
-- [ ] **Build the four remaining curated plug-ins.**
+- [x] **Build the four remaining curated plug-ins.**
       `apps/server/src/plugins/{forum,qr-checkin}` hold only a README; they are
       deliberately not registered as no-op plug-ins. Order from the plan:
       programme proposals (AP 2/3), forum (AP 4/5), room planning (AP 6), QR
@@ -1003,6 +1012,18 @@ entry, the answer is noted below rather than repeated.
       from a network: `qrcode` (MIT) draws, `jsqr` (Apache-2.0) reads, the
       second one loaded only when the camera is switched on. **Milestone M11 is
       reached.** Only `personal-program` is left (AP 9).
+      **Five of five are done: the individual programme plan followed (AP 9,
+      10.09.2026), server and bundle in one package** — the smallest of the
+      five, and splitting it would have produced a route nobody called for the
+      length of a package. `apps/server/src/plugins/personal-program` — one
+      table (`plugin_personal_program_entry`, the pair as its primary key), one
+      migration, **one** controller and one audience, `requires: ['profiles']`.
+      `apps/plugins/personal-program` is the fifth bundle and the only one that
+      is not a switch: it declares one hook point, `event-detail`, so a
+      `mountPoint` input would be a value nothing reads. On the contract it
+      added exactly one field, `PluginProgramItem.registrationEnabled` (E55,
+      F201) — the mark that keeps a tick from reading like a booking — and left
+      `findItem` as it was. `CURATED_PLUGINS` has all five entries.
 - [x] **Implement the overbooking check** in the room planning plug-in: sign-ups
       per programme item against room capacity. Everything it needs exists since
       AP 9 — the room's capacity, the sessions assigned to it, and their sign-up
@@ -1136,7 +1157,7 @@ entry, the answer is noted below rather than repeated.
       (`apps/admin-client-e2e/src/plugin-forum.spec.ts`). Nothing in the host
       changed for it, which is what "verify" here meant.
 
-- [ ] **A plug-in behind the login cannot tell whether there is a session.** The
+- [x] **A plug-in behind the login cannot tell whether there is a session.** The
       contract hands a mounted element `locale`, `strings` and `mountPoint` — not
       whether the reader is signed in. So the participant half of the programme
       proposals asks its own endpoint and reads the 401 (E58: no session is a
@@ -1160,6 +1181,35 @@ entry, the answer is noted below rather than repeated.
       `event-dashboard`, three plug-in tiles side by side in registration
       order. The condition is met three times over; what AP 9 decides is only
       whether the hint is worth a contract step.
+      **AP 9 decided against it (10.09.2026).** The personal programme is the
+      third participant-facing half that asks and reads the refusal, so the
+      cost is now three failed requests in the console of an anonymous visit
+      with all three switched on — and it stays. The reason is the catch the
+      entry itself names: a property only the **page** can supply is one a hook
+      point can forget, and a forgotten `signedIn` is `false`, so a plug-in
+      would draw "please log in" **at somebody who is logged in**. A silent
+      wrong answer is worse than a 401 that is right every time, and E58
+      already says a refusal is a state rather than a failure. The slot cannot
+      supply it either: the two clients have different session kinds, and the
+      same bundle runs in both. What is left is console noise on a page that
+      works, which is not worth the first context value that can be wrong.
+
+- [ ] **A personal plan does not say where I hold a seat.** E55 has two halves:
+      putting a session in a plan books nothing (built, F201) — and "the plan
+      shows where I have a seat", which AP 9 did **not** build. The reason is
+      structural rather than an oversight: a seat belongs to a **registration**
+      (`program_item_signup.registration_id`, and somebody may register without
+      an account), a plan belongs to an **account**
+      (`plugin_personal_program_entry.user_id`). Joining the two would need two
+      capabilities the contract does not have — resolving an account's
+      registrations for one event, and asking which sessions one registration
+      signed up for — and the second one is a participant list read one row at
+      a time, which is exactly what `countSignups` gives a number for instead.
+      What was built in its place is the mark on the **session**: where a seat
+      is booked at all (`registrationEnabled`), so a tick cannot be mistaken
+      for a booking. Decide in phase 5 whether the missing half is worth two
+      port capabilities, or whether the programme's own timeline — where the
+      seat is taken — is the right and only place to see it.
 
 ## Checkable after phase 5 — hardening and release
 

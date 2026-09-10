@@ -400,5 +400,24 @@ conversations` ist der Fall: Lesen und Antworten sind FR 3.4 und damit **P1**,
   jede Zeile sagt ihre Quelle, und ein Filter wäre ein zweiter Weg zu einer
   Frage, die die Liste in jeder Zeile beantwortet. Wer eine Person sucht, sucht
   sie in der Teilnehmerübersicht.
+- **Eine Auswahl, die nur existieren oder nicht existieren kann, ist `PUT` und
+  `DELETE` auf ihrer eigenen Adresse — beide 204, beide ohne Rumpf.** Der
+  individuelle Programmplan (AP 9 der Phase 4) ist die Vorlage: `PUT
+/…/program-items/:id` stellt eine Tatsache fest statt einer Sammlung etwas
+  hinzuzufügen, also ist das zweite Mal dieselbe Antwort wie das erste. Ein
+  Rumpf müsste etwas sagen, und es gibt nichts zu sagen — die Adresse ist die
+  ganze Anfrage.
+- **Die zwei Richtungen sind dabei bewusst unsymmetrisch:** Hineinlegen
+  antwortet **404** für etwas, das es nicht gibt, Herausnehmen antwortet **204**
+  für etwas, das nie drin war. Der Grund ist der Zustand, den der Aufrufer
+  bestellt hat: „nicht im Plan" ist erreichbar, „im Plan, obwohl es die Session
+  nicht gibt" nicht. Und weil eine Prüfung das Rennen mit einer Löschung nicht
+  gewinnt, gibt der Fremdschlüssel dieselbe 404 noch einmal aus.
+- **Ein Plug-in erfindet keine 404 über etwas, wofür es keinen Port hat.** Ein
+  Event, das es nicht gibt, ist für den Plan eine **leere Liste** — der Vertrag
+  veröffentlicht keinen Port für die Existenz eines Events, und die Antwort
+  darüber wäre eine Behauptung über etwas, das das Plug-in nicht sehen kann.
+  Dieselbe Entscheidung wie beim öffentlichen Raumplan, der nicht prüft, ob ein
+  Event veröffentlicht ist.
 
 Siehe auch: [Schichten und Ports im Server](server-layers.md), [Mehrsprachigkeit und Katalog](i18n.md).

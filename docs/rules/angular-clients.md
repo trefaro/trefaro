@@ -266,5 +266,22 @@ besteht. Jede Zeile hier hat einmal einen halben Tag gekostet.
   `[routerLink]="[]" [fragment]="…"` die Adresse und sonst nichts. Und immer
   über den Router: beide Clients tragen ein `<base href>`, gegen das ein nacktes
   `href="#ziel"` auflöst — und dann verlässt der Klick die Seite.
+- **Ein Bündel mit genau einem Einhängepunkt deklariert kein `mountPoint`**
+  (AP 9). Vier der fünf Bündel sind oben ein Schalter über die übergebene
+  Eigenschaft (F202); der individuelle Programmplan hängt nur am
+  `event-detail`, also wäre der `input()` ein Wert, den niemand liest (E21).
+  Der Slot weist ihn trotzdem zu — `Object.assign` auf ein Custom Element legt
+  eine gewöhnliche Eigenschaft an, und das stört nichts.
+- **Nach Tagen gruppiert wird nach der gezeichneten Beschriftung, nicht nach dem
+  ISO-Datum** (AP 9). `startsAt.slice(0, 10)` ist der Tag in UTC, die Überschrift
+  darüber steht in der Uhr des Lesers — bei einer Session am späten Abend sind
+  das zwei verschiedene Tage, und dann widerspricht eine Überschrift den Zeilen
+  unter ihr. Also ist der Schlüssel der Gruppe dieselbe Zeichenkette, die auch
+  angezeigt wird.
+- **Ein Schreibvorgang, der 204 antwortet, schreibt die Zeile am Ort um und
+  liest die Liste nicht neu** (AP 9). Ein 204 sagt, dass der Zustand der
+  bestellte ist; noch einmal zu lesen verschiebt die Seite unter einem Daumen,
+  der gerade die nächste Zeile drücken will. Währenddessen liegt die Id in
+  einem `busy`-Set, damit zwei Antippen nicht zwei Anfragen werden.
 
 Siehe auch: [Browsersuiten und E2E-Tests](e2e-tests.md), [Mehrsprachigkeit und Katalog](i18n.md), [Whitelabel und PWA](whitelabel-pwa.md).

@@ -127,6 +127,7 @@ jobs:
       - run: npx nx build plugin-program-proposals
       - run: npx nx build plugin-forum
       - run: npx nx build plugin-qr-checkin
+      - run: npx nx build plugin-personal-program
       - run: npx nx run-many -t e2e --parallel=1
 
       - if: failure()

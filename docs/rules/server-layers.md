@@ -283,5 +283,23 @@ PushModule` einen Kreis, und der Server startete nicht mehr („The module at
   Anmeldezahlen auf einmal; F49) —, keine Migration, und kein `assign`, das
   wegen einer Warnung ablehnt: ein Plan, der einen Raum verweigert, wird
   umgangen, und dann steht die Wahrheit nicht mehr drin.
+- **Eine geplante Vertragserweiterung ohne Leser wird nicht gebaut** (AP 9 der
+  Phase 4, E21). `locale` an `findItem` stand seit AP 1 in der Tabelle der
+  1.2.0-Erweiterungen; als das Paket kam, das sie brauchen sollte, war der
+  einzige Aufrufer von `findItem` ein Schreibvorgang, der prüft, dass es die
+  Session gibt, und 204 antwortet. Ein Parameter, den niemand übergibt, ist
+  dieselbe Attrappe wie ein Schalter, den niemand liest — die Zeile im Plan ist
+  keine Zusage, sondern eine Vermutung, und sie wird protokolliert statt
+  abgehakt.
+- **Umgekehrt darf ein Feld dazukommen, wenn ein Bildschirm sonst lügt.**
+  `PluginProgramItem.registrationEnabled` (AP 9, E55) stand in keiner Tabelle
+  des Plans und ist trotzdem gebaut worden: ohne es liest sich ein Häkchen an
+  einem Workshop mit begrenzten Plätzen wie eine Buchung, und `capacity` allein
+  kann die Marke nicht tragen — ein Programmpunkt darf fragen, wer kommt, ohne
+  zu begrenzen, wie viele (F42). **Ein Feld, keine Methode**: es ist eine
+  Eigenschaft der Session, die der Port ohnehin ausgibt. Was ausdrücklich nicht
+  dazukam, ist eine Frage nach **einem Menschen** — „hält dieses Konto einen
+  Platz" wäre eine Teilnehmerliste durch die Hintertür, und ein Platz gehört
+  einer Anmeldung, ein Plan einem Konto.
 
 Siehe auch: [Verträge der Endpunkte](api-contracts.md), [Regeln des Datenmodells](data-model.md).

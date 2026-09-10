@@ -20,6 +20,18 @@
  * plug-in reads it **translated when a participant is reading**, and the
  * original otherwise. A plug-in built against 1.1.0 keeps working and simply
  * never asks — which is what the minor step means.
+ *
+ * **1.2.0 also adds `registrationEnabled`** (AP 9, E55). A personal programme
+ * plan reserves nothing, and the one thing that keeps it from being read as if
+ * it did is a mark on the sessions where a seat is actually booked — in the
+ * event's programme, by FR 3.10. `capacity` alone cannot carry that mark: a
+ * session may ask who is coming without limiting how many (F42), and such a
+ * session would then look like one that asks nothing.
+ *
+ * What is **not** here is any read about one named person: how many signed up
+ * is a number ({@link PluginProgramReads.countSignups}), and *who* did is the
+ * core's business. A plug-in that could ask "does this account hold a seat"
+ * would be reading a participant list through the back door.
  */
 
 /** One session, in the shape the overbooking check needs it. */
@@ -38,12 +50,29 @@ export interface PluginProgramItem {
   /** Absolute instants. Two sessions in one room may not overlap in time. */
   readonly startsAt: string;
   readonly endsAt: string;
+  /**
+   * Whether this session asks who is coming (FR 3.10, F42).
+   *
+   * The mark a personal plan needs (E55): where this is true, a seat is booked
+   * in the event's programme, and nowhere else. Independent of `capacity` —
+   * "as many as come" is a sign-up without a limit.
+   */
+  readonly registrationEnabled: boolean;
   /** The session's own limit, if it has one — not the room's. */
   readonly capacity: number | null;
 }
 
 export interface PluginProgramReads {
-  /** `null` when no session has that id. The title is the original. */
+  /**
+   * `null` when no session has that id. The title is the original.
+   *
+   * **No `locale` here, and that is a decision** (AP 9). The plan of this
+   * phase had one arriving with the personal programme; when the package came,
+   * the only caller of `findItem` was a write that checks a session exists and
+   * answers 204, and a parameter no caller passes is the pretence E21 was
+   * written against. It stays available for the release that has a reader for
+   * it — a translated single session is a screen nobody has asked for yet.
+   */
   findItem(itemId: string): Promise<PluginProgramItem | null>;
   /**
    * Every session of one event, in the order the programme has them (F40).

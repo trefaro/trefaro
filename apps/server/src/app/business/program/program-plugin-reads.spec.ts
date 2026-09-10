@@ -112,9 +112,10 @@ describe('ProgramPluginReads', () => {
 
     const sessions = await reads.listForEvent(EVENT);
 
-    // The five fields of F45 plus the title E56 added — and nothing else of
-    // the record: no abstract, no speaker, no timestamps of the row, and
-    // above all no count of people, which a plug-in asks for separately.
+    // The five fields of F45, the title E56 added and the sign-up flag AP 9
+    // needed (E55) — and nothing else of the record: no abstract, no speaker,
+    // no timestamps of the row, and above all no count of people, which a
+    // plug-in asks for separately.
     expect(sessions).toEqual([
       {
         id: 'item-1',
@@ -122,6 +123,7 @@ describe('ProgramPluginReads', () => {
         title: 'Opening plenary',
         startsAt: '2027-06-14T09:00:00.000Z',
         endsAt: '2027-06-14T10:00:00.000Z',
+        registrationEnabled: true,
         capacity: 40,
       },
       {
@@ -130,6 +132,7 @@ describe('ProgramPluginReads', () => {
         title: 'Workshop: door-to-door',
         startsAt: '2027-06-14T11:00:00.000Z',
         endsAt: '2027-06-14T12:30:00.000Z',
+        registrationEnabled: false,
         capacity: null,
       },
     ]);
@@ -176,6 +179,7 @@ describe('ProgramPluginReads', () => {
       title: 'Opening plenary',
       startsAt: '2027-06-14T09:00:00.000Z',
       endsAt: '2027-06-14T10:00:00.000Z',
+      registrationEnabled: true,
       capacity: 40,
     });
   });

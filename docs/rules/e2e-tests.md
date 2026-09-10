@@ -519,4 +519,14 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   sie fehlen dem Seed die Admin-Zugangsdaten und der Lauf scheitert im
   `globalSetup`.
 
+- **Neben einer Browsersuite wird nicht gebaut.** Ein `nx run-many -t build`
+  parallel zu einem laufenden `nx e2e` lässt den Entwicklungs-Server der
+  Clients verhungern, und weil Playwright drei Engines gleichzeitig fährt,
+  zahlen die zwei, die später dran sind: ein Lauf der Veranstaltersuite hatte
+  so **146** Fehlschläge in Firefox und WebKit, **null** in Chromium, und
+  brauchte 11,6 statt 2,1 Minuten. Die Seiten hingen bei „Loading Trefaro …",
+  also an der Startsequenz, nicht an einer Zusicherung. Derselbe Lauf allein
+  war grün (317). Wer eine Zahl nennen will, hat die Suite **allein** laufen
+  lassen.
+
 Siehe auch: [Fallen in den Angular-Clients](angular-clients.md), [Deployment und Prüfung](deployment.md).

@@ -1,6 +1,6 @@
 # Phase 4 — Plug-ins: die fünf kuratierten Fachlichkeiten
 
-**Status: in Arbeit** (Plan 04.09.2026, AP 1 bis AP 3 erledigt am 07.09.2026 — **Meilenstein M9 erreicht** —, AP 4 bis AP 6 am 08.09.2026 — **Meilenstein M10 erreicht** —, AP 7 und AP 8 am 09.09.2026 — **Meilenstein M11 erreicht**). Alles über
+**Status: in Arbeit** (Plan 04.09.2026, AP 1 bis AP 3 erledigt am 07.09.2026 — **Meilenstein M9 erreicht** —, AP 4 bis AP 6 am 08.09.2026 — **Meilenstein M10 erreicht** —, AP 7 und AP 8 am 09.09.2026 — **Meilenstein M11 erreicht** —, AP 9 am 10.09.2026: **alle fünf Plug-ins stehen**). Alles über
 dem Abschnitt _Fortschritt_ ist der **Plan** und wird nicht rückwirkend
 korrigiert; was tatsächlich passierte — samt Abweichungen — steht unten, wie in
 [`PHASE1.md`](PHASE1.md), [`PHASE2.md`](PHASE2.md) und
@@ -375,16 +375,17 @@ Alles in dieser Tabelle ist eine **Erweiterung** — ein Plug-in gegen 1.1.0
 bleibt montiert und fragt nicht. Die rechte Spalte ist die Bedingung aus E46:
 ohne Füller keine Erweiterung.
 
-| Erweiterung                                                                   | Warum                                                                                                                                                                 | Gefüllt in |
-| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| Einhängepunkt `event-dashboard` (Veranstalter-Client)                         | F47: die Kacheln für Vorschläge und Forum aus den Mockups                                                                                                             | AP 3, AP 5 |
-| Einhängepunkt `my-registration` (Nutzer-Client)                               | E54: die Ticketseite hinter dem Mail-Link                                                                                                                             | AP 8       |
-| Slot-Kontext `locale` und `strings`                                           | E48: Worte aus dem Katalog, von der Organisation pflegbar                                                                                                             | AP 1       |
-| `PluginClientContribution.icon` wird gelesen, Namen aus geschlossenem Satz    | E49: das Feld liest endlich jemand                                                                                                                                    | AP 1       |
-| `ServerPlugin.requires`                                                       | E47: drei Plug-ins brauchen Konten                                                                                                                                    | AP 2       |
-| Port `PluginParticipantReads` — wer fragt, und wie ein Autor heißt            | E58: ein Beitrag gehört einem Menschen                                                                                                                                | AP 2, AP 4 |
-| Port `PluginRegistrationReads` — Anspruch auflösen, bestätigte Anmeldungen    | E53/E54: Ticket und Einlassliste — dazu `findRegistration` je Id, weil die Tür einen **Namen** zeigen muss (AP 7)                                                     | AP 7       |
-| `PluginProgramReads.listForEvent(eventId, locale)` und `locale` an `findItem` | E56: ein Teilnehmender liest seinen Plan — `listForEvent` mit Titel kam in **AP 6** (vorgezogen: der Raumplan brauchte es zuerst), `locale` an `findItem` bleibt AP 9 | AP 6, AP 9 |
+| Erweiterung                                                                    | Warum                                                                                                                                                                                                                                                                                                                     | Gefüllt in     |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| Einhängepunkt `event-dashboard` (Veranstalter-Client)                          | F47: die Kacheln für Vorschläge und Forum aus den Mockups                                                                                                                                                                                                                                                                 | AP 3, AP 5     |
+| Einhängepunkt `my-registration` (Nutzer-Client)                                | E54: die Ticketseite hinter dem Mail-Link                                                                                                                                                                                                                                                                                 | AP 8           |
+| Slot-Kontext `locale` und `strings`                                            | E48: Worte aus dem Katalog, von der Organisation pflegbar                                                                                                                                                                                                                                                                 | AP 1           |
+| `PluginClientContribution.icon` wird gelesen, Namen aus geschlossenem Satz     | E49: das Feld liest endlich jemand                                                                                                                                                                                                                                                                                        | AP 1           |
+| `ServerPlugin.requires`                                                        | E47: drei Plug-ins brauchen Konten                                                                                                                                                                                                                                                                                        | AP 2           |
+| Port `PluginParticipantReads` — wer fragt, und wie ein Autor heißt             | E58: ein Beitrag gehört einem Menschen                                                                                                                                                                                                                                                                                    | AP 2, AP 4     |
+| Port `PluginRegistrationReads` — Anspruch auflösen, bestätigte Anmeldungen     | E53/E54: Ticket und Einlassliste — dazu `findRegistration` je Id, weil die Tür einen **Namen** zeigen muss (AP 7)                                                                                                                                                                                                         | AP 7           |
+| `PluginProgramReads.listForEvent(eventId, locale)`, ~~`locale` an `findItem`~~ | E56: ein Teilnehmender liest seinen Plan — `listForEvent` mit Titel kam in **AP 6** (vorgezogen: der Raumplan brauchte es zuerst). `locale` an `findItem` ist in **AP 9 gestrichen**: der einzige Aufrufer prüft, dass es eine Session gibt, und antwortet 204 — ein Parameter ohne Leser ist die Attrappe aus E21 (F200) | AP 6, ~~AP 9~~ |
+| `PluginProgramItem.registrationEnabled`                                        | E55: ein Plan, der nichts reserviert, muss sagen, **wo** reserviert wird — sonst liest sich ein Häkchen wie eine Buchung. `capacity` allein trägt die Marke nicht (F42). **Nicht im Plan vorgesehen**, in AP 9 dazugekommen (F201)                                                                                        | AP 9           |
 
 Was **nicht** dazukommt, und warum es genannt wird, damit es nicht nachträglich
 hineinwächst:
@@ -2030,3 +2031,128 @@ Was anders lief als geplant:
   diese Datei scheitert genauso, an derselben Route. Nicht repariert, weil die
   Abhilfe entweder an der Drosselung liegt (verboten) oder daran, wie die drei
   Projekte gefahren werden — beides gehört nicht in ein Plug-in-Paket.
+
+### AP 9 — Individueller Programmplan (erledigt, 10.09.2026)
+
+Das fünfte Plug-in, Server und Bündel in **einem** Paket — es ist das kleinste
+der fünf, und es zu teilen hätte eine Route erzeugt, die ein Paket lang niemand
+ruft. Damit stehen alle fünf kuratierten Fachlichkeiten.
+
+- **Der Server** — `apps/server/src/plugins/personal-program` mit **einer**
+  Tabelle (`plugin_personal_program_entry`), einer Migration, **einem**
+  Controller und `requires: ['profiles']`. Das Paar `(user_id,
+program_item_id)` ist der Primärschlüssel: eine Auswahl existiert oder sie
+  existiert nicht, es gibt keinen zweiten Zustand und nichts, was zwei Zeilen
+  unterscheiden könnte. Beide Fremdschlüssel liegen auf der Plug-in-Tabelle und
+  kaskadieren (F21) — ein gelöschter Programmpunkt lässt niemandes Plan zurück,
+  ein gelöschtes Konto nimmt seinen mit, und „meine Daten löschen" bleibt eine
+  Anweisung.
+- **Ein Controller, eine Zielgruppe**, wo der Check-in drei hat. Es gibt keine
+  Veranstalterhälfte, und das ist eine Entscheidung: wer vorhat zu kommen, ist
+  keine Anwesenheitsliste (E55). Wer einen Platz hält, beantwortet das Programm
+  (FR 3.10); wer durch die Tür kam, der Check-in.
+- **Drei Routen** — `GET …/events/:id/plan?locale=` gibt das **ganze** Programm
+  aus, je Punkt mit `inPlan`, und `PUT`/`DELETE` auf
+  `…/program-items/:id` antworten **204**, beide ohne Rumpf. Der ganze Plan
+  reist, nicht die Auswahl: ein Plan, den man nur lesen kann, ist ein Plan, den
+  man nicht ändern kann — der Bildschirm, der einen Punkt anhakt, ist derselbe,
+  der die noch nicht angehakten zeigt (F49). Die zwei Richtungen sind bewusst
+  unsymmetrisch: Hineinlegen ist 404 für etwas, das es nicht gibt,
+  Herausnehmen 204 für etwas, das nie drin war.
+- **Der Vertrag wächst um genau ein Feld und schrumpft um einen Parameter.**
+  Dazu kam `PluginProgramItem.registrationEnabled` (E55, F201) — die Marke, ohne
+  die sich ein Häkchen an einem Workshop mit zwölf Plätzen wie eine Buchung
+  liest; `capacity` allein trägt sie nicht, weil ein Programmpunkt fragen darf,
+  wer kommt, ohne zu begrenzen, wie viele (F42). Weggefallen ist `locale` an
+  `findItem`, das der Plan für dieses Paket vorsah: der einzige Aufrufer prüft,
+  dass es die Session gibt, und antwortet 204 — ein Parameter, den niemand
+  übergibt, ist die Attrappe aus E21 (F200). Die Version bleibt **1.2.0**.
+- **Das Bündel** — `apps/plugins/personal-program`, das **fünfte**, und das
+  einzige, das oben kein Schalter ist: es hat einen Einhängepunkt, also wäre ein
+  `mountPoint`-Input ein Wert, den niemand liest. Der Abschnitt hängt am
+  `event-detail`, ist für **alle** montiert und zeigt ohne Sitzung die
+  Einladung, sich anzumelden (E58). Mobil zuerst: eine Spalte, der Knopf unter
+  dem Titel, die zweispaltige Form ist die Ausnahme ab 34 rem. Gruppiert wird
+  nach **Tagen**, und zwar nach der gezeichneten Beschriftung statt nach dem
+  ISO-Datum — bei einer Session am späten Abend sind das zwei verschiedene Tage,
+  und dann widerspricht eine Überschrift den Zeilen unter ihr. Dazu ein Filter
+  „nur mein Plan", der Zeilen ausblendet statt neu zu fragen.
+- **Ein Schreibvorgang schreibt die Zeile am Ort um.** Ein 204 sagt, dass der
+  Zustand der bestellte ist; noch einmal zu lesen verschöbe die Seite unter
+  einem Daumen, der die nächste Zeile drücken will. Währenddessen liegt die Id
+  in einem `busy`-Set, damit zwei Antippen nicht zwei Anfragen werden.
+- **Katalog** — fünfzehn Schlüssel unter `plugins.personalProgram.`, in beiden
+  Sprachen; der Katalog steht bei **1080**.
+- **Am Host geändert: nichts.** Der `event-detail`-Einhängepunkt steht seit
+  AP 3, der Veranstalter-Client bekommt keine Kachel, weil das Plug-in keinen
+  Dashboard-Einhängepunkt deklariert. Image und CI bauen das fünfte Bündel mit.
+
+Belegt: `nx run-many -t lint test build --skip-nx-cache` grün über **18**
+Projekte (das neue Bündel ist das achtzehnte). Server-Unit-Tests **1267** (war
+1252 — fünfzehn für den neuen Dienst), das Bündel **19**,
+Vertragstests **687** in **38** Suiten (war 662 in 37), Teilnehmer-Browsersuite
+**258** bestanden / 63 übersprungen (war 251/49), Veranstalter-Browsersuite
+**317** bestanden / 82 übersprungen — unverändert, weil dieses Paket am
+Veranstalter-Client nichts ändert.
+
+Was die neue Vertragssuite entscheidet, kann kein Unit-Test entscheiden: dass
+ein Punkt im Plan **keine Zeile** in `program_item_signup` erzeugt — abgelesen
+am öffentlichen Programm, wo `signupCount` die Zahl ist, die jemand sieht, der
+über sein Kommen entscheidet —, dass zwei Menschen denselben Workshop mit zwölf
+Plätzen im Plan haben dürfen, dass zweimal Hineinlegen eine Zeile bleibt, dass
+die Titel in der Sprache des Lesers kommen und ein **Raumplan-Aufruf weiterhin
+die Originale bekommt** (die Regression, die dieses Paket hätte auslösen
+können), und dass Abschalten jede Route auf 404 setzt, ohne einen Plan zu
+verlieren (E14). Die Browsersuite entscheidet den Rest: dass der Abschnitt für
+alle montiert ist, dass drei Programmpunkte auf zwei Tage fallen, dass beide
+Formen von FR 3.10 markiert sind und die Zahl der Plätze **nicht** dabeisteht,
+dass ein Häkchen einen Neuladen übersteht, dass der Filter einen Sprachwechsel
+übersteht, ohne dass das Element ersetzt wird, und dass Abschalten Kachel und
+Abschnitt nimmt, ohne den Plan zu nehmen.
+
+Was anders lief als geplant:
+
+- **Der Vertrag ist um ein Feld gewachsen, das in keiner Tabelle des Plans
+  stand.** E55 verlangt, dass der Plan markiert, wo ein Platz gebucht wird, und
+  ohne `registrationEnabled` ist diese Marke nicht zu haben: `capacity` ist
+  `NULL` für „so viele, wie kommen" (F42), also sähe ein Programmpunkt mit
+  unbegrenzter Anmeldung aus wie einer, der gar nichts fragt. **Ein Feld, keine
+  Methode** — es ist eine Eigenschaft der Session, die der Port ohnehin ausgibt,
+  und ein Plug-in gegen 1.1.0 merkt nichts davon.
+- **Die zweite Hälfte von E55 ist nicht gebaut worden.** „Der Plan zeigt an, wo
+  ich einen Platz habe" braucht zwei weitere Fähigkeiten im Vertrag, weil ein
+  Platz einer **Anmeldung** gehört und ein Plan einem **Konto** — und die
+  zweite davon wäre eine Teilnehmerliste, Zeile für Zeile, wo `countSignups`
+  bewusst nur eine Zahl gibt. Protokolliert statt nachgebaut: der Eintrag steht
+  in `todo.md` unter _Checkable after phase 5_.
+- **`locale` an `findItem` ist gestrichen, nicht vergessen.** Der Plan sah es
+  für dieses Paket vor; als das Paket kam, hatte `findItem` genau einen
+  Aufrufer, und der braucht keinen Titel, sondern eine Existenz. Die Zeile in
+  der Erweiterungstabelle ist entsprechend umgeschrieben.
+- **Die vierte offene Frage der Phase ist entschieden, und zwar mit Nein.** Ob
+  der Slot einem Plug-in sagen soll, dass eine Sitzung besteht (`todo.md`, seit
+  AP 3 offen, „AP 9 entscheidet"): nein. Eine Eigenschaft, die nur die **Seite**
+  liefern kann, ist eine, die ein Einhängepunkt vergessen kann — und ein
+  vergessenes `signedIn` ist `false`, also zeichnete ein Plug-in „bitte
+  anmelden" für jemanden, der angemeldet ist. Eine stille falsche Antwort ist
+  schlimmer als ein 401, der immer stimmt.
+- **Ein Fixture-Etikett kann jede Ziffer enthalten.** Die Browsersuite prüfte
+  zuerst, dass „12" nirgends im Abschnitt steht — und die Titel des Fixtures
+  tragen die Prozess-Id, in der zufällig „12" vorkam. Jetzt wird auf der Marke
+  selbst geprüft, nicht auf dem ganzen Abschnitt.
+- **Neben einer Browsersuite darf nicht gebaut werden.** Der erste Lauf der
+  Veranstaltersuite hatte **146** Fehlschläge — und zwar **null** in Chromium,
+  54 in Firefox, 92 in WebKit, alle mit Seiten, die bei „Loading Trefaro …"
+  hingen. Ursache war kein Code dieses Pakets, sondern ein `nx run-many -t
+lint test build`, das nebenher lief: der Entwicklungs-Server der Clients
+  verhungerte, und die zwei Engines, die später dran sind, zahlen dafür. Der
+  Lauf brauchte 11,6 Minuten. Allein wiederholt: **317** bestanden, 82
+  übersprungen, in 2,1 Minuten, null Fehlschläge. Als Regel in
+  `docs/rules/e2e-tests.md`, weil die Zahl sonst beim nächsten Mal für einen
+  Fehler gehalten wird.
+- **Eine Wortsammlung im Test ist ein Literal, kein `Record`.**
+  `noPropertyAccessFromIndexSignature` verbietet `STRINGS.remove` auf einem
+  `Record<string, string>`, und `STRINGS['remove']` macht aus einem Tippfehler
+  ein `undefined` statt eines Fehlers. Mit `as const satisfies Record<string,
+string>` ist der Punktzugriff erlaubt und ein falscher Schlüssel ein
+  Build-Fehler; die Regel steht in `docs/rules/tooling-traps.md`.
