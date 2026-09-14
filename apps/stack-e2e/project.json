@@ -1,0 +1,18 @@
+{
+  "name": "stack-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "tags": ["scope:stack", "type:e2e"],
+  "sourceRoot": "apps/stack-e2e/src",
+  "// targets": "The target is deliberately not called `e2e`: the CI `e2e` job runs `nx run-many -t e2e`, which would sweep this project up and run it against a stack nobody started. For the same reason nx.json excludes this project from the @nx/playwright plugin, which would otherwise infer an `e2e` target from the config file. No `dependsOn` either — the containers are brought up by tools/shipped-stack/verify.sh, not by Nx.",
+  "targets": {
+    "e2e-stack": {
+      "executor": "@nx/playwright:playwright",
+      "options": {
+        "config": "apps/stack-e2e/playwright.config.mts"
+      },
+      "outputs": ["{workspaceRoot}/dist/.playwright/apps/stack-e2e"],
+      "parallelism": false
+    }
+  }
+}

@@ -41,6 +41,26 @@ Beispiele haben je eine frische Produktionsinstanz unbenutzbar gemacht.
 - **`AUTH_SECRET` braucht ≥ 32 Zeichen.** Ein handgeschriebenes `.env`
   unterschreitet das leicht, und der Server läuft dann in einer Absturzschleife
   mit genau dieser Meldung. `randomBytes(32).toString('base64url')`.
+- **Vier Werte fehlen nicht mit einer Warnung, sondern mit einer
+  Absturzschleife:** `AUTH_SECRET`, `DATABASE_PASSWORD`, **`SMTP_HOST` und
+  `SMTP_FROM`** — `read.required()` in `env.ts` sammelt sie unter „is required
+  when `NODE_ENV=production`", und der Server startet nicht. Die zwei Mailwerte
+  überraschen, weil eine Instanz ohne Mail sonst nirgends verboten ist; die
+  Begründung ist der Double-Opt-In, ohne den sich niemand anmelden kann. Dazu
+  verlangt Compose selbst `PUBLIC_USER_CLIENT_URL` und
+  `PUBLIC_ADMIN_CLIENT_URL` (`:?`-Syntax, der Fehler kommt dann von Compose und
+  nicht vom Server). Gefunden am 14.09.2026 vom `stack`-Job beim allerersten
+  Lauf, an seinem eigenen erzeugten `.env` — was genau die Klasse ist, für die
+  es ihn gibt.
+- **Der `stack`-Job der CI ist die Antwort auf diese ganze Datei.**
+  `tools/shipped-stack/verify.sh` fährt die fünf Container aus **leerem**
+  Volume hoch, richtet die Instanz über den **geführten** Weg ein
+  (`ADMIN_BOOTSTRAP_*` bleibt leer, der Token kommt aus dem Serverlog), fährt
+  `verify-setup.mjs` und `verify-proxy.mjs` und lässt danach einen Browser mit
+  **wirklich registriertem** Service Worker darauf los (`apps/stack-e2e`).
+  Lokal dasselbe Kommando. Die statische Hälfte ist `verify-proxy.mjs` gegen
+  `ngsw.json`, die verhaltensmäßige ist der Browser — beide braucht es, weil
+  die eine die Regel liest und die andere ihre Wirkung.
 - **`startupWarnings()` ist eine reine Funktion mit zwei Lesern** — dem Startlog
   und dem Setup-Zustand. Sie meldet Werte, die _vorhanden_ und für ein echtes
   Deployment _falsch_ sind (Klartext-URL, Mailserver auf `localhost`, Absender

@@ -7,6 +7,21 @@ Drei Browser × zwei Suiten laufen parallel gegen **eine** Instanz mit
 **einer** `app_config`-Zeile und einer globalen Drosselung. Fast jeder
 Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
 
+- **In einer Kette, die beim ersten Fehlschlag abbricht, ist jede spätere
+  Prüfung unbewiesen.** `tools/shipped-stack/verify.sh` fährt `verify-proxy.mjs`
+  vor der Browsersuite; im absichtlich kaputten Lauf scheiterte das Skript, und
+  `set -e` beendete alles, bevor der Browser startete — die Suite, deren ganzer
+  Daseinsgrund die verhaltensmäßige Hälfte ist, hatte den Fehler nie gesehen.
+  Wer eine Prüfung hinter eine andere hängt, hält sie einmal **allein** gegen
+  den Fehler, den sie fangen soll. Sonst prüft man die Reihenfolge und nicht die
+  Prüfung (AP 1 der Phase 5).
+- **Beide Clients bootstrappen `trefaro-root`.** Ein Test, der dieses Element
+  findet, hat **nicht** gezeigt, welche der beiden Anwendungen antwortet — er
+  wird grün, wenn der Nutzer-Client auf `/admin/` ausgeliefert wird, was genau
+  der Fehler vom 28.08.2026 war. Was unterscheidet: `base href` (`/` gegen
+  `/admin/`) und die Hüllen selbst — `main.app-main` und `nav.app-nav` beim
+  Nutzer-Client, `div.layout > aside.sidebar` und `main.content` beim
+  Veranstalter-Client.
 - **Playwrights `name` vergleicht Teilstrings**, nicht ganze Namen:
   `getByRole('link', { name: 'Participants' })` traf auch „All participants".
   Wo eine Seite zwei Wege zur selben Ansicht anbietet, braucht der Test

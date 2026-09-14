@@ -1596,7 +1596,7 @@ entry, the answer is noted below rather than repeated.
       AP 12: one-click unsubscribe from a header is exactly the request E5b says
       a link previewer must not be able to make, so the endpoint needs its own
       reasoning rather than a copy of this one. Phase 5, with the SMTP work.
-- [ ] **Nothing in CI starts the containers and drives a browser.** The
+- [x] **Nothing in CI starts the containers and drives a browser.** The
       test pyramid has a hole exactly the shape of the bug found on 28.08.2026: a
       service worker misconfiguration that made the organizer client unreachable
       in the production stack. Unit tests do not see it, the API contract suite
@@ -1611,6 +1611,28 @@ entry, the answer is noted below rather than repeated.
       "works in development, broken as shipped", which is the worst class this
       project can produce. Phase 5, with the rest of the hardening — but it is the
       first item there, not the last.
+      **Closed in AP 1 of phase 5** (14.09.2026), and it was the first item.
+      The job is `stack` in `.github/workflows/ci.yml`; the work is
+      `tools/shipped-stack/verify.sh`, which runs identically on a laptop, so
+      "it worked for me" and "CI says green" mean the same thing. It brings the
+      five containers up from an empty volume, **sets the instance up through
+      the wizard** rather than through `ADMIN_BOOTSTRAP_*` — which incidentally
+      proves the one path `docs/rules/deployment.md` says no suite can reach —
+      then runs `verify-setup.mjs`, `verify-proxy.mjs` and a new Playwright
+      project (`apps/stack-e2e`, seven tests, Chromium only) whose subject is a
+      service worker that is **actually registered and in control** of the
+      page. 59 script checks plus those seven, 97s locally with warm images.
+      The acceptance criterion was met the way it was written: with `!/admin`
+      and `!/admin/**` deleted from `ngsw-config.json` the job goes red, and
+      **nothing else in the repository does** — `navigationUrls` is asserted in
+      exactly two places, this new spec and `verify-proxy.mjs`, and the latter
+      only ever runs inside this job. Two things fell out of building it, both
+      now rules: four values (`AUTH_SECRET`, `DATABASE_PASSWORD`, `SMTP_HOST`,
+      `SMTP_FROM`) fail a production start with a crash loop rather than a
+      warning — the job found that on its own first run, against its own
+      generated `.env` — and a `playwright.config.*` silently earns an `e2e`
+      target from the Nx plugin, which would have swept this project into the
+      existing `e2e` job.
 - [ ] **Usability test with Democracy International**: the thesis' seven tasks
       repeated, plus the use cases it never tested.
 

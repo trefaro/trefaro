@@ -538,6 +538,98 @@ Vertrags.
 
 ## Fortschritt
 
-_Noch nichts — die Phase ist nicht freigegeben._ Je Paket kommt hier ein
-Abschnitt „erledigt" mit dem, was tatsächlich passierte; Abweichungen vom Plan
-stehen hier, damit AP 14 sie nicht rekonstruieren muss.
+Je Paket ein Abschnitt „erledigt" mit dem, was tatsächlich passierte —
+Abweichungen vom Plan stehen hier, damit AP 14 sie nicht rekonstruieren muss.
+
+### AP 1 — Der Stack wird geprüft, wie er ausgeliefert wird (erledigt, 14.09.2026)
+
+Umgesetzt:
+
+- **Ein CI-Job `stack`, und dasselbe Kommando auf dem Laptop.** Die Arbeit liegt
+  in `tools/shipped-stack/verify.sh`, nicht in der YAML — absichtlich, denn ein
+  Job, den man lokal nicht fahren kann, wird beim ersten roten Lauf nicht
+  verstanden, sondern abgeschaltet. Er fährt die fünf Container aus **leerem**
+  Volume hoch, wartet auf `/api/health`, richtet ein, prüft, lässt einen Browser
+  laufen und räumt in einer `trap` wieder ab — auch im Fehlschlag. Die letzte
+  Zeile ist die Laufzeit: **97 s** lokal bei warmen Images.
+- **Eingerichtet wird über den geführten Weg, nicht über `ADMIN_BOOTSTRAP_*`** —
+  eine Abweichung vom Plan, und eine, die mehr beweist als geplant. Der Plan
+  sagte „bootstrappt sich einen Administrator"; beim Bauen stellte sich heraus,
+  dass `verify-setup.mjs` den Administrator ohnehin selbst anlegt. Also bleiben
+  die beiden Bootstrap-Werte **leer**, das Skript liest den Setup-Token aus dem
+  Serverlog und geht den Weg, den ein echter Betreiber geht — genau den, von dem
+  `docs/rules/deployment.md` sagt, dass ihn **keine** Suite dieses Repositories
+  erreichen kann (die Endpunkte existieren nur bei leerer `admin_user`-Tabelle,
+  und der letzte Administrator ist nicht löschbar, F22).
+- **`apps/stack-e2e`, sieben Tests, nur Chromium.** Die verhaltensmäßige Hälfte:
+  ein Service Worker, der **wirklich registriert und in Kontrolle** der Seite
+  ist. `verify-proxy.mjs` liest `ngsw.json` mit ngsws eigener Auswahlregel — das
+  ist die statische Hälfte und bleibt —, aber eine Regel zu lesen ist nicht
+  dasselbe wie ihre Wirkung zu sehen. Die entscheidende Behauptung ist
+  formuliert wie das Symptom von damals: an `/admin/` darf **die Navigation des
+  Nutzer-Clients nicht** antworten. Ein Engine-Fächer wäre hier Verschwendung —
+  Firefox und WebKit decken die zwei Client-Suiten ab, wo die Unterschiede
+  zwischen Engines tatsächlich wohnen.
+- **Das Abnahmekriterium, so geprüft, wie es geschrieben steht.** Mit `!/admin`
+  und `!/admin/**` aus `ngsw-config.json` entfernt wird der Job rot (`EXIT=1`,
+  89 s); mit ihnen grün (`EXIT=0`, 97 s). Und die zweite Hälfte — „und sonst
+  nichts im Repository" — ist nicht geglaubt, sondern nachgezählt:
+  `navigationUrls` wird an genau **zwei** Stellen behauptet, in dieser neuen
+  Suite und in `verify-proxy.mjs`, und das zweite läuft ausschließlich in diesem
+  Job. Kein Unit-Test, keine Vertragssuite, keine der beiden Browsersuiten liest
+  die Datei überhaupt.
+- **Beide Hälften fangen den Fehler, jede für sich — und das musste eigens
+  geprüft werden.** Im roten Lauf scheitert `verify-proxy.mjs` zuerst, und
+  `set -e` beendet das Skript, bevor der Browser überhaupt startet. Damit war
+  die verhaltensmäßige Hälfte **unbewiesen**, also ist der kaputte Stack ein
+  zweites Mal hochgefahren und nur die Browsersuite darauf gefahren worden:
+  `leaves the organizer client to the network` fällt, und zwar mit dem
+  buchstäblichen Symptom von damals — `base href` ist **`/`** statt `/admin/`,
+  der Worker hat `/admin/` also wirklich aus dem Cache des Nutzer-Clients
+  beantwortet und der Browser hatte die falsche Anwendung vor sich. Die Lehre
+  ist allgemeiner als dieser Fall: **in einer Kette, die beim ersten Fehlschlag
+  abbricht, ist jede spätere Prüfung unbewiesen, bis sie einmal allein gegen den
+  Fehler gehalten wurde.**
+
+**Was anders lief:**
+
+- **Der Job hat zuerst mich gefunden, und das war der Beweis.** Der allererste
+  Lauf kam nicht bis zur ersten Prüfung: der Server startete nicht, weil mein
+  erzeugtes `.env` `SMTP_HOST` und `SMTP_FROM` nicht setzte. Vier Werte fehlen
+  in Produktion nicht mit einer Warnung, sondern mit einer **Absturzschleife**
+  (dazu `AUTH_SECRET` und `DATABASE_PASSWORD`); die zwei Mailwerte überraschen,
+  weil eine Instanz ohne Mail sonst nirgends verboten ist, und der Grund ist der
+  Double-Opt-In. Steht jetzt in `docs/rules/deployment.md`. Dass ausgerechnet
+  der Job, der „läuft in der Entwicklung, kaputt wie ausgeliefert" fangen soll,
+  als erstes ein unvollständiges `.env` fängt, ist keine Ironie, sondern seine
+  Arbeit.
+- **Eine `playwright.config.*` erzeugt still ein `e2e`-Target.** Das
+  `@nx/playwright`-Plugin leitet es aus jeder solchen Datei ab, also war
+  `stack-e2e` in der Sekunde seiner Entstehung Teil von
+  `nx run-many -t e2e` — dem Job, der gegen `nx serve` läuft — und wäre dort
+  gegen einen Stack gelaufen, den niemand gestartet hat. Ein eigener Target-Name
+  in `project.json` genügt **nicht**, weil die Ableitung danebensteht; das
+  Projekt musste im Plugin-Eintrag ausgeschlossen werden. Geprüft mit
+  `nx show projects --with-target e2e` nach einem `nx reset`. In
+  `docs/rules/tooling-traps.md`.
+- **Zwei Behauptungen waren falsch, bevor sie liefen.** Beide Clients
+  bootstrappen `trefaro-root`, also unterscheidet dieses Element sie nicht —
+  ein Test, der es geprüft hätte, wäre aus dem falschen Grund grün geworden.
+  Und `/api/config` trägt `theme`, nicht `design`. Das zweite hat der erste
+  Lauf gefunden, das erste ein Blick in die Vorlagen davor.
+- **Das Skript räumt auch im Fehlschlag ab**, und die Reihenfolge in der `trap`
+  ist Absicht: erst `compose down -v`, dann die Umgebungsdatei löschen. Compose
+  interpoliert die Datei auch beim **Abräumen**, also entfernt die umgekehrte
+  Reihenfolge nichts und lässt fünf Container stehen — mit
+  „`DATABASE_PASSWORD must be set`" als Begründung, die wie ein Startfehler
+  aussieht. Einmal von Hand hineingelaufen, danach auch der `STACK_KEEP`-Zweig
+  repariert: dort überlebt die Umgebungsdatei den Lauf, und der Hinweis nennt
+  sie, statt ein Kommando vorzuschlagen, das scheitern muss.
+
+**Der Stand nach diesem Paket:** `nx run-many -t lint test build` grün über
+**19** Projekte (18 plus `stack-e2e`), die drei E2E-Projekte unverändert — die
+Plugin-Ableitung hätte `stack-e2e` zu einem vierten gemacht, und das ist
+verhindert. Der `stack`-Job ist der vierte der CI und hängt bewusst **nicht** an
+`images`: jener Job baut in den GitHub-Actions-Cache und lädt die Ergebnisse
+nie, es gäbe also nichts wiederzuverwenden, und eine Abhängigkeit würde nur zwei
+Jobs serialisieren, die nebeneinander laufen können.

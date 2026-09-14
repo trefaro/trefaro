@@ -53,7 +53,9 @@
       "plugin": "@nx/playwright/plugin",
       "options": {
         "targetName": "e2e"
-      }
+      },
+      "// exclude": "stack-e2e runs against the shipped container stack, which nothing in Nx starts. Inferring an `e2e` target for it would put it into `nx run-many -t e2e` — the CI job that runs the two client suites and the API contract suite against `nx serve` — where it would fail for want of a stack. It declares its own `e2e-stack` target in project.json instead.",
+      "exclude": ["apps/stack-e2e/**"]
     },
     {
       "plugin": "@nx/webpack/plugin",

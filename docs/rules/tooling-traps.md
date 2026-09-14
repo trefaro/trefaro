@@ -25,6 +25,21 @@ dass das Werkzeug etwas anderes tut als erwartet.
   `npx jest -c jest.config.cts --testPathPatterns=<teil>` aus `apps/server`
   (die Datei heißt `.cts`, nicht `.ts`). Playwright nimmt `--grep`.
 
+- **Eine `playwright.config.*` erzeugt still ein `e2e`-Target.** Das
+  `@nx/playwright/plugin` in `nx.json` leitet aus **jeder** solchen Datei ein
+  Target mit dem konfigurierten Namen ab — auch aus einer, die nie in
+  `nx run-many -t e2e` landen soll. Ein neues Projekt, das gegen den
+  Container-Stack läuft, war damit sofort Teil des `e2e`-Jobs der CI und wäre
+  dort gegen einen Stack gelaufen, den niemand gestartet hat. Ein eigener
+  Target-Name in `project.json` genügt **nicht**, weil die Ableitung danebensteht;
+  das Projekt muss im Plugin-Eintrag ausgeschlossen werden
+  (`"exclude": ["apps/stack-e2e/**"]`). Geprüft wird das mit
+  `npx nx show projects --with-target e2e` — nach einem `nx reset`, sonst
+  antwortet der Projektgraph aus dem Cache. Gefunden in AP 1 der Phase 5.
+- **Ein Kommentarschlüssel in `project.json` muss eine echte Eigenschaft
+  benennen.** `"// targets"` ist erlaubt, `"// e2e-stack"` nicht — Nx meldet
+  „contains extension with invalid name" und die Zeile steht ab da in jedem
+  Build-Log. Der Kommentar gehört in den Wert des Schlüssels, den er erklärt.
 - **`nx format:write --uncommitted` überspringt still.** Es hat `todo.md`
   aufgelistet und **nicht** geschrieben — gestaged wie ungestaged —, während
   `npx nx format:check` und `prettier --check` die Datei beide beanstanden. Der

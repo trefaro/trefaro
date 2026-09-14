@@ -1,15 +1,27 @@
 # Trefaro CI
 #
-# Three jobs, in increasing cost and decreasing frequency of failure:
+# Four jobs, in increasing cost and decreasing frequency of failure:
 #
 #   quality  — format, lint, unit tests and builds for the affected projects
 #   e2e      — both clients in a real browser against a real server and database
 #   images   — the five-container stack's images
+#   stack    — those images actually started together, and a browser on them
 #
 # The image job exists because phase 0 found two defects that no unit test could
 # have caught: a database driver missing from the server image's dependency list,
 # and a service worker served as an immutable asset. Both only appear once
 # something is actually built into a container.
+#
+# The stack job exists because building an image is not starting it. On
+# 28.08.2026 a service worker misconfiguration made the organizer client
+# unreachable in the production stack while every job above was green — the
+# worker's scope is the whole origin, and `/admin` was missing from its
+# `navigationUrls`. Nothing could have seen it: unit tests run no worker, the API
+# contract suite uses `fetch`, both browser suites run against `nx serve` (where
+# Angular registers no worker at all), and `images` builds without starting.
+# This job is the one that brings the five containers up from an empty volume,
+# sets the instance up the way an operator does, and drives a real browser
+# against the result.
 
 name: CI
 
@@ -170,3 +182,44 @@ jobs:
           load: false
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+  # The stack as it ships. Everything above this line runs against something
+  # assembled for testing; this runs against `infra/docker-compose.yml`, which is
+  # what an organization actually installs.
+  #
+  # It deliberately does not depend on `images`: that job builds with the GitHub
+  # Actions cache and never loads the results, so there is nothing to reuse here
+  # and a dependency would only serialize two jobs that can run side by side.
+  stack:
+    runs-on: ubuntu-latest
+    # Three Angular production builds plus the server image, then a browser.
+    # Generous, because a timeout that fires on a slow runner teaches people to
+    # ignore the job.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+
+      # Only Chromium. The subject of this job is the service worker, and the
+      # engine differences the other two cover live in the suites that run
+      # against `nx serve` — a second engine here would double a container run
+      # to re-assert what those assert better.
+      - run: npx playwright install --with-deps chromium
+
+      # Brings the five containers up from an empty volume, walks the first-run
+      # setup wizard the way an operator does (the one path no suite in this
+      # repository can reach), runs the proxy and PWA checks, then the browser
+      # suite — and tears the whole thing down, volumes included, on the way
+      # out. The runtime is the last line it prints.
+      - run: tools/shipped-stack/verify.sh
+
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stack-playwright-report
+          path: dist/.playwright/apps/stack-e2e
+          retention-days: 7
