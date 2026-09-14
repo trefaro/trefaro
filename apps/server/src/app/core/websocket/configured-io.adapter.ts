@@ -1,8 +1,10 @@
 import type { INestApplicationContext } from '@nestjs/common';
 import { IoAdapter } from '@nestjs/platform-socket.io';
+import type { ThrottlerStorage } from '@nestjs/throttler';
 import { REALTIME_PATH } from '@trefaro/shared-models';
 import type { ServerOptions } from 'socket.io';
 import type { TrefaroEnv } from '../config/env';
+import { handshakeThrottle } from '../throttling/handshake-throttle';
 
 /**
  * socket.io adapter with the instance's origins allow-listed.
@@ -19,11 +21,18 @@ import type { TrefaroEnv } from '../config/env';
  * proxy forwards that path with the `Upgrade` and `Connection` headers a
  * WebSocket handshake needs; the constant is shared with both clients so the
  * three cannot disagree.
+ *
+ * `allowRequest` is the other thing a decorator could not have done, and it is
+ * the only place a handshake can be counted at all: engine.io answers the
+ * handshake itself, before Nest's router and therefore before `ThrottlerGuard`
+ * — so until phase 5 every rate limit in this application counted zero of them
+ * (see `throttling/handshake-throttle.ts`).
  */
 export class ConfiguredIoAdapter extends IoAdapter {
   constructor(
     app: INestApplicationContext,
     private readonly env: TrefaroEnv,
+    private readonly storage: ThrottlerStorage,
   ) {
     super(app);
   }
@@ -36,6 +45,7 @@ export class ConfiguredIoAdapter extends IoAdapter {
         origin: [this.env.publicUserClientUrl, this.env.publicAdminClientUrl],
         credentials: true,
       },
+      allowRequest: handshakeThrottle(this.storage),
     });
   }
 }

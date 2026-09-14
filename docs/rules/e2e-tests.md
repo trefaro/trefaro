@@ -7,6 +7,35 @@ Drei Browser × zwei Suiten laufen parallel gegen **eine** Instanz mit
 **einer** `app_config`-Zeile und einer globalen Drosselung. Fast jeder
 Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
 
+- **Die E2E-Läufe fahren gegen `server:serve-e2e`, nicht gegen `server:serve`.**
+  Der Zielname ist die ganze Mechanik: Nx lädt für eine Task namens `serve-e2e`
+  die Datei `apps/server/.env.serve-e2e` und für keine andere — nicht für
+  `nx serve server`, nicht für einen Build, und schon gar nicht für das Image,
+  das weder Nx noch diese Datei enthält. Darin steht das Drosselprofil der
+  Phase 5 (E61): vier gelockerte Budgets, damit sich drei Projekte einen Server
+  teilen können, ohne dass das zuletzt laufende 429 statt 202 bekommt. Der
+  Server sagt beim Start, welches Profil er benutzt, und nennt jeden Wert über
+  seiner Vorgabe. **Nachgemessen** (AP 2 der Phase 5): `nx serve server`
+  schreibt keine einzige dieser Zeilen, `nx run server:serve-e2e` sechs.
+  Wer eine neue E2E-Task anlegt, hängt sie an `serve-e2e` — sonst läuft sie
+  gegen die ausgelieferten Zahlen und die Rechnerei von unten beginnt von vorn.
+- **Ein gelockertes Budget ist nicht dasselbe wie ein gelockerter Grenzwert**
+  (E4, E60). Das Profil hebt vier Zahlen an und **eine ausdrücklich nicht**:
+  `MAILS_PER_RECIPIENT_PER_WINDOW` bleibt bei der ausgelieferten Fünf, damit
+  jeder volle Lauf eine echte Grenze anfasst. Genau daran hängt
+  `apps/server-e2e/src/api/rate-limits.spec.ts`, und eine Mutation hat das
+  gezeigt: mit `=100` im Profil lief dieselbe Suite rot, achtmal 202 statt
+  fünfmal 202 und dreimal 429. Wer eine Zahl im Profil anfasst, fährt diese
+  Suite dagegen.
+- **Ein Test darf mehrere Clients sein, ohne mehrere Rechner zu brauchen.**
+  Der Server traut genau einem Hop (`app.set('trust proxy', 1)` in `main.ts`)
+  und liest den **letzten** Eintrag von `X-Forwarded-For` als Clientadresse.
+  Eine Suite, die `x-forwarded-for: 203.0.113.1, <client>` schickt, bekommt
+  also je `<client>` einen eigenen Zähler — der einzige Weg, einen Zähler zu
+  prüfen, der _nicht_ am Aufrufer hängen soll. Die Gegenprobe steht in derselben
+  Datei: zwei Anfragen von zwei Adressen müssen dasselbe
+  `x-ratelimit-remaining-registration` melden, sonst zählt der Header etwas
+  anderes als gedacht und alles Weitere beweist nichts.
 - **In einer Kette, die beim ersten Fehlschlag abbricht, ist jede spätere
   Prüfung unbewiesen.** `tools/shipped-stack/verify.sh` fährt `verify-proxy.mjs`
   vor der Browsersuite; im absichtlich kaputten Lauf scheiterte das Skript, und
@@ -136,7 +165,11 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   vorher nach. Ehrlich gesagt ist das eine Rechnung, die niemand ewig richtig
   macht: das saubere Gegenmittel ist die konfigurierbare Drosselung aus Phase 5,
   denn dann konfiguriert die Testumgebung ihr Budget, statt dass die Suiten um
-  ein festes herumlaufen.
+  ein festes herumlaufen. **Seit AP 2 der Phase 5 ist genau das der Fall** —
+  das Profil setzt hier zweihundert statt zwanzig. Die geseedeten Fixtures
+  bleiben trotzdem geseedet: ein Test, der durch ein Formular postet, um ein
+  Budget auszugeben, hat das Formular nie geprüft. Was entfällt, ist die
+  Pflicht, vorher zu addieren.
 - **Was instanzweit ist, muss eine Suite selbst wieder abräumen.** Der
   Profil-Baukasten (`profile_field`) hat kein Event, an dem er hängt: eine
   liegengebliebene **Pflichtfrage** lässt jedes `PATCH /api/participant/me`
@@ -504,11 +537,15 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   `server-e2e` als letztes an die Reihe kommt, sind die 60 Registrierungen je
   5 Minuten (E4) aufgebraucht: die Vertragssuite bekommt **429**, wo sie 202
   erwartet, und der Fehlschlag sieht nach einem kaputten Endpunkt aus. Die
-  Suite allein ist dann grün — das ist die Probe. **Nicht die Drosselung
-  anfassen** (`decisions.md`): entweder je Projekt fahren
-  (`nx e2e server-e2e`), oder zwischen den Projekten einen frischen Server
-  nehmen. Verwandt mit dem stehen gebliebenen Server unten, aber nicht
-  dasselbe: hier reicht **ein** Lauf.
+  Suite allein ist dann grün — das ist die Probe. **Seit AP 2 der Phase 5 ist
+  das erledigt**, und zwar durch keinen der beiden damals genannten Auswege:
+  die Grenzwerte sind Konfiguration geworden, das Testprofil in
+  `apps/server/.env.serve-e2e` hebt die vier aufruferseitigen Budgets an, und
+  der kombinierte Lauf enthält seither genau drei 429 — alle drei von der
+  Suite erbeten, deren Gegenstand sie sind. Die Regel darüber gilt weiter:
+  **nicht die Drosselung im Code anfassen** (`decisions.md`), ein Profil ist
+  etwas anderes als eine gelockerte Konstante. Verwandt mit dem stehen
+  gebliebenen Server unten, aber nicht dasselbe: hier reicht **ein** Lauf.
 - **Ein Fixture mit eigener Reihe löscht seine Anmeldungen selbst** (AP 8 der
   Phase 4). `DELETE /api/admin/series/:id` verweigert eine Reihe, unter der
   bestätigte Anmeldungen hängen — richtig für einen Veranstalter (E14,

@@ -6,13 +6,20 @@ die Entscheidung, also nichts davon „auf Verdacht" umsetzen.
 Jede davon wurde schon einmal diskutiert; ein erneutes Aufrollen kostet
 Zeit und endet beim gleichen Ergebnis.
 
-- **Drosselung bleibt, wie sie ist** (28.08.2026): 20 Logins, 60 Registrierungen,
-  60 Bestätigungen je 5 min je Client-Adresse; global 300 Anfragen/min. **Nicht
-  für Tests entfernen oder lockern** (E4) — eine fehlende Drosselung hat kein
-  Symptom, und eine für Tests gelockerte Grenze wird nicht mehr geprüft. Wer beim
-  Entwickeln in eine Sperre läuft, **startet den Server neu** (Zähler liegen im
-  Speicher). Konfigurierbar (strenge Vorgaben + Startwarnung bei Lockerung) wird
-  das in **Phase 5**, zusammen mit dem zweiten Zähler je Empfängeradresse.
+- **Die Zahlen der Drosselung bleiben, wie sie sind** (28.08.2026): 20 Logins,
+  60 Registrierungen, 60 Bestätigungen, 20 Newsletter-Anmeldungen je 5 min je
+  Client-Adresse; global 300 Anfragen/min. **Nicht für Tests entfernen oder
+  lockern** (E4) — eine fehlende Drosselung hat kein Symptom, und eine für Tests
+  gelockerte Grenze wird nicht mehr geprüft. Wer beim Entwickeln in eine Sperre
+  läuft, **startet den Server neu** (Zähler liegen im Speicher).
+  **Seit AP 2 der Phase 5 sind das Vorgaben, keine Konstanten** (E60): jede der
+  fünf Zahlen kommt aus der Umgebung, die Vorgabe ist exakt die bisherige, und
+  jeder Wert **über** seiner Vorgabe erzeugt beim Start eine `WARN`-Zeile. Das
+  ändert nichts an der Regel, sondern schärft sie: eine Lockerung steht jetzt
+  sichtbar in einer `.env` statt unsichtbar im Code, und ein Testprofil ist nie
+  das, was eine Instanz ausliefert (E61). Dazu kam der **fünfte Zähler je
+  Empfängeradresse** (`MAILS_PER_RECIPIENT_PER_WINDOW`, Vorgabe 5) — die
+  anderen vier zählen den Aufrufer, und der sucht sich seine Adresse aus.
 - **Die fünf Fragen an den Pilotpartner** (Democracy International) bleiben
   offen, gesammelt in `todo.md` unter _Questions for the pilot partner_. Sie
   werden erst an einem weiter entwickelten Stand gestellt (28.08.2026); keine

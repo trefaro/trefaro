@@ -20,6 +20,12 @@ import type { TrefaroEnv } from '../../core/config/env';
  * The lines are English regardless of the instance's language: they are for
  * whoever installs the instance, not for its visitors, and they end up in a
  * container log that no translation catalogue reaches.
+ *
+ * The rate limits are **not** in here, although they warn at startup too
+ * (`core/config/rate-limits.ts`, E60). The boundary is the second reader: this
+ * list is served to the first-run setup screen as things to fix, and a raised
+ * limit is not a thing to fix — it is a decision an operator made on purpose,
+ * and its warning is a record rather than a request.
  */
 export function startupWarnings(env: TrefaroEnv): readonly string[] {
   const warnings: string[] = [];

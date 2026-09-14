@@ -26,7 +26,7 @@ werden müssen:
 | Anforderungen, Use Cases, Prioritäten, DB-Schema, F1–F202 | **`docs/Anforderungsanalyse_und_Umsetzungsplan.md`** (maßgeblich)                         |
 | Was in einer Phase passierte, E1–E45, _Was anders lief_   | `docs/PHASE1.md`, `docs/PHASE2.md`, `docs/PHASE3.md`, `docs/BOOTSTRAP.md`, `docs/spikes/` |
 | Phase 4: Pakete, E46–E59, F186–F202, Stand je Paket       | **`docs/PHASE4.md`** (Plan oben, _Fortschritt_ unten)                                     |
-| Phase 5: Plan, AP 1–14, M13–M16, E60–E71, F203 ff.        | **`docs/PHASE5.md`** (nur Plan — _Fortschritt_ noch leer)                                 |
+| Phase 5: Pakete, E60–E71, F203 ff., Stand je Paket        | **`docs/PHASE5.md`** (Plan oben, _Fortschritt_ unten)                                     |
 | Installation, TLS, Betrieb                                | `docs/INSTALL.md`                                                                         |
 | Offene Punkte, bekannte Lücken, Pilotpartner-Fragen       | `todo.md` (nach Phase gruppiert, nach jeder Phase durchgehen)                             |
 | Diagramme der Thesis                                      | `docs/thesis/`                                                                            |
@@ -173,17 +173,18 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    Dinge, beide benannt: eine Zeile der Gerätematrix (eine Kamera am Einlass)
    und ein Flackern in der Veranstaltersuite, das seit AP 10 einen Testnamen
    hat.
-5. Härtung, Usability-Test mit Democracy International (Pilotpartner), Doku,
-   Release v1.0 — hier auch: konfigurierbare Drosselung, arc42-Architekturdoku,
-   `CONTRIBUTING.md`. **Phase 5 ist nicht freigegeben**, hat aber seit dem
-   14.09.2026 einen Plan: `docs/PHASE5.md`, vierzehn Pakete, **M13–M16**,
-   E60–E71, F203 ff. — jeder der zweiunddreißig Einträge aus `todo.md` unter
-   _Checkable after phase 5_ ist dort einem Paket zugeordnet. **v1.0 taggt
+5. **Läuft seit dem 14.09.2026:** Härtung, Usability-Test mit Democracy
+   International (Pilotpartner), Doku, Release v1.0 → `docs/PHASE5.md` —
+   vierzehn Pakete, **M13–M16**, E60–E71, F203 ff., und jeder der
+   zweiunddreißig Einträge aus `todo.md` unter _Checkable after phase 5_ ist
+   einem Paket zugeordnet. **Freigegeben wird Paket für Paket** (AP 1 und AP 2
+   sind erledigt, der Stand je Paket steht unter _Fortschritt_). **v1.0 taggt
    Marius, nicht ein Paket** (E71).
 
 **Der Stand in Zahlen:** Entscheidungen **E1–E59** vergeben (E46–E59 in Phase 4,
-in AP 10 gegen die Umsetzung geprüft); Nachträge **F1–F202** stehen vollständig
-im Referenzdokument (F62 und F129–F131 bleiben unvergeben); Katalog **1080**
+in AP 10 gegen die Umsetzung geprüft); Nachträge **F1–F205** stehen vollständig
+im Referenzdokument (F62 und F129–F131 bleiben unvergeben; F203–F205 kamen in
+AP 2 der Phase 5 dazu); Katalog **1080**
 Schlüssel. Was in einem Paket tatsächlich passierte, steht im Phasenprotokoll,
 und was man beim Bauen daraus braucht, in `docs/rules/` — **hier nicht noch
 einmal.**

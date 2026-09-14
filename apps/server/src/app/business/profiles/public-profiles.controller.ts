@@ -15,6 +15,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Throttle, minutes } from '@nestjs/throttler';
+import { ThrottleByRecipient } from '../../core/throttling/recipient-throttle.interceptor';
 import { PROFILES_MODULE_KEY } from '@trefaro/shared-models';
 import { CoreModuleController, CoreModuleEnabledGuard } from '../config';
 import {
@@ -60,6 +61,9 @@ export class PublicProfilesController {
   @Throttle({
     default: { limit: PROFILE_REGISTRATIONS_PER_WINDOW, ttl: minutes(5) },
   })
+  // Like the registration and the newsletter: this route puts a link in an
+  // inbox the caller names, so the inbox gets a budget of its own.
+  @ThrottleByRecipient()
   @ApiOperation({
     summary: 'Create a participant account',
     description:

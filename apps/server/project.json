@@ -4,6 +4,7 @@
   "sourceRoot": "apps/server/src",
   "projectType": "application",
   "tags": ["scope:server", "type:app"],
+  "// targets": "`serve-e2e` is `serve` under a different name, and the name is the whole point: Nx loads `.env.serve-e2e` from this directory for a task called `serve-e2e` and for no other task. That file is the rate-limit profile of E61 — a file the production stack does not know, which the server names in its startup log. The end-to-end suites depend on it instead of on `serve`, because running them against `serve` runs them against the shipped limits, which is what made three projects sharing one server fight over 60 registrations (AP 8 of phase 4). A comment key has to name a real property of the object it sits in: one inside `targets` becomes a target, and the project graph then fails to build (docs/rules/tooling-traps.md).",
   "targets": {
     "build": {
       "executor": "nx:run-commands",
@@ -62,6 +63,21 @@
         },
         "production": {
           "buildTarget": "server:build:production"
+        }
+      }
+    },
+    "serve-e2e": {
+      "continuous": true,
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "dependsOn": ["build"],
+      "options": {
+        "buildTarget": "server:build:development",
+        "runBuildTargetDependencies": false
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "server:build:development"
         }
       }
     },

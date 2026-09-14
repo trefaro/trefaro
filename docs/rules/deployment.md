@@ -14,6 +14,17 @@ Beispiele haben je eine frische Produktionsinstanz unbenutzbar gemacht.
   `ADMIN_BOOTSTRAP_*`: eine frische Produktionsinstanz hatte **keinen
   Administrator**. Bei `I18N_CATALOGUE_DIR` sind es vier Stellen (zusätzlich
   webpack-`assets` und der `COPY` im Dockerfile).
+- **Fünf Zahlen sind seit AP 2 der Phase 5 Konfiguration, nicht Code**:
+  `LOGIN_ATTEMPTS_PER_WINDOW`, `REGISTRATIONS_PER_WINDOW`,
+  `NEWSLETTER_SIGNUPS_PER_WINDOW`, `CONFIRMATIONS_PER_WINDOW` und
+  `MAILS_PER_RECIPIENT_PER_WINDOW`. Sie leben an den drei Stellen von oben —
+  `core/config/rate-limits.ts` hält die Vorgaben, `.env.example` erklärt sie,
+  `infra/docker-compose.yml` reicht sie durch — und in der Compose-Datei
+  **leer**, nicht mit einer Kopie der Zahl: eine zweite Kopie einer Vorgabe ist
+  eine Vorgabe, die auseinanderläuft. Wer eine Instanz übernimmt und wissen
+  will, ob jemand eine Grenze gelockert hat, liest die ersten Zeilen des
+  Serverlogs: jeder Wert über seiner Vorgabe steht dort als `WARN`, und
+  Schweigen heißt die ausgelieferten Zahlen.
 - **Wer Installierbarkeit prüfen will, fährt den Stack hoch:**
   `docker compose -f infra/docker-compose.yml up -d --build` gegen ein **leeres**
   Volume, mit eigenem `-p`-Projektnamen, danach `down -v`. Das ist die einzige

@@ -2,10 +2,12 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ThrottlerStorage } from '@nestjs/throttler';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app/app.module';
 import type { TrefaroEnv } from './app/core/config/env';
 import { ENV } from './app/core/config/env.module';
+import { rateLimitWarnings } from './app/core/config/rate-limits';
 import { AllExceptionsFilter } from './app/core/filters/all-exceptions.filter';
 import { VALIDATION_PIPE_OPTIONS } from './app/core/validation';
 import { ConfiguredIoAdapter } from './app/core/websocket/configured-io.adapter';
@@ -34,8 +36,16 @@ async function bootstrap(): Promise<void> {
     credentials: true,
   });
 
-  // socket.io needs the same allow-list, and a gateway decorator cannot read it.
-  app.useWebSocketAdapter(new ConfiguredIoAdapter(app, env));
+  // socket.io needs the same allow-list, and a gateway decorator cannot read
+  // it. The storage goes with it because engine.io answers the handshake before
+  // Nest's router does, so the only counter that can see one lives in there.
+  app.useWebSocketAdapter(
+    new ConfiguredIoAdapter(
+      app,
+      env,
+      app.get<ThrottlerStorage>(ThrottlerStorage),
+    ),
+  );
 
   // The same options the registration form's multipart pipe reuses — see
   // `core/validation.ts`.
@@ -77,6 +87,19 @@ async function bootstrap(): Promise<void> {
   // Containers stop by signal; without this, shutdown hooks never run and
   // PostgreSQL sees connections drop instead of close.
   app.enableShutdownHooks();
+
+  // Loud, and on the way up rather than in a file nobody opens (E60, E61). An
+  // instance running the defaults says nothing here — which is what makes the
+  // silence worth reading.
+  //
+  // Deliberately not part of `startupWarnings` (business/setup), although the
+  // shape is the same: that list answers "what is missing from this deployment"
+  // and is also served to the first-run setup screen, where a raised limit
+  // would read as a problem to fix. A raised limit is a decision somebody made,
+  // and the log is its record.
+  for (const warning of rateLimitWarnings(env.rateLimits)) {
+    Logger.warn(warning, 'RateLimits');
+  }
 
   // 0.0.0.0, not localhost: inside a container the port must be reachable from
   // the reverse proxy.

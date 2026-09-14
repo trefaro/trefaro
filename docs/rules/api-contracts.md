@@ -162,7 +162,9 @@ Link.
   Dekorator „nachträgt", nimmt einer Instanz ihr Postfach — deshalb steht die
   Begründung im Kopf des Controllers und nicht nur hier. Antwort ist immer
   **202** mit der geschickten Adresse (E10), eigene Drosselung (30 je 5 min,
-  enger als die 60 des Anmeldeformulars, weil jede Anfrage eine Mail auslöst),
+  enger als die 60 des Anmeldeformulars, weil jede Anfrage eine Mail auslöst —
+  die Mail geht hier aber an die **Organisation**, nicht an eine Adresse des
+  Aufrufers, deshalb ohne den Empfängerzähler),
   404 nur für „kein veröffentlichtes Event an dieser Adresse" (F26) — und
   **kein** `hasEnded`-Riegel wie bei der Anmeldung: eine Frage zu einem Event,
   das vorbei ist, ist eine Frage. **Kein Bild**, also JSON statt `multipart`:
@@ -326,7 +328,23 @@ Link.
 - **`/api/participant/**` braucht keine eigene Drosselung, `/api/user/**`
   schon.** Die tokenbasierten Selbstbedienungsrouten tragen `@Throttle` (60 je 5
   min), weil ein Token im Prinzip erratbar ist und jeder Aufruf einen HMAC
-  kostet (E4); hinter einer Sitzung greift die globale Grenze. Was jede
+  kostet (E4); hinter einer Sitzung greift die globale Grenze.
+  **Zwei Schreibweisen seit AP 2 der Phase 5, und sie meinen Verschiedenes:**
+  `@Throttle({ default: { limit: KONSTANTE, … } })` ist eine Zahl, die im Bau
+  feststeht, und `@RateLimit('login' | 'registration' | 'newsletter-signup' |
+'confirmation')` benennt eine Zahl, die aus der Umgebung kommt (E60) — ein
+  Dekorator kann nicht injiziert werden, also nennt die Route die **Art** der
+  Tür und nicht ihr Maß. Wer eine neue öffentliche Route baut, fragt zuerst, ob
+  sie eine der vier Arten ist; nur wenn nicht, bekommt sie eine eigene
+  Konstante.
+- **Eine Route, die an eine Adresse mailt, die der Aufrufer wählt, zählt
+  zweimal.** `@ThrottleByRecipient()` neben die Drosselung des Aufrufers — die
+  vier Zähler oben zählen den Absender, und der sucht sich seine Adresse aus.
+  Heute tragen es das Anmeldeformular, die Newsletter-Anmeldung und das
+  Kontoformular. **Wo die Route auch `multipart` annimmt, steht der Dekorator
+  hinter dem Multipart-Interceptor im selben `@UseInterceptors`** — ein Guard
+  wäre hier falsch, weil er läuft, bevor irgendetwas den Rumpf geparst hat, und
+  eine Anmeldung mit Datei käme ungezählt durch. Was jede
   Teilnehmerroute dagegen **braucht**, sind `@UseGuards(CoreModuleEnabledGuard)`
   und `@CoreModuleController(<Schlüssel>)` — eine Instanz ohne das Modul
   antwortet dort 404, nicht 401 (F53). Der Schlüssel ist der des Moduls, nicht

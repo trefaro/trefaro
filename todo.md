@@ -96,7 +96,7 @@ an instance were exposed today.
       a logo uploaded on a series shows up on the start page —
       `apps/user-client-e2e/src/event-series.spec.ts`.
 
-- [ ] **The combined E2E run cannot be read any more.**
+- [x] **The combined E2E run cannot be read any more.**
       `nx run-many -t e2e --parallel=1` — which is exactly what
       `.github/workflows/ci.yml` runs — starts **one** `server:serve` for all
       three projects, and the registration budget of E4 (60 per five minutes
@@ -115,6 +115,17 @@ an instance were exposed today.
       limit — that is the one thing `docs/rules/decisions.md` rules out, and
       the budget is a feature. Decide it in phase 5, where the CI job that
       starts the whole stack already lives.
+      **Closed in AP 2 of phase 5, and by none of the three ways listed above.**
+      The fourth one is the one the entry could not see: the limits became
+      configuration (E60), so the test environment configures its own budget
+      instead of the suites walking around a fixed one. It comes from
+      `apps/server/.env.serve-e2e`, a file Nx loads for the task `serve-e2e`
+      and for no other — not for `nx serve server`, and least of all for the
+      image, which contains no Nx and no copy of it (E61). The three e2e
+      projects depend on that target now. **Measured after the change:** a full
+      `nx run-many -t e2e --parallel=1` contains exactly three 429s, all three
+      asked for by `apps/server-e2e/src/api/rate-limits.spec.ts`, which is the
+      suite whose subject they are. 690 + 317 + 258 green.
 
 ---
 
@@ -1447,6 +1458,12 @@ entry, the answer is noted below rather than repeated.
       verified by hand, via
       `tools/spike-verification/verify-admin-access.mjs`, because exercising it
       locks the route for fifteen minutes.
+      **Still a number to confirm, but no longer a number to rebuild for**
+      (AP 2 of phase 5): `LOGIN_ATTEMPTS_PER_WINDOW` is read from the
+      environment with twenty as the default, and the fifteen-minute block
+      deliberately stayed a constant — an operator may want a more forgiving
+      count for an office behind one address, but there is no instance for
+      which "keep trying immediately" is the right answer.
 - [ ] **Confirm the registration and confirmation rate limits.** **Sixty**
       attempts per five minutes per client address, for the public registration
       form (`REGISTRATIONS_PER_WINDOW`) and for the confirmation endpoint
@@ -1463,8 +1480,10 @@ entry, the answer is noted below rather than repeated.
       **Confirmed at sixty by Marius on 28.08.2026** ("ok fürs erste"), so this is
       no longer a question waiting for an answer — it is a number to re-examine
       with the rest of the hardening, next to the second counter per recipient
-      address.
-- [ ] **Make the rate limits configurable, with the strict values as defaults.**
+      address. **That counter exists since AP 2 of phase 5**, and both numbers
+      are configuration now — so re-examining one is an `.env` line and a
+      restart, not a release.
+- [x] **Make the rate limits configurable, with the strict values as defaults.**
       Decided for phase 5 on 28.08.2026, after weighing the alternative: taking
       the limits out for now and putting them back once the application is stable.
       Rejected, because a missing throttle has **no symptom** — no test fails, no
@@ -1481,6 +1500,19 @@ entry, the answer is noted below rather than repeated.
       per recipient address and the SMTP work of this phase. Until then the
       workaround is one command: `docker compose -p trefaro restart server` clears
       the counters, which live in memory.
+      **Done in AP 2 of phase 5, in the shape the entry describes** —
+      `LOGIN_ATTEMPTS_PER_WINDOW`, `REGISTRATIONS_PER_WINDOW`,
+      `CONFIRMATIONS_PER_WINDOW`, and two the entry did not name:
+      `NEWSLETTER_SIGNUPS_PER_WINDOW` (which has had its own budget since
+      AP 12 of phase 3) and `MAILS_PER_RECIPIENT_PER_WINDOW` (the new counter
+      below — a limit that could not be moved would have been the odd one out).
+      Defaults exactly today's numbers, in `core/config/rate-limits.ts`, and
+      every value above its default is a `WARN` line while the server starts.
+      A route names a _kind_ now (`@RateLimit('login')`) rather than a number:
+      a decorator cannot be injected into, so a route that spelled out its
+      limit would have frozen it at build time. `infra/docker-compose.yml`
+      passes all five through, empty by default, so the numbers live in exactly
+      one place.
 - [ ] **Security review.** Auth, upload validation, plug-in isolation, and
       whether the OpenAPI description should keep being served publicly (it is
       today, on the grounds that the source is AGPL anyway).
@@ -1502,7 +1534,7 @@ entry, the answer is noted below rather than repeated.
       but it must happen before a release: an instance whose mail lands in spam
       cannot register anyone, and no test in this repository can find that out.
       Latest point is the hardening of phase 5, together with TLS.
-- [ ] **Throttle registration attempts per e-mail address, not only per client.**
+- [x] **Throttle registration attempts per e-mail address, not only per client.**
       `REGISTRATIONS_PER_WINDOW` counts per client address, which is what the
       guard can see — so one address can be mailed as often as a single client is
       allowed to submit at all (60 per five minutes since AP 7, raised because an
@@ -1510,6 +1542,18 @@ entry, the answer is noted below rather than repeated.
       address it is given, so the number that matters is per recipient. Needs a
       second counter with its own key; belongs with the hardening of phase 5,
       together with the SMTP work.
+      **Done in AP 2 of phase 5**, and it turned out not to be a guard:
+      `RecipientThrottleInterceptor` counts the address in the body across
+      _every_ public route that mails to a caller-chosen inbox — the
+      registration form, the newsletter sign-up and the account form — with one
+      budget per address and no route in the key. It has to be an interceptor
+      because a guard runs before anything has parsed a body, and a registration
+      with a file field arrives as `multipart/form-data`: a guard would have seen
+      an empty body and waved it through, which is a bypass an attacker only has
+      to find once. Proven from a different client address per attempt in
+      `apps/server-e2e/src/api/rate-limits.spec.ts`. Default five per five
+      minutes — the legitimate ceiling decides it, and that is a household
+      signing its members up for one event.
 - [ ] **A sweep over the upload volume.** `AttachmentsService` compensates where
       the database and the volume can disagree, and it compensates towards
       keeping bytes rather than losing them — so a crash between two steps can
@@ -1552,7 +1596,7 @@ entry, the answer is noted below rather than repeated.
       (F182) — filled it, and the navigation threw it away; the submit landed
       on the empty form of the series page. A `toHaveURL` on the series page
       before the locator; the rule is in `docs/rules/e2e-tests.md`.
-- [ ] **The three e2e projects share one server's rate limits.** CI runs them
+- [x] **The three e2e projects share one server's rate limits.** CI runs them
       with `--parallel=1` against a single instance, so every limit that counts
       per client address is a budget for the whole run: sixty public
       registrations per five minutes (`REGISTRATIONS_PER_WINDOW`), twenty logins
@@ -1574,6 +1618,15 @@ entry, the answer is noted below rather than repeated.
       second counter per recipient anyway: a test profile that raises the limits
       would work, but only if it cannot be the one an instance ships with. That is
       now decided — see the entry about making the limits configurable.
+      **Built in AP 2 of phase 5**, exactly as that sentence describes:
+      `apps/server/.env.serve-e2e` raises the four caller-side budgets, Nx loads
+      it for the `serve-e2e` task alone, and the server names the profile in a
+      `WARN` line the moment it reads it (E61). The arithmetic across suites is
+      therefore no longer load-bearing — but the fixtures that were seeded to
+      survive it stay seeded, because a test that posts through a form only to
+      spend a budget was never testing the form. One number the profile does
+      **not** raise: `MAILS_PER_RECIPIENT_PER_WINDOW`, so every full run still
+      exercises a real limit (E4).
 - [ ] **The invitation sender has no pause and no retry.** AP 12 sends one mail
       after another as fast as the mail server accepts them, and a refused
       address is recorded as failed and never tried again. Against Mailpit and
@@ -1636,7 +1689,7 @@ entry, the answer is noted below rather than repeated.
 - [ ] **Usability test with Democracy International**: the thesis' seven tasks
       repeated, plus the use cases it never tested.
 
-- [ ] **The WebSocket handshake carries no rate limit.** `@nestjs/throttler`
+- [x] **The WebSocket handshake carries no rate limit.** `@nestjs/throttler`
       sees HTTP routes, and a socket.io handshake is served by engine.io before
       Nest's router ever sees it — so the one request that now costs a session
       lookup is the one request nothing counts. Belongs with the configurable
@@ -1647,6 +1700,15 @@ entry, the answer is noted below rather than repeated.
       where the configurable throttling of E4 already lives: the two are one
       piece of work, and doing the handshake alone would mean inventing a
       second place where limits are configured.
+      **Done in AP 2 of phase 5**, and the second place was not needed after
+      all: socket.io's `allowRequest` counts the handshake against the **same**
+      global budget as every other request (300 per minute per client address),
+      through the same `ThrottlerStorage`. Nothing about a handshake makes it
+      worth more than a page load, so what it should have cost all along is
+      what an ordinary request costs — no new number to configure and none to
+      get wrong. `core/throttling/handshake-throttle.ts`, wired in
+      `ConfiguredIoAdapter`; the forwarded client address is read the way
+      Express reads it under `trust proxy: 1`.
 
 - [ ] **A deleted profile leaves its conversations standing** —
       `conversation_member.member_id` carries no foreign key (E39), on purpose.

@@ -8,6 +8,10 @@
  * lookups out of the business layer.
  */
 
+import { RATE_LIMIT_DEFAULTS, type RateLimitEnv } from './rate-limits';
+
+export type { RateLimitEnv };
+
 export type NodeEnv = 'development' | 'test' | 'production';
 
 export interface DatabaseEnv {
@@ -85,6 +89,8 @@ export interface TrefaroEnv {
   /** Signing secret for auth tokens and double opt-in confirmation links. */
   readonly authSecret: string;
   readonly adminAuth: AdminAuthEnv;
+  /** What this instance refuses to do too often, and how loudly it says so (E60). */
+  readonly rateLimits: RateLimitEnv;
   readonly database: DatabaseEnv;
   readonly smtp: SmtpEnv;
   /** `null` until the organization has generated a VAPID key pair. */
@@ -231,6 +237,29 @@ export function loadEnv(
         bootstrapEmail && bootstrapPassword
           ? { email: bootstrapEmail, password: bootstrapPassword }
           : null,
+    },
+    rateLimits: {
+      loginAttemptsPerWindow: read.integer(
+        'LOGIN_ATTEMPTS_PER_WINDOW',
+        RATE_LIMIT_DEFAULTS.loginAttemptsPerWindow,
+      ),
+      registrationsPerWindow: read.integer(
+        'REGISTRATIONS_PER_WINDOW',
+        RATE_LIMIT_DEFAULTS.registrationsPerWindow,
+      ),
+      newsletterSignupsPerWindow: read.integer(
+        'NEWSLETTER_SIGNUPS_PER_WINDOW',
+        RATE_LIMIT_DEFAULTS.newsletterSignupsPerWindow,
+      ),
+      confirmationsPerWindow: read.integer(
+        'CONFIRMATIONS_PER_WINDOW',
+        RATE_LIMIT_DEFAULTS.confirmationsPerWindow,
+      ),
+      mailsPerRecipientPerWindow: read.integer(
+        'MAILS_PER_RECIPIENT_PER_WINDOW',
+        RATE_LIMIT_DEFAULTS.mailsPerRecipientPerWindow,
+      ),
+      profile: source['RATE_LIMIT_PROFILE']?.trim() || null,
     },
     database: {
       host: read.optional('DATABASE_HOST', 'localhost'),

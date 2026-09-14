@@ -87,6 +87,34 @@ Either leave `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD` **empty** an
 use the guided setup, or set both for an unattended installation. Both paths are
 described in [section 5](#5-the-first-administrator).
 
+### The values that decide how often a stranger may knock
+
+Trefaro refuses to do a handful of things too often, and it ships with numbers
+you can leave alone: twenty login attempts per five minutes from one address
+(then fifteen minutes of silence), sixty registrations, sixty confirmations,
+twenty newsletter sign-ups — and five mails to any **one** recipient, however
+many different people ask for them.
+
+You will want to raise one of them in exactly one situation: your office, your
+school or your venue shares a single public internet address, so twenty
+colleagues signing up for the same event look to Trefaro like one very busy
+visitor. Set the value in your `.env`, restart, and the server will say in its
+log that it is running above the default — deliberately, because a limit that
+has been raised is a limit nobody is testing any more.
+
+```bash
+# Only if you actually need it. Every one of these is already the default.
+REGISTRATIONS_PER_WINDOW=60
+CONFIRMATIONS_PER_WINDOW=60
+LOGIN_ATTEMPTS_PER_WINDOW=20
+NEWSLETTER_SIGNUPS_PER_WINDOW=20
+MAILS_PER_RECIPIENT_PER_WINDOW=5
+```
+
+The counters are kept in memory, so `docker compose -p trefaro restart server`
+clears them — which is the quickest way to let somebody back in who locked
+themselves out of the login while you decide whether to change a number.
+
 ### Ports
 
 `HTTP_PORT` and `HTTPS_PORT` are the ports the reverse proxy publishes on the

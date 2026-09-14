@@ -13,8 +13,9 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { Throttle, minutes } from '@nestjs/throttler';
 import { NEWSLETTER_MODULE_KEY } from '@trefaro/shared-models';
+import { RateLimit } from '../../core/throttling/rate-limit.decorator';
+import { ThrottleByRecipient } from '../../core/throttling/recipient-throttle.interceptor';
 import { CoreModuleController, CoreModuleEnabledGuard } from '../config';
 import {
   ConfirmNewsletterDto,
@@ -23,19 +24,6 @@ import {
   NewsletterSignupDto,
 } from './dto/newsletter.dto';
 import { NewsletterService } from './newsletter.service';
-
-/**
- * How many newsletter sign-ups one address may make per five minutes.
- *
- * Twenty. Lower than the sixty of the registration and account forms, because
- * this one has less to be legitimately repeated for: a household filling in one
- * form after another is registering people for an event, and nobody signs
- * twenty addresses up for news from one browser. High enough that a person who
- * mistypes their address twice and a family sharing a connection are not
- * refused (E4 — the limit is never removed for a test, and it is not loosened
- * for a suite either).
- */
-export const NEWSLETTER_SIGNUPS_PER_WINDOW = 20;
 
 /**
  * Signing up for the newsletter, and confirming it (FR 4.8, E45).
@@ -54,14 +42,15 @@ export const NEWSLETTER_SIGNUPS_PER_WINDOW = 20;
 @UseGuards(CoreModuleEnabledGuard)
 @CoreModuleController(NEWSLETTER_MODULE_KEY)
 @Controller('user/newsletter')
-@Throttle({
-  default: { limit: NEWSLETTER_SIGNUPS_PER_WINDOW, ttl: minutes(5) },
-})
+@RateLimit('newsletter-signup')
 export class PublicNewsletterController {
   constructor(private readonly newsletter: NewsletterService) {}
 
   @Post()
   @HttpCode(HttpStatus.OK)
+  // The sign-up mails whoever is named in the body, so it counts twice: once
+  // against the caller, once against the inbox.
+  @ThrottleByRecipient()
   @ApiOperation({
     summary: 'Sign an address up for the newsletter (FR 4.8)',
     description:

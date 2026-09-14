@@ -17,10 +17,9 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { Throttle, minutes } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
+import { RateLimit } from '../../core/throttling/rate-limit.decorator';
 import { AllowAnonymous } from '../common/allow-anonymous';
-import { LOGIN_ATTEMPTS_PER_WINDOW } from '../common/login-throttle';
 import { AdminUserService, toAdminSummary } from './admin-user.service';
 import { CurrentAdmin } from './current-admin.decorator';
 import { AdminSessionInfoDto, toAdminAccountDto } from './dto/admin.dto';
@@ -56,15 +55,10 @@ export class AuthController {
   @Post('login')
   // No session exists yet — the one route below `admin/` that cannot require one.
   @AllowAnonymous()
-  // Twenty attempts per five minutes, then fifteen minutes of silence; the
-  // reasoning is with the constant, which the participant login shares.
-  @Throttle({
-    default: {
-      limit: LOGIN_ATTEMPTS_PER_WINDOW,
-      ttl: minutes(5),
-      blockDuration: minutes(15),
-    },
-  })
+  // Twenty attempts per five minutes, then fifteen minutes of silence — the
+  // default, which an operator may move (E60). The reasoning is with the
+  // limit, which the participant login shares.
+  @RateLimit('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Log in as an administrator',

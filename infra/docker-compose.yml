@@ -70,6 +70,21 @@ services:
       ADMIN_BOOTSTRAP_EMAIL: ${ADMIN_BOOTSTRAP_EMAIL:-}
       ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_BOOTSTRAP_PASSWORD:-}
       ADMIN_SESSION_TTL_HOURS: ${ADMIN_SESSION_TTL_HOURS:-12}
+
+      # What this instance refuses to do too often (E60). Left empty on purpose:
+      # the defaults live in the server, so writing them here too would be two
+      # numbers waiting to disagree. Set one in the .env only with a reason —
+      # an office behind a single public address is the usual one. The server
+      # logs every raised value while starting, because a raised limit is a
+      # limit nobody is testing any more (E4).
+      LOGIN_ATTEMPTS_PER_WINDOW: ${LOGIN_ATTEMPTS_PER_WINDOW:-}
+      REGISTRATIONS_PER_WINDOW: ${REGISTRATIONS_PER_WINDOW:-}
+      NEWSLETTER_SIGNUPS_PER_WINDOW: ${NEWSLETTER_SIGNUPS_PER_WINDOW:-}
+      CONFIRMATIONS_PER_WINDOW: ${CONFIRMATIONS_PER_WINDOW:-}
+      MAILS_PER_RECIPIENT_PER_WINDOW: ${MAILS_PER_RECIPIENT_PER_WINDOW:-}
+      # RATE_LIMIT_PROFILE is deliberately not passed through: a profile is a
+      # thing a test run loads from a file, never something an instance ships
+      # (E61). An operator who wants different numbers sets the numbers.
       # DATABASE_SYNCHRONIZE is deliberately not passed through: migrations are
       # the only authority over the schema, and the server refuses to start with
       # it on in production anyway. UPLOAD_DIR, PLUGIN_BUNDLE_DIR and

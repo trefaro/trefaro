@@ -7,8 +7,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { Throttle, minutes } from '@nestjs/throttler';
-import { CONFIRMATIONS_PER_WINDOW } from './public-registrations.controller';
+import { RateLimit } from '../../core/throttling/rate-limit.decorator';
 import { ConfirmRegistrationDto } from './dto/create-registration.dto';
 import { RegistrationConfirmationDto } from './dto/registration.dto';
 import { RegistrationService } from './registration.service';
@@ -36,7 +35,7 @@ export class RegistrationConfirmationController {
 
   @Post('confirm')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: CONFIRMATIONS_PER_WINDOW, ttl: minutes(5) } })
+  @RateLimit('confirmation')
   @ApiOperation({
     summary: 'Confirm a registration with the token from the mailed link',
     description:

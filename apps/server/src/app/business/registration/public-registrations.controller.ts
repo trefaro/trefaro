@@ -20,13 +20,14 @@ import {
   ApiServiceUnavailableResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { Throttle, minutes } from '@nestjs/throttler';
 import type { RegistrationInput } from '@trefaro/shared-models';
 import {
   MAX_FILE_FIELDS,
   MAX_UPLOAD_BYTES,
   REGISTRATION_PAYLOAD_PART,
 } from '@trefaro/shared-models';
+import { RateLimit } from '../../core/throttling/rate-limit.decorator';
+import { RecipientThrottleInterceptor } from '../../core/throttling/recipient-throttle.interceptor';
 import { CreateRegistrationDto } from './dto/create-registration.dto';
 import { RegistrationAcknowledgementDto } from './dto/registration.dto';
 import {
@@ -35,35 +36,6 @@ import {
   type MultipartFile,
 } from './registration-submission.pipe';
 import { RegistrationService } from './registration.service';
-
-/**
- * Attempts allowed per client address per five minutes.
- *
- * Every accepted registration sends a mail, so this endpoint is a way to send
- * mail to someone else's inbox — the reason it is throttled more tightly than
- * the default. Deliberately without a block period, unlike the login: a
- * participant who mistypes their address a few times has to be able to fix it.
- *
- * Raised from 30 in AP 7. Two reasons, and the second one is the honest trigger:
- * an office or a school shares one public address, so twenty colleagues signing
- * up for the same event within a few minutes are one client here — and the API
- * contract suite, which now exercises this endpoint from three files, ran into
- * the old number. Twelve attempts a minute is still a tight bound on the way
- * this endpoint could be abused.
- *
- * What it does *not* bound is attempts per e-mail address; that needs a second
- * counter and is noted for the hardening of phase 5.
- */
-export const REGISTRATIONS_PER_WINDOW = 60;
-
-/**
- * How many confirmations one address may attempt per five minutes.
- *
- * The same number, for the same reason: the two belong to one flow, and a
- * household or an office behind a single address has to be able to complete as
- * many opt-ins as it started.
- */
-export const CONFIRMATIONS_PER_WINDOW = 60;
 
 /**
  * What the multipart parser accepts, and how it reads a file name.
@@ -114,10 +86,13 @@ export class PublicRegistrationsController {
 
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
-  @Throttle({
-    default: { limit: REGISTRATIONS_PER_WINDOW, ttl: minutes(5) },
-  })
-  @UseInterceptors(AnyFilesInterceptor(UPLOAD_OPTIONS))
+  @RateLimit('registration')
+  // The recipient counter has to see a parsed body, and the multipart parser is
+  // the interceptor above it — so the order of these two is load-bearing.
+  @UseInterceptors(
+    AnyFilesInterceptor(UPLOAD_OPTIONS),
+    RecipientThrottleInterceptor,
+  )
   @ApiConsumes('application/json', 'multipart/form-data')
   @ApiBody({ type: CreateRegistrationDto })
   @ApiOperation({

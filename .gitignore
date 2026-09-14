@@ -15,6 +15,10 @@ out-tsc/
 .env
 .env.*
 !.env.example
+# Checked in on purpose: the end-to-end rate-limit profile holds no secret, and
+# a file the production stack does not know is exactly what E61 asks a test
+# profile to be. Nx loads it for the `serve-e2e` task alone.
+!apps/server/.env.serve-e2e
 
 # Test artifacts
 coverage/

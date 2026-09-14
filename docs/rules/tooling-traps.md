@@ -5,6 +5,26 @@ Zwei Fallen, die keinen Fehler werfen, sondern ein falsches Ergebnis liefern.
 Beide sind einmal als Anwendungsfehler gesucht worden, bevor klar war,
 dass das Werkzeug etwas anderes tut als erwartet.
 
+- **Nx lädt `.env.<zielname>` für eine Task dieses Namens — und das ist
+  benutzbar.** Für `projekt:ziel` liest Nx der Reihe nach
+  `.env.<ziel>.local`, `.env.<ziel>`, `.env.local`, `.env` — erst im
+  Projektverzeichnis, dann in der Wurzel; früher geladene gewinnen. Ein Ziel
+  namens `serve-e2e` bekommt damit `apps/server/.env.serve-e2e` und
+  `nx serve server` bekommt sie nicht, ohne dass irgendwo ein Schalter steht.
+  Genau darauf ruht das Drosselprofil der Phase 5 (E61). Zwei Dinge dazu:
+  **`dependsOn` kennt keine Konfiguration** — `{"projects": [...], "target": "x"}`
+  hat kein `configuration`-Feld, also wird aus „dieselbe Task mit anderer
+  Konfiguration" ein **eigenes Ziel**; und **`@nx/js:node` hat keine
+  `env`-Option**, der Umweg über die Datei ist also nicht Geschmackssache.
+  Nachgemessen statt geglaubt: `nx run server:serve-e2e` schreibt die sechs
+  Profilzeilen, `nx run server:serve` keine einzige.
+- **Ein Kommentarschlüssel in `project.json` muss eine Eigenschaft des Objekts
+  benennen, in dem er steht.** Steht er in `targets`, ist er ein **Ziel** — und
+  der Projektgraph scheitert dann komplett (`Failed to process project graph`),
+  nicht etwa mit einer Warnung an der betroffenen Stelle. Also `"// targets"`
+  neben `targets` auf Projektebene, `"// dependsOn"` neben `dependsOn` **im**
+  Ziel. Diese Falle hat in Phase 5 zweimal zugeschlagen, in AP 1 und in AP 2,
+  und beim zweiten Mal stand sie schon in dieser Datei.
 - **Ein UPDATE über `repository.query()` antwortet `[rows, rowCount]`** — zwei
   Elemente, immer. `rows.length` meldet also „zwei Zeilen geändert", auch wenn
   nichts geändert wurde. Wer eine Anzahl braucht, nimmt den Query-Builder und

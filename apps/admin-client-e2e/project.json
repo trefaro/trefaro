@@ -8,9 +8,14 @@
   "// targets": "to see all targets run: nx show project admin-client-e2e --web",
   "targets": {
     "e2e": {
+      "// dependsOn": "The server comes up under `serve-e2e`, not `serve`: that target name is what makes Nx load `apps/server/.env.serve-e2e`, the rate-limit profile of E61. Three e2e projects share one server process in a full run and therefore one set of throttle counters, and with the shipped numbers the project that ran last got 429 where it expected 202 (AP 8 of phase 4). The client is served by the ordinary `serve` — only the server has limits to configure.",
       "dependsOn": [
         {
-          "projects": ["server", "admin-client"],
+          "projects": ["server"],
+          "target": "serve-e2e"
+        },
+        {
+          "projects": ["admin-client"],
           "target": "serve"
         }
       ],

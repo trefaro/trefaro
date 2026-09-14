@@ -19,11 +19,10 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { Throttle, minutes } from '@nestjs/throttler';
 import { PROFILES_MODULE_KEY } from '@trefaro/shared-models';
 import type { Request, Response } from 'express';
+import { RateLimit } from '../../core/throttling/rate-limit.decorator';
 import { AllowAnonymous } from '../common/allow-anonymous';
-import { LOGIN_ATTEMPTS_PER_WINDOW } from '../common/login-throttle';
 import { CoreModuleController, CoreModuleEnabledGuard } from '../config';
 import { ParticipantLoginDto } from './dto/participant-login.dto';
 import {
@@ -66,14 +65,8 @@ export class ParticipantAuthController {
   // cannot require one.
   @AllowAnonymous()
   // The same limit as the administrative login; the reasoning is with the
-  // constant, which both share.
-  @Throttle({
-    default: {
-      limit: LOGIN_ATTEMPTS_PER_WINDOW,
-      ttl: minutes(5),
-      blockDuration: minutes(15),
-    },
-  })
+  // configured value, which both share.
+  @RateLimit('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Log in as a participant',

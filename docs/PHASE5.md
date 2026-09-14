@@ -633,3 +633,116 @@ verhindert. Der `stack`-Job ist der vierte der CI und hängt bewusst **nicht** a
 `images`: jener Job baut in den GitHub-Actions-Cache und lädt die Ergebnisse
 nie, es gäbe also nichts wiederzuverwenden, und eine Abhängigkeit würde nur zwei
 Jobs serialisieren, die nebeneinander laufen können.
+
+### AP 2 — Die Drosselung wird konfigurierbar, und sie zählt vollständig (erledigt, 14.09.2026)
+
+Umgesetzt:
+
+- **Fünf Zahlen kommen aus der Umgebung, und die Vorgaben sind die bisherigen**
+  (E60, F203). Der Plan nannte vier; die fünfte ist der Zähler, den dasselbe
+  Paket dazubaut — ein neuer Grenzwert, der als einziger nicht verstellbar
+  wäre, wäre der Sonderfall gewesen, den später niemand erklären kann. Die
+  Vorgaben stehen in `core/config/rate-limits.ts`, jede mit der Begründung, die
+  bis hierher neben ihrem Controller stand. Die globale Grenze (300/min) und
+  die Fünfzehn-Minuten-Sperre des Logins bleiben ausdrücklich Konstanten: ein
+  Betreiber mag einen großzügigeren **Zähler** wollen, aber „sofort weiter
+  probieren" ist für keine Instanz richtig.
+- **Eine Route nennt die Art ihrer Tür, nicht ihr Maß.** `@RateLimit('login')`
+  statt `@Throttle({ default: { limit: KONSTANTE } })`. Das ist keine Kosmetik,
+  sondern der Grund, warum das Paket überhaupt eine Form brauchte: ein Dekorator
+  kann nicht injiziert werden, also hätte jede Zahl an einer Route sie im Bau
+  festgeschrieben. Gelöst über **benannte Throttler** aus
+  `ThrottlerModule.forRootAsync` — die Zahl kommt per DI aus der geprüften
+  Umgebung, und jeder benannte Throttler trägt ein `skipIf`, das die Metadaten
+  der Route liest. Die fünf Konstanten sind damit weg, `common/login-throttle.ts`
+  ebenfalls.
+- **Laut heißt laut, und Schweigen heißt die ausgelieferten Zahlen.** Jeder Wert
+  **über** seiner Vorgabe erzeugt beim Start eine `WARN`-Zeile mit Variable,
+  Wert und Vorgabe; ein Wert **darunter** erzeugt keine, weil das die sichere
+  Richtung ist. `rateLimitWarnings()` ist eine reine Funktion mit sechs Tests —
+  die Alternative, im Bootstrap zu formulieren, hätte eine Zeile geprüft, die
+  nur beim Hochfahren entsteht.
+- **Der zweite Zähler ist ein Interceptor, kein Guard** (F204), und das ist die
+  einzige Stelle des Pakets, an der der Plan gegen die Wirklichkeit korrigiert
+  werden musste. Ein Guard läuft, bevor irgendetwas den Rumpf geparst hat — und
+  eine Anmeldung mit Dateifeld kommt als `multipart/form-data`. Ein Guard hätte
+  dort einen leeren Rumpf gesehen und durchgewunken: eine Umgehung, die ein
+  Angreifer genau einmal finden muss. `RecipientThrottleInterceptor` steht
+  deshalb **hinter** dem Multipart-Interceptor derselben Route und zählt die
+  Adresse im Rumpf mit **einem** Budget je Postfach, ohne Route im Schlüssel —
+  Anmeldeformular, Newsletter-Anmeldung und Kontoformular teilen sich fünf je
+  fünf Minuten. Der Schlüssel ist gehasht: er überlebt die Anfrage um fünf
+  Minuten, und eine Liste von Adressen im Speicher ist etwas anderes als eine
+  Adresse in einer Anfrage.
+- **Der Handshake kostet, was eine Anfrage kostet** (F205). socket.ios
+  `allowRequest` zählt ihn gegen **dasselbe** globale Budget, über denselben
+  `ThrottlerStorage` — keine neue Zahl zum Konfigurieren und keine zum
+  Falschsetzen. Die Client-Adresse wird gelesen, wie Express sie unter
+  `trust proxy: 1` liest: der letzte Eintrag von `X-Forwarded-For`. Der erste
+  wäre vom Aufrufer wählbar, und den Header zu ignorieren machte alle Clients
+  hinter dem Proxy zu einem.
+- **Das Testprofil ist eine Datei, die der Produktions-Stack nicht kennt**
+  (E61). `apps/server/.env.serve-e2e`, geladen von Nx für die Task
+  `serve-e2e` und für keine andere. Es brauchte ein eigenes Ziel statt einer
+  Konfiguration, weil `dependsOn` kein `configuration`-Feld hat und
+  `@nx/js:node` keine `env`-Option — beides nachgeschlagen, nicht vermutet, und
+  als Falle in `docs/rules/tooling-traps.md` notiert. Die drei E2E-Projekte
+  hängen jetzt an `serve-e2e`.
+
+**Das Abnahmekriterium, Punkt für Punkt:**
+
+- _Ein gesetzter Wert wirkt_ — nachgewiesen als Mutation: mit
+  `MAILS_PER_RECIPIENT_PER_WINDOW=100` im Profil läuft
+  `apps/server-e2e/src/api/rate-limits.spec.ts` **rot** (achtmal 202 statt
+  fünfmal 202 und dreimal 429), mit `=5` grün. Ein Test, der nach dem Code
+  geschrieben wurde, beweist nichts, bevor er einmal gefallen ist.
+- _Ein gelockerter Wert warnt beim Start_ — `nx run server:serve-e2e` schreibt
+  sechs Zeilen (Profilname plus vier gelockerte Werte, in der Mutation fünf),
+  `nx run server:serve` schreibt **keine einzige**. Beide Richtungen gemessen;
+  die zweite ist die wichtigere, weil sie zeigt, dass das Profil nicht leckt.
+- _Eine zweite Anmeldung an dieselbe Adresse von einer anderen Clientadresse
+  wird gedrosselt_ — jeder der acht Versuche in der Suite kommt von einer
+  anderen `X-Forwarded-For`, und das Registrierungsbudget steht im Profil bei
+  400: was ausgeht, kann also nichts anderes sein als das Postfach. Die
+  Gegenprobe steht daneben: derselbe Client darf danach an ein **anderes**
+  Postfach schreiben.
+- _Ein Handshake-Sturm wird gezählt_ — fünf Unit-Tests auf `handshakeThrottle`,
+  darunter der Sturm selbst, die getrennten Budgets zweier Adressen und der
+  Beweis, dass der Proxy-Hop und nicht der Proxy zählt.
+- _`nx run-many -t e2e --parallel=1` läuft lesbar_ — **EXIT=0**, 690 + 317 + 258
+  grün, und im ganzen Lauf genau **drei** 429: alle drei von der Suite erbeten,
+  deren Gegenstand sie sind. Vorher waren es die Registrierungen der
+  Vertragssuite, und der Fehlschlag sah nach einem kaputten Endpunkt aus.
+
+**Was anders lief:**
+
+- **Der Plan sagte „Guard", die Multipart-Route sagte etwas anderes.** Siehe
+  oben — die Korrektur kam aus der Frage, was `req.body` zum Zeitpunkt eines
+  Guards eigentlich enthält, und nicht aus einem roten Test. Der Test kam danach
+  und steht jetzt in `recipient-throttle.interceptor.spec.ts` als eigener Fall.
+- **Die Kommentarschlüssel-Falle aus AP 1 hat ein zweites Mal zugeschlagen.**
+  `"// serve-e2e"` **in** `targets` ist ein Ziel namens `// serve-e2e`, und der
+  Projektgraph scheitert dann vollständig („Failed to process project graph"),
+  nicht an der betroffenen Stelle. Die Regel stand bereits in
+  `docs/rules/tooling-traps.md` — sie ist jetzt um das genaue Fehlerbild und um
+  die zulässigen Stellen ergänzt, denn die alte Fassung sagte, was gilt, aber
+  nicht, woran man merkt, dass man dagegen verstoßen hat.
+- **Eine Entscheidung, die der Plan nicht vorsah: die Ablehnung bleibt
+  sichtbar.** Ein erschöpftes Empfängerbudget antwortet 429 statt die Mail still
+  fallen zu lassen. Still wäre das dichtere Verhalten — aber ein Haushalt hinter
+  einer gemeinsamen Adresse stünde dann ohne jede Erklärung da, warum der
+  Bestätigungslink nie ankam, und für ein Anmeldeformular heißt das: die
+  Anmeldung kommt nie zustande. Das Restsignal ist benannt und schmal (F204).
+- **Das Profil hebt vier Zahlen an und eine ausdrücklich nicht.**
+  `MAILS_PER_RECIPIENT_PER_WINDOW` bleibt bei der ausgelieferten Fünf, damit
+  jeder volle E2E-Lauf **eine echte Grenze** anfasst. Das ist die direkte
+  Antwort auf die Sorge, die E4 formuliert und E60 wiederholt: ein Profil, das
+  alles anhebt, ist ein Profil, unter dem nichts mehr geprüft wird.
+
+**Der Stand nach diesem Paket:** `nx run-many -t lint test build` grün über
+**19** Projekte, 1291 Server-Unit-Tests (14 neu), 690 Vertragstests (3 neu),
+317 + 258 Browsertests unverändert. `todo.md` verliert sechs Einträge unter
+_Checkable after phase 5_ — der unlesbare Kombinationslauf, die konfigurierbare
+Drosselung, der Zähler je Empfänger, der ungezählte Handshake, die geteilten
+E2E-Budgets und die Frage nach der Login-Grenze, die jetzt eine `.env`-Zeile ist
+statt eines Releases.

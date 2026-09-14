@@ -138,3 +138,48 @@ describe('loadEnv', () => {
     expect(env.publicUserClientUrl).toBe('https://events.example.org');
   });
 });
+
+describe('loadEnv — rate limits (E60)', () => {
+  it('defaults to the numbers the instance has always shipped with', () => {
+    expect(loadEnv({}).rateLimits).toEqual({
+      loginAttemptsPerWindow: 20,
+      registrationsPerWindow: 60,
+      newsletterSignupsPerWindow: 20,
+      confirmationsPerWindow: 60,
+      mailsPerRecipientPerWindow: 5,
+      profile: null,
+    });
+  });
+
+  it('takes every limit from the environment', () => {
+    expect(
+      loadEnv({
+        LOGIN_ATTEMPTS_PER_WINDOW: '5',
+        REGISTRATIONS_PER_WINDOW: '7',
+        NEWSLETTER_SIGNUPS_PER_WINDOW: '9',
+        CONFIRMATIONS_PER_WINDOW: '11',
+        MAILS_PER_RECIPIENT_PER_WINDOW: '13',
+      }).rateLimits,
+    ).toMatchObject({
+      loginAttemptsPerWindow: 5,
+      registrationsPerWindow: 7,
+      newsletterSignupsPerWindow: 9,
+      confirmationsPerWindow: 11,
+      mailsPerRecipientPerWindow: 13,
+    });
+  });
+
+  it('refuses a limit that is not a positive integer', () => {
+    expect(() => loadEnv({ REGISTRATIONS_PER_WINDOW: '0' })).toThrow(
+      /REGISTRATIONS_PER_WINDOW must be a positive integer/,
+    );
+  });
+
+  // E61: a test profile is never what an instance ships, so the server has to
+  // be able to say which one it is running under.
+  it('carries the name of the profile the values came from', () => {
+    expect(loadEnv({ RATE_LIMIT_PROFILE: 'e2e' }).rateLimits.profile).toBe(
+      'e2e',
+    );
+  });
+});
