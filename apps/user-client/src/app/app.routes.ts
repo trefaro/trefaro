@@ -27,11 +27,20 @@ import { profileSearchGuard } from './features/profiles/profile-search.service';
  * of them with no token at all — the same component as `registrations/me`,
  * because the view and its rules are identical.
  *
- * The four `profile/*` routes are the account itself (FR 4.1–4.3). Three of
- * them are for somebody who is *not* logged in — registering, confirming,
- * logging in — and only `profile` needs a session. Two of the four are linked
- * from a mail, so their addresses are constants in `shared-models` that the
- * server reads as well: `PROFILE_CONFIRMATION_PATH` and `PROFILE_LOGIN_PATH`.
+ * The six `profile/*` routes are the account itself (FR 4.1–4.3, and since
+ * AP 4 of phase 5 the way back into one). Five of them are for somebody who is
+ * *not* logged in — registering, confirming, logging in, asking for a reset
+ * link and setting a new password — and only `profile` needs a session. Four
+ * are linked from a mail, so their addresses are constants in `shared-models`
+ * that the server reads as well: `PROFILE_CONFIRMATION_PATH`,
+ * `PROFILE_LOGIN_PATH`, `PROFILE_REGISTRATION_PATH` and
+ * `PROFILE_NEW_PASSWORD_PATH`.
+ *
+ * `profile/new-password` is deliberately **not** behind the anonymous guard,
+ * although the other four are: somebody may still be logged in somewhere while
+ * holding a reset link, and turning them away from the page would leave them
+ * with a link they cannot use. Setting the password ends every session anyway
+ * (F139).
  */
 export const appRoutes: Route[] = [
   {
@@ -203,6 +212,29 @@ export const appRoutes: Route[] = [
         (m) => m.ProfileLoginPage,
       ),
     title: 'profile.login.title',
+  },
+  {
+    // "I have forgotten my password" (AP 4 of phase 5). No session by
+    // definition, and no token either — it takes an address and answers the
+    // same way for every one of them (E10, E32).
+    path: 'profile/forgot-password',
+    canActivate: [participantAnonymousGuard],
+    loadComponent: () =>
+      import('./pages/profile-forgot-password/profile-forgot-password-page').then(
+        (m) => m.ProfileForgotPasswordPage,
+      ),
+    title: 'profile.forgot.title',
+  },
+  {
+    // Where the reset link lands, with its token in the query — the fourth page
+    // of this client that a mail opens, and the only one whose token *changes*
+    // something. It is posted from a form, never fetched (E5b).
+    path: 'profile/new-password',
+    loadComponent: () =>
+      import('./pages/profile-new-password/profile-new-password-page').then(
+        (m) => m.ProfileNewPasswordPage,
+      ),
+    title: 'profile.newPassword.title',
   },
   {
     path: 'profile/register',

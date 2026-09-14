@@ -70,6 +70,11 @@ export class TypeormUserSessionRepository implements UserSessionRepository {
     return result.affected ?? 0;
   }
 
+  async deleteForUser(userId: string): Promise<number> {
+    const result = await this.repository.delete({ user: { id: userId } });
+    return result.affected ?? 0;
+  }
+
   async deleteExpired(now: Date): Promise<number> {
     const result = await this.repository.delete({
       expiresAt: LessThanOrEqual(now),

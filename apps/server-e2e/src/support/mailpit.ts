@@ -150,6 +150,23 @@ export function newsletterTokenFrom(mail: CapturedMail): string {
 }
 
 /**
+ * The `token` of the link that sets a new password (AP 4 of phase 5).
+ *
+ * Its own path again, and here the reason is at its sharpest: this is the one
+ * token that hands an account over, so a helper that also matched a
+ * confirmation link would let a suite pass on a letter that grants nothing.
+ */
+export function passwordResetTokenFrom(mail: CapturedMail): string {
+  const match = /profile\/new-password\?token=([A-Za-z0-9_.%-]+)/.exec(
+    mail.text,
+  );
+  if (!match) {
+    throw new Error(`No reset link in "${mail.subject}"`);
+  }
+  return decodeURIComponent(match[1]);
+}
+
+/**
  * The `token` of the objection link in an invitation (E15, F58).
  *
  * Every invitation carries one, written by the template rather than by the

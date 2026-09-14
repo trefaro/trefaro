@@ -34,6 +34,7 @@ class FakeUserSessionRepository implements UserSessionRepository {
   readonly touched: { sessionId: string; seenAt: Date; expiresAt: Date }[] = [];
   readonly revokedHashes: string[] = [];
   readonly revokedOthers: { userId: string; keepSessionId: string }[] = [];
+  readonly revokedAll: string[] = [];
   readonly sweptAt: Date[] = [];
 
   async create(session: NewUserSession): Promise<void> {
@@ -71,6 +72,11 @@ class FakeUserSessionRepository implements UserSessionRepository {
   ): Promise<number> {
     this.revokedOthers.push({ userId, keepSessionId });
     return 2;
+  }
+
+  async deleteForUser(userId: string): Promise<number> {
+    this.revokedAll.push(userId);
+    return 3;
   }
 
   async deleteExpired(now: Date): Promise<number> {
@@ -162,6 +168,26 @@ describe('UserSessionService', () => {
       hashSessionToken(issued.token),
     ]);
     await expect(service.resolve(issued.token)).resolves.toBeNull();
+  });
+
+  it('ends every other session after a password change (F139)', async () => {
+    await service.revokeOthers(owner.id, 'session-1');
+
+    expect(sessions.revokedOthers).toEqual([
+      { userId: owner.id, keepSessionId: 'session-1' },
+    ]);
+    expect(sessions.revokedAll).toEqual([]);
+  });
+
+  it('ends every session after a reset, because there is none to keep', async () => {
+    // The difference to the line above is the whole of it: somebody changing
+    // their password is holding a session this server can see, and somebody who
+    // had to be sent a link is not. Keeping "the current one" would keep a
+    // session belonging to whoever locked them out.
+    await service.revokeAll(owner.id);
+
+    expect(sessions.revokedAll).toEqual([owner.id]);
+    expect(sessions.revokedOthers).toEqual([]);
   });
 
   it('sweeps expired rows on boot', async () => {

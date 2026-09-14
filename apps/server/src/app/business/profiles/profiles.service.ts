@@ -9,9 +9,13 @@ import {
 import {
   MAX_ACTIVITY_AREAS_LENGTH,
   PROFILE_CONFIRMATION_PATH,
+  PROFILE_FORGOT_PASSWORD_PATH,
   PROFILE_LOGIN_PATH,
+  PROFILE_NEW_PASSWORD_PATH,
+  PROFILE_REGISTRATION_PATH,
   type ParticipantPasswordChange,
   type ParticipantProfileUpdate,
+  type PasswordResetAcknowledgement,
   type ProfileConfirmation,
   type ProfileRegistrationAcknowledgement,
   type ProfileRegistrationRequest,
@@ -28,8 +32,13 @@ import {
 } from '../common/password-policy';
 import { ConfigurationService } from '../config';
 import { MailDeliveryError, MailService, PublicLinks } from '../mail';
-import { CONFIRMATION_TOKEN_TTL_MS, TokenSigner } from '../security';
+import {
+  CONFIRMATION_TOKEN_TTL_MS,
+  PASSWORD_RESET_TTL_MS,
+  TokenSigner,
+} from '../security';
 import { avatarUrl } from './avatar-url';
+import { resetSubject, resetSubjectParts } from './password-reset-token';
 import type { AuthenticatedParticipant } from './ports/user-session.repository';
 import {
   USER_PROFILE_REPOSITORY,
@@ -94,6 +103,12 @@ const AVATAR_AREA = 'avatars';
  *   changed only by `setAvatarPath`.
  * - **A password change ends the other sessions**, because somebody changing
  *   their password has said something about their other devices too.
+ *
+ * Since AP 4 of phase 5 it also owns the way *back* into an account — the one
+ * dead end a participant could walk into, because FR 4.3's password change
+ * needs the password nobody has. It obeys property 3 above to the letter, and
+ * one step further: all three states send a letter, so not even the time the
+ * answer takes says which state the address is in.
  */
 @Injectable()
 export class ProfilesService {
@@ -294,6 +309,104 @@ export class ProfilesService {
   }
 
   /**
+   * Answers "I have forgotten my password" (AP 4 of phase 5, E10, E32).
+   *
+   * Three states, three letters, one answer. Which letter goes out is the only
+   * place the difference between a confirmed account, an unconfirmed one and an
+   * address this instance has never seen may appear — and there being a letter
+   * in all three cases is what makes the *timing* of the answer say nothing
+   * either, which no status code could do on its own.
+   *
+   * - **Confirmed**: the reset link, minted against the current password hash,
+   *   so using it spends it (see `password-reset-token.ts`).
+   * - **Unconfirmed**: the account confirmation again. A reset link would hand
+   *   over an account whose address nobody has proved they hold, and the step
+   *   that is actually missing is the confirmation — the same mail `register`
+   *   sends for the same state.
+   * - **Unknown**: a letter saying so. Somebody who is sure they have an
+   *   account is holding the wrong address, and this is the only way they can
+   *   be told.
+   *
+   * A failing mail server is a 503 in all three cases, for the reason E32 gives
+   * about the registration form: an error for one address and an
+   * acknowledgement for another is the disclosure the identical answer exists
+   * to prevent.
+   */
+  async requestPasswordReset(
+    address: string,
+  ): Promise<PasswordResetAcknowledgement> {
+    const email = normalizeEmail(address);
+    const profile = await this.profiles.findByEmail(email);
+
+    try {
+      if (!profile) {
+        await this.mail.sendNoAccount(email, {
+          registerUrl: this.links.url(PROFILE_REGISTRATION_PATH),
+        });
+      } else if (!profile.confirmedAt) {
+        await this.requestConfirmation(profile);
+      } else {
+        await this.mail.sendPasswordReset(profile.email, {
+          firstName: profile.firstName,
+          resetUrl: this.links.token(
+            PROFILE_NEW_PASSWORD_PATH,
+            this.tokens.sign(
+              'password-reset',
+              resetSubject(profile.id, this.tokens.mark(profile.passwordHash)),
+              PASSWORD_RESET_TTL_MS,
+            ),
+          ),
+        });
+      }
+    } catch (error: unknown) {
+      if (!(error instanceof MailDeliveryError)) throw error;
+      throw undeliverable();
+    }
+
+    return { email };
+  }
+
+  /**
+   * Sets a new password from the mailed link (AP 4 of phase 5).
+   *
+   * Every refusal is the same sentence, on purpose: forged, expired, already
+   * used and "the password has changed since" are one thing to the person
+   * holding the link — ask for a new one — and telling them apart would say
+   * whether an address has an account after all.
+   *
+   * Afterwards **every** session of the account ends (F139). A password change
+   * inside the profile keeps the session doing the changing; there is none
+   * here, and the sessions that do exist are the ones that may not be the
+   * person's own.
+   */
+  async resetPassword(token: string, password: string): Promise<void> {
+    const subject = this.tokens.verify('password-reset', token);
+    const parts = subject ? resetSubjectParts(subject) : null;
+    if (!parts) throw staleResetLink();
+
+    const profile = await this.profiles.findById(parts.profileId);
+    if (!profile) throw staleResetLink();
+    // The link was minted against a password. Any password set since — by this
+    // link, by a second copy of it, or by the profile page — has spent it.
+    if (this.tokens.mark(profile.passwordHash) !== parts.passwordMark) {
+      throw staleResetLink();
+    }
+
+    // After the token, before the write: a password the policy rejects is a
+    // form error for somebody who has already proved they hold the address.
+    if (!isUsablePassword(password)) {
+      throw new BadRequestException(describePasswordPolicy());
+    }
+
+    const updated = await this.profiles.update(profile.id, {
+      passwordHash: await this.hasher.hash(password),
+    });
+    if (!updated) throw new NotFoundException(GONE);
+
+    await this.sessions.revokeAll(profile.id);
+  }
+
+  /**
    * Replaces the profile picture (FR 4.3, F124).
    *
    * The same three writes in the same order as a series or event logo, and for
@@ -413,6 +526,10 @@ export class ProfilesService {
       await this.mail.sendProfileExists(profile.email, {
         firstName: profile.firstName,
         loginUrl: this.links.url(PROFILE_LOGIN_PATH),
+        // Since AP 4 of phase 5 this letter can say what it could not before:
+        // that there is a way back in. Somebody registering an address that
+        // already has an account is usually somebody who cannot get in.
+        forgotUrl: this.links.url(PROFILE_FORGOT_PASSWORD_PATH),
       });
     } catch (error: unknown) {
       if (!(error instanceof MailDeliveryError)) throw error;
@@ -436,6 +553,20 @@ export class ProfilesService {
 function undeliverable(): ServiceUnavailableException {
   return new ServiceUnavailableException(
     'The confirmation e-mail could not be sent. Please try again in a moment.',
+  );
+}
+
+/**
+ * One sentence for every way a reset link can fail to work.
+ *
+ * Forged, expired, already used, or minted against a password that has since
+ * changed: to the person holding the link they are one situation with one
+ * remedy, and telling them apart would answer the question the form refuses to
+ * answer — whether this address has an account at all.
+ */
+function staleResetLink(): BadRequestException {
+  return new BadRequestException(
+    'This link is not valid any more. Please ask for a new one.',
   );
 }
 

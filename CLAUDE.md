@@ -177,14 +177,14 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    International (Pilotpartner), Doku, Release v1.0 → `docs/PHASE5.md` —
    vierzehn Pakete, **M13–M16**, E60–E71, F203 ff., und jeder der
    zweiunddreißig Einträge aus `todo.md` unter _Checkable after phase 5_ ist
-   einem Paket zugeordnet. **Freigegeben wird Paket für Paket** (AP 1 bis AP 3
+   einem Paket zugeordnet. **Freigegeben wird Paket für Paket** (AP 1 bis AP 4
    sind erledigt, **M13 ist erreicht**; der Stand je Paket steht unter
    _Fortschritt_). **v1.0 taggt Marius, nicht ein Paket** (E71).
 
 **Der Stand in Zahlen:** Entscheidungen **E1–E59** vergeben (E46–E59 in Phase 4,
-in AP 10 gegen die Umsetzung geprüft); Nachträge **F1–F208** stehen vollständig
+in AP 10 gegen die Umsetzung geprüft); Nachträge **F1–F211** stehen vollständig
 im Referenzdokument (F62 und F129–F131 bleiben unvergeben; F203–F205 kamen in
-AP 2 der Phase 5 dazu, F206–F208 in AP 3); Katalog **1080**
+AP 2 der Phase 5 dazu, F206–F208 in AP 3, F209–F211 in AP 4); Katalog **1108**
 Schlüssel. Was in einem Paket tatsächlich passierte, steht im Phasenprotokoll,
 und was man beim Bauen daraus braucht, in `docs/rules/` — **hier nicht noch
 einmal.**

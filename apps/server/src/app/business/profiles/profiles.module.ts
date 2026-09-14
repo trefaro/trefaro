@@ -30,8 +30,9 @@ import { UserSessionService } from './user-session.service';
  * the instance's default language, which a registration form need not send.
  *
  * `CommonModule` for the password hasher and the stored-image service,
- * `SecurityModule` for the signed confirmation token, `MailModule` for the two
- * account mails. What is *not* imported is `RegistrationModule`: an account and
+ * `SecurityModule` for the signed confirmation token, `MailModule` for the account
+ * mails — four of them since AP 4 of phase 5, because the way back into an
+ * account is a letter as well. What is *not* imported is `RegistrationModule`: an account and
  * a registration are joined by the address and nothing else (E31), and asking
  * one module about the other would be the first step towards a foreign key
  * nobody wants. Not `LogoFilesModule` either — what the avatar shares with a

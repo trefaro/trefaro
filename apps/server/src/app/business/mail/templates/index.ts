@@ -23,6 +23,8 @@ export type {
   MailEvent,
   MailTemplate,
   NewsletterConfirmationMailContext,
+  NoAccountMailContext,
+  PasswordResetMailContext,
   ProfileConfirmationMailContext,
   ProfileExistsMailContext,
   ReceiptMailContext,

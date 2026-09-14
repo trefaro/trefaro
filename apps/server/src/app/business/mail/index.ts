@@ -25,6 +25,8 @@ export {
   type MailStrings,
   type MailTemplate,
   type NewsletterConfirmationMailContext,
+  type NoAccountMailContext,
+  type PasswordResetMailContext,
   type ProfileConfirmationMailContext,
   type ProfileExistsMailContext,
   type ReceiptMailContext,

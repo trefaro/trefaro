@@ -6,6 +6,7 @@ import {
   PROFILES_MODULE_KEY,
   type ParticipantAccount,
   type ParticipantSessionInfo,
+  type PasswordResetAcknowledgement,
   type ProfileConfirmation,
   type ProfileRegistrationAcknowledgement,
   type ProfileRegistrationRequest,
@@ -60,11 +61,11 @@ const SESSION_HINT_KEY = 'trefaro.participant-session';
  * and answer different guards, and the point of E34 is that neither can be
  * mistaken for the other.
  *
- * Creating and confirming an account live here too, although they are the only
- * two calls that go to `/api/user` rather than `/api/participant` (E33): at
- * that point there is nobody to authenticate. They are about the same thing —
- * this browser's account — and splitting them off would put half of one
- * subject in a second file.
+ * Creating an account, confirming it and getting back into it live here too,
+ * although those four calls are the only ones that go to `/api/user` rather
+ * than `/api/participant` (E33): at that point there is nobody to
+ * authenticate. They are about the same thing — this browser's account — and
+ * splitting them off would put half of one subject in a second file.
  */
 @Injectable({ providedIn: 'root' })
 export class ParticipantSessionService {
@@ -150,6 +151,42 @@ export class ParticipantSessionService {
         'user/profiles',
         request,
       ),
+    );
+  }
+
+  /**
+   * Asks for a link that sets a new password (AP 4 of phase 5).
+   *
+   * Says nothing about whether the address has an account, and cannot be timed
+   * to find out: every address is written to, only the letters differ (E10,
+   * E32). The page therefore reports what it knows — that a message is on its
+   * way — and never guesses at which one.
+   *
+   * @throws ApiError — 400 for something that is not an address, 429 when the
+   * limit is reached, 503 when no mail could go out at all.
+   */
+  requestPasswordReset(email: string): Promise<PasswordResetAcknowledgement> {
+    return firstValueFrom(
+      this.api.post<PasswordResetAcknowledgement>(
+        'user/profiles/password-reset',
+        { email },
+      ),
+    );
+  }
+
+  /**
+   * Sets the new password with the token from the mailed link.
+   *
+   * No session comes back, deliberately: a mailed link proves an address and
+   * this client asks for the password afterwards, which proves the person knows
+   * what they just chose. Every session the account had is gone by then (F139).
+   *
+   * @throws ApiError — 400 for a spent, expired or forged link, or a password
+   * the policy rejects.
+   */
+  setNewPassword(token: string, password: string): Promise<void> {
+    return firstValueFrom(
+      this.api.post<void>('user/profiles/password', { token, password }),
     );
   }
 

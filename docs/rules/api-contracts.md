@@ -457,4 +457,32 @@ conversations` ist der Fall: Lesen und Antworten sind FR 3.4 und damit **P1**,
   Dieselbe Entscheidung wie beim öffentlichen Raumplan, der nicht prüft, ob ein
   Event veröffentlicht ist.
 
+- **Der Weg zurück ins Konto sind zwei Routen, und die erste antwortet immer
+  gleich** (F209, F210, E10, E32). `POST /api/user/profiles/password-reset`
+  nimmt eine Adresse und antwortet **200 mit genau dieser Adresse** — ob sie ein
+  bestätigtes Konto hat, ein unbestätigtes oder gar keines. Der Unterschied
+  steht ausschließlich im Postfach, und weil **jeder** der drei Fälle einen
+  Brief schickt, verrät auch die **Laufzeit** der Antwort nichts; das ist die
+  Hälfte, die ein Statuscode allein nicht abdeckt.
+  `POST /api/user/profiles/password` setzt das Passwort, **204**, Token im
+  **Rumpf** (F44, E5b) — ein Linkvorschau-Dienst darf kein Passwort setzen —,
+  und es kommt **keine** Sitzung zurück: der Link belegt eine Adresse, das
+  Anmelden danach belegt, dass jemand das eben gewählte Passwort kennt.
+- **Ein 503 ist hier für jede Adresse einer** — anders als beim Newsletter, der
+  einen `MailDeliveryError` schluckt und trotzdem 200 sagt (F181). Beide Wege
+  sind zulässig, **gemischt ist keiner**: was zählt, ist, dass zwei Adressen
+  dieselbe Antwort bekommen. Das Kontoformular wirft (E32), also wirft der
+  Rücksetzweg auch — er ist dessen Nachbar, nicht der des Newsletters.
+- **Ein Token, das etwas _übergibt_, wird gegen den Zustand geprägt, den es
+  ersetzt** (F209). Der Rücksetz-Link trägt als Subjekt die Konto-ID **und**
+  eine geheime Marke über dem Passwort-Hash; das gesetzte Passwort ändert den
+  Hash, also löst der Link nichts mehr auf. So wirkt er **einmal**, ohne dass
+  irgendetwas gespeichert wird — und ohne die Spalte, die F23 und F180
+  ausdrücklich nicht wollen. Wer einen fünften Tokenzweck baut, fragt zuerst:
+  gewährt er etwas, das man zweimal haben darf? Nur dann genügt eine ID.
+- **Jede Ablehnung eines Rücksetz-Links ist derselbe Satz** — gefälscht,
+  abgelaufen, verbraucht, vom Profil überholt. Für den Menschen mit dem Link
+  sind sie eine Lage mit einer Antwort (neuen anfordern), und auseinanderhalten
+  hieße sagen, ob es zu der Adresse ein Konto gibt.
+
 Siehe auch: [Schichten und Ports im Server](server-layers.md), [Mehrsprachigkeit und Katalog](i18n.md).

@@ -128,6 +128,24 @@ export class UserSessionService
     }
   }
 
+  /**
+   * Ends every session of one account, after a password **reset** (F139).
+   *
+   * The twin of {@link revokeOthers} and deliberately not the same call: a
+   * reset is asked for by somebody who is not logged in, so there is no current
+   * session to keep — and the sessions that do exist are the ones that may not
+   * be the person's own. Whoever resets a password has said something about all
+   * of them.
+   */
+  async revokeAll(userId: string): Promise<void> {
+    const ended = await this.sessions.deleteForUser(userId);
+    if (ended > 0) {
+      this.logger.log(
+        `Ended ${ended} participant session(s) after a password reset`,
+      );
+    }
+  }
+
   private expiryFrom(now: Date): Date {
     return new Date(
       now.getTime() + this.env.adminAuth.sessionTtlHours * 60 * 60_000,

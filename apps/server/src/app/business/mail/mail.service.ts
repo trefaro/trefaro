@@ -9,6 +9,8 @@ import type {
   InvitationMailContext,
   MailTemplate,
   NewsletterConfirmationMailContext,
+  NoAccountMailContext,
+  PasswordResetMailContext,
   ProfileConfirmationMailContext,
   ProfileExistsMailContext,
   ReceiptMailContext,
@@ -150,6 +152,35 @@ export class MailService {
     content: MailContent<ProfileExistsMailContext>,
   ): Promise<void> {
     await this.send(MAIL_TEMPLATES.profileExists, to, content);
+  }
+
+  /**
+   * The link that sets a forgotten password (AP 4 of phase 5).
+   *
+   * One of the two letters the reset form can send, and which of them goes out
+   * is the only place the difference between a known and an unknown address
+   * appears (E10, E32). @throws MailDeliveryError
+   */
+  async sendPasswordReset(
+    to: string,
+    content: MailContent<PasswordResetMailContext>,
+  ): Promise<void> {
+    await this.send(MAIL_TEMPLATES.passwordReset, to, content);
+  }
+
+  /**
+   * The other one: there is no account for this address.
+   *
+   * Sent rather than skipped, which is a decision and not an oversight. It
+   * gives somebody who is holding the wrong address the only clue they can get
+   * — and it makes the form's answer take the same time either way, which a
+   * status code alone cannot do. @throws MailDeliveryError
+   */
+  async sendNoAccount(
+    to: string,
+    content: MailContent<NoAccountMailContext>,
+  ): Promise<void> {
+    await this.send(MAIL_TEMPLATES.noAccount, to, content);
   }
 
   /**

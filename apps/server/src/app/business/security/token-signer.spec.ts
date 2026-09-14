@@ -1,6 +1,7 @@
 import type { TrefaroEnv } from '../../core/config/env';
 import {
   CONFIRMATION_TOKEN_TTL_MS,
+  PASSWORD_RESET_TTL_MS,
   SELF_SERVICE_GRACE_MS,
   TokenSigner,
   selfServiceTokenTtlMs,
@@ -115,6 +116,27 @@ describe('TokenSigner', () => {
     expect(signer.verify('invitation-opt-out', confirmation)).toBeNull();
   });
 
+  it('keeps a password reset out of every other purpose', () => {
+    const reset = signer.sign('password-reset', SUBJECT, PASSWORD_RESET_TTL_MS);
+
+    // The one link that takes an account over rather than confirming it, so the
+    // direction that matters is both: no other token may be spent as a reset,
+    // and a reset may be spent as nothing else.
+    expect(signer.verify('password-reset', reset)).toBe(SUBJECT);
+    expect(signer.verify('profile-confirmation', reset)).toBeNull();
+    expect(signer.verify('registration-self-service', reset)).toBeNull();
+    expect(signer.verify('invitation-opt-out', reset)).toBeNull();
+
+    const confirmation = signer.sign('profile-confirmation', SUBJECT, 60_000);
+    expect(signer.verify('password-reset', confirmation)).toBeNull();
+  });
+
+  it('expires a password reset within the hour', () => {
+    // Not the fourteen days of a confirmation: that link only confirms an
+    // address somebody asked to confirm, this one hands the account over.
+    expect(PASSWORD_RESET_TTL_MS).toBeLessThanOrEqual(60 * 60 * 1000);
+  });
+
   it('rejects an expired token', () => {
     const token = signer.sign('registration-confirmation', SUBJECT, -1);
 
@@ -125,6 +147,35 @@ describe('TokenSigner', () => {
     for (const value of ['', '.', 'no-dot', 'a.b', '$$$.$$$']) {
       expect(signer.verify('registration-confirmation', value)).toBeNull();
     }
+  });
+});
+
+describe('TokenSigner.mark', () => {
+  const signer = signerWith('a-test-secret-of-at-least-32-characters');
+
+  it('is the same mark for the same value', () => {
+    expect(signer.mark('$argon2id$v=19$m=65536,t=3,p=4$abc$def')).toBe(
+      signer.mark('$argon2id$v=19$m=65536,t=3,p=4$abc$def'),
+    );
+  });
+
+  it('is a different mark once the value changes', () => {
+    // The whole of "a reset link works once": the value marked is the password
+    // hash, so setting a password spends every token minted against the old one.
+    expect(signer.mark('old-hash')).not.toBe(signer.mark('new-hash'));
+  });
+
+  it('is a different mark under a different secret', () => {
+    expect(
+      signerWith('a-different-secret-of-32-characters!').mark('same'),
+    ).not.toBe(signer.mark('same'));
+  });
+
+  it('survives a URL, because it travels inside a subject', () => {
+    const mark = signer.mark('$argon2id$v=19$m=65536,t=3,p=4$abc$def');
+
+    expect(mark).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(encodeURIComponent(mark)).toBe(mark);
   });
 });
 

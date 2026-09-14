@@ -74,6 +74,22 @@ export interface RateLimitEnv {
    */
   readonly mailsPerRecipientPerWindow: number;
   /**
+   * Reset links one client address may ask for per five minutes.
+   *
+   * Twenty, the number of the newsletter sign-up rather than the sixty of the
+   * registration forms, and the legitimate ceiling decides it here as
+   * everywhere: several people behind one public address forgetting their
+   * password within five minutes is a handful at most, and nobody needs twenty.
+   * What this counter bounds is the one public route that mails a *way into an
+   * account* — the letter itself is harmless, but a route that sends it is
+   * worth keeping narrow.
+   *
+   * Setting the password is not counted here: that is a confirmation, counted
+   * with the other three, because the only thing such a limit defends against
+   * is guessing an HMAC.
+   */
+  readonly passwordResetsPerWindow: number;
+  /**
    * Name of the profile these values came from, or `null` for the defaults.
    *
    * Free text, and deliberately not a switch: the profile changes nothing by
@@ -90,6 +106,7 @@ export const RATE_LIMIT_DEFAULTS = {
   newsletterSignupsPerWindow: 20,
   confirmationsPerWindow: 60,
   mailsPerRecipientPerWindow: 5,
+  passwordResetsPerWindow: 20,
 } as const satisfies Omit<RateLimitEnv, 'profile'>;
 
 /** The environment variable each limit is read from, for the startup log. */
@@ -99,6 +116,7 @@ const VARIABLE_NAMES = {
   newsletterSignupsPerWindow: 'NEWSLETTER_SIGNUPS_PER_WINDOW',
   confirmationsPerWindow: 'CONFIRMATIONS_PER_WINDOW',
   mailsPerRecipientPerWindow: 'MAILS_PER_RECIPIENT_PER_WINDOW',
+  passwordResetsPerWindow: 'PASSWORD_RESETS_PER_WINDOW',
 } as const satisfies Record<keyof typeof RATE_LIMIT_DEFAULTS, string>;
 
 /**

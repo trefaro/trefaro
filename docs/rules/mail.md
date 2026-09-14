@@ -32,8 +32,8 @@ gröber als in der Oberfläche.
   bricht: **auch der Fehlschlag muss gleich aussehen.** Ein 503 bei
   unerreichbarem Mailserver für die eine und ein 200 für die andere Adresse wäre
   genau die Auskunft, die das Formular nicht geben darf.
-- **Die Texte kommen aus demselben Katalog wie die Oberfläche** (43 Schlüssel
-  unter `mail.`, neun Mails). Je Mail **ein** `MailTemplate` aus Schlüsselliste
+- **Die Texte kommen aus demselben Katalog wie die Oberfläche** (53 Schlüssel
+  unter `mail.`, elf Mails). Je Mail **ein** `MailTemplate` aus Schlüsselliste
   **und** Renderer (F87) — eine daneben geführte Liste driftet, und dann prüft E24 die
   falsche Menge.
 - **Die Einheit des Rückfalls ist eine Mail** (E24, F87), nicht der Katalog und
@@ -139,6 +139,31 @@ gröber als in der Oberfläche.
   Konto hat), sonst die Vorgabe der Instanz. Das Formular schickt **kein**
   `preferredLocale`; ein Feld, das eine Mail entscheidet und danach verschwindet,
   wäre ein Feld, das nichts liest.
+
+- **Die zehnte und die elfte Mail gehören zusammen, und die elfte ist die
+  Begründung der zehnten** (F210, E10, E32). „Passwort vergessen" schickt an
+  eine bestätigte Adresse den Rücksetz-Link, an eine **unbestätigte** noch
+  einmal die Kontobestätigung (der fehlende Schritt ist die Bestätigung, nicht
+  das Passwort) und an eine **unbekannte** den Satz, dass es hier kein Konto
+  gibt. Der dritte Brief ist kein Luxus: nur weil es ihn gibt, kostet jede
+  Anfrage dasselbe Mailserver-Gespräch, und erst damit verrät auch die Laufzeit
+  der Antwort nichts. F181 („keine zehnte Mail für ‚du stehst schon auf der
+  Liste'") widerspricht nicht — dort hätte der Brief nichts enthalten, was man
+  tun kann, hier schon: die richtige Adresse suchen oder ein Konto anlegen.
+- **Die elfte Mail grüßt niemanden, und zwar aus dem umgekehrten Grund wie die
+  neunte** (F210). Die Newsletter-Bestätigung kennt keinen Namen, weil das
+  Formular keinen erfragt; diese kennt keinen, weil es zu der Adresse **keine
+  Zeile gibt**. Sie trägt auch kein Token — es gibt nichts zu autorisieren.
+- **Ein Brief, dessen Link ein Konto übergibt, sagt zwei Dinge mehr** (F209):
+  wie lange der Link gilt (als Parameter, wie die vierzehn Tage aus F85 — hier
+  in **Minuten**, weil die Zahl ein Parameter ist und „1 Stunde" eine
+  Pluralform bräuchte, die ein Mailkatalog nicht hat), und dass ohne Klick
+  nichts passiert. Das zweite, weil ein öffentliches Formular jede Adresse
+  annimmt: dieser Brief kann jemanden erreichen, der nichts wollte.
+- **Die Mail bei wiederholter Registrierung zeigt seit AP 4 der Phase 5 auf die
+  Wiederherstellung** (F210). Vorher stand dort „es gibt schon ein Konto" und
+  sonst nichts — für den wahrscheinlichsten Leser, jemanden, der nicht
+  hineinkommt, war das eine Sackgasse mit Briefmarke.
 
 - **Verschlüsselt wird nicht nach Gutdünken der Leitung, sondern auf Verlangen**
   (E62). Zwei Formen, und eine Instanz benutzt genau eine: `SMTP_SECURE=true`

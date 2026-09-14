@@ -92,8 +92,9 @@ described in [section 5](#5-the-first-administrator).
 Trefaro refuses to do a handful of things too often, and it ships with numbers
 you can leave alone: twenty login attempts per five minutes from one address
 (then fifteen minutes of silence), sixty registrations, sixty confirmations,
-twenty newsletter sign-ups — and five mails to any **one** recipient, however
-many different people ask for them.
+twenty newsletter sign-ups, twenty requests for a forgotten-password link — and
+five mails to any **one** recipient, however many different people ask for
+them.
 
 You will want to raise one of them in exactly one situation: your office, your
 school or your venue shares a single public internet address, so twenty
@@ -109,6 +110,7 @@ CONFIRMATIONS_PER_WINDOW=60
 LOGIN_ATTEMPTS_PER_WINDOW=20
 NEWSLETTER_SIGNUPS_PER_WINDOW=20
 MAILS_PER_RECIPIENT_PER_WINDOW=5
+PASSWORD_RESETS_PER_WINDOW=20
 ```
 
 The counters are kept in memory, so `docker compose -p trefaro restart server`

@@ -250,6 +250,10 @@ export function loadEnv(
         'MAILS_PER_RECIPIENT_PER_WINDOW',
         RATE_LIMIT_DEFAULTS.mailsPerRecipientPerWindow,
       ),
+      passwordResetsPerWindow: read.integer(
+        'PASSWORD_RESETS_PER_WINDOW',
+        RATE_LIMIT_DEFAULTS.passwordResetsPerWindow,
+      ),
       profile: source['RATE_LIMIT_PROFILE']?.trim() || null,
     },
     database: {

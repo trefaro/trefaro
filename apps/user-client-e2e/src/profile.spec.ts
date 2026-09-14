@@ -1,6 +1,10 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import { expectNoRawKeys, t } from './support/catalogue';
-import { accountConfirmationPathFrom, waitForMailTo } from './support/mail';
+import {
+  accountConfirmationPathFrom,
+  passwordResetPathFrom,
+  waitForMailTo,
+} from './support/mail';
 import { png } from './support/png';
 import {
   removeProfileField,
@@ -366,7 +370,15 @@ test.describe('a participant account', () => {
     // because registering again is a new registration and not an undo.
     page.once('dialog', (dialog) => void dialog.accept());
     await page.getByRole('button', { name: t('mine.cancel') }).click();
-    await expect(page.getByRole('status')).toHaveText(t('mine.cancelled'));
+    // Filtered rather than bare: the check-in plug-in draws a live region of
+    // its own on this page ("no check-in code for this registration"), and
+    // after the cancellation both are on the screen. Which of the two a strict
+    // locator sees then depends on when the plug-in bundle re-renders — a race
+    // that made this line fail once in one engine and pass on the re-run. The
+    // assertion still says what it meant: a live region carries this sentence.
+    await expect(
+      page.getByRole('status').filter({ hasText: t('mine.cancelled') }),
+    ).toHaveText(t('mine.cancelled'));
     // And the button is gone with it: there is nothing left to cancel.
     await expect(
       page.getByRole('button', { name: t('mine.cancel') }),
@@ -444,5 +456,94 @@ test.describe('a participant account', () => {
         .getByRole('navigation', { name: t('app.nav.label') })
         .getByRole('link', { name: t('profile.login.title') }),
     ).toBeVisible();
+  });
+
+  test('comes back from a forgotten password without help', async ({
+    page,
+  }, testInfo) => {
+    engine = testInfo.project.name;
+    const email = `e2e-forgot-${Date.now()}${addressDomain(engine)}`;
+
+    // Its own account rather than the one above: this test is about somebody
+    // who cannot get in, and the account above is signed in and out by the
+    // test that made it. One login all the same — the budget is twenty per
+    // five minutes for every suite of this repository together (E4).
+    await page.goto('/profile/register');
+    await page.getByLabel(t('profile.firstName')).fill('Amina');
+    await page.getByLabel(t('profile.lastName')).fill('Okonkwo');
+    await page.getByLabel(t('profile.email')).fill(email);
+    await page.getByLabel(t('profile.password')).fill(PASSWORD);
+    await page
+      .getByRole('button', { name: t('profile.register.title') })
+      .click();
+    await page.goto(
+      accountConfirmationPathFrom(
+        await waitForMailTo(email, {
+          subject: new RegExp(t('mail.profileConfirm.subject')),
+        }),
+      ),
+    );
+    await page
+      .getByRole('button', { name: t('profile.confirm.title') })
+      .click();
+    await expect(
+      page.getByRole('heading', { name: t('profile.confirm.done') }),
+    ).toBeVisible();
+
+    // --- the dead end, and the way out of it ------------------------------
+    // Found from the login form, which is where somebody who cannot get in is
+    // standing. That link is the whole point of the package: without it the
+    // password change of FR 4.3 needs the password nobody has.
+    await page.goto('/profile/login');
+    await page
+      .getByRole('main')
+      .getByRole('link', { name: t('profile.forgot.title') })
+      .click();
+    await expect(page).toHaveURL(/\/profile\/forgot-password$/);
+    await expectNoRawKeys(page);
+
+    await page.getByLabel(t('profile.email')).fill(email);
+    await page
+      .getByRole('button', { name: t('profile.forgot.submit') })
+      .click();
+
+    // What the page may promise: a message is on its way. Not that there is an
+    // account — the form answers the same way for an address that has none
+    // (E10, E32), and it is Mailpit that knows which letter went out.
+    await expect(
+      page.getByRole('heading', { name: t('profile.forgot.done.title') }),
+    ).toBeVisible();
+    await expect(page.getByText(email)).toBeVisible();
+    await expectNoRawKeys(page);
+
+    // --- the link, and a password nobody had to know ----------------------
+    await page.goto(
+      passwordResetPathFrom(
+        await waitForMailTo(email, {
+          subject: new RegExp(t('mail.passwordReset.subject')),
+        }),
+      ),
+    );
+    await expectNoRawKeys(page);
+    await page.getByLabel(t('profile.newPassword.field')).fill(NEW_PASSWORD);
+    await page
+      .getByRole('button', { name: t('profile.newPassword.submit') })
+      .click();
+    await expect(
+      page.getByRole('heading', { name: t('profile.newPassword.done.title') }),
+    ).toBeVisible();
+
+    // --- and in -----------------------------------------------------------
+    await page
+      .getByRole('main')
+      .getByRole('link', { name: t('profile.login.title') })
+      .click();
+    await page.getByLabel(t('profile.email')).fill(email);
+    await page.getByLabel(t('profile.password')).fill(NEW_PASSWORD);
+    await page.getByRole('button', { name: t('profile.login.title') }).click();
+
+    await expect(page).toHaveURL(/\/profile$/);
+    await expect(page.getByText(email)).toBeVisible();
+    await expectNoRawKeys(page);
   });
 });

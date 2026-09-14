@@ -600,4 +600,15 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   `NX File change detected. Restarting...`. Wer sie im Protokoll findet, wirft
   den Lauf weg statt den Fehlschlag zu untersuchen.
 
+- **`getByRole('status')` ist auf einer Seite mit Plug-in-Slot nicht eindeutig**
+  (AP 4 der Phase 5). Auf „meine Anmeldung" zeichnet das Check-In-Plug-in eine
+  eigene Live-Region („kein Check-In-Code für diese Anmeldung"); nach dem
+  Stornieren stehen **zwei** auf dem Schirm, und welche ein strikter Locator
+  sieht, hängt davon ab, wann das Bündel neu zeichnet. Das ist einmal in einer
+  Engine rot geworden und beim Wiederholen grün — also kein Produktfehler,
+  sondern ein Selektor, der eine Rolle für einen Ort hält. Gefiltert
+  (`.filter({ hasText: … })`) sagt die Zeile weiter, was sie meinte: **eine**
+  Live-Region trägt diesen Satz. Wo ein Slot zeichnet, ist eine Rolle allein
+  keine Adresse.
+
 Siehe auch: [Fallen in den Angular-Clients](angular-clients.md), [Deployment und Prüfung](deployment.md).

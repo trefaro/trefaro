@@ -26,7 +26,17 @@ export type TokenPurpose =
    * cannot be replayed as any of the four purposes above it, which is what
    * having a purpose in the payload is for.
    */
-  | 'newsletter-confirmation';
+  | 'newsletter-confirmation'
+  /**
+   * Setting a forgotten password (AP 4 of phase 5).
+   *
+   * The one link this application mints that hands an account over rather than
+   * confirming, granting or withdrawing something — which is why it has the
+   * shortest life of the six and why its subject carries a {@link
+   * TokenSigner.mark} of the password it was minted against, so that using it
+   * spends it.
+   */
+  | 'password-reset';
 
 /** Fourteen days, per E5: long enough for someone who registers before a holiday. */
 export const CONFIRMATION_TOKEN_TTL_MS = 14 * 24 * 60 * 60 * 1000;
@@ -70,6 +80,19 @@ export function selfServiceTokenTtlMs(eventEndsAt: Date | string): number {
  * is why the invitation templates name the organizer's address as well.
  */
 export const INVITATION_OPT_OUT_TTL_MS = 2 * 365 * 24 * 60 * 60 * 1000;
+
+/**
+ * How long a reset link stays usable.
+ *
+ * One hour, against the fourteen days of a confirmation, and the difference is
+ * what the two links do: a confirmation link says "yes, this is my address" and
+ * grants nothing, so it may wait through a holiday (E5). A reset link *is* the
+ * account for as long as it lives — anybody holding the message holds the
+ * account — so it lives as long as it takes to switch to a mail app and back.
+ * Asking again costs one form and one letter, and the old link dies the moment
+ * a password is set anyway.
+ */
+export const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
 
 /** Separator inside the payload; neither a purpose nor a UUID contains it. */
 const FIELD_SEPARATOR = '|';
@@ -134,6 +157,27 @@ export class TokenSigner {
     if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) return null;
 
     return subject;
+  }
+
+  /**
+   * A short, keyed mark over a value a token is minted against.
+   *
+   * What makes a link **spendable** without storing anything (E5). A token is
+   * self-contained, so nothing about it changes when it is used — but the world
+   * around it can: mark the password hash into the subject of a reset link, and
+   * setting a password gives every link minted against the old hash a mark that
+   * no longer matches. One use, no table, no cleanup job.
+   *
+   * Keyed with `AUTH_SECRET` and domain-separated from {@link signature}, so
+   * neither construction can ever be made to produce the other's output. What
+   * travels in a token is this mark and never the value behind it.
+   */
+  mark(value: string): string {
+    return createHmac('sha256', this.secret)
+      .update('mark')
+      .update(FIELD_SEPARATOR)
+      .update(value)
+      .digest('base64url');
   }
 
   private signature(payload: string): string {

@@ -249,7 +249,15 @@ test.describe('my registration', () => {
     page.once('dialog', (dialog) => void dialog.accept());
     await page.getByRole('button', { name: t('mine.cancel') }).click();
 
-    await expect(page.getByRole('status')).toHaveText(t('mine.cancelled'));
+    // Filtered rather than bare: the check-in plug-in draws a live region of
+    // its own on this page ("no check-in code for this registration"), and
+    // after the cancellation both are on the screen. Which of the two a strict
+    // locator sees then depends on when the plug-in bundle re-renders — a race
+    // that made this line fail once in one engine and pass on the re-run. The
+    // assertion still says what it meant: a live region carries this sentence.
+    await expect(
+      page.getByRole('status').filter({ hasText: t('mine.cancelled') }),
+    ).toHaveText(t('mine.cancelled'));
     // The seat went with it, and there is nothing left to claim.
     await expect(session(page, TOUR).getByRole('button')).toHaveCount(0);
 

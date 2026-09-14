@@ -29,6 +29,35 @@ export const PROFILE_CONFIRMATION_PATH = '/profile/confirm';
  */
 export const PROFILE_LOGIN_PATH = '/profile/login';
 
+/**
+ * Where the participant client shows the registration form.
+ *
+ * Named here for the same reason as the login: a mail links to it. Somebody who
+ * asks to reset the password of an address that has no account is written to —
+ * that is where E32's unvarying answer puts the difference — and the one useful
+ * thing such a letter can offer is the form that would create the account.
+ */
+export const PROFILE_REGISTRATION_PATH = '/profile/register';
+
+/**
+ * Where somebody says they have forgotten their password.
+ *
+ * Linked from the login form and from the mail that answers a repeated
+ * registration (E32) — which may now say what it could not before phase 5:
+ * that there is a way back in.
+ */
+export const PROFILE_FORGOT_PASSWORD_PATH = '/profile/forgot-password';
+
+/**
+ * Where the mailed reset link lands, with its token in the query.
+ *
+ * A page and not the API, like every other link this application mails (E5b):
+ * a scanner that prefetches links must not be able to spend the one token that
+ * hands an account over, and a person clicking it deserves a form rather than a
+ * status code.
+ */
+export const PROFILE_NEW_PASSWORD_PATH = '/profile/new-password';
+
 /** A participant as they see themselves; never carries the password hash. */
 export interface ParticipantAccount {
   readonly id: string;
@@ -99,6 +128,44 @@ export interface ParticipantProfileUpdate {
 export interface ParticipantPasswordChange {
   readonly currentPassword: string;
   readonly newPassword: string;
+}
+
+/**
+ * What the "I have forgotten my password" form posts (E10, E32).
+ *
+ * An address and nothing else. No name, no old password, no question to answer:
+ * everything that decides whether anything happens is on the server, and
+ * anything else on this form would be a field that cannot be checked.
+ */
+export interface PasswordResetRequest {
+  readonly email: string;
+}
+
+/**
+ * The answer to that form — the same answer every time.
+ *
+ * It carries the address back, exactly like a registration acknowledgement, and
+ * for the same reason: whether that address has an account, has an unconfirmed
+ * one, or has none at all is the difference a public form may not tell
+ * (E10, E32). Every one of the three sends a letter, so the answer takes the
+ * same time as well, which is the half of non-disclosure that a status code
+ * alone does not cover.
+ */
+export interface PasswordResetAcknowledgement {
+  readonly email: string;
+}
+
+/**
+ * What the page behind the mailed link posts to set the new password.
+ *
+ * The token travels in the body rather than in the query, like every other
+ * token that *changes* something (F44): a link previewer fetching the address
+ * must not be able to set somebody's password. The page has it from its own
+ * query and hands it on.
+ */
+export interface PasswordReset {
+  readonly token: string;
+  readonly password: string;
 }
 
 /** What the avatar upload and removal endpoints answer with. */

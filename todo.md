@@ -1357,15 +1357,18 @@ entry, the answer is noted below rather than repeated.
       either way, and a thread with no published post is invisible), and the
       thread’s `author` is already nullable in the payload.
 
-- [ ] **Resetting a forgotten participant password.** Deliberately left out of
-      phase 3 (AP 1): FR 4.3 asks for changing the password _in_ the profile,
-      which needs the old one, and that is what exists. A reset is its own
-      route — a signed token with its own purpose and lifetime, a rate limit of
-      its own, and an answer that must not disclose whether the address has an
-      account (E10, E32). Until then the mail sent for a repeated registration
-      says an account exists and nothing about recovery, because there is none
-      to promise. This is the one dead end a participant can walk into, so it
-      belongs early in phase 5 rather than late.
+- [x] **Resetting a forgotten participant password — done in AP 4 of phase 5**
+      (F209–F211). Two routes under `/api/user/profiles`, a fourth token purpose
+      with a lifetime of one hour, its own configurable limit
+      (`PASSWORD_RESETS_PER_WINDOW`, 20), and an answer that does not disclose
+      whether the address has an account — **nor how long it took to find out**,
+      because all three cases send a letter: the link, the account confirmation
+      that is actually missing, or "there is no account for this address". The
+      link works once without anything being stored: its subject carries a keyed
+      mark of the password hash it was minted against, so setting a password
+      spends it. A reset ends **every** session (F139), not all but the current
+      one — there is no current one. The mail for a repeated registration now
+      points at the way back in, which it could not do before there was one.
 
 - [ ] **Decide whether the registration form and the media links are content
       too.** E25 lists what is translated, and the labels an organizer writes on

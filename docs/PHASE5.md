@@ -904,3 +904,111 @@ Gemessen wurde deshalb so: Veranstalter- und Vertragssuite im kombinierten Lauf
 erbeten), und die Teilnehmersuite gegen **denselben** `serve-e2e`-Server über
 `BASE_URL` auf einem freien Port — 258 grün, EXIT=0. Das ist dieselbe Aussage,
 nur ohne den Port, der einem anderen gehört.
+
+### AP 4 — Die eine Sackgasse: vergessenes Passwort (erledigt, 14.09.2026)
+
+Umgesetzt:
+
+- **Der vierte Tokenzweck, und er wirkt genau einmal** (F209). `password-reset`
+  lebt **eine Stunde** statt der vierzehn Tage einer Bestätigung, und der
+  Unterschied ist nicht Vorsicht, sondern Fachlichkeit: ein Bestätigungslink
+  sagt „ja, das ist meine Adresse" und gewährt nichts; ein Rücksetz-Link **ist**
+  das Konto, solange er gilt. Das Einmalige war die eigentliche Frage, denn
+  diese Anwendung speichert Token grundsätzlich nicht (E5, F23, F180) — es gibt
+  also keine Zeile zum Abhaken. Antwort: das Subjekt trägt nicht nur die
+  Konto-ID, sondern dazu eine geheime **Marke über dem Passwort-Hash**
+  (`TokenSigner.mark`, HMAC mit `AUTH_SECRET`, vom Signaturverfahren
+  domänengetrennt). Ein gesetztes Passwort ändert den Hash, die Marke stimmt
+  nicht mehr, der Link löst kein Konto mehr auf. Zwei Folgen, beide geprüft und
+  beide dokumentiert statt versteckt: ein **zweiter** angeforderter Link
+  entwertet den ersten nicht (beide sind gegen denselben Hash geprägt — wer
+  zuerst benutzt wird, entwertet den anderen), und ein im Profil geänderter
+  Passwort entwertet einen offenen Rücksetz-Link, weil das dieselbe Aussage über
+  dasselbe Konto ist und die jüngere gewinnt.
+- **Drei Zustände, drei Briefe — und der dritte ist die Begründung der anderen
+  beiden** (F210). Eine bestätigte Adresse bekommt den Link (die **zehnte**
+  Mail), eine unbestätigte noch einmal die Kontobestätigung (der fehlende
+  Schritt ist die Bestätigung, nicht das Passwort), eine **unbekannte** den
+  Satz, dass es hier kein Konto gibt (die **elfte**, und sie grüßt niemanden —
+  es gibt keine Zeile, also keinen Namen). Dass auch der dritte Fall schreibt,
+  ist die Entscheidung des Pakets: E32 verlangt, dass der Unterschied im
+  Postfach steht, und nur so kostet jede Anfrage dasselbe
+  Mailserver-Gespräch — womit die **Laufzeit** der Antwort so wenig verrät wie
+  ihr Statuscode. F181 („keine zehnte Mail für ‚du stehst schon auf der
+  Liste'") widerspricht nicht: dort hätte der Brief nichts enthalten, was man
+  tun kann, hier schon — die richtige Adresse suchen oder ein Konto anlegen.
+- **Zwei Routen, und die zweite nimmt ihr Token im Rumpf.** `POST
+/api/user/profiles/password-reset` (200, die Adresse zurück) und `POST
+/api/user/profiles/password` (204). Das Token steht im Rumpf, weil diese
+  Anfrage etwas **ändert** (F44, E5b) — ein Linkvorschau-Dienst darf kein
+  Passwort setzen. Es kommt auch **keine** Sitzung zurück: der Link belegt eine
+  Adresse, das Anmelden danach belegt, dass jemand das eben gewählte Passwort
+  kennt. Jede Ablehnung — gefälscht, abgelaufen, verbraucht, überholt — ist
+  **ein** Satz.
+- **Ein Zurücksetzen beendet alle Sitzungen, nicht „alle außer der eigenen"**
+  (F211, F139 zu Ende gedacht). Dafür ein **zweiter** Port-Aufruf
+  (`deleteForUser`) statt `deleteForUserExcept(userId, '')`: wer einen Link
+  anfordern musste, ist nirgends angemeldet, und die Sitzungen, die es gibt,
+  sind genau die, die vielleicht nicht die eigenen sind. Eine leere Ausnahme
+  wäre ein Sonderfall, den später niemand liest.
+- **Eine eigene Drosselung, und eine, die es schon gab** (E60). `PASSWORD_RESETS_PER_WINDOW`
+  ist der sechste konfigurierbare Wert, Vorgabe **20** — die Zahl der
+  Newsletter-Anmeldung, nicht die sechzig der Formulare: mehrere Menschen hinter
+  einer öffentlichen Adresse, die binnen fünf Minuten ihr Passwort vergessen,
+  sind eine Handvoll. Das **Setzen** des Passworts zählt dagegen als
+  Bestätigung, weil eine solche Grenze nur gegen das Raten eines HMAC schützt —
+  kein siebter Wert für dieselbe Sache. Dazu `@ThrottleByRecipient()`, weil die
+  Route an eine Adresse schreibt, die der Aufrufer nennt (F204).
+- **Zwei Seiten im Nutzer-Client und ein Link, der die Sackgasse öffnet.**
+  `/profile/forgot-password` und `/profile/new-password`; der Link darauf steht
+  **direkt unter** dem Anmeldeformular, weil wer diese Seite zum zweiten Mal
+  liest, sie meistens liest, weil das Passwort nicht ging. Die neue Seite hängt
+  bewusst **nicht** am `participantAnonymousGuard`: jemand kann anderswo noch
+  angemeldet sein und trotzdem einen Link in der Hand halten.
+
+**Nebenbei mitgenommen, weil es danebenlag:** die beiden Kontoendpunkte trugen
+noch `@Throttle({ default: { limit: PROFILE_REGISTRATIONS_PER_WINDOW } })` mit
+einer Konstante im Controller — eine Lücke, die AP 2 übersehen hatte. Sie heißen
+jetzt `@RateLimit('registration')` und `@RateLimit('confirmation')`, die
+Konstante ist weg, und damit wirkt das Testprofil endlich auch auf das
+Kontoformular.
+
+**Das Abnahmekriterium, Punkt für Punkt:**
+
+- _Ein Teilnehmender kommt ohne Hilfe zurück_ — als Browserlauf, nicht als
+  Behauptung: `apps/user-client-e2e/src/profile.spec.ts` registriert ein Konto,
+  bestätigt es über die Mail, findet den Link **auf dem Anmeldeformular**,
+  fordert an, holt den Link aus dem Brief, setzt ein Passwort und meldet sich
+  damit an. Eine Anmeldung je Engine, wie es in dieser Datei vorgeschrieben ist.
+- _Eine unbekannte Adresse bekommt dieselbe Antwort und dieselbe Laufzeit_ —
+  dieselbe Antwort und **ein Brief** für beide (das ist das Strukturargument,
+  und es ist das belastbare), dazu ein Vergleich der Mediane aus je drei
+  Anfragen. Die Toleranz ist absichtlich großzügig: gemessen wird, dass kein Weg
+  einen ganzen Schritt auslässt, nicht dass ein Mailserver konstant antwortet.
+  **Als Mutation belegt:** lässt man den Brief an die unbekannte Adresse weg,
+  wird genau dieser eine Test rot (1 von 9) — und sonst keiner.
+- _Ein Token wirkt einmal_ — zweite Benutzung 400, Passwort unverändert; dazu
+  im Unit-Test der Fall, den niemand von Hand findet: ein im Profil geändertes
+  Passwort entwertet den offenen Link.
+- _Ein Zurücksetzen beendet die anderen Sitzungen_ — eine zweite Sitzung wird in
+  die Tabelle gesetzt, antwortet vorher 200 auf `/api/participant/me` und
+  nachher 401.
+
+**Was anders lief:** der erste vollständige Lauf der Teilnehmersuite hat einen
+Test rot gemacht, den dieses Paket nicht angefasst hat — die Zeile nach dem
+Stornieren einer Anmeldung. `getByRole('status')` fand **zwei** Live-Regionen:
+die Storno-Meldung der Seite und die des Check-In-Plug-ins („kein Check-In-Code
+für diese Anmeldung"), das im selben Moment neu zeichnet. Allein wiederholt war
+der Test grün, es ist also ein Selektor und kein Produktfehler — an **zwei**
+Stellen, denn `my-registration.spec.ts` hatte dieselbe Zeile. Beide filtern
+jetzt auf den Satz, den sie meinen. In `docs/rules/e2e-tests.md`.
+
+**Der Stand nach diesem Paket:** `nx run-many -t lint test build` grün,
+**1345** Server-Unit-Tests (29 neu), die Vertragssuite um eine Datei und
+**9** Tests reicher (**40** Suiten, **704** Tests, genau **drei** 429 im ganzen
+Lauf — alle drei von der Drosselungssuite erbeten), die Teilnehmersuite um einen
+Browsertest je Engine (**261** grün, EXIT=0). Der
+Katalog wächst um **28** Schlüssel auf **1108** (zehn davon Mailtext für die
+zwei neuen Briefe, einer die Zeile in der Mail bei wiederholter Registrierung).
+`todo.md` verliert den Eintrag, der seit Phase 3 die einzige benannte Sackgasse
+war.

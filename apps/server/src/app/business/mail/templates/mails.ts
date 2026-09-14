@@ -1,5 +1,8 @@
 import { formatEventPeriod } from '@trefaro/shared-models';
-import { CONFIRMATION_TOKEN_TTL_MS } from '../../security';
+import {
+  CONFIRMATION_TOKEN_TTL_MS,
+  PASSWORD_RESET_TTL_MS,
+} from '../../security';
 import {
   escapeHtml,
   htmlAction,
@@ -18,6 +21,8 @@ import type {
   MailEvent,
   MailTemplate,
   NewsletterConfirmationMailContext,
+  NoAccountMailContext,
+  PasswordResetMailContext,
   ProfileConfirmationMailContext,
   ProfileExistsMailContext,
   ReceiptMailContext,
@@ -26,7 +31,7 @@ import type {
 } from './types';
 
 /**
- * The nine mails, written out of the catalogue (AP 10 of phase 2, E22, E24).
+ * The eleven mails, written out of the catalogue (AP 10 of phase 2, E22, E24).
  *
  * Two renderings of the same sentences, never two sets of sentences: the plain
  * text part and the HTML part read the same key and differ only in what they do
@@ -50,13 +55,15 @@ const EVENT_DETAILS = 'mail.event.details';
 /**
  * Every mail to a person greets them and ends with something to click.
  *
- * Three of the nine are exceptions, and they prove the rule from both ends: the
+ * Four of the eleven are exceptions, and they prove the rule from every end: the
  * contact notification goes to a mailbox rather than to somebody, so it takes
  * {@link ACTION_LINE} without a greeting; the answer to a guest greets them by
  * the name they typed and has nothing to click, because the only address it
  * could offer is the event page its own block already links (F174); and the
  * newsletter confirmation has something to click and nobody to greet, because
- * a sign-up asked for an address and not for a name (E45).
+ * a sign-up asked for an address and not for a name (E45); and the eleventh
+ * has something to click and nobody to greet for the opposite reason to the
+ * newsletter's — there is no account here, so there is no name to know.
  */
 const COMMON_KEYS = [GREETING, ACTION_LINE] as const;
 /** The block that says when and where — the receipt and the invitation carry it. */
@@ -74,6 +81,17 @@ const EVENT_KEYS = [EVENT_WHEN, EVENT_DETAILS] as const;
 const CONFIRMATION_VALID_DAYS = Math.round(
   CONFIRMATION_TOKEN_TTL_MS / (24 * 60 * 60 * 1000),
 );
+
+/**
+ * How long a reset link lasts, in the sentence that says so.
+ *
+ * The same construction as the days above, in **minutes** — and that is the
+ * whole reason for the unit. The number is a parameter, so the sentence has to
+ * read properly for every value the constant could take, and the singular of an
+ * hour is the one case that would break it. There is no plural form in a mail
+ * catalogue (F86: sentences, not machinery), so the unit is chosen to avoid one.
+ */
+const RESET_VALID_MINUTES = Math.round(PASSWORD_RESET_TTL_MS / 60_000);
 
 const registrationConfirmation: MailTemplate<ConfirmationMailContext> = {
   name: 'registration confirmation',
@@ -323,10 +341,11 @@ const profileExists: MailTemplate<ProfileExistsMailContext> = {
     'mail.profileExists.intro',
     'mail.profileExists.unchanged',
     'mail.profileExists.action',
+    'mail.profileExists.forgot',
   ],
 
   render(s: MailStrings, context: ProfileExistsMailContext): RenderedMail {
-    const { firstName, loginUrl } = context;
+    const { firstName, loginUrl, forgotUrl } = context;
     const label = s.text('mail.profileExists.action');
 
     return {
@@ -336,12 +355,107 @@ const profileExists: MailTemplate<ProfileExistsMailContext> = {
         s.text('mail.profileExists.intro'),
         s.text('mail.profileExists.unchanged'),
         textAction(s, label, loginUrl),
+        // After the button rather than before it: the likely reader wants to
+        // log in, and the one who cannot needs a second sentence, not a second
+        // decision to make first.
+        s.text('mail.profileExists.forgot', { url: forgotUrl }),
       ),
       html: htmlBody(
         htmlGreeting(s, firstName),
         s.html('mail.profileExists.intro'),
         s.html('mail.profileExists.unchanged'),
         htmlAction(loginUrl, label),
+        s.html('mail.profileExists.forgot', {
+          url: htmlLink(forgotUrl, forgotUrl),
+        }),
+      ),
+    };
+  },
+};
+
+/**
+ * "Set a new password", the tenth mail (AP 4 of phase 5).
+ *
+ * The link inside it is the account for as long as it is valid, which is why
+ * this template says two things no other one has to: how long that is, and that
+ * doing nothing changes nothing. The second sentence is not decoration — the
+ * form that triggers this letter is public and takes any address, so a person
+ * who never asked for anything may be reading it.
+ */
+const passwordReset: MailTemplate<PasswordResetMailContext> = {
+  name: 'password reset',
+  keys: [
+    ...COMMON_KEYS,
+    'mail.passwordReset.subject',
+    'mail.passwordReset.intro',
+    'mail.passwordReset.action',
+    'mail.passwordReset.validity',
+    'mail.passwordReset.ignore',
+  ],
+
+  render(s: MailStrings, context: PasswordResetMailContext): RenderedMail {
+    const { firstName, resetUrl } = context;
+    const label = s.text('mail.passwordReset.action');
+
+    return {
+      subject: s.text('mail.passwordReset.subject'),
+      text: textBody(
+        greeting(s, firstName),
+        s.text('mail.passwordReset.intro'),
+        textAction(s, label, resetUrl),
+        s.text('mail.passwordReset.validity', {
+          minutes: RESET_VALID_MINUTES,
+        }),
+        s.text('mail.passwordReset.ignore'),
+      ),
+      html: htmlBody(
+        htmlGreeting(s, firstName),
+        s.html('mail.passwordReset.intro'),
+        htmlAction(resetUrl, label),
+        s.html('mail.passwordReset.validity', {
+          minutes: escapeHtml(String(RESET_VALID_MINUTES)),
+        }),
+        s.html('mail.passwordReset.ignore'),
+      ),
+    };
+  },
+};
+
+/**
+ * "There is no account for this address", the eleventh mail (E10, E32).
+ *
+ * The other side of the unvarying answer the reset form gives, and the reason
+ * that answer can be unvarying in its **timing** as well: an unknown address
+ * costs the same letter as a known one. It greets nobody — this instance has no
+ * row for the address and therefore no name — and it carries no token, because
+ * there is nothing to authorize. What it can do is tell somebody who is sure
+ * they have an account that they are holding the wrong address, which is the
+ * commonest way into this dead end.
+ */
+const noAccount: MailTemplate<NoAccountMailContext> = {
+  name: 'no account for this address',
+  keys: [
+    ACTION_LINE,
+    'mail.noAccount.subject',
+    'mail.noAccount.intro',
+    'mail.noAccount.other',
+    'mail.noAccount.action',
+  ],
+
+  render(s: MailStrings, context: NoAccountMailContext): RenderedMail {
+    const label = s.text('mail.noAccount.action');
+
+    return {
+      subject: s.text('mail.noAccount.subject'),
+      text: textBody(
+        s.text('mail.noAccount.intro'),
+        s.text('mail.noAccount.other'),
+        textAction(s, label, context.registerUrl),
+      ),
+      html: htmlBody(
+        s.html('mail.noAccount.intro'),
+        s.html('mail.noAccount.other'),
+        htmlAction(context.registerUrl, label),
       ),
     };
   },
@@ -527,12 +641,14 @@ export const MAIL_TEMPLATES = {
   invitation,
   profileConfirmation,
   profileExists,
+  passwordReset,
+  noAccount,
   contactRequest,
   contactAnswer,
   newsletterConfirmation,
 } as const;
 
-/** Every key the nine mails between them can ask for — CI checks this list. */
+/** Every key the eleven mails between them can ask for — CI checks this list. */
 export const ALL_MAIL_KEYS: readonly string[] = [
   ...new Set(
     Object.values(MAIL_TEMPLATES).flatMap((template) => template.keys),

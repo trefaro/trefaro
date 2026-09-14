@@ -178,6 +178,7 @@ describe('ProfilesService', () => {
   let fields: FakeProfileFieldRepository;
   let files: FakeFileStore;
   let revokedOthers: { userId: string; keepSessionId: string }[];
+  let revokedAll: string[];
   let service: ProfilesService;
   let sent: { kind: string; to: string; context: unknown }[];
   let failMail: boolean;
@@ -214,6 +215,7 @@ describe('ProfilesService', () => {
     fields = new FakeProfileFieldRepository();
     files = new FakeFileStore();
     revokedOthers = [];
+    revokedAll = [];
     secrets.clear();
     sent = [];
     failMail = false;
@@ -230,6 +232,16 @@ describe('ProfilesService', () => {
         sent.push({ kind: 'exists', to, context });
         return Promise.resolve();
       },
+      sendPasswordReset: (to: string, context: unknown) => {
+        if (failMail) return Promise.reject(new MailDeliveryError('smtp down'));
+        sent.push({ kind: 'reset', to, context });
+        return Promise.resolve();
+      },
+      sendNoAccount: (to: string, context: unknown) => {
+        if (failMail) return Promise.reject(new MailDeliveryError('smtp down'));
+        sent.push({ kind: 'no-account', to, context });
+        return Promise.resolve();
+      },
     } as unknown as MailService;
 
     const tokens = {
@@ -238,9 +250,13 @@ describe('ProfilesService', () => {
         return `token-for-${subject}`;
       },
       verify: (purpose: string, token: string) =>
-        purpose === 'profile-confirmation' && token.startsWith('token-for-')
+        (purpose === 'profile-confirmation' || purpose === 'password-reset') &&
+        token.startsWith('token-for-')
           ? token.slice('token-for-'.length)
           : null,
+      // Marking is what makes a reset link spendable; the fake keeps it
+      // readable so a test can say which hash a token was minted against.
+      mark: (value: string) => `mark(${value})`,
     } as unknown as TokenSigner;
 
     const links = {
@@ -257,6 +273,10 @@ describe('ProfilesService', () => {
     const sessions = {
       revokeOthers: (userId: string, keepSessionId: string) => {
         revokedOthers.push({ userId, keepSessionId });
+        return Promise.resolve();
+      },
+      revokeAll: (userId: string) => {
+        revokedAll.push(userId);
         return Promise.resolve();
       },
     } as unknown as UserSessionService;
@@ -652,6 +672,178 @@ describe('ProfilesService', () => {
       expect(revokedOthers).toEqual([
         { userId: 'profile-1', keepSessionId: 'session-1' },
       ]);
+    });
+  });
+
+  describe('requestPasswordReset', () => {
+    const confirmedAccount = async (): Promise<void> => {
+      await service.register(registration);
+      await service.confirm('token-for-profile-1');
+      sent = [];
+      signed = [];
+    };
+
+    it('mails a link to a confirmed account, minted against its password', async () => {
+      await confirmedAccount();
+
+      const acknowledgement =
+        await service.requestPasswordReset('AMINA@example.org');
+
+      expect(acknowledgement).toEqual({ email: 'amina@example.org' });
+      expect(sent).toHaveLength(1);
+      expect(sent[0]).toMatchObject({ kind: 'reset', to: 'amina@example.org' });
+      // Account and password in one subject: that is what makes the link work
+      // once, without a row anywhere to tick off.
+      expect(signed).toEqual([
+        {
+          purpose: 'password-reset',
+          subject: `profile-1.mark(${profiles.rows[0].passwordHash})`,
+        },
+      ]);
+    });
+
+    it('writes to an address it has no account for, and signs nothing', async () => {
+      const acknowledgement =
+        await service.requestPasswordReset('nobody@example.org');
+
+      // The letter is what carries the difference (E32) — and because there is
+      // one either way, the form cannot be timed to find out which case it hit.
+      expect(acknowledgement).toEqual({ email: 'nobody@example.org' });
+      expect(sent).toHaveLength(1);
+      expect(sent[0]).toMatchObject({
+        kind: 'no-account',
+        to: 'nobody@example.org',
+      });
+      expect(signed).toEqual([]);
+    });
+
+    it('sends the confirmation again for an account that never confirmed', async () => {
+      await service.register(registration);
+      sent = [];
+      signed = [];
+
+      await service.requestPasswordReset(registration.email);
+
+      // The mail that fits the state the address is in: a reset link would
+      // hand over an account nobody has proved they own, and the confirmation
+      // is the step that is actually missing.
+      expect(sent).toHaveLength(1);
+      expect(sent[0]).toMatchObject({ kind: 'confirmation' });
+      expect(signed).toEqual([
+        { purpose: 'profile-confirmation', subject: 'profile-1' },
+      ]);
+    });
+
+    it('answers the same way when the mail server is down', async () => {
+      await confirmedAccount();
+      failMail = true;
+
+      // Both directions, because a 503 for one address and a 200 for the other
+      // would be exactly the disclosure the identical answer exists to prevent.
+      await expect(
+        service.requestPasswordReset(registration.email),
+      ).rejects.toThrow(ServiceUnavailableException);
+      await expect(
+        service.requestPasswordReset('nobody@example.org'),
+      ).rejects.toThrow(ServiceUnavailableException);
+    });
+  });
+
+  describe('resetPassword', () => {
+    /** Asks for a link and returns the token the letter would carry. */
+    const linkFor = async (): Promise<string> => {
+      await service.register(registration);
+      await service.confirm('token-for-profile-1');
+      await service.requestPasswordReset(registration.email);
+      return `token-for-${signed.at(-1)?.subject}`;
+    };
+
+    it('sets the password and ends every session of the account', async () => {
+      const token = await linkFor();
+
+      await service.resetPassword(token, 'an even longer passphrase');
+
+      await expect(
+        service.checkCredentials(
+          registration.email,
+          'an even longer passphrase',
+        ),
+      ).resolves.toMatchObject({ outcome: 'authenticated' });
+      await expect(
+        service.checkCredentials(registration.email, PASSWORD),
+      ).resolves.toMatchObject({ outcome: 'rejected' });
+      // Every one, not all but the current: whoever asks for a reset is not
+      // holding a session, and the ones that exist may not be theirs (F139).
+      expect(revokedAll).toEqual(['profile-1']);
+      expect(revokedOthers).toEqual([]);
+    });
+
+    it('spends the link — the same token a second time does nothing', async () => {
+      const token = await linkFor();
+      await service.resetPassword(token, 'an even longer passphrase');
+
+      await expect(
+        service.resetPassword(token, 'a third long passphrase'),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        service.checkCredentials(
+          registration.email,
+          'an even longer passphrase',
+        ),
+      ).resolves.toMatchObject({ outcome: 'authenticated' });
+    });
+
+    it('is spent by a password changed in the profile meanwhile', async () => {
+      const token = await linkFor();
+
+      await service.changePassword(
+        {
+          sessionId: 'session-1',
+          lastSeenAt: new Date(),
+          expiresAt: new Date(Date.now() + 3_600_000),
+          profile: profiles.rows[0],
+        },
+        { currentPassword: PASSWORD, newPassword: 'chosen in the profile' },
+      );
+
+      // The same statement about the same account, so the older link loses:
+      // a mailed token must never undo a password its owner just set.
+      await expect(
+        service.resetPassword(token, 'from the mailed link'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('refuses a token that speaks for no password', async () => {
+      await service.register(registration);
+
+      // A confirmation token carries a bare account id. Reaching this far with
+      // one would mean a link was accepted that was never minted against a
+      // password — which is the whole of the one-time mechanism.
+      await expect(
+        service.resetPassword(
+          'token-for-profile-1',
+          'a long enough passphrase',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('refuses a forged or expired token', async () => {
+      await expect(
+        service.resetPassword('nonsense', 'a long enough passphrase'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('refuses a password the policy rejects, and changes nothing', async () => {
+      const token = await linkFor();
+      const before = profiles.rows[0].passwordHash;
+
+      await expect(service.resetPassword(token, 'short')).rejects.toThrow(
+        BadRequestException,
+      );
+
+      expect(profiles.rows[0].passwordHash).toBe(before);
+      expect(revokedAll).toEqual([]);
     });
   });
 

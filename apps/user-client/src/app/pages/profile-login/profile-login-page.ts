@@ -69,6 +69,16 @@ import { ParticipantSessionService } from '../../features/auth/participant-sessi
       </fieldset>
     </form>
 
+    <!-- The way out of the one dead end this client has (AP 4 of phase 5).
+         Directly under the form rather than at the bottom: somebody reading
+         this page a second time is usually reading it because the password did
+         not work. -->
+    <p class="alternative">
+      <a routerLink="/profile/forgot-password">
+        {{ 'profile.forgot.title' | transloco }}
+      </a>
+    </p>
+
     <p class="alternative">
       {{ 'profile.login.noAccount' | transloco }}
       <a routerLink="/profile/register">
@@ -125,6 +135,10 @@ import { ParticipantSessionService } from '../../features/auth/participant-sessi
 
     .alternative {
       margin-block-start: 1.5rem;
+    }
+
+    .alternative + .alternative {
+      margin-block-start: 0.5rem;
     }
 
     .notice {

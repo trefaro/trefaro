@@ -10,6 +10,9 @@ import type {
   InvitationMailContext,
   MailTemplate,
   NewsletterConfirmationMailContext,
+  NoAccountMailContext,
+  PasswordResetMailContext,
+  ProfileExistsMailContext,
   ReceiptMailContext,
   RenderedMail,
 } from './types';
@@ -628,5 +631,95 @@ describe('the newsletter confirmation (FR 4.8, E45)', () => {
     );
 
     expect(mail.html).not.toMatch(/<img|<link|@import|url\(/i);
+  });
+});
+
+/**
+ * The two mails of the reset, and the sentence the third one gained (AP 4).
+ *
+ * Three letters, one question: which of them a person receives is the only
+ * place the difference between a known, an unconfirmed and an unknown address
+ * is allowed to appear (E10, E32) — and every one of them goes *somewhere*, so
+ * the form answers in the same time as well.
+ */
+const RESET: PasswordResetMailContext = {
+  firstName: 'Amina',
+  resetUrl: 'https://events.example.org/profile/new-password?token=abc.def',
+};
+
+const NO_ACCOUNT: NoAccountMailContext = {
+  registerUrl: 'https://events.example.org/profile/register',
+};
+
+const EXISTS: ProfileExistsMailContext = {
+  firstName: 'Amina',
+  loginUrl: 'https://events.example.org/profile/login',
+  forgotUrl: 'https://events.example.org/profile/forgot-password',
+};
+
+describe('the password mails', () => {
+  it('carry the link that sets a new password, in both languages', () => {
+    for (const locale of LOCALES) {
+      const mail = render(locale, MAIL_TEMPLATES.passwordReset, RESET);
+
+      expect(mail.text).toContain(RESET.resetUrl);
+      expect(mail.html).toContain(RESET.resetUrl);
+      expect(mail.text).toContain('Amina');
+    }
+  });
+
+  it('say how long that link lasts, from the signer’s own number', () => {
+    // The same argument as the confirmation's fourteen days (F85): the number
+    // is a fact about the system, so it is a parameter and not prose.
+    for (const locale of LOCALES) {
+      expect(
+        render(locale, MAIL_TEMPLATES.passwordReset, RESET).text,
+      ).toContain('60');
+    }
+  });
+
+  it('say that ignoring the letter leaves the password alone', () => {
+    // This message goes to an address a stranger may have typed into a public
+    // form, so it has to say what happens if nobody clicks: nothing.
+    expect(render('en', MAIL_TEMPLATES.passwordReset, RESET).text).toMatch(
+      /nothing/i,
+    );
+    expect(render('de', MAIL_TEMPLATES.passwordReset, RESET).text).toMatch(
+      /nichts/i,
+    );
+  });
+
+  it('greet nobody when there is no account, and carry no token', () => {
+    for (const locale of LOCALES) {
+      const mail = render(locale, MAIL_TEMPLATES.noAccount, NO_ACCOUNT);
+
+      // The instance knows no name for this address — it has no row for it —
+      // and inventing one would be a greeting to somebody it has never met.
+      expect(mail.text).not.toContain('Amina');
+      expect(mail.text).not.toContain('token=');
+      // What it can offer is the form that would create the account.
+      expect(mail.text).toContain(NO_ACCOUNT.registerUrl);
+    }
+  });
+
+  it('point the repeated registration at the way back in', () => {
+    // What this letter could not say before phase 5, because there was no way
+    // back: somebody who registers again is usually somebody who cannot get in.
+    for (const locale of LOCALES) {
+      const mail = render(locale, MAIL_TEMPLATES.profileExists, EXISTS);
+
+      expect(mail.text).toContain(EXISTS.loginUrl);
+      expect(mail.text).toContain(EXISTS.forgotUrl);
+      expect(mail.html).toContain(EXISTS.forgotUrl);
+    }
+  });
+
+  it('load nothing from anywhere when opened', () => {
+    for (const mail of [
+      render('de', MAIL_TEMPLATES.passwordReset, RESET),
+      render('de', MAIL_TEMPLATES.noAccount, NO_ACCOUNT),
+    ]) {
+      expect(mail.html).not.toMatch(/<img|<link|@import|url\(/i);
+    }
   });
 });

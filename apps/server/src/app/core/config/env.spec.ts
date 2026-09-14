@@ -147,6 +147,7 @@ describe('loadEnv — rate limits (E60)', () => {
       newsletterSignupsPerWindow: 20,
       confirmationsPerWindow: 60,
       mailsPerRecipientPerWindow: 5,
+      passwordResetsPerWindow: 20,
       profile: null,
     });
   });
@@ -159,6 +160,7 @@ describe('loadEnv — rate limits (E60)', () => {
         NEWSLETTER_SIGNUPS_PER_WINDOW: '9',
         CONFIRMATIONS_PER_WINDOW: '11',
         MAILS_PER_RECIPIENT_PER_WINDOW: '13',
+        PASSWORD_RESETS_PER_WINDOW: '15',
       }).rateLimits,
     ).toMatchObject({
       loginAttemptsPerWindow: 5,
@@ -166,6 +168,7 @@ describe('loadEnv — rate limits (E60)', () => {
       newsletterSignupsPerWindow: 9,
       confirmationsPerWindow: 11,
       mailsPerRecipientPerWindow: 13,
+      passwordResetsPerWindow: 15,
     });
   });
 

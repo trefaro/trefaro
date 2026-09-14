@@ -92,5 +92,11 @@ export function buildThrottlers(limits: RateLimitEnv): ThrottlerOptions[] {
       limit: limits.confirmationsPerWindow,
       skipIf: everywhereBut('confirmation'),
     },
+    {
+      name: 'password-reset',
+      ttl: WINDOW,
+      limit: limits.passwordResetsPerWindow,
+      skipIf: everywhereBut('password-reset'),
+    },
   ];
 }

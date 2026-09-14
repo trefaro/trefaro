@@ -81,6 +81,7 @@ services:
       REGISTRATIONS_PER_WINDOW: ${REGISTRATIONS_PER_WINDOW:-}
       NEWSLETTER_SIGNUPS_PER_WINDOW: ${NEWSLETTER_SIGNUPS_PER_WINDOW:-}
       CONFIRMATIONS_PER_WINDOW: ${CONFIRMATIONS_PER_WINDOW:-}
+      PASSWORD_RESETS_PER_WINDOW: ${PASSWORD_RESETS_PER_WINDOW:-}
       MAILS_PER_RECIPIENT_PER_WINDOW: ${MAILS_PER_RECIPIENT_PER_WINDOW:-}
       # RATE_LIMIT_PROFILE is deliberately not passed through: a profile is a
       # thing a test run loads from a file, never something an instance ships

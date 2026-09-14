@@ -90,6 +90,51 @@ export interface ProfileExistsMailContext {
   readonly firstName: string;
   /** The login page of the participant client. */
   readonly loginUrl: string;
+  /**
+   * Where somebody says they have forgotten their password (AP 4 of phase 5).
+   *
+   * New in phase 5, and the reason this letter changed: until there was a way
+   * back in, "there is already an account" was the whole message and the most
+   * likely reader — somebody registering again because they cannot get in — was
+   * left where they started. It is still a page and still carries no token.
+   */
+  readonly forgotUrl: string;
+}
+
+/**
+ * The link that sets a new password (AP 4 of phase 5).
+ *
+ * The tenth mail, and the only one whose link *is* the account while it lives:
+ * everything else this application mails confirms, shows or withdraws
+ * something. Hence the shortest lifetime of the six purposes, a sentence that
+ * says so, and a second sentence saying that ignoring the letter changes
+ * nothing — because a public form accepts any address, so this may reach
+ * somebody who asked for nothing.
+ */
+export interface PasswordResetMailContext {
+  readonly firstName: string;
+  /** Where the new password is set — a page, not the API (E5b). */
+  readonly resetUrl: string;
+}
+
+/**
+ * What is sent when somebody asks to reset the password of an address that has
+ * no account (E10, E32).
+ *
+ * The eleventh mail, and the counterpart of {@link ProfileExistsMailContext} on
+ * the other side of the same unvarying answer. It greets nobody, like the
+ * newsletter confirmation and for the same reason turned around: there is no
+ * row here at all, so there is no name to use — and it carries no token,
+ * because there is nothing to authorize.
+ *
+ * That it exists is what makes the two halves of non-disclosure hold at once:
+ * the difference goes to the inbox (E32), and a request about an unknown
+ * address costs the same mail server round trip as a request about a known one,
+ * so the form answers in the same time as well.
+ */
+export interface NoAccountMailContext {
+  /** The registration form of the participant client. */
+  readonly registerUrl: string;
 }
 
 /**

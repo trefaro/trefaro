@@ -145,6 +145,25 @@ export function accountConfirmationPathFrom(mail: CapturedMail): string {
  * browser reaches the client on.
  */
 /**
+ * The link that sets a new password (AP 4 of phase 5), as a path.
+ *
+ * Its own matcher for the reason the account confirmation has one, and here it
+ * matters most: this is the only mailed link that hands an account over, so a
+ * pattern that also matched a confirmation would let the suite pass on a letter
+ * that grants nothing.
+ */
+export function passwordResetPathFrom(mail: CapturedMail): string {
+  const match = /https?:\/\/[^\s]*\/profile\/new-password\?token=[^\s]+/.exec(
+    mail.text,
+  );
+  if (!match) {
+    throw new Error(`No reset link in "${mail.subject}"`);
+  }
+  const url = new URL(match[0]);
+  return `${url.pathname}${url.search}`;
+}
+
+/**
  * The objection link from an invitation (E15, F58), as a path.
  *
  * Relative for the same reason as the two above. That every invitation carries

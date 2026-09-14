@@ -47,6 +47,19 @@ export interface UserSessionRepository {
    * @returns how many were ended, for the log line — nobody is shown a count.
    */
   deleteForUserExcept(userId: string, keepSessionId: string): Promise<number>;
+  /**
+   * Ends **every** session of one account (F139, AP 4 of phase 5).
+   *
+   * Its caller is the password reset, and it is a second method rather than
+   * `deleteForUserExcept(userId, '')` because the two say different things:
+   * somebody changing their password from inside the profile is holding a
+   * session this server can see and keeps it, and somebody who had to be sent a
+   * link is holding none — so "all but the current one" would spare a session
+   * belonging to whoever locked them out.
+   *
+   * @returns how many were ended, for the log line.
+   */
+  deleteForUser(userId: string): Promise<number>;
   /** Housekeeping — expired rows are dead weight, not a security problem. */
   deleteExpired(now: Date): Promise<number>;
 }
