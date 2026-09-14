@@ -26,6 +26,7 @@ werden müssen:
 | Anforderungen, Use Cases, Prioritäten, DB-Schema, F1–F202 | **`docs/Anforderungsanalyse_und_Umsetzungsplan.md`** (maßgeblich)                         |
 | Was in einer Phase passierte, E1–E45, _Was anders lief_   | `docs/PHASE1.md`, `docs/PHASE2.md`, `docs/PHASE3.md`, `docs/BOOTSTRAP.md`, `docs/spikes/` |
 | Phase 4: Pakete, E46–E59, F186–F202, Stand je Paket       | **`docs/PHASE4.md`** (Plan oben, _Fortschritt_ unten)                                     |
+| Phase 5: Plan, AP 1–14, M13–M16, E60–E71, F203 ff.        | **`docs/PHASE5.md`** (nur Plan — _Fortschritt_ noch leer)                                 |
 | Installation, TLS, Betrieb                                | `docs/INSTALL.md`                                                                         |
 | Offene Punkte, bekannte Lücken, Pilotpartner-Fragen       | `todo.md` (nach Phase gruppiert, nach jeder Phase durchgehen)                             |
 | Diagramme der Thesis                                      | `docs/thesis/`                                                                            |
@@ -173,9 +174,12 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    und ein Flackern in der Veranstaltersuite, das seit AP 10 einen Testnamen
    hat.
 5. Härtung, Usability-Test mit Democracy International (Pilotpartner), Doku,
-   Release v1.0 — hier auch: konfigurierbare Drosselung, `CONTRIBUTING.md`.
-   **Phase 5 ist nicht freigegeben** und hat noch keinen Plan; was ihr schon
-   zugeordnet ist, steht in `todo.md` unter _Checkable after phase 5_.
+   Release v1.0 — hier auch: konfigurierbare Drosselung, arc42-Architekturdoku,
+   `CONTRIBUTING.md`. **Phase 5 ist nicht freigegeben**, hat aber seit dem
+   14.09.2026 einen Plan: `docs/PHASE5.md`, vierzehn Pakete, **M13–M16**,
+   E60–E71, F203 ff. — jeder der zweiunddreißig Einträge aus `todo.md` unter
+   _Checkable after phase 5_ ist dort einem Paket zugeordnet. **v1.0 taggt
+   Marius, nicht ein Paket** (E71).
 
 **Der Stand in Zahlen:** Entscheidungen **E1–E59** vergeben (E46–E59 in Phase 4,
 in AP 10 gegen die Umsetzung geprüft); Nachträge **F1–F202** stehen vollständig
