@@ -102,6 +102,8 @@ const INVITATION: InvitationMailContext = {
   paragraphs: ['we would love to see you again.', 'Registration is open.'],
   event: CONTEXT.event,
   optOutUrl: 'https://events.example.org/invitations/unsubscribe?token=mno.pqr',
+  oneClickOptOutUrl:
+    'https://events.example.org/api/user/invitations/opt-out/one-click?token=mno.pqr',
 };
 
 /**
@@ -319,6 +321,22 @@ describe('the invitation template (FR 2.4, E15)', () => {
       expect(mail.text).toContain(INVITATION.optOutUrl);
       expect(mail.html).toContain(INVITATION.optOutUrl);
     }
+  });
+
+  /*
+   * The header pair of RFC 8058, and the reason it is asserted next to the
+   * footer link rather than somewhere else: the two are the same objection.
+   * A mail provider that finds no header weighs a bulk message as more likely
+   * to be spam, so an invitation without this is an invitation that may never
+   * be read — and then the link in the footer protects nobody.
+   */
+  it('offers the same objection to the mail client, in a header (RFC 8058)', () => {
+    const mail = render('en', MAIL_TEMPLATES.invitation, INVITATION);
+
+    expect(mail.headers).toEqual({
+      'List-Unsubscribe': `<${INVITATION.oneClickOptOutUrl}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    });
   });
 
   it('says why the mail arrived, naming the series', () => {

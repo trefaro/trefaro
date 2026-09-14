@@ -70,6 +70,23 @@ export async function waitForMailTo(
   throw new Error(`No mail for ${address} arrived within ${timeoutMs / 1000}s`);
 }
 
+/**
+ * The headers a message actually went out with.
+ *
+ * A separate request because the message endpoint does not carry them: what a
+ * mail *client* acts on — `List-Unsubscribe` above all — is invisible to a test
+ * that only reads the body, which is exactly how an invitation could lose its
+ * one-click objection without any suite noticing.
+ */
+export async function headersOf(
+  mail: CapturedMail,
+): Promise<Record<string, readonly string[]>> {
+  const response = await fetch(
+    `${MAILPIT_URL}/api/v1/message/${mail.id}/headers`,
+  );
+  return (await response.json()) as Record<string, readonly string[]>;
+}
+
 /** How many messages Mailpit currently holds for an address. */
 export async function countMailTo(address: string): Promise<number> {
   const summaries = await list();

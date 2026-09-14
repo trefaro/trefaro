@@ -12,11 +12,11 @@ services:
       POSTGRES_USER: trefaro
       POSTGRES_PASSWORD: trefaro_dev # nur Entwicklung!
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - trefaro-pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U trefaro -d trefaro"]
+      test: ['CMD-SHELL', 'pg_isready -U trefaro -d trefaro']
       interval: 5s
       timeout: 3s
       retries: 10
@@ -26,8 +26,42 @@ services:
     image: axllent/mailpit:latest
     container_name: trefaro-mailpit
     ports:
-      - "1025:1025"
-      - "8025:8025"
+      - '1025:1025'
+      - '8025:8025'
+
+  # Derselbe Mailserver, aber so streng wie ein echter (E62): Anmeldung
+  # erforderlich, STARTTLS erforderlich, eigenes Zertifikat.
+  #
+  # In einem eigenen Profil, weil er nicht der Standard sein soll — die Suiten
+  # und `nx serve` sprechen weiter mit dem offenen Mailpit oben. Dieser hier
+  # beantwortet die eine Frage, die der offene nicht beantworten kann: ob der
+  # Server sich anmelden und verschlüsseln *kann*, wenn er muss.
+  #
+  #   tools/secure-mail/verify.sh          # legt alles an und prüft es
+  #   docker compose -f infra/docker-compose.dev.yml --profile secure-mail up -d
+  #
+  # Zertifikat, Schlüssel und Passwortdatei stehen in `infra/mailpit/` und
+  # werden von `tools/secure-mail/materials.sh` erzeugt (nicht eingecheckt —
+  # ein Schlüssel gehört in kein Repository, auch kein selbstsignierter).
+  # Deshalb ohne diesen Schritt nicht starten: Compose legt fehlende Mounts als
+  # leere Verzeichnisse an, und Mailpit beendet sich dann mit einem Fehler über
+  # ein Zertifikat, das nie da war.
+  mailpit-secure:
+    image: axllent/mailpit:latest
+    container_name: trefaro-mailpit-secure
+    profiles: ['secure-mail']
+    command:
+      - --smtp-auth-file=/etc/mailpit/smtp-auth
+      - --smtp-tls-cert=/etc/mailpit/tls/cert.pem
+      - --smtp-tls-key=/etc/mailpit/tls/key.pem
+      - --smtp-require-starttls
+    ports:
+      # Eigene Ports, damit beide nebeneinander laufen können: der Vergleich
+      # „der eine nimmt es an, der andere lehnt es ab" ist der Beweis.
+      - '1026:1025'
+      - '8026:8025'
+    volumes:
+      - ./mailpit:/etc/mailpit:ro
 
   # Produktions-Stack (Referenz, wird in Phase 2 vervollständigt):
   # 5 Container gemäß Verteilungssicht der Thesis —

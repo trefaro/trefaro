@@ -281,7 +281,7 @@ production.
 ```dotenv
 SMTP_HOST=mail.example.org
 SMTP_PORT=587
-SMTP_SECURE=true
+SMTP_REQUIRE_TLS=true
 SMTP_USER=trefaro
 SMTP_PASSWORD=…
 SMTP_FROM=Events <no-reply@example.org>
@@ -290,10 +290,115 @@ SMTP_FROM=Events <no-reply@example.org>
 Use the organization's own mail server. The sender domain should be one the
 server is allowed to send for — most receiving servers reject or silently drop a
 message whose sender they cannot verify, and "silently" is the part that costs a
-registration.
+registration. Which is also what section 7.3 below is about.
 
-`SMTP_SECURE=true` means implicit TLS (port 465). For port 587 with STARTTLS,
-leave it `false`; the connection is still upgraded.
+### 7.1 Encryption, and the one thing never to do
+
+A mail server offers encryption in one of two shapes, and an instance uses one
+of them:
+
+| Port    | Setting                 | What happens                                        |
+| ------- | ----------------------- | --------------------------------------------------- |
+| 465     | `SMTP_SECURE=true`      | encrypted from the first byte (implicit TLS)        |
+| 587, 25 | `SMTP_REQUIRE_TLS=true` | starts in the clear and **must** upgrade (STARTTLS) |
+
+`SMTP_REQUIRE_TLS` defaults to `true` when `NODE_ENV=production`, so a normal
+installation needs neither line — it gets encryption by not saying anything.
+The word _must_ is what the setting adds: without it, a connection that is
+supposed to upgrade simply does not when something in the way removes the
+server's offer, and the mail goes out in the clear with nobody the wiser. The
+password goes with it.
+
+> **If you set `SMTP_SECURE=true` on port 587, nothing will be sent.** The two
+> are different protocols on different ports, not a stronger and a weaker
+> setting. Version 1.0 corrected the shipped default in
+> `infra/docker-compose.yml`, which paired `587` with `SMTP_SECURE=true`.
+
+If the mail server's certificate comes from the organization's own certificate
+authority rather than a public one, **name the certificate**:
+
+```dotenv
+NODE_EXTRA_CA_CERTS=/etc/trefaro/ca/mail.pem
+```
+
+The file goes into `infra/ca/`, which the server container mounts read-only at
+`/etc/trefaro/ca`. There is no setting anywhere in Trefaro that turns
+certificate checking off, and there will not be one: such a switch applies to
+every connection the process makes, for good, and nobody who finds it later can
+tell which problem it once solved. A named certificate applies to one server
+and is written where the next person looks.
+
+The server says all of this out loud while it starts. **Silence means the
+instance encrypts what it hands over.** A line beginning with `[Smtp]` means
+something was switched off, and names it.
+
+### 7.2 Invitations go out slowly, on purpose
+
+Inviting former participants (FR 2.4) sends one message per person, one after
+another, with a pause between them:
+
+```dotenv
+SMTP_PAUSE_BETWEEN_MAILS_MS=1000
+```
+
+At the default of one second, two hundred invitations take a little over three
+minutes. That is the intended behaviour: a shared mail service that receives
+two hundred messages in twenty seconds answers by throttling the sender, and in
+the worse case by blacklisting the domain — the same domain the organization
+receives its own mail on. Raise the number if the provider asks for less than
+one message a second. Lowering it is written into the startup log.
+
+A message the mail server refuses _for now_ — a full mailbox, a "slow down" —
+is tried once more after a longer wait. A message it refuses outright is
+recorded as failed with the server's own words next to it, where the organizer
+can read them.
+
+### 7.3 Deliverability is yours, not the software's
+
+Everything above decides whether a message **leaves** this instance. Whether it
+**arrives** — in an inbox rather than in a spam folder — is decided by DNS
+records on the organization's domain, and no amount of testing inside Trefaro
+can establish it. Work through this list before the first real event:
+
+- [ ] **SPF.** A `TXT` record on the sender domain naming the servers allowed
+      to send for it, ending in `-all` (hard fail) rather than `~all` once you
+      are sure the list is complete. If mail leaves through a provider, use the
+      `include:` they document.
+- [ ] **DKIM.** The mail server signs outgoing messages, and the public key
+      sits in a `TXT` record at `<selector>._domainkey.<domain>`. This is
+      configured on the mail server, not in Trefaro. Without it, SPF alone
+      breaks the moment a message is forwarded.
+- [ ] **DMARC.** A `TXT` record at `_dmarc.<domain>`, starting at `p=none` with
+      an `rua=` address so you receive reports, and moved to `p=quarantine` or
+      `p=reject` once those reports are clean. Gmail and Microsoft both require
+      a DMARC record from anybody sending in volume.
+- [ ] **Reverse DNS.** The sending IP address resolves back to the name it
+      announces in `HELO`. A mismatch is one of the cheapest reasons to be
+      filtered.
+- [ ] **The `From` domain matches.** `SMTP_FROM` must be on the domain SPF and
+      DKIM are set up for. `no-reply@example.org` sent through a server that is
+      only authorized for `example.net` fails alignment even when both records
+      are perfect.
+- [ ] **Send one real registration to an address at each of the two big
+      providers** (a Gmail one and an Outlook one) and check where it lands.
+      This is the only test that answers the question, and it has to be done by
+      a person with two mailboxes.
+- [ ] **Invitations carry a one-click unsubscribe**, which Trefaro sets by
+      itself (`List-Unsubscribe`). Nothing to configure — but if a reverse
+      proxy in front of the instance rewrites or blocks `POST` requests to
+      `/api/user/invitations/opt-out/one-click`, the header points at a door
+      that does not open, and providers notice.
+
+The first five are one afternoon with whoever administers the domain. They are
+the difference between a registration form that works and one that quietly
+collects nothing.
+
+### 7.4 Trying it out before an event
+
+`tools/secure-mail/verify.sh` starts a mail server that refuses anonymous and
+unencrypted submission, and shows a confirmation mail going through it anyway.
+It answers "can this instance authenticate and encrypt", which is the half that
+can be tested here. It says nothing about section 7.3.
 
 The instance's language decides the language of every outgoing mail. It is asked
 during the guided setup and can be changed later.

@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { MailCatalogue } from './mail-catalogue.service';
-import { MAILER, type Mailer } from './ports/mailer';
+import { MAILER, TemporaryMailFailure, type Mailer } from './ports/mailer';
 import { MAIL_TEMPLATES } from './templates';
 import type {
   ConfirmationMailContext,
@@ -33,9 +33,21 @@ export type MailContent<Context> =
 
 /** Raised when a message could not be handed to the mail server. */
 export class MailDeliveryError extends Error {
+  /**
+   * Whether the mail server said "not now" rather than "never".
+   *
+   * Read by exactly one caller — the invitation sender, which is the only one
+   * that can do anything with the answer (F56). Everywhere else a letter that
+   * could not be handed over is a 503 or a logged line, whatever the reason
+   * was: a participant waiting for a double opt-in is not helped by the
+   * difference.
+   */
+  readonly temporary: boolean;
+
   constructor(readonly cause: unknown) {
     super('The message could not be handed to the mail server');
     this.name = 'MailDeliveryError';
+    this.temporary = cause instanceof TemporaryMailFailure;
   }
 }
 

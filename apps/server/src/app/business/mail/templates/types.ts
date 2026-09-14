@@ -16,6 +16,15 @@ export interface RenderedMail {
   readonly subject: string;
   readonly text: string;
   readonly html: string;
+  /**
+   * Headers this letter needs beyond the obvious ones.
+   *
+   * Rendered here rather than added by the sender, because the only mail that
+   * has any is the invitation and what its headers carry — the objection link
+   * — is also in its footer. One renderer writes both, so they cannot come to
+   * mean two different things (F58).
+   */
+  readonly headers?: Readonly<Record<string, string>>;
 }
 
 /** The event a mail is about, in the form a template needs it. */
@@ -131,6 +140,18 @@ export interface InvitationMailContext {
   readonly event: MailEvent | null;
   /** Where the recipient objects — a page, not the API (E5b, F58). */
   readonly optOutUrl: string;
+  /**
+   * The same objection, for a mail client's own unsubscribe button (RFC 8058).
+   *
+   * An endpoint rather than a page, and the one address in this application
+   * that is meant to be posted to by software. It is in the *header* of the
+   * letter and not in its body: a reader never sees it, and a reader who wants
+   * to object clicks the link in the footer, which is the one E15 promises.
+   * This exists because Gmail and Outlook weigh the header's absence when they
+   * decide whether a bulk message is spam — an invitation nobody receives has
+   * an objection link nobody needs.
+   */
+  readonly oneClickOptOutUrl: string;
 }
 
 /**

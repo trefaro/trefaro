@@ -49,10 +49,15 @@ export class PublicLinks {
   }
 
   /**
-   * A page that a signed token authorizes.
+   * A page — or, in exactly one case, an endpoint — that a signed token
+   * authorizes.
    *
    * The token travels in the query string because the link is opened by a
-   * browser; what the page then does with it is a POST (E5b, F44).
+   * browser; what the page then does with it is a POST (E5b, F44). The one
+   * case without a page is the one-click unsubscribe of RFC 8058, which a
+   * *mail client* posts to and no person ever opens; it passes a path under
+   * `/api`, served from this same origin by the reverse proxy in production
+   * and by the dev-server proxy in development.
    */
   token(path: string, token: string): string {
     return `${this.url(path)}?token=${encodeURIComponent(token)}`;

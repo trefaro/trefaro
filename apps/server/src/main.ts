@@ -8,6 +8,7 @@ import { AppModule } from './app/app.module';
 import type { TrefaroEnv } from './app/core/config/env';
 import { ENV } from './app/core/config/env.module';
 import { rateLimitWarnings } from './app/core/config/rate-limits';
+import { smtpWarnings } from './app/core/config/smtp';
 import { AllExceptionsFilter } from './app/core/filters/all-exceptions.filter';
 import { VALIDATION_PIPE_OPTIONS } from './app/core/validation';
 import { ConfiguredIoAdapter } from './app/core/websocket/configured-io.adapter';
@@ -99,6 +100,20 @@ async function bootstrap(): Promise<void> {
   // and the log is its record.
   for (const warning of rateLimitWarnings(env.rateLimits)) {
     Logger.warn(warning, 'RateLimits');
+  }
+
+  // The same idea for the mail server (E62): silence means this instance
+  // encrypts what it hands over and waits between two messages, and a line
+  // means somebody decided otherwise. `NODE_TLS_REJECT_UNAUTHORIZED` is read
+  // here rather than in `loadEnv` because it is Node's setting and not this
+  // application's — it belongs in the report all the same, since it undoes
+  // what the rest of the mail configuration is for.
+  for (const warning of smtpWarnings(env.smtp, {
+    production: env.nodeEnv === 'production',
+    certificateChecksDisabled:
+      process.env['NODE_TLS_REJECT_UNAUTHORIZED'] === '0',
+  })) {
+    Logger.warn(warning, 'Smtp');
   }
 
   // 0.0.0.0, not localhost: inside a container the port must be reachable from

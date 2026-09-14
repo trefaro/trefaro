@@ -23,7 +23,7 @@ werden müssen:
 
 | Frage                                                     | Nachschlagen in                                                                           |
 | --------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Anforderungen, Use Cases, Prioritäten, DB-Schema, F1–F202 | **`docs/Anforderungsanalyse_und_Umsetzungsplan.md`** (maßgeblich)                         |
+| Anforderungen, Use Cases, Prioritäten, DB-Schema, F1–F208 | **`docs/Anforderungsanalyse_und_Umsetzungsplan.md`** (maßgeblich)                         |
 | Was in einer Phase passierte, E1–E45, _Was anders lief_   | `docs/PHASE1.md`, `docs/PHASE2.md`, `docs/PHASE3.md`, `docs/BOOTSTRAP.md`, `docs/spikes/` |
 | Phase 4: Pakete, E46–E59, F186–F202, Stand je Paket       | **`docs/PHASE4.md`** (Plan oben, _Fortschritt_ unten)                                     |
 | Phase 5: Pakete, E60–E71, F203 ff., Stand je Paket        | **`docs/PHASE5.md`** (Plan oben, _Fortschritt_ unten)                                     |
@@ -177,14 +177,14 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    International (Pilotpartner), Doku, Release v1.0 → `docs/PHASE5.md` —
    vierzehn Pakete, **M13–M16**, E60–E71, F203 ff., und jeder der
    zweiunddreißig Einträge aus `todo.md` unter _Checkable after phase 5_ ist
-   einem Paket zugeordnet. **Freigegeben wird Paket für Paket** (AP 1 und AP 2
-   sind erledigt, der Stand je Paket steht unter _Fortschritt_). **v1.0 taggt
-   Marius, nicht ein Paket** (E71).
+   einem Paket zugeordnet. **Freigegeben wird Paket für Paket** (AP 1 bis AP 3
+   sind erledigt, **M13 ist erreicht**; der Stand je Paket steht unter
+   _Fortschritt_). **v1.0 taggt Marius, nicht ein Paket** (E71).
 
 **Der Stand in Zahlen:** Entscheidungen **E1–E59** vergeben (E46–E59 in Phase 4,
-in AP 10 gegen die Umsetzung geprüft); Nachträge **F1–F205** stehen vollständig
+in AP 10 gegen die Umsetzung geprüft); Nachträge **F1–F208** stehen vollständig
 im Referenzdokument (F62 und F129–F131 bleiben unvergeben; F203–F205 kamen in
-AP 2 der Phase 5 dazu); Katalog **1080**
+AP 2 der Phase 5 dazu, F206–F208 in AP 3); Katalog **1080**
 Schlüssel. Was in einem Paket tatsächlich passierte, steht im Phasenprotokoll,
 und was man beim Bauen daraus braucht, in `docs/rules/` — **hier nicht noch
 einmal.**

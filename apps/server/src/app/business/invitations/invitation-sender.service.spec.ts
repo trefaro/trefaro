@@ -6,6 +6,7 @@ import {
   MailDeliveryError,
   MailService,
   PublicLinks,
+  TemporaryMailFailure,
   type InvitationMailContext,
   type MailContent,
 } from '../mail';
@@ -17,9 +18,13 @@ import type {
   PendingRecipient,
 } from './ports/invitation.repository';
 
+/** The shipped pause, run under fake timers so it costs nothing to keep. */
+const PAUSE = 1000;
+
 const ENV = {
   authSecret: 'a-test-secret-of-at-least-32-characters',
   publicUserClientUrl: 'https://events.example.org/',
+  smtp: { pauseBetweenMailsMs: PAUSE },
 } as TrefaroEnv;
 
 const SERIES = {
@@ -108,7 +113,11 @@ class FakeInvitationRepository {
  */
 class RecordingMailService {
   readonly sent: { to: string; context: InvitationMailContext }[] = [];
+  /** Every attempt, including the ones that failed — a retry shows up here. */
+  readonly attempts: string[] = [];
   failFor = new Set<string>();
+  /** How many attempts an address answers "not now" to before giving in. */
+  refuseOnce = new Map<string, number>();
   /** Per address, because a batch is exactly where two languages meet. */
   locales = new Map<string, string>();
 
@@ -116,6 +125,14 @@ class RecordingMailService {
     to: string,
     content: MailContent<InvitationMailContext>,
   ): Promise<void> {
+    this.attempts.push(to);
+    const refusals = this.refuseOnce.get(to) ?? 0;
+    if (refusals > 0) {
+      this.refuseOnce.set(to, refusals - 1);
+      throw new MailDeliveryError(
+        new TemporaryMailFailure(new Error('451 mailbox busy, try again')),
+      );
+    }
     if (this.failFor.has(to)) {
       throw new MailDeliveryError(new Error('Mailbox unavailable'));
     }
@@ -165,10 +182,19 @@ describe('InvitationSenderService', () => {
   let series: FakeSeriesService;
   let sender: InvitationSenderService;
 
-  /** `start` returns immediately by design, so the tests await the work. */
-  const drain = () => new Promise((resolve) => setTimeout(resolve, 0));
+  /**
+   * `start` returns immediately by design, so the tests await the work.
+   *
+   * On fake timers since phase 5: the sender waits between two mails now, and
+   * a test that waited with it would either sleep for real or measure a
+   * stopwatch. Advancing time instead makes the pause something the tests can
+   * *state* — see "waits between two mails" below, which asserts what has and
+   * has not happened at a given moment.
+   */
+  const drain = () => jest.advanceTimersByTimeAsync(600_000);
 
   beforeEach(() => {
+    jest.useFakeTimers();
     repository = new FakeInvitationRepository();
     mail = new RecordingMailService();
     events = new FakeEventsService();
@@ -180,7 +206,12 @@ describe('InvitationSenderService', () => {
       mail as unknown as MailService,
       new PublicLinks(ENV),
       new TokenSigner(ENV),
+      ENV,
     );
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('writes to every recipient once, one mail each', async () => {
@@ -329,6 +360,79 @@ describe('InvitationSenderService', () => {
     ]);
     // One mistyped address must not cost the other hundred and ninety-nine.
     expect(repository.sent).toEqual(['recipient-1', 'recipient-3']);
+  });
+
+  /*
+   * The pause, stated rather than measured (E62's neighbour in this package).
+   * Two hundred invitations arriving at a small mail server in twenty seconds
+   * is how an instance gets itself throttled — so the sender waits, and the
+   * wait is configuration (`SMTP_PAUSE_BETWEEN_MAILS_MS`) because only the
+   * organization knows what its mail server tolerates.
+   */
+  it('waits between two mails, so two hundred do not arrive as a burst', async () => {
+    repository.pending = [recipient(1), recipient(2), recipient(3)];
+
+    sender.start('invitation-1');
+    await jest.advanceTimersByTimeAsync(0);
+    expect(mail.sent).toHaveLength(1);
+
+    await jest.advanceTimersByTimeAsync(PAUSE);
+    expect(mail.sent).toHaveLength(2);
+
+    await jest.advanceTimersByTimeAsync(PAUSE);
+    expect(mail.sent).toHaveLength(3);
+  });
+
+  it('gives a temporarily refused address a second attempt', async () => {
+    repository.pending = [recipient(1), recipient(2)];
+    mail.refuseOnce.set('person1@example.org', 1);
+
+    sender.start('invitation-1');
+    await jest.advanceTimersByTimeAsync(0);
+
+    // Not straight away: a server that just said "slow down" is not helped by
+    // being asked again in the same second.
+    expect(mail.attempts).toEqual(['person1@example.org']);
+
+    await drain();
+
+    // "Not now" is not "never": a mailbox that was briefly full used to stay
+    // failed for good, which is what this second attempt ends.
+    expect(mail.attempts).toEqual([
+      'person1@example.org',
+      'person1@example.org',
+      'person2@example.org',
+    ]);
+    expect(repository.sent).toEqual(['recipient-1', 'recipient-2']);
+    expect(repository.failed).toEqual([]);
+  });
+
+  it('writes an address off when the second attempt is refused as well', async () => {
+    repository.pending = [recipient(1)];
+    mail.refuseOnce.set('person1@example.org', 2);
+
+    sender.start('invitation-1');
+    await drain();
+
+    // A second attempt, not an unbounded one: the counters an organizer reads
+    // have to settle, and a third try is a second invitation.
+    expect(mail.attempts).toHaveLength(2);
+    expect(repository.failed).toEqual([
+      { id: 'recipient-1', failure: '451 mailbox busy, try again' },
+    ]);
+  });
+
+  it('does not try again when the mail server said never', async () => {
+    repository.pending = [recipient(1)];
+    mail.failFor.add('person1@example.org');
+
+    sender.start('invitation-1');
+    await drain();
+
+    // A refused recipient — a mistyped address, a mailbox that is gone — is a
+    // permanent answer, and asking again would only annoy the mail server.
+    expect(mail.attempts).toEqual(['person1@example.org']);
+    expect(repository.failed).toHaveLength(1);
   });
 
   it('stamps the invitation as finished when nothing is pending', async () => {

@@ -295,6 +295,25 @@ Link.
   `POST` schreibt die Empfängerzeilen und antwortet **202**; die Zeilen _sind_ die
   Warteschlange, der Fortschritt wird aus ihnen **gezählt**, nie daneben
   gespeichert.
+- **Der Widerspruch gegen Einladungen hat zwei Türen, und die zweite hat eine
+  eigene Begründung gegen E5b** (F208, RFC 8058). `POST
+/api/user/invitations/opt-out` ist die Seite: ein Mensch klickt einen Link,
+  die Seite widerspricht per `POST`, weil ein Linkvorschau-Dienst das nicht für
+  den Leser entscheiden darf. `POST …/opt-out/one-click?token=` ist die
+  Kopfzeile: **ein Mailprogramm** ruft sie auf, wenn sein Nutzer den eigenen
+  Abmeldeknopf drückt. Drei Dinge machen sie zu einer anderen Anfrage und nicht
+  zu einer Aufweichung von E5b: sie steht in einer **Kopfzeile**, nicht im
+  Rumpf, also rendert sie niemand; sie verlangt im Rumpf das Feld
+  `List-Unsubscribe=One-Click`, das ein URL-abklappernder Dienst nicht
+  mitschickt (ein `GET` ist dort gar keine Route); und sie kann nur
+  **wegnehmen**, und zwar der Person, die den Brief bekommen hat (F58) — der
+  Bestätigungslink, für den E5b geschrieben wurde, ist das Gegenteil, er
+  **erzeugt** eine Anmeldung. Antwort ist `204`: keine Seite, kein Rumpf,
+  niemand, der es liest — und ein zweiter Aufruf antwortet genauso, weil
+  Anbieter Zeitüberschreitungen wiederholen. Der Pfad steht **einmal**, in
+  `invitations.routes.ts`, weil Controller und Mailvorlage dieselbe
+  Zeichenkette brauchen: zwei Schreibweisen ergäben eine Kopfzeile, die ins
+  Leere zeigt, und gemerkt hätte es zuerst ein Spamfilter.
 - **Ein Objekt-Query und `?locale=` müssen sich einig sein.**
   `forbidNonWhitelisted` (in `core/validation.ts`) prüft die **ganze** Query
   gegen das DTO, das ein Handler mit `@Query()` entgegennimmt — ein Endpunkt mit

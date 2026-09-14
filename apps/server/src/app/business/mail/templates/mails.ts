@@ -208,8 +208,15 @@ const invitation: MailTemplate<InvitationMailContext> = {
   ],
 
   render(s: MailStrings, context: InvitationMailContext): RenderedMail {
-    const { event, firstName, paragraphs, seriesName, subject, optOutUrl } =
-      context;
+    const {
+      event,
+      firstName,
+      paragraphs,
+      seriesName,
+      subject,
+      optOutUrl,
+      oneClickOptOutUrl,
+    } = context;
     // Why this arrived and how to stop the next one. Not the organizer's words
     // and not optional: it is what makes writing to former participants
     // legitimate at all (E15) — which is also why it is a key of ours and not a
@@ -220,6 +227,15 @@ const invitation: MailTemplate<InvitationMailContext> = {
       // The organizer's own, unchanged and untranslated: this is the one mail
       // whose subject is written by a person rather than by the image.
       subject,
+      // The same objection the footer links to, in the place a mail client
+      // looks for it (RFC 8058). Both headers or neither: the URL alone means
+      // "write to this address to unsubscribe", and it is the `-Post` line
+      // that says a POST does it in one click. Angle brackets are the syntax,
+      // not decoration.
+      headers: {
+        'List-Unsubscribe': `<${oneClickOptOutUrl}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
       text: textBody(
         greeting(s, firstName),
         ...paragraphs,

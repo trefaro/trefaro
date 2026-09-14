@@ -8,6 +8,8 @@ import {
   INVITATION_OPT_OUT_PATH,
   invitationParagraphs,
 } from '@trefaro/shared-models';
+import type { TrefaroEnv } from '../../core/config/env';
+import { ENV } from '../../core/config/env.module';
 import { EventsService } from '../events';
 import { EventSeriesService } from '../event-series';
 import {
@@ -18,14 +20,28 @@ import {
   type MailEvent,
 } from '../mail';
 import { INVITATION_OPT_OUT_TTL_MS, TokenSigner } from '../security';
+import { INVITATION_ONE_CLICK_PATH } from './invitations.routes';
 import {
   INVITATION_REPOSITORY,
   type InvitationRecord,
   type InvitationRepository,
+  type PendingRecipient,
 } from './ports/invitation.repository';
 
+/**
+ * How much longer the sender waits before trying a refused address again.
+ *
+ * A multiple of the configured pause rather than a number of its own: the two
+ * waits answer the same question — how much this mail server can take — and a
+ * second knob would be a second thing to get wrong.
+ */
+const RETRY_PAUSE_FACTOR = 10;
+
 /** Everything an invitation's mails share, resolved once per send. */
-type SharedContext = Omit<InvitationMailContext, 'firstName' | 'optOutUrl'>;
+type SharedContext = Omit<
+  InvitationMailContext,
+  'firstName' | 'optOutUrl' | 'oneClickOptOutUrl'
+>;
 
 /**
  * Sends one invitation's mails, one recipient at a time (FR 2.4, F56).
@@ -43,8 +59,13 @@ type SharedContext = Omit<InvitationMailContext, 'firstName' | 'optOutUrl'>;
  * 1. **One mail per recipient.** Never a shared `To` or `CC`: that would show
  *    every invited person who else was invited, which for an organization
  *    running political events is a data breach in one click.
- * 2. **Sequential.** Small NGOs run small mail servers; twenty parallel SMTP
- *    connections is how an instance gets itself rate-limited or blacklisted.
+ * 2. **Sequential, and with a pause between two messages.** Small NGOs run
+ *    small mail servers, and a shared mail service that sees two hundred
+ *    messages in twenty seconds does not thank the sender for being quick — it
+ *    throttles it, or blacklists the domain the organization also *receives*
+ *    its own mail on. How long the pause is belongs to the organization
+ *    (`SMTP_PAUSE_BETWEEN_MAILS_MS`), because only it knows what its mail
+ *    server tolerates; that it exists does not.
  * 3. **The queue is in the database, not in this object.** `nextPending` is
  *    asked again after every single mail, so a restart in the middle of a send
  *    loses at most the one mail that was in flight — and {@link resume} picks
@@ -52,6 +73,13 @@ type SharedContext = Omit<InvitationMailContext, 'firstName' | 'optOutUrl'>;
  * 4. **A refused address does not stop the send.** It is recorded as failed
  *    with what the mail server said, and the next recipient follows. One
  *    mistyped address must not cost the other hundred and ninety-nine.
+ * 5. **"Not now" gets a second attempt, "never" does not.** A 4xx reply — a
+ *    full mailbox, a server asking the sender to slow down — used to leave a
+ *    row failed for good, which is a person who never heard about the event
+ *    because their mailbox was briefly full. It gets one more attempt after a
+ *    longer wait. One, not an unbounded number: the counters an organizer
+ *    watches have to settle, and a third try is a second invitation, which is
+ *    a decision a person makes.
  */
 @Injectable()
 export class InvitationSenderService implements OnApplicationBootstrap {
@@ -69,6 +97,7 @@ export class InvitationSenderService implements OnApplicationBootstrap {
     private readonly mail: MailService,
     private readonly links: PublicLinks,
     private readonly tokens: TokenSigner,
+    @Inject(ENV) private readonly env: TrefaroEnv,
   ) {}
 
   onApplicationBootstrap(): void {
@@ -152,6 +181,13 @@ export class InvitationSenderService implements OnApplicationBootstrap {
     };
 
     let previous: string | null = null;
+    /**
+     * Nobody waits before the first mail; everybody waits before the next.
+     *
+     * Set by an *attempt*, not by a success: a refused address cost the mail
+     * server a conversation too, and the pause is about conversations.
+     */
+    let attempted = false;
 
     for (;;) {
       const recipient = await this.invitations.nextPending(invitationId);
@@ -168,21 +204,13 @@ export class InvitationSenderService implements OnApplicationBootstrap {
       }
       previous = recipient.id;
 
+      // The pause belongs before the mail rather than after it, so the last
+      // recipient does not hold the invitation open for nothing.
+      if (attempted) await this.pause(this.env.smtp.pauseBetweenMailsMs);
+      attempted = true;
+
       try {
-        await this.mail.sendInvitation(recipient.email, async (locale) => ({
-          ...(await sharedFor(locale)),
-          firstName: recipient.firstName,
-          // Signed per recipient and per registration: the link speaks for the
-          // person who received this mail and for nobody else (F58).
-          optOutUrl: this.links.token(
-            INVITATION_OPT_OUT_PATH,
-            this.tokens.sign(
-              'invitation-opt-out',
-              recipient.registrationId,
-              INVITATION_OPT_OUT_TTL_MS,
-            ),
-          ),
-        }));
+        await this.deliver(recipient, sharedFor);
         await this.invitations.markSent(recipient.id);
       } catch (error: unknown) {
         // Only a delivery failure is recorded and skipped. Anything else — the
@@ -195,6 +223,74 @@ export class InvitationSenderService implements OnApplicationBootstrap {
     }
 
     await this.invitations.finish(invitationId);
+  }
+
+  /**
+   * One mail to one recipient, with a second attempt if the answer was "not
+   * now".
+   *
+   * The wait before that attempt is ten times the ordinary pause, because the
+   * two answer different things: the pause keeps a mail server from being
+   * surprised, while a 4xx reply means it already is. Ten seconds at the
+   * shipped setting — long enough for a burst limit to have moved on, short
+   * enough that two hundred recipients behind a server having a bad minute do
+   * not turn into an afternoon.
+   *
+   * What this cannot do is answer greylisting, which asks for minutes rather
+   * than seconds. Those rows end up `failed` with the server's own words next
+   * to them, which is at least something an organizer can read and act on.
+   */
+  private async deliver(
+    recipient: PendingRecipient,
+    sharedFor: (locale: string) => Promise<SharedContext>,
+  ): Promise<void> {
+    const send = () =>
+      this.mail.sendInvitation(recipient.email, async (locale) => ({
+        ...(await sharedFor(locale)),
+        firstName: recipient.firstName,
+        // Signed per recipient and per registration: the link speaks for the
+        // person who received this mail and for nobody else (F58).
+        ...this.objection(recipient.registrationId),
+      }));
+
+    try {
+      await send();
+    } catch (error: unknown) {
+      if (!(error instanceof MailDeliveryError) || !error.temporary)
+        throw error;
+      this.logger.warn(
+        `Recipient ${recipient.id} was refused for now; trying once more.`,
+      );
+      await this.pause(this.env.smtp.pauseBetweenMailsMs * RETRY_PAUSE_FACTOR);
+      await send();
+    }
+  }
+
+  /**
+   * The objection link, in both the places an invitation carries it (F58).
+   *
+   * One token for both: the footer's link opens a page that objects by `POST`
+   * (E5b), and the header's is the same objection made in one click by a mail
+   * client that follows RFC 8058. Built together so they can never speak for
+   * two different people.
+   */
+  private objection(registrationId: string): {
+    optOutUrl: string;
+    oneClickOptOutUrl: string;
+  } {
+    const token = this.tokens.sign(
+      'invitation-opt-out',
+      registrationId,
+      INVITATION_OPT_OUT_TTL_MS,
+    );
+    return {
+      optOutUrl: this.links.token(INVITATION_OPT_OUT_PATH, token),
+      oneClickOptOutUrl: this.links.token(INVITATION_ONE_CLICK_PATH, token),
+    };
+  }
+
+  private pause(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**

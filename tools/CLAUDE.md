@@ -1,6 +1,6 @@
 # Hinweise für diesen Teilbaum
 
-Drei Werkzeuge, und sie unterscheiden sich darin, **wer die Instanz hochfährt**:
+Vier Werkzeuge, und sie unterscheiden sich darin, **wer die Instanz hochfährt**:
 
 - `spike-verification/` und `demo-seed/` laufen gegen eine **laufende** Instanz,
   die jemand anders gestartet hat, nicht im CI — jenes prüft ein Deployment,
@@ -10,6 +10,11 @@ Drei Werkzeuge, und sie unterscheiden sich darin, **wer die Instanz hochfährt**
   leerem Volume, geführte Ersteinrichtung, ein Browser darauf, danach `down -v`.
   Es läuft lokal und im CI-Job `stack` mit demselben Kommando, damit „bei mir
   lief es" und „die CI sagt grün" dieselbe Sache bedeuten.
+- `secure-mail/` **erzeugt seinen eigenen Gegenspieler**: einen Mailserver, der
+  ohne Anmeldung und ohne STARTTLS ablehnt (Compose-Profil `secure-mail`), und
+  einen Server daneben, der trotzdem durchkommt. Es beantwortet die eine Frage,
+  die der offene Mailpit nicht beantworten kann — und ausdrücklich **nicht** die
+  nach der Zustellbarkeit, die an DNS-Einträgen hängt (E63).
 
 Vor Änderungen: [`docs/rules/deployment.md`](../docs/rules/deployment.md).
 Die zwei Regeln, die hier am häufigsten gebrochen wurden:

@@ -25,6 +25,26 @@ Beispiele haben je eine frische Produktionsinstanz unbenutzbar gemacht.
   will, ob jemand eine Grenze gelockert hat, liest die ersten Zeilen des
   Serverlogs: jeder Wert über seiner Vorgabe steht dort als `WARN`, und
   Schweigen heißt die ausgelieferten Zahlen.
+- **Zwei weitere Werte und ein Verzeichnis kamen in AP 3 der Phase 5 dazu**:
+  `SMTP_REQUIRE_TLS` und `SMTP_PAUSE_BETWEEN_MAILS_MS` — beide leer
+  durchgereicht, beide mit ihrer Vorgabe im Server — sowie
+  `NODE_EXTRA_CA_CERTS` zusammen mit dem Mount `infra/ca/` →
+  `/etc/trefaro/ca`. Der Mount ist bewusst **immer** da und normalerweise leer:
+  einem internen Mailserver zu vertrauen soll eine Datei und eine Variable
+  sein, keine zweite Compose-Datei. Bei derselben Gelegenheit wurde eine
+  Vorgabe **korrigiert**: `SMTP_PORT=587` stand neben `SMTP_SECURE=true`, und
+  das ist kein „sicherer", sondern das falsche Protokoll auf diesem Port — so
+  konfiguriert wurde nie etwas versendet. Das ist genau die Fehlerklasse dieses
+  Dokuments: die Kombination existiert nur in der Compose-Datei, also sah sie
+  keine Suite.
+- **Der Mailserver der Entwicklung beweist zu wenig, und dafür gibt es ein
+  eigenes Profil** (E62): `docker compose -f infra/docker-compose.dev.yml
+--profile secure-mail up -d` startet einen Mailpit, der ohne Anmeldung und
+  ohne STARTTLS **ablehnt**, auf eigenen Ports neben dem offenen. Geprüft wird
+  er mit `tools/secure-mail/verify.sh` — erst, was er ablehnt, dann eine
+  Bestätigungsmail, die trotzdem durchgeht. Zertifikat, Schlüssel und
+  Passwortdatei erzeugt `materials.sh` nach `infra/mailpit/` und **nichts
+  davon ist eingecheckt**: ein selbstsignierter Schlüssel ist ein Schlüssel.
 - **Wer Installierbarkeit prüfen will, fährt den Stack hoch:**
   `docker compose -f infra/docker-compose.yml up -d --build` gegen ein **leeres**
   Volume, mit eigenem `-p`-Projektnamen, danach `down -v`. Das ist die einzige

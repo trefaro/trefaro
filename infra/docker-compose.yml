@@ -92,12 +92,31 @@ services:
       # infra/docker/server.Dockerfile) and not to the operator.
 
       # The organization's own mail server (no third-party mail service).
+      #
+      # Port 587 is submission, which starts unencrypted and *upgrades* — so
+      # SMTP_SECURE stays off there and SMTP_REQUIRE_TLS is what makes the
+      # upgrade non-negotiable (E62). Implicit TLS is port 465: then set
+      # SMTP_SECURE=true and the port, and REQUIRE_TLS has nothing left to do.
+      # Neither is left to chance: the server requires encryption in production
+      # unless the .env says otherwise, and says so out loud while starting.
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_SECURE: ${SMTP_SECURE:-true}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_REQUIRE_TLS: ${SMTP_REQUIRE_TLS:-}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-}
+      # How long the invitation sender waits between two messages. Empty means
+      # the shipped second; raise it if the mail service says so, and never
+      # lower it without a reason — the server logs a shortened pause.
+      SMTP_PAUSE_BETWEEN_MAILS_MS: ${SMTP_PAUSE_BETWEEN_MAILS_MS:-}
+      # A mail server whose certificate no public authority vouches for — an
+      # internal one, one behind the organization's own CA — is trusted by
+      # naming its certificate here, and in no other way (E62). Put the file in
+      # the directory mounted below and point this at it, e.g.
+      # NODE_EXTRA_CA_CERTS=/etc/trefaro/ca/mail.pem. There is no setting
+      # anywhere that turns the check off, and there will not be one.
+      NODE_EXTRA_CA_CERTS: ${NODE_EXTRA_CA_CERTS:-}
       # Self-hosted Web Push. Leave both empty to run without push.
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
@@ -106,6 +125,11 @@ services:
       # Uploaded files: logos, avatars, registration attachments. Backing this
       # volume up is part of backing up the instance.
       - uploads:/app/uploads
+      # Certificates the image does not ship with — see NODE_EXTRA_CA_CERTS
+      # above. Empty in a normal deployment, and mounted either way so that
+      # trusting an internal mail server is a file and a variable rather than a
+      # second compose file.
+      - ${SMTP_CA_DIR:-./ca}:/etc/trefaro/ca:ro
 
   user-client:
     build:

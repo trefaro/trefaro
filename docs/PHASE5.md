@@ -746,3 +746,161 @@ _Checkable after phase 5_ — der unlesbare Kombinationslauf, die konfigurierbar
 Drosselung, der Zähler je Empfänger, der ungezählte Handshake, die geteilten
 E2E-Budgets und die Frage nach der Login-Grenze, die jetzt eine `.env`-Zeile ist
 statt eines Releases.
+
+### AP 3 — Mail: angemeldet, verschlüsselt und höflich (erledigt, 14.09.2026) → **Meilenstein M13**
+
+Umgesetzt:
+
+- **Ein Mailserver, der ablehnt** (E62, F206). `infra/docker-compose.dev.yml`
+  bekommt ein zweites Profil (`--profile secure-mail`): derselbe Mailpit, aber
+  mit `--smtp-auth-file`, einem STARTTLS-Zertifikat und
+  `--smtp-require-starttls`, auf eigenen Ports **neben** dem offenen. Zwei
+  nebeneinander, weil der Vergleich der Beweis ist. Der Plan schrieb
+  `--smtp-auth`; das Abbild kennt den Schalter unter `--smtp-auth-file`, und die
+  Passwortdatei nimmt Klartext — beides am laufenden Container nachgesehen statt
+  aus der Dokumentation abgeschrieben.
+- **Verschlüsselung ist etwas, das verlangt wird, nicht etwas, das sich ergibt.**
+  Neu ist `SMTP_REQUIRE_TLS` — STARTTLS, das stattfinden **muss** —, mit `true`
+  als Vorgabe in Produktion und `false` sonst. Das ist die einzige
+  umgebungsabhängige Vorgabe in `env.ts`, und der Grund steht in
+  `core/config/smtp.ts`: der Mailpit der Entwicklung hat kein Zertifikat, und
+  eine Vorgabe, die `nx serve` das Mailen unmöglich macht, ist eine Vorgabe, die
+  jemand einmal abschaltet und nie wieder anschaltet. Ohne sie war STARTTLS eine
+  Gelegenheit: nodemailer rüstet auf, **wenn** der Server es anbietet, und wer
+  das Angebot unterwegs entfernt, bekommt die Mail und das Passwort im Klartext.
+- **Das Zertifikat wird benannt, die Prüfung nie abgeschaltet.**
+  `NODE_EXTRA_CA_CERTS` reicht `infra/docker-compose.yml` jetzt durch, dazu ein
+  immer vorhandener, normalerweise leerer Mount `infra/ca/` →
+  `/etc/trefaro/ca`: einem internen Mailserver zu vertrauen soll eine Datei und
+  eine Variable sein und keine zweite Compose-Datei. Eine Zeile
+  `rejectUnauthorized: false` gibt es nirgends — und `smtp-mailer.spec.ts` wird
+  rot, wenn jemand eine schreibt. Gemessen in beide Richtungen: mit benannter
+  Datei geht die Mail durch, ohne sie lehnt schon die TLS-Verbindung ab.
+- **Eine Pause zwischen zwei Mails, und sie ist Konfiguration** (F207).
+  `SMTP_PAUSE_BETWEEN_MAILS_MS`, Vorgabe eine Sekunde, gewählt aus dem Fehler,
+  den sie verhindert: `todo.md` nannte „zweihundert Einladungen in zwanzig
+  Sekunden" als den Weg in die Drosselung, also muss die Vorgabe genau das
+  unmöglich machen — dreieinhalb Minuten statt zwanzig Sekunden. Sie steht am
+  SMTP-Block und nicht bei den Einladungen, weil der Grund dem Mailserver
+  gehört. Eine **verkürzte** Pause ist eine `WARN`-Zeile beim Start: bei den
+  Grenzwerten ist die gefährliche Richtung die größere Zahl (E60), hier die
+  kleinere, und `smtpWarnings()` ist dieselbe reine Funktion mit acht Tests.
+- **„Jetzt nicht" bekommt einen zweiten Versuch, „nie" nicht** (F207). Eine
+  4xx-Antwort wird nach dem Zehnfachen der Pause noch einmal versucht; danach
+  ist Schluss, weil die Zähler, die ein Veranstalter beobachtet, zur Ruhe kommen
+  müssen. 5xx und Verbindungsfehler bekommen keinen: der erste ist endgültig,
+  der zweite trifft alle zweihundert Empfänger nacheinander und machte aus einem
+  Ausfall den doppelten. Die Unterscheidung fällt am **Port**
+  (`TemporaryMailFailure`), weil „eine Zahl zwischen 400 und 499" SMTP-Wissen
+  ist; die Geschäftsschicht liest ein `temporary`.
+- **Der Abmeldeknopf des Mailprogramms** (F208, RFC 8058). Jede Einladung trägt
+  `List-Unsubscribe` und `List-Unsubscribe-Post`, geschrieben von der
+  **Vorlage** — derselben, die den Link im Fußtext setzt, damit beide nie für
+  zwei verschiedene Menschen sprechen. Dahinter ein Endpunkt, der einen nackten
+  `POST` annimmt, das Feld `List-Unsubscribe=One-Click` **verlangt** und `204`
+  antwortet. Seine Begründung gegen E5b ist eigen und keine Kopie: die Anfrage
+  steht in einer Kopfzeile statt im Rumpf, sie trägt einen Marker, den ein
+  Linkvorschau-Dienst nicht mitschickt, und sie kann ausschließlich wegnehmen —
+  während der Bestätigungslink, für den E5b geschrieben wurde, eine Anmeldung
+  **erzeugt**.
+- **Zustellbarkeit verlässt `todo.md` und wird eine Prüfliste** (E63).
+  `docs/INSTALL.md` hat einen neuen Abschnitt 7 mit vier Teilen: die zwei
+  Formen der Verschlüsselung, warum Einladungen langsam rausgehen, die sieben
+  Punkte SPF/DKIM/DMARC/Reverse-DNS/Ausrichtung/zwei echte Postfächer/der
+  Proxy vor dem One-Click-Endpunkt — und der Satz, dass
+  `tools/secure-mail/verify.sh` die **erste** Hälfte beantwortet und über die
+  zweite nichts sagt.
+
+**Das Abnahmekriterium, Punkt für Punkt:**
+
+- _Eine Bestätigungsmail geht über einen Mailserver, der ohne Anmeldung und
+  ohne TLS ablehnt_ — `tools/secure-mail/verify.sh`, EXIT=0. Es fragt den
+  Mailserver zuerst, was er ablehnt (`530 Must issue a STARTTLS command first`,
+  `530 Authentication required`), und schickt danach eine echte
+  Konto-Bestätigung durch ihn hindurch. Ohne `NODE_EXTRA_CA_CERTS` scheitert
+  schon die Verbindung — das ist die Gegenprobe, die zeigt, dass die Prüfung
+  wirklich stattfindet.
+- _Ein Server, der 451 antwortet, bekommt einen zweiten Versuch und die Zeile
+  bleibt nicht auf „failed" stehen_ — drei Unit-Tests am Versand: der zweite
+  Versuch findet statt, er findet **nicht sofort** statt, und nach dem zweiten
+  Fehlschlag steht die Zeile mit den Worten des Mailservers auf `failed`. Dazu
+  zwei am Mailer, die 4xx von 5xx und von einem Verbindungsfehler trennen.
+- _Zweihundert Einladungen gehen mit messbarer Pause raus_ — die Vertragssuite
+  misst sie: der Versand der zweihundert dauert **länger als zwanzig Sekunden**,
+  und diese Behauptung ist ohne Pause falsch. Gegengeprüft als Mutation am
+  Unit-Test: ohne die Pause wird „waits between two mails" rot.
+- _Der Kopfzeilen-Abmeldelink funktioniert einmal und macht beim zweiten Mal
+  nichts kaputt_ — fünf Vertragstests, die die URL **aus der Kopfzeile der
+  Mail** nehmen, die der Server tatsächlich verschickt hat: ein `GET` ist keine
+  Route, ein `POST` ohne Marker ist 400, der erste Klick nimmt die Adresse aus
+  jeder Kontaktliste, der zweite antwortet wieder 204.
+- _`INSTALL.md` sagt, welche DNS-Einträge eine Organisation braucht_ —
+  Abschnitt 7.3, sieben Punkte zum Abhaken.
+
+**Was anders lief:**
+
+- **Der ausgelieferte Stack konnte keine Mail verschicken** (Anhangspunkt 28).
+  `infra/docker-compose.yml` setzte `SMTP_PORT=587` neben `SMTP_SECURE=true` —
+  implizites TLS auf einem Port, der im Klartext begrüßt. Gemessen: gegen den
+  strengen Mailserver kommt so in sechzig Sekunden keine Verbindung zustande.
+  Gefunden hat es nicht ein Test, sondern die Frage, was `SMTP_SECURE=true`
+  eigentlich gegen einen STARTTLS-Port tut — genau die Fehlerklasse aus
+  `docs/rules/deployment.md`: die Kombination existierte nur in der
+  Compose-Datei, also sah sie keine Suite. Die Vorgabe ist korrigiert, und der
+  Ersatz ist keine zweite Kopie derselben Zahl, sondern eine Variable mit einer
+  umgebungsabhängigen Vorgabe.
+- **Die Unit-Tests des Versands laufen jetzt auf falschen Uhren.** Eine Pause
+  lässt sich mit `setTimeout(0)` nicht mehr abwarten, und ein Test, der wirklich
+  wartet, misst eine Stoppuhr statt eine Eigenschaft. Mit
+  `jest.advanceTimersByTimeAsync` sagt die Suite stattdessen, **was zu welchem
+  Zeitpunkt passiert sein muss** — nach null Millisekunden eine Mail, nach einer
+  Pause zwei —, und das ist die schärfere Behauptung.
+- **Die Pause wird für die E2E-Läufe verkürzt, nicht abgeschaltet.** 150 ms im
+  Profil, damit die zweihundert Einladungen der Vertragssuite eine halbe Minute
+  brauchen statt dreieinhalb. Abschalten ginge nicht einmal: `read.integer`
+  verweigert die Null, und eine Pause von null wäre keine. Das Profil sagt es
+  beim Start, wie es das Drosselprofil sagt — die siebte `WARN`-Zeile.
+- **Ein Endpunkt, den nur Software aufruft, ist eine ungewohnte Sorte Vertrag.**
+  Der One-Click-Endpunkt hat kein DTO und keine Seite, dafür eine
+  Rumpf-Bedingung, die anderswo Validierung wäre. Sie steht im Controller mit
+  ihrer Begründung, weil sie **die** Begründung ist: ohne den Marker ist der
+  Endpunkt genau das, was E5b verbietet.
+- **Ein Lauf ist in diesem Paket zweimal ungültig geworden, einmal fremd und
+  einmal durch mich.** Der erste kombinierte Lauf war rot mit **einem** Test von
+  258 (`plugin-forum.spec.ts:224`, Chromium), Nx hat die Task selbst als flaky
+  markiert, und dieselbe Suite allein war unmittelbar danach grün. Das ist die
+  Sorte Fehlschlag, die `todo.md` seit AP 7 der Phase 4 verfolgt; der Eintrag
+  dort hat jetzt auch für die Teilnehmersuite einen Testnamen. Der zweite Lauf
+  ist **meine** Schuld: ich habe während der laufenden Browsersuite eine
+  Quelldatei umbenannt, `serve-e2e` hat neu gestartet, und acht Tests liefen
+  gegen `ECONNREFUSED`. Die Regel dagegen stand schon da, nur eine Nummer zu
+  eng — „nicht neben einer Browsersuite **bauen**" heißt auch „nicht neben ihr
+  **schreiben**", denn der Watcher baut dann für einen. Steht jetzt so in
+  `docs/rules/e2e-tests.md`.
+- **Das Prüfskript läuft vorerst nur lokal.** `tools/secure-mail/verify.sh`
+  gehört der Form nach neben `shipped-stack/` in die CI, und die Stelle ist
+  offensichtlich. Es ist trotzdem nicht dazugekommen: einen CI-Auftrag kann man
+  von hier aus nicht prüfen, ohne zu pushen, und „grün in der CI" heißt in
+  diesem Repository, dass jemand den **Abschluss** eines Laufs gelesen hat. Als
+  Eintrag in `todo.md` benannt, mit der Form, die er haben müsste.
+
+**Der Stand nach diesem Paket:** `nx run-many -t lint test build` grün über
+**19** Projekte, **1316** Server-Unit-Tests (25 neu), **695** Vertragstests
+(5 neu), 317 + 258 Browsertests unverändert grün. `tools/shipped-stack/verify.sh`
+noch einmal gefahren, weil `infra/docker-compose.yml` sich geändert hat:
+**EXIT=0**, keine einzige `[Smtp]`- oder `[RateLimits]`-Zeile, keine
+Container- und Volume-Reste. `todo.md` verliert drei Einträge — den Mailserver
+mit Anmeldung und TLS, die fehlende Pause samt zweitem Versuch und die fehlende
+`List-Unsubscribe`-Kopfzeile — und bekommt einen dazu, den CI-Auftrag für
+`tools/secure-mail/verify.sh`.
+
+**Eine Einschränkung, die zum Lauf gehört:** der kombinierte
+`nx run-many -t e2e --parallel=1` ist an diesem Tag nur einmal vollständig
+durchgelaufen (mit dem einen flaky gewordenen Test); bei den Wiederholungen
+belegte ein **anderes Projekt auf demselben Rechner** Port 4200, worauf
+`user-client:serve` scheitert und Nx die Teilnehmersuite gar nicht erst startet.
+Gemessen wurde deshalb so: Veranstalter- und Vertragssuite im kombinierten Lauf
+(317 und 695, drei 429 im ganzen Lauf, alle drei von der Drosselungssuite
+erbeten), und die Teilnehmersuite gegen **denselben** `serve-e2e`-Server über
+`BASE_URL` auf einem freien Port — 258 grün, EXIT=0. Das ist dieselbe Aussage,
+nur ohne den Port, der einem anderen gehört.

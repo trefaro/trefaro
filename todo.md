@@ -1168,6 +1168,21 @@ entry, the answer is noted below rather than repeated.
       recorded here as an observation rather than a finding, and the lesson is
       the mechanical one: **capture a suite's output to a file, then read it.**
       Tailing a run throws away the only evidence a flake ever produces.
+      **AP 3 of phase 5 gave the participant suite's sighting a name.** In the
+      combined `nx run-many -t e2e --parallel=1`, one test of 258 failed:
+      `apps/user-client-e2e/src/plugin-forum.spec.ts:224` — _discussion forum
+      plug-in on an event page › does with every plug-in the configuration
+      names what it does with one_, in **chromium**. The configuration named
+      `[forum, room-planning, personal-program]`, and after ten seconds only
+      `forum` had mounted and had a tile. Nx marked the task flaky by itself.
+      Re-run alone immediately afterwards, nothing changed: **258 passed,
+      EXIT=0**. Same
+      shape as the organizer sighting above — one test, a ten-second wait for
+      something the server has to deliver, no state shared with another test —
+      so the suspicion is the same one and still a suspicion: three plug-in
+      bundles are three more requests to a development server that the suite
+      is also driving. The next run that catches either of them should keep
+      the trace.
 - [x] **Each new plug-in proves the contract.** Verify per plug-in: own tables
       only, prefixed `plugin_<key>_`; disabled means 404 and absent from
       `/api/config`; disabling keeps its data.
@@ -1521,7 +1536,7 @@ entry, the answer is noted below rather than repeated.
 - [ ] **Load tests** (NFR 12).
 - [ ] **socket.io shared adapter** — only if more than one server container is
       ever run. Not needed for one instance per organization.
-- [ ] **Mail against the pilot partner's real SMTP server.** AP 4 proves the
+- [x] **Mail against the pilot partner's real SMTP server.** AP 4 proves the
       double opt-in against Mailpit, in unit tests, in the API contract suite and
       in three browsers — but Mailpit accepts everything. What it cannot show:
       authentication, TLS, SPF/DKIM alignment and whether the mail lands in an
@@ -1534,6 +1549,19 @@ entry, the answer is noted below rather than repeated.
       but it must happen before a release: an instance whose mail lands in spam
       cannot register anyone, and no test in this repository can find that out.
       Latest point is the hardening of phase 5, together with TLS.
+      **Closed in AP 3 of phase 5, and split in two along the line E63 draws.**
+      The half this repository can answer is answered: there is a mail server in
+      `infra/docker-compose.dev.yml` now (`--profile secure-mail`) that refuses
+      anonymous and unencrypted submission, `SMTP_REQUIRE_TLS` makes STARTTLS
+      something the instance _demands_ rather than accepts, and
+      `tools/secure-mail/verify.sh` sends a real confirmation mail through it —
+      trusting a certificate named in `NODE_EXTRA_CA_CERTS`, with no line
+      anywhere that switches the check off. The other half — SPF, DKIM, DMARC,
+      reverse DNS, inbox rather than spam — hangs on the DNS records of the
+      organization's domain and can never be answered here, so it is a checklist
+      in `docs/INSTALL.md` (section 7.3) rather than an open item. Nothing about
+      a specific pilot partner's server is left: credentials for one would prove
+      only that that one server works.
 - [x] **Throttle registration attempts per e-mail address, not only per client.**
       `REGISTRATIONS_PER_WINDOW` counts per client address, which is what the
       guard can see — so one address can be mailed as often as a single client is
@@ -1627,7 +1655,7 @@ entry, the answer is noted below rather than repeated.
       spend a budget was never testing the form. One number the profile does
       **not** raise: `MAILS_PER_RECIPIENT_PER_WINDOW`, so every full run still
       exercises a real limit (E4).
-- [ ] **The invitation sender has no pause and no retry.** AP 12 sends one mail
+- [x] **The invitation sender has no pause and no retry.** AP 12 sends one mail
       after another as fast as the mail server accepts them, and a refused
       address is recorded as failed and never tried again. Against Mailpit and
       against a well-behaved server that is right; against a shared mail service
@@ -1639,7 +1667,19 @@ entry, the answer is noted below rather than repeated.
       (`status`, `failure`), so this is the sender's own loop and no schema
       change. Belongs with the SMTP work of phase 5, where a real server is
       available to measure against.
-- [ ] **No `List-Unsubscribe` header on invitations.** The objection link is in
+      **Done in AP 3 of phase 5, in the shape the entry describes.**
+      `SMTP_PAUSE_BETWEEN_MAILS_MS` defaults to one second, so two hundred
+      invitations take three and a half minutes rather than the twenty seconds
+      this entry names as the danger; the number sits with the SMTP settings
+      because the reason belongs to the mail server, and a _shortened_ pause is
+      a warning in the startup log the way a raised limit is (E60). A 4xx reply
+      gets one more attempt after ten times the pause. A 5xx and a connection
+      failure get none — the first is final, and the second would turn one
+      outage into two hundred doubled attempts while the rows stay pending for
+      the next boot anyway. Greylisting, which asks for minutes, is still not
+      answered: those rows end up `failed` with the server's own words beside
+      them.
+- [x] **No `List-Unsubscribe` header on invitations.** The objection link is in
       the body (F58), which is where a person looks. Mail clients look for the
       header, and Gmail and Outlook weigh its absence when they decide whether a
       bulk message is spam — so the feature that works may still not arrive. It
@@ -1649,6 +1689,17 @@ entry, the answer is noted below rather than repeated.
       AP 12: one-click unsubscribe from a header is exactly the request E5b says
       a link previewer must not be able to make, so the endpoint needs its own
       reasoning rather than a copy of this one. Phase 5, with the SMTP work.
+      **Done in AP 3 of phase 5, including the reasoning the entry asked for.**
+      The template that writes the footer link writes both headers, so they
+      cannot come to speak for two different people; the `Mailer` port carries
+      headers now, and the endpoint behind them
+      (`POST /api/user/invitations/opt-out/one-click?token=`) requires the body
+      `List-Unsubscribe=One-Click` of RFC 8058 and answers 204. Its own argument
+      against E5b, in three parts: it is in a header rather than in the body, so
+      nothing renders or follows it; the required marker is what a link
+      previewer would not send; and it can only ever take something away from
+      the person who received the letter, where the confirmation link E5b was
+      written for _creates_ a registration (F208).
 - [x] **Nothing in CI starts the containers and drives a browser.** The
       test pyramid has a hole exactly the shape of the bug found on 28.08.2026: a
       service worker misconfiguration that made the organizer client unreachable
@@ -1686,6 +1737,18 @@ entry, the answer is noted below rather than repeated.
       generated `.env` — and a `playwright.config.*` silently earns an `e2e`
       target from the Nx plugin, which would have swept this project into the
       existing `e2e` job.
+- [ ] **`tools/secure-mail/verify.sh` runs nowhere but on a laptop.** AP 3 of
+      phase 5 built the mail server that refuses anonymous and unencrypted
+      submission, and the script that proves this application gets through it
+      (E62). It was run locally and it passes — but nothing runs it again, and
+      a check nobody runs is a promise nobody keeps: the next person who adds
+      `rejectUnauthorized: false` to solve a certificate problem would be
+      caught by the unit test and not by this. The shape is obvious, because
+      AP 1 built it for the other script: a job beside `stack` in
+      `.github/workflows/ci.yml`, checkout, `npm ci`, `tools/secure-mail/verify.sh`,
+      maybe four minutes. It was **not** added in AP 3 for one reason: a CI job
+      cannot be verified without pushing, and "green in CI" means somebody read
+      the end of a run. Add it when the next push happens and read that run.
 - [ ] **Usability test with Democracy International**: the thesis' seven tasks
       repeated, plus the use cases it never tested.
 

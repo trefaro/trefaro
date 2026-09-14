@@ -140,4 +140,58 @@ gröber als in der Oberfläche.
   `preferredLocale`; ein Feld, das eine Mail entscheidet und danach verschwindet,
   wäre ein Feld, das nichts liest.
 
-Siehe auch: [Mehrsprachigkeit und Katalog](i18n.md), [Bestätigte Zuschnitt-Entscheidungen](decisions.md).
+- **Verschlüsselt wird nicht nach Gutdünken der Leitung, sondern auf Verlangen**
+  (E62). Zwei Formen, und eine Instanz benutzt genau eine: `SMTP_SECURE=true`
+  ist implizites TLS ab dem ersten Byte (Port 465), `SMTP_REQUIRE_TLS=true` ist
+  STARTTLS, **das stattfinden muss** (Port 587, 25). Die Vorgabe von
+  `SMTP_REQUIRE_TLS` ist `true` in Produktion und `false` sonst — die einzige
+  umgebungsabhängige Vorgabe in `env.ts`, und der Grund steht in `core/config/
+smtp.ts`: der Mailpit des Entwicklungsstacks hat kein Zertifikat, und eine
+  Vorgabe, die `nx serve` das Mailen unmöglich macht, ist eine Vorgabe, die
+  jemand einmal abschaltet und nie wieder anschaltet. `SMTP_SECURE=true` auf
+  Port 587 ist **keine** stärkere Einstellung, sondern ein anderes Protokoll auf
+  dem falschen Port: es wird nichts versendet. Genau so stand es bis AP 3 der
+  Phase 5 als Vorgabe in `infra/docker-compose.yml`.
+- **Ein Zertifikat wird benannt, die Prüfung nie abgeschaltet** (E62).
+  `NODE_EXTRA_CA_CERTS` zeigt auf die Datei, `infra/ca/` ist der Ort dafür, und
+  es gibt in diesem Repository keine Zeile `rejectUnauthorized: false` — ein
+  Unit-Test in `smtp-mailer.spec.ts` wird rot, wenn jemand eine schreibt. Der
+  Unterschied ist nicht Geschmack: ein abgeschalteter Test gilt für **jede**
+  Verbindung dieses Prozesses, für immer, und niemand sieht ihm an, welches
+  Problem er einmal gelöst hat. Beweis in beide Richtungen ist
+  `tools/secure-mail/`: mit benanntem Zertifikat geht die Mail durch, ohne es
+  lehnt schon die Verbindung ab.
+- **Zwischen zwei Mails wird gewartet, und wie lange, entscheidet die
+  Organisation** (`SMTP_PAUSE_BETWEEN_MAILS_MS`, Vorgabe eine Sekunde). Zwei
+  Sender gibt es nicht — nur die Einladung schickt Briefe hintereinander (F56) —,
+  aber der Grund gehört zum Mailserver und nicht zur Einladung: zweihundert
+  Nachrichten in zwanzig Sekunden beantwortet ein geteilter Maildienst mit
+  Drosselung, im schlimmeren Fall mit einer Sperre der Domain, auf der die
+  Organisation auch **empfängt**. Eine **verkürzte** Pause steht im Startlog, so
+  wie ein erhöhter Grenzwert (E60) — die gefährliche Richtung ist hier die
+  kleinere Zahl.
+- **„Jetzt nicht" ist nicht „nie"** (F207). Eine 4xx-Antwort des Mailservers
+  bekommt **einen** zweiten Versuch nach dem Zehnfachen der Pause; eine
+  5xx-Antwort und ein Verbindungsfehler bekommen keinen. Die Unterscheidung
+  fällt am Port (`TemporaryMailFailure` in `ports/mailer.ts`), weil „eine Zahl
+  zwischen 400 und 499" SMTP-Wissen ist und in der Geschäftsschicht nichts zu
+  suchen hat; gelesen wird sie von genau einem Aufrufer, dem Einladungsversand.
+  **Ein Verbindungsfehler ist bewusst ausgenommen**: ein Mailserver, der liegt,
+  lehnt zweihundert Empfänger nacheinander ab, und ein zweiter Versuch je
+  Empfänger macht aus einem Ausfall den doppelten Ausfall — die Zeilen bleiben
+  ohnehin `pending` und werden beim nächsten Start weitergeschickt.
+- **Die Einladung ist die einzige Mail mit einer Kopfzeile** (F208, RFC 8058).
+  `List-Unsubscribe` und `List-Unsubscribe-Post` werden **von der Vorlage**
+  geschrieben, nicht vom Absender: die Kopfzeile und der Link im Fußtext sind
+  derselbe Widerspruch für dieselbe Person, und zwei Stellen wären zwei
+  Meinungen. Das ist keine Höflichkeit — Gmail und Outlook gewichten das Fehlen
+  der Kopfzeile, und eine Einladung im Spam-Ordner hat einen Widerspruchslink,
+  den niemand sieht. Der Endpunkt dahinter nimmt einen nackten `POST` an und hat
+  **eigene** Begründung gegen E5b (`api-contracts.md`), keine Kopie der
+  Abmeldeseite.
+- **Zustellbarkeit steht nicht in diesem Verzeichnis** (E63). SPF, DKIM, DMARC,
+  Reverse-DNS und die Frage „Posteingang oder Spam" hängen an den DNS-Einträgen
+  der Organisation, und keine Suite dieses Repositories kann sie beantworten.
+  Sie sind eine Prüfliste in `docs/INSTALL.md` (Abschnitt 7.3) und bleiben es.
+
+Siehe auch: [Mehrsprachigkeit und Katalog](i18n.md), [Bestätigte Zuschnitt-Entscheidungen](decisions.md), [Deployment und Prüfung](deployment.md).

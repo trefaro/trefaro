@@ -9,8 +9,9 @@
  */
 
 import { RATE_LIMIT_DEFAULTS, type RateLimitEnv } from './rate-limits';
+import { SMTP_DEFAULTS, type SmtpEnv } from './smtp';
 
-export type { RateLimitEnv };
+export type { RateLimitEnv, SmtpEnv };
 
 export type NodeEnv = 'development' | 'test' | 'production';
 
@@ -26,16 +27,6 @@ export interface DatabaseEnv {
    * stays off outside development — `loadEnv` refuses to enable it in production.
    */
   readonly synchronize: boolean;
-}
-
-export interface SmtpEnv {
-  readonly host: string;
-  readonly port: number;
-  readonly secure: boolean;
-  readonly user: string | null;
-  readonly password: string | null;
-  /** Envelope sender for all outgoing mail (double opt-in, organizer replies). */
-  readonly from: string;
 }
 
 /** Administrative access to the instance (FR 1.2, FR 1.3). */
@@ -278,9 +269,18 @@ export function loadEnv(
       host: read.required('SMTP_HOST', 'localhost'),
       port: read.integer('SMTP_PORT', 1025),
       secure: read.boolean('SMTP_SECURE', false),
+      // The only default in this file that differs between environments, and
+      // the reason is in `smtp.ts`: the development stack's mail server has no
+      // certificate, and a production instance that hands mail over in the
+      // clear should have had to say so (E62).
+      requireTls: read.boolean('SMTP_REQUIRE_TLS', production),
       user: source['SMTP_USER']?.trim() || null,
       password: source['SMTP_PASSWORD']?.trim() || null,
       from: read.required('SMTP_FROM', 'Trefaro <no-reply@localhost>'),
+      pauseBetweenMailsMs: read.integer(
+        'SMTP_PAUSE_BETWEEN_MAILS_MS',
+        SMTP_DEFAULTS.pauseBetweenMailsMs,
+      ),
     },
     webPush:
       vapidPublicKey && vapidPrivateKey

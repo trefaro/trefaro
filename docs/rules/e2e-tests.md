@@ -16,9 +16,20 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   teilen können, ohne dass das zuletzt laufende 429 statt 202 bekommt. Der
   Server sagt beim Start, welches Profil er benutzt, und nennt jeden Wert über
   seiner Vorgabe. **Nachgemessen** (AP 2 der Phase 5): `nx serve server`
-  schreibt keine einzige dieser Zeilen, `nx run server:serve-e2e` sechs.
+  schreibt keine einzige dieser Zeilen, `nx run server:serve-e2e` sechs — seit
+  AP 3 sieben, die siebte über die verkürzte Mailpause.
   Wer eine neue E2E-Task anlegt, hängt sie an `serve-e2e` — sonst läuft sie
   gegen die ausgelieferten Zahlen und die Rechnerei von unten beginnt von vorn.
+- **Die Einladungssuite dauert jetzt eine halbe Minute länger, und das ist der
+  Test** (AP 3 der Phase 5). Der Versand wartet zwischen zwei Mails
+  (`SMTP_PAUSE_BETWEEN_MAILS_MS`, Vorgabe eine Sekunde), also brauchen die
+  zweihundert Einladungen der Vertragssuite Minuten statt Sekunden. Das Profil
+  **verkürzt** die Pause auf 150 ms und schaltet sie nicht ab: die Suite
+  behauptet, dass der Versand länger als zwanzig Sekunden dauert, und diese
+  Behauptung wäre ohne Pause falsch. Wer die Zahl weiter senkt, nimmt sich den
+  Test; wer sie auf null setzt, bekommt beim Start einen Fehler, weil eine
+  Pause von null keine Pause ist. Die Zeitbudgets des Tests (300 s Warten,
+  360 s Testlaufzeit) sind danach bemessen und nicht nach Vorsicht.
 - **Ein gelockertes Budget ist nicht dasselbe wie ein gelockerter Grenzwert**
   (E4, E60). Das Profil hebt vier Zahlen an und **eine ausdrücklich nicht**:
   `MAILS_PER_RECIPIENT_PER_WINDOW` bleibt bei der ausgelieferten Fünf, damit
@@ -580,5 +591,13 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   also an der Startsequenz, nicht an einer Zusicherung. Derselbe Lauf allein
   war grün (317). Wer eine Zahl nennen will, hat die Suite **allein** laufen
   lassen.
+- **Und neben einer Browsersuite wird auch nicht geschrieben** (AP 3 der
+  Phase 5). Dieselbe Regel, eine Nummer zu eng gefasst: `serve-e2e` ist ein
+  Watcher, also baut eine gespeicherte Quelldatei **für einen**. Eine
+  Umbenennung mitten im kombinierten Lauf hat den Server neu gestartet, und
+  acht Tests der Veranstaltersuite liefen in `ECONNREFUSED` — der Lauf war
+  ungültig, nicht rot. Erkennbar an einer Zeile, die kein Test schreibt:
+  `NX File change detected. Restarting...`. Wer sie im Protokoll findet, wirft
+  den Lauf weg statt den Fehlschlag zu untersuchen.
 
 Siehe auch: [Fallen in den Angular-Clients](angular-clients.md), [Deployment und Prüfung](deployment.md).

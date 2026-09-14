@@ -9,6 +9,7 @@ import {
 import {
   clearMailbox,
   countMailTo,
+  headersOf,
   optOutTokenFrom,
   waitForMailTo,
   waitForMailpit,
@@ -638,6 +639,109 @@ describe('invitations API', () => {
     });
   });
 
+  /**
+   * The objection a mail client makes on its own (RFC 8058) — AP 3 of phase 5.
+   *
+   * Two things are being decided here, and only the second one is new. The
+   * first is that the header is *there*: a bulk message without
+   * `List-Unsubscribe` is weighed as more likely to be spam by the two
+   * providers most participants read their mail at, and an invitation that
+   * lands in spam has an objection link nobody ever sees. The second is that
+   * the endpoint behind it is not the objection page with the reasoning
+   * copied across — it takes a bare POST, it requires the marker RFC 8058
+   * prescribes, and it answers a person's mail client rather than a browser.
+   */
+  describe('one-click objection from the mail client (RFC 8058)', () => {
+    const clicker = `invite-oneclick-${stamp}@example.org`;
+    let clickerId = '';
+    /** The URL out of the header of the message the server actually sent. */
+    let oneClickUrl = '';
+
+    const post = (url: string, body: string) =>
+      api(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body,
+      });
+
+    beforeAll(async () => {
+      await clearMailbox();
+      const [id] = await seedRegistrations(firstEvent.id, [
+        {
+          email: clicker,
+          firstName: 'Ines',
+          lastName: 'Inbox',
+          status: 'confirmed',
+        },
+      ]);
+      clickerId = id;
+
+      const { body } = await invite(message([clickerId]));
+      await untilSent(body.id);
+
+      const mail = await waitForMailTo(clicker);
+      const headers = await headersOf(mail);
+      // Both or neither: the URL alone means "write to this address", and it
+      // is the second header that says a POST ends it in one click.
+      expect(headers['List-Unsubscribe-Post']).toEqual([
+        'List-Unsubscribe=One-Click',
+      ]);
+      const [header] = headers['List-Unsubscribe'] ?? [];
+      expect(header).toMatch(/^<https?:\/\/.+>$/);
+      oneClickUrl = header.slice(1, -1);
+
+      // The header and the footer speak for the same person, because one
+      // renderer wrote both (F58). A token is base64url and dots, which
+      // survive a query string as they are.
+      expect(oneClickUrl).toContain(optOutTokenFrom(mail));
+    }, 70_000);
+
+    it('points at this instance’s own one-click endpoint', () => {
+      expect(oneClickUrl).toContain(
+        '/api/user/invitations/opt-out/one-click?token=',
+      );
+    });
+
+    it('is not something a GET can do either (E5b)', async () => {
+      const { status } = await api(
+        oneClickUrl.replace(/^https?:\/\/[^/]+/, ''),
+      );
+
+      expect(status).toBe(404);
+    });
+
+    it('refuses a POST that does not carry the marker of RFC 8058', async () => {
+      const path = oneClickUrl.replace(/^https?:\/\/[^/]+/, '');
+
+      // The part a link previewer following its nose would not send — and the
+      // reason this endpoint may be one click when the page may not.
+      expect((await post(path, '')).status).toBe(400);
+      expect((await post(path, 'List-Unsubscribe=Maybe')).status).toBe(400);
+    });
+
+    it('records the objection on the first click', async () => {
+      const { status } = await post(
+        oneClickUrl.replace(/^https?:\/\/[^/]+/, ''),
+        'List-Unsubscribe=One-Click',
+      );
+
+      expect(status).toBe(204);
+      const { body } = await contacts('?pageSize=200');
+      expect(body.rows.map((row) => row.email)).not.toContain(clicker);
+    });
+
+    it('breaks nothing on the second — providers retry', async () => {
+      const { status } = await post(
+        oneClickUrl.replace(/^https?:\/\/[^/]+/, ''),
+        'List-Unsubscribe=One-Click',
+      );
+
+      // Nothing about the reader's situation changed, so this is not an error.
+      // A provider that retries a timed-out request must not see one.
+      expect(status).toBe(204);
+    });
+  });
+
   describe('two hundred addresses — the other criterion of AP 12', () => {
     let volumeEvent: Event;
     const total = 200;
@@ -681,10 +785,23 @@ describe('invitations API', () => {
       // into a timeout. Two seconds is generous for writing two hundred rows.
       expect(elapsed).toBeLessThan(2000);
 
-      const finished = await untilSent(body.id, 120_000);
+      const sendStarted = Date.now();
+      const finished = await untilSent(body.id, 300_000);
+      const sending = Date.now() - sendStarted;
+
       expect(finished.sent).toBe(total);
       expect(finished.failed).toBe(0);
       expect(finished.state).toBe('sent');
-    }, 180_000);
+
+      // AP 3 of phase 5: the mails go out with a pause between them, and two
+      // hundred of them therefore take *minutes* rather than seconds. That is
+      // the point — two hundred messages in twenty seconds is how an instance
+      // gets itself throttled by a shared mail service, or blacklisted on the
+      // domain it also receives its own mail on. The bound is deliberately far
+      // below what the end-to-end profile's shortened pause produces
+      // (`apps/server/.env.serve-e2e`), so this stays true of a run against
+      // the shipped default as well, where it takes longer still.
+      expect(sending).toBeGreaterThan(20_000);
+    }, 360_000);
   });
 });

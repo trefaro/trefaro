@@ -183,3 +183,47 @@ describe('loadEnv — rate limits (E60)', () => {
     );
   });
 });
+
+describe('loadEnv — the mail server (E62)', () => {
+  /** Production refuses to start without a mail server at all. */
+  const withMailServer = {
+    ...productionBase,
+    SMTP_HOST: 'mail.example.org',
+    SMTP_FROM: 'Example NGO <events@example.org>',
+  };
+
+  it('requires encryption in production and not in development', () => {
+    expect(loadEnv({}).smtp.requireTls).toBe(false);
+    expect(loadEnv(withMailServer).smtp.requireTls).toBe(true);
+  });
+
+  /*
+   * The one way to switch it off, and the reason it is a variable at all: an
+   * organization whose mail server sits on the same host and speaks no
+   * STARTTLS has to be able to say so — in an `.env`, where it is visible and
+   * where the startup log can complain about it (E62).
+   */
+  it('lets a production instance say it cannot encrypt', () => {
+    expect(
+      loadEnv({ ...withMailServer, SMTP_REQUIRE_TLS: 'false' }).smtp.requireTls,
+    ).toBe(false);
+  });
+
+  it('defaults the pause between two mails to a second', () => {
+    expect(loadEnv({}).smtp.pauseBetweenMailsMs).toBe(1000);
+  });
+
+  it('takes the pause from the environment', () => {
+    expect(
+      loadEnv({ SMTP_PAUSE_BETWEEN_MAILS_MS: '150' }).smtp.pauseBetweenMailsMs,
+    ).toBe(150);
+  });
+
+  // Zero is not a pause, and a sender without one is the state this package
+  // was written to end.
+  it('refuses a pause that is not a positive integer', () => {
+    expect(() => loadEnv({ SMTP_PAUSE_BETWEEN_MAILS_MS: '0' })).toThrow(
+      /SMTP_PAUSE_BETWEEN_MAILS_MS must be a positive integer/,
+    );
+  });
+});
