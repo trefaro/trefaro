@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type {
   EventSeriesTranslation,
   EventSeriesTranslations,
@@ -17,6 +17,7 @@ import type {
   ContentTranslationRecord,
   ContentTranslationRepository,
 } from '../common/ports/content-translation.port';
+import { refuse } from '../common/problem';
 import { EventSeriesService } from '../event-series/event-series.service';
 import {
   EVENT_SERIES_TRANSLATION_REPOSITORY,
@@ -216,9 +217,7 @@ export class ContentTranslationsService {
   private canonical(locale: string): string {
     const tag = canonicalLocaleTag(locale);
     if (tag === null) {
-      throw new BadRequestException(
-        'locale must be a BCP 47 language tag such as de or de-AT',
-      );
+      throw refuse('problem.locale.tag', { field: 'locale' });
     }
     return tag;
   }

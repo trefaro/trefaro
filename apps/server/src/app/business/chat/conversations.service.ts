@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ForbiddenException,
   Inject,
   Injectable,
@@ -18,6 +17,7 @@ import {
   SEARCHABLE_PROFILE_REPOSITORY,
   type SearchableProfileRepository,
 } from '../common/ports/searchable-profile.repository';
+import { refuse } from '../common/problem';
 import { avatarUrl } from '../profiles';
 import { ChatRealtimeService } from './chat-realtime.service';
 import {
@@ -103,9 +103,7 @@ export class ConversationsService {
     profileId: string,
   ): Promise<ConversationSummary> {
     if (profileId === viewerId) {
-      throw new BadRequestException(
-        'A conversation has two sides. There is no conversation with oneself.',
-      );
+      throw refuse('problem.chat.withOneself');
     }
 
     // The one moment `searchable` is asked about (E37). Through the port whose

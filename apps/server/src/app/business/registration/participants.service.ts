@@ -1,10 +1,4 @@
-import {
-  ConflictException,
-  Inject,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type {
   ParticipantDetail,
   ParticipantPage,
@@ -25,6 +19,7 @@ import {
 } from '@trefaro/shared-models';
 import { AttachmentsService } from '../attachments';
 import { pageWindow } from '../common/page-window';
+import { conflict } from '../common/problem';
 import { searchTerms } from '../common/search-terms';
 import {
   PROFILE_DIRECTORY,
@@ -311,19 +306,13 @@ export class ParticipantsService {
     if (status === 'cancelled') return;
 
     if (status === 'confirmed' && !registration.confirmedAt) {
-      throw new ConflictException(
-        'This address has never been confirmed, so the registration cannot be ' +
-          'set to confirmed. Ask the participant to submit the form again — ' +
-          'that re-sends the confirmation mail without creating a second entry.',
-      );
+      throw conflict('problem.registration.neverConfirmed');
     }
     if (
       status === 'pending' &&
       (registration.status !== 'cancelled' || registration.confirmedAt)
     ) {
-      throw new ConflictException(
-        'Only a cancelled registration that was never confirmed can go back to pending.',
-      );
+      throw conflict('problem.registration.notPendable');
     }
   }
 

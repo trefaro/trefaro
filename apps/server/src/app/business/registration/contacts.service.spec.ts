@@ -1,4 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { refusalOf } from '../common/problem';
 import { ContactsService } from './contacts.service';
 import type {
   RegistrationRecord,
@@ -149,7 +150,14 @@ describe('ContactsService', () => {
       // Refused rather than silently skipped: an organizer who selected eighty
       // people and reached seventy-nine has no way to find the missing one.
       await expect(failure).rejects.toBeInstanceOf(BadRequestException);
-      await expect(failure).rejects.toThrow(/1 of the selected addresses/);
+      expect(refusalOf(await failure.catch((error: unknown) => error))).toEqual(
+        {
+          code: 'problem.contacts.someGone',
+          // The count is what an organizer acts on, so it travels as a value
+          // rather than being baked into a sentence (E64).
+          params: { count: 1 },
+        },
+      );
     });
 
     it('collapses two registrations of one address into one recipient', async () => {

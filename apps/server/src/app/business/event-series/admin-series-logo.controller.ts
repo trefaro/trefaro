@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Controller,
   Delete,
   Param,
@@ -29,6 +28,7 @@ import {
   IMAGE_UPLOAD_OPTIONS,
   type ImageMultipartFile,
 } from '../common/image-upload';
+import { refuse } from '../common/problem';
 import { LogoImageDto, LogoImageUploadDto } from '../logo-files';
 import { EventSeriesService } from './event-series.service';
 
@@ -81,9 +81,9 @@ export class AdminSeriesLogoController {
     @UploadedFile() file: ImageMultipartFile | undefined,
   ): Promise<LogoImageDto> {
     if (!file) {
-      throw new BadRequestException(
-        `Send the image in a multipart part called "${BRANDING_IMAGE_PART}".`,
-      );
+      throw refuse('problem.branding.imagePartMissing', {
+        part: BRANDING_IMAGE_PART,
+      });
     }
 
     return {

@@ -262,4 +262,72 @@ describe('MyRegistrationPage', () => {
     expect(text()).toContain('Keep this link to yourself');
     expect(text()).toContain('Cancel my registration');
   });
+
+  it('keeps the answer to the language it asked for last, whatever arrives later', async () => {
+    const service = new DeferredSelfService();
+    const locale = signal('en');
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: AppConfigService, useValue: new StubAppConfig() },
+        { provide: PluginLoaderService, useValue: new StubLoader() },
+        provideTranslationsForTest(),
+        { provide: SelfServiceService, useValue: service },
+        {
+          provide: TranslationService,
+          useValue: {
+            locale,
+            translate: (key: string) => key,
+            stringsWithPrefix: () => ({}),
+          },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(MyRegistrationPage);
+    fixture.componentRef.setInput('token', 'signed.token');
+    fixture.detectChanges();
+
+    locale.set('de');
+    fixture.detectChanges();
+    expect(service.calls.map((call) => call.locale)).toEqual(['en', 'de']);
+    const [english, german] = service.calls;
+    const text = () => String(fixture.nativeElement.textContent);
+
+    // The later request answers first — a loaded server, a slow first byte.
+    german.resolve('Auftakt in Köln');
+    await settle(fixture);
+    expect(text()).toContain('Auftakt in Köln');
+
+    // And then the answer nobody is waiting for any more: the titles of the
+    // sessions are the server's translations, so a late English answer would
+    // put an English programme under a German page.
+    english.resolve('Kickoff in Cologne');
+    await settle(fixture);
+    expect(text()).toContain('Auftakt in Köln');
+    expect(text()).not.toContain('Kickoff in Cologne');
+  });
 });
+
+/** The registration read, handed out one answer at a time. */
+class DeferredSelfService {
+  readonly calls: { locale: string; resolve: (name: string) => void }[] = [];
+
+  view(_access: SelfServiceAccess, locale: string): Promise<MyRegistration> {
+    return new Promise((resolve) => {
+      this.calls.push({
+        locale,
+        resolve: (name: string) =>
+          resolve({
+            ...registration(),
+            event: { ...EVENT, name },
+          } as MyRegistration),
+      });
+    });
+  }
+}
+
+/** Lets the promises the page awaits settle, then redraws. */
+async function settle(fixture: { detectChanges(): void }): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  fixture.detectChanges();
+}

@@ -103,8 +103,10 @@ interface Answer {
     } @else if (error(); as problem) {
       <p class="notice" role="alert">
         {{ problem.key | transloco }}
-        @if (problem.detail; as detail) {
-          <span class="notice__detail">{{ detail }}</span>
+        @if (problem.reason; as reason) {
+          <span class="notice__detail">{{
+            reason.code | transloco: reason.params
+          }}</span>
         }
       </p>
     } @else {
@@ -289,7 +291,7 @@ export class PersonPage {
         key: isRefused(error)
           ? 'people.detail.writeRefused'
           : 'people.detail.writeFailed',
-        detail: null,
+        reason: null,
       });
     } finally {
       this.opening.set(false);
@@ -308,7 +310,7 @@ export class PersonPage {
       // "no profile of that id is in the search" does not).
       this.error.set(
         isMissing(error)
-          ? { key: 'people.detail.notFound', detail: null }
+          ? { key: 'people.detail.notFound', reason: null }
           : problemOf(error, 'people.detail.error'),
       );
     }

@@ -94,8 +94,10 @@ import {
         @if (error(); as problem) {
           <p class="notice" role="alert">
             {{ problem.key | transloco }}
-            @if (problem.detail; as detail) {
-              <span class="notice__detail">{{ detail }}</span>
+            @if (problem.reason; as reason) {
+              <span class="notice__detail">{{
+                reason.code | transloco: reason.params
+              }}</span>
             }
           </p>
         }
@@ -214,8 +216,10 @@ import {
       <h1>{{ 'mine.title' | transloco }}</h1>
       <p class="notice" role="alert">
         {{ problem.key | transloco }}
-        @if (problem.detail; as detail) {
-          <span class="notice__detail">{{ detail }}</span>
+        @if (problem.reason; as reason) {
+          <span class="notice__detail">{{
+            reason.code | transloco: reason.params
+          }}</span>
         }
       </p>
       <p>
@@ -394,6 +398,17 @@ export class MyRegistrationPage {
   protected readonly error = signal<Problem | null>(null);
   protected readonly busy = signal(false);
 
+  /**
+   * Counts the reads, so a late answer to an earlier one is dropped.
+   *
+   * Two loads are in flight the moment somebody switches the language before
+   * the first has arrived, and the answers come back in the order of the
+   * network. The session titles are the server's translations, so a late
+   * English answer would put an English programme under a German page
+   * (AP 5 of phase 5).
+   */
+  private loadSequence = 0;
+
   constructor() {
     // The language is read here so a switch re-runs the effect: the event's name
     // and the session titles are translated on the server (FR 3.12).
@@ -529,10 +544,14 @@ export class MyRegistrationPage {
     locale: string,
   ): Promise<void> {
     if (!access) return;
+    const run = ++this.loadSequence;
     this.error.set(null);
     try {
-      this.registration.set(await this.selfService.view(access, locale));
+      const mine = await this.selfService.view(access, locale);
+      if (run !== this.loadSequence) return;
+      this.registration.set(mine);
     } catch (error: unknown) {
+      if (run !== this.loadSequence) return;
       this.registration.set(null);
       this.report(error, 'mine.error.load');
     }

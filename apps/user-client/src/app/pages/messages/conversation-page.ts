@@ -112,8 +112,10 @@ interface Line {
       @if (error(); as problem) {
         <p class="notice" role="alert">
           {{ problem.key | transloco: problem.params }}
-          @if (problem.detail; as detail) {
-            <span class="notice__detail">{{ detail }}</span>
+          @if (problem.reason; as reason) {
+            <span class="notice__detail">{{
+              reason.code | transloco: reason.params
+            }}</span>
           }
         </p>
       }
@@ -573,7 +575,7 @@ export class ConversationPage {
     if (!BRANDING_MIME_TYPES.includes(file.type)) {
       this.error.set({
         key: 'chat.compose.wrongType',
-        detail: null,
+        reason: null,
         params: { hint: this.typeHint() },
       });
       this.reset();
@@ -583,7 +585,7 @@ export class ConversationPage {
     if (file.size > MAX_MESSAGE_IMAGE_BYTES) {
       this.error.set({
         key: 'chat.compose.tooLarge',
-        detail: null,
+        reason: null,
         params: {
           size: formatBytes(file.size, this.i18n.locale()),
           hint: this.typeHint(),

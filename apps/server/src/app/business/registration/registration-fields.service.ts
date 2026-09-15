@@ -1,11 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-  PayloadTooLargeException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   CustomFieldValue,
   CustomFieldValues,
@@ -41,6 +34,7 @@ import {
   selectOptions,
   unknownFieldKeys,
 } from '../common/field-kit';
+import { conflict, refuse, tooLarge } from '../common/problem';
 import { EventsService } from '../events';
 import {
   REGISTRATION_FIELD_REPOSITORY,
@@ -141,26 +135,29 @@ export class RegistrationFieldsService {
 
     const existing = await this.fields.findByEvent(eventId);
     if (existing.length >= MAX_REGISTRATION_FIELDS) {
-      throw new ConflictException(
-        `A registration form holds at most ${MAX_REGISTRATION_FIELDS} extra ` +
-          'fields. Remove one before adding another.',
-      );
+      throw conflict('problem.registrationField.tooMany', {
+        max: MAX_REGISTRATION_FIELDS,
+      });
     }
 
     if (input.type === 'file') {
       const files = existing.filter((field) => field.type === 'file').length;
       if (files >= MAX_FILE_FIELDS) {
-        throw new ConflictException(
-          `A form asks for at most ${MAX_FILE_FIELDS} files. Remove one ` +
-            'before adding another.',
-        );
+        throw conflict('problem.registrationField.tooManyFiles', {
+          max: MAX_FILE_FIELDS,
+        });
       }
     }
 
-    const label = fieldLabel(input.label, 'participants');
+    const label = fieldLabel(input.label);
     const key = firstFreeFieldKey(
       existing.map((field) => field.key),
-      requestedFieldKey(input.key, label, RESERVED_KEYS, 'the registration'),
+      requestedFieldKey(
+        input.key,
+        label,
+        RESERVED_KEYS,
+        'problem.field.keyReservedByRegistration',
+      ),
     );
 
     try {
@@ -201,7 +198,7 @@ export class RegistrationFieldsService {
     const updated = await this.fields.update(id, {
       ...(change.label === undefined
         ? {}
-        : { label: fieldLabel(change.label, 'participants') }),
+        : { label: fieldLabel(change.label) }),
       ...(change.helpText === undefined
         ? {}
         : { helpText: optionalHelpText(change.helpText) }),
@@ -252,16 +249,13 @@ export class RegistrationFieldsService {
 
     const wanted = new Set(ids);
     if (wanted.size !== ids.length) {
-      throw new BadRequestException('The new order lists a field twice.');
+      throw refuse('problem.registrationField.orderTwice');
     }
     if (
       wanted.size !== existing.length ||
       existing.some((field) => !wanted.has(field.id))
     ) {
-      throw new BadRequestException(
-        'The new order has to list every field of this event exactly once — ' +
-          'reload the form and try again.',
-      );
+      throw refuse('problem.registrationField.orderIncomplete');
     }
 
     return (await this.fields.reorder(eventId, ids)).map(toField);
@@ -295,11 +289,9 @@ export class RegistrationFieldsService {
     const known = new Map(definitions.map((field) => [field.key, field]));
     const unknown = unknownFieldKeys(given, new Set(known.keys()));
     if (unknown.length > 0) {
-      throw new BadRequestException(
-        `This registration form has no field called ${unknown
-          .map((key) => `"${key}"`)
-          .join(', ')}.`,
-      );
+      throw refuse('problem.registrationField.unknown', {
+        keys: unknown.join(', '),
+      });
     }
     this.assertFilesBelong(known, files);
     this.assertFitsInOneRequest(files);
@@ -330,11 +322,10 @@ export class RegistrationFieldsService {
   private assertFitsInOneRequest(files: readonly UploadedFile[]): void {
     const total = files.reduce((sum, file) => sum + file.bytes.length, 0);
     if (total > MAX_SUBMISSION_BYTES) {
-      throw new PayloadTooLargeException(
-        `One registration carries at most ${formatBytes(MAX_SUBMISSION_BYTES)} ` +
-          `of files; these are ${formatBytes(total)}. Please send fewer or ` +
-          'smaller files.',
-      );
+      throw tooLarge('problem.upload.submissionTooLarge', {
+        max: formatBytes(MAX_SUBMISSION_BYTES),
+        size: formatBytes(total),
+      });
     }
   }
 
@@ -352,14 +343,12 @@ export class RegistrationFieldsService {
     for (const upload of files) {
       const field = known.get(upload.fieldKey);
       if (!field) {
-        throw new BadRequestException(
-          `This registration form has no field called "${upload.fieldKey}".`,
-        );
+        throw refuse('problem.upload.unknownField', {
+          key: upload.fieldKey,
+        });
       }
       if (field.type !== 'file') {
-        throw new BadRequestException(
-          `"${field.label}" is not answered with a file.`,
-        );
+        throw refuse('problem.upload.notAFileField', { label: field.label });
       }
     }
   }
@@ -379,16 +368,15 @@ export class RegistrationFieldsService {
     value: CustomFieldValue | undefined,
   ): UploadedFile | undefined {
     if (value !== undefined) {
-      throw new BadRequestException(
-        `"${field.label}" is answered with a file, not with a value.`,
-      );
+      throw refuse('problem.upload.notAValueField', { label: field.label });
     }
 
     const parts = files.filter((upload) => upload.fieldKey === field.key);
     if (parts.length > 1) {
-      throw new BadRequestException(
-        `"${field.label}" takes one file, and ${parts.length} were sent.`,
-      );
+      throw refuse('problem.upload.tooMany', {
+        label: field.label,
+        count: parts.length,
+      });
     }
 
     const upload = parts[0];
@@ -398,31 +386,38 @@ export class RegistrationFieldsService {
     }
 
     if (upload.bytes.length === 0) {
-      throw new BadRequestException(`The file for "${field.label}" is empty.`);
+      throw refuse('problem.upload.empty', { label: field.label });
     }
 
     // A browser may append a charset; the type is what precedes it.
     const mimeType = (upload.mimeType.split(';')[0] ?? '').trim().toLowerCase();
     if (!field.accept.includes(mimeType)) {
-      throw new BadRequestException(
-        `"${field.label}" takes ${field.accept
-          .map(uploadTypeLabel)
-          .join(', ')} — this file says it is ${mimeType || 'of no type'}.`,
-      );
+      const types = field.accept.map(uploadTypeLabel).join(', ');
+      // Two codes rather than a placeholder that is sometimes empty: a browser
+      // that sends no type at all leaves a gap in the middle of the sentence,
+      // and a gap is not a reason.
+      throw mimeType
+        ? refuse('problem.upload.type', {
+            label: field.label,
+            types,
+            type: mimeType,
+          })
+        : refuse('problem.upload.typeUnknown', { label: field.label, types });
     }
 
     const limit = field.maxSizeBytes ?? MAX_UPLOAD_BYTES;
     if (upload.bytes.length > limit) {
-      throw new BadRequestException(
-        `"${field.label}" takes files up to ${formatBytes(limit)}; this one is ` +
-          `${formatBytes(upload.bytes.length)}.`,
-      );
+      throw refuse('problem.upload.tooLarge', {
+        label: field.label,
+        max: formatBytes(limit),
+        size: formatBytes(upload.bytes.length),
+      });
     }
 
     if (!matchesSignature(mimeType, upload.bytes)) {
-      throw new BadRequestException(
-        `This file is not ${uploadTypeLabel(mimeType)}, whatever it is called.`,
-      );
+      throw refuse('problem.upload.typeMismatch', {
+        type: uploadTypeLabel(mimeType),
+      });
     }
 
     return {
@@ -449,9 +444,7 @@ export class RegistrationFieldsService {
       // Not reachable — the caller routes file fields to `upload` instead. It
       // is written out so that the narrowing below belongs to the compiler
       // rather than to a cast at a boundary.
-      throw new BadRequestException(
-        `"${field.label}" is answered with a file, not with a value.`,
-      );
+      throw refuse('problem.upload.notAValueField', { label: field.label });
     }
 
     return checkAnswer(
@@ -488,9 +481,7 @@ export class RegistrationFieldsService {
   ): readonly string[] {
     if (type !== 'file') {
       if (values && values.length > 0) {
-        throw new BadRequestException(
-          'Only a file field has accepted file types.',
-        );
+        throw refuse('problem.registrationField.acceptWithoutFile');
       }
       return [];
     }
@@ -503,19 +494,17 @@ export class RegistrationFieldsService {
       ),
     ];
     if (accept.length === 0) {
-      throw new BadRequestException(
-        'A file field needs at least one accepted file type.',
-      );
+      throw refuse('problem.registrationField.noAcceptedTypes');
     }
 
     const unsupported = accept.filter(
       (mimeType) => !UPLOAD_MIME_TYPES.includes(mimeType),
     );
     if (unsupported.length > 0) {
-      throw new BadRequestException(
-        `This instance does not store ${unsupported.join(', ')}. It accepts ` +
-          `${UPLOAD_TYPES.map((entry) => entry.label).join(', ')}.`,
-      );
+      throw refuse('problem.registrationField.unsupportedTypes', {
+        types: unsupported.join(', '),
+        accepted: UPLOAD_TYPES.map((entry) => entry.label).join(', '),
+      });
     }
     return accept;
   }
@@ -533,7 +522,7 @@ export class RegistrationFieldsService {
   ): number | null {
     if (type !== 'file') {
       if (value !== undefined && value !== null) {
-        throw new BadRequestException('Only a file field has a size limit.');
+        throw refuse('problem.registrationField.limitWithoutFile');
       }
       return null;
     }
@@ -544,17 +533,17 @@ export class RegistrationFieldsService {
       bytes < MIN_UPLOAD_MAX_BYTES ||
       bytes > MAX_UPLOAD_BYTES
     ) {
-      throw new BadRequestException(
-        `A file field's limit is between ${formatBytes(MIN_UPLOAD_MAX_BYTES)} ` +
-          `and ${formatBytes(MAX_UPLOAD_BYTES)}.`,
-      );
+      throw refuse('problem.registrationField.sizeRange', {
+        min: formatBytes(MIN_UPLOAD_MAX_BYTES),
+        max: formatBytes(MAX_UPLOAD_BYTES),
+      });
     }
     return bytes;
   }
 
   private translate(error: unknown): unknown {
     return error instanceof RegistrationFieldKeyTakenError
-      ? new ConflictException(`${error.message} — please give it another one.`)
+      ? conflict('problem.registrationField.keyTaken', { key: error.key })
       : error;
   }
 }

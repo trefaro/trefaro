@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Injectable,
   ValidationPipe,
   type ArgumentMetadata,
@@ -8,6 +7,7 @@ import {
 import { REGISTRATION_PAYLOAD_PART } from '@trefaro/shared-models';
 import type { UploadedFile } from '../attachments';
 import { VALIDATION_PIPE_OPTIONS } from '../../core/validation';
+import { refuse } from '../common/problem';
 import { CreateRegistrationDto } from './dto/create-registration.dto';
 
 /**
@@ -58,18 +58,18 @@ function unwrap(value: unknown): unknown {
     (key) => key !== REGISTRATION_PAYLOAD_PART,
   );
   if (extra.length > 0) {
-    throw new BadRequestException(
-      `A multipart registration carries its fields in the "${REGISTRATION_PAYLOAD_PART}" ` +
-        `part and its files in one part per field — not in ${extra.join(', ')}.`,
-    );
+    throw refuse('problem.registration.strayParts', {
+      part: REGISTRATION_PAYLOAD_PART,
+      parts: extra.join(', '),
+    });
   }
 
   try {
     return JSON.parse(payload);
   } catch {
-    throw new BadRequestException(
-      `The "${REGISTRATION_PAYLOAD_PART}" part is not valid JSON.`,
-    );
+    throw refuse('problem.registration.payloadNotJson', {
+      part: REGISTRATION_PAYLOAD_PART,
+    });
   }
 }
 

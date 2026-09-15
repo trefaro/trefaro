@@ -44,8 +44,10 @@ import { SelfServiceService } from '../../features/self-service/self-service.ser
     @if (error(); as problem) {
       <p class="notice" role="alert">
         {{ problem.key | transloco }}
-        @if (problem.detail; as detail) {
-          <span class="notice__detail">{{ detail }}</span>
+        @if (problem.reason; as reason) {
+          <span class="notice__detail">{{
+            reason.code | transloco: reason.params
+          }}</span>
         }
       </p>
     }
@@ -189,6 +191,16 @@ export class MyRegistrationsPage {
 
   protected readonly more = computed(() => this.rows().length < this.total());
 
+  /**
+   * Counts the reads, so a late answer to an earlier one is dropped.
+   *
+   * The same guard the landing page has had since AP 5 of phase 4, and this
+   * list needs it most: a late answer here would not merely replace the rows
+   * but be **appended** to them, because a second page arrives the same way —
+   * a German list with an English page two under it (AP 5 of phase 5).
+   */
+  private loadSequence = 0;
+
   constructor() {
     // The language is read here so a switch re-runs the effect: the event names
     // are translated on the server (FR 3.12). A switch starts the list over,
@@ -222,10 +234,12 @@ export class MyRegistrationsPage {
     locale: string,
     append: boolean,
   ): Promise<void> {
+    const run = ++this.loadSequence;
     this.busy.set(true);
     this.error.set(null);
     try {
       const answer = await this.selfService.listMine(locale, page);
+      if (run !== this.loadSequence) return;
       this.rows.update((rows) =>
         append ? [...rows, ...answer.rows] : answer.rows,
       );
@@ -233,6 +247,7 @@ export class MyRegistrationsPage {
       this.page.set(answer.page);
       this.loaded.set(true);
     } catch (error: unknown) {
+      if (run !== this.loadSequence) return;
       // The list that is on screen stays there: a failed second page is no
       // reason to take the first one away.
       if (!append) {
@@ -241,7 +256,7 @@ export class MyRegistrationsPage {
       }
       this.error.set(problemOf(error, 'mine.list.error'));
     } finally {
-      this.busy.set(false);
+      if (run === this.loadSequence) this.busy.set(false);
     }
   }
 }

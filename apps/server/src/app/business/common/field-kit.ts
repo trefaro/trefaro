@@ -1,9 +1,10 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import type { BadRequestException } from '@nestjs/common';
 import type { CustomFieldValue } from '@trefaro/shared-models';
 import {
   MAX_CUSTOM_TEXT_LENGTH,
   MAX_FIELD_OPTIONS,
 } from '@trefaro/shared-models';
+import { conflict, refuse } from './problem';
 import { isSlug, slugify } from './slug';
 
 /**
@@ -70,16 +71,14 @@ export function checkAnswer(
       return undefined;
     }
     if (typeof value !== 'boolean') {
-      throw new BadRequestException(
-        `"${field.label}" is a checkbox and takes true or false.`,
-      );
+      throw refuse('problem.field.checkbox', { label: field.label });
     }
     if (field.required && !value) throw missingAnswer(field);
     return value;
   }
 
   if (value !== undefined && typeof value !== 'string') {
-    throw new BadRequestException(`"${field.label}" takes text.`);
+    throw refuse('problem.field.takesText', { label: field.label });
   }
 
   // An empty string is no answer at all (F36): "answered with nothing" and
@@ -92,17 +91,19 @@ export function checkAnswer(
 
   if (field.type === 'select') {
     if (!field.options.includes(text)) {
-      throw new BadRequestException(
-        `"${text}" is not one of the choices for "${field.label}".`,
-      );
+      throw refuse('problem.field.notAChoice', {
+        value: text,
+        label: field.label,
+      });
     }
     return text;
   }
 
   if (text.length > MAX_CUSTOM_TEXT_LENGTH) {
-    throw new BadRequestException(
-      `"${field.label}" takes at most ${MAX_CUSTOM_TEXT_LENGTH} characters.`,
-    );
+    throw refuse('problem.field.tooLong', {
+      label: field.label,
+      max: MAX_CUSTOM_TEXT_LENGTH,
+    });
   }
   return text;
 }
@@ -111,15 +112,13 @@ export function checkAnswer(
 export function missingAnswer(field: {
   readonly label: string;
 }): BadRequestException {
-  return new BadRequestException(`"${field.label}" is required.`);
+  return refuse('problem.field.required', { label: field.label });
 }
 
 /** A label somebody reads — trimmed, and never empty. */
-export function fieldLabel(value: string, readers: string): string {
+export function fieldLabel(value: string): string {
   const label = value.trim();
-  if (label.length === 0) {
-    throw new BadRequestException(`A field needs a label ${readers} read.`);
-  }
+  if (label.length === 0) throw refuse('problem.field.labelMissing');
   return label;
 }
 
@@ -145,9 +144,7 @@ export function selectOptions(
 ): readonly string[] {
   if (!isSelect) {
     if (values && values.length > 0) {
-      throw new BadRequestException(
-        'Only a selection field has choices to offer.',
-      );
+      throw refuse('problem.field.optionsWithoutSelect');
     }
     return [];
   }
@@ -155,16 +152,9 @@ export function selectOptions(
   const options = [
     ...new Set((values ?? []).map((value) => value.trim()).filter(Boolean)),
   ];
-  if (options.length === 0) {
-    throw new BadRequestException(
-      'A selection field needs at least one choice.',
-    );
-  }
+  if (options.length === 0) throw refuse('problem.field.noChoices');
   if (options.length > MAX_FIELD_OPTIONS) {
-    throw new BadRequestException(
-      `A selection field offers at most ${MAX_FIELD_OPTIONS} choices — ` +
-        'beyond that a text field asks the question better.',
-    );
+    throw refuse('problem.field.tooManyChoices', { max: MAX_FIELD_OPTIONS });
   }
   return options;
 }
@@ -176,30 +166,30 @@ export function selectOptions(
  * has to match something outside this application, and quietly rewriting it
  * into something similar would defeat the only reason to send one.
  *
- * `owns` names whoever already uses the reserved keys, so the message tells an
- * organizer which form they collided with ("the registration", "a profile").
+ * `reservedBy` is the refusal of whichever kit already uses the reserved keys,
+ * so the message tells an organizer which form they collided with. A code per
+ * kit rather than one code with the owner as a value: the owner stands in the
+ * middle of the sentence, and German does not put it where English does (F79).
  */
 export function requestedFieldKey(
   requested: string | undefined,
   label: string,
   reserved: readonly string[],
-  owns: string,
+  reservedBy: ReservedFieldKeyProblem,
 ): string {
   const cleaned =
     requested === undefined ? slugify(label) : requested.trim().toLowerCase();
   if (requested !== undefined && !isSlug(cleaned)) {
-    throw new BadRequestException(
-      'A field key is made of lower-case letters, digits and single hyphens.',
-    );
+    throw refuse('problem.field.keyShape');
   }
-  if (reserved.includes(cleaned)) {
-    throw new ConflictException(
-      `"${cleaned}" is what ${owns} already calls one of its own fields. ` +
-        'Please phrase the question differently, or give the field its own key.',
-    );
-  }
+  if (reserved.includes(cleaned)) throw conflict(reservedBy, { key: cleaned });
   return cleaned;
 }
+
+/** Which kit a reserved key belongs to — see {@link requestedFieldKey}. */
+export type ReservedFieldKeyProblem =
+  | 'problem.field.keyReservedByProfile'
+  | 'problem.field.keyReservedByRegistration';
 
 /**
  * First free variant among the keys already taken: `diet`, then `diet-2`, …
@@ -220,9 +210,7 @@ export function firstFreeFieldKey(
     if (!used.has(candidate)) return candidate;
   }
 
-  throw new ConflictException(
-    `Could not derive a free key from "${root}" — please give the field one.`,
-  );
+  throw conflict('problem.field.noFreeKey', { root });
 }
 
 /**

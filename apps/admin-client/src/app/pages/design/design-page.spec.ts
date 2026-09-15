@@ -216,8 +216,11 @@ describe('DesignPage', () => {
     const { fixture, page } = await render();
     admin.failWith = {
       status: 400,
-      message: 'Not a hexadecimal colour.',
-      explained: true,
+      message: 'problem.config.colour',
+      refusal: {
+        code: 'problem.config.colour',
+        params: { field: 'primaryColor' },
+      },
     };
     page.form.patchValue({ organizationName: 'Kept' });
     fixture.detectChanges();
@@ -226,7 +229,10 @@ describe('DesignPage', () => {
     fixture.detectChanges();
 
     expect(page.error()?.key).toBe('admin.design.errorSave');
-    expect(page.error()?.detail).toBe('Not a hexadecimal colour.');
+    expect(page.error()?.reason).toEqual({
+      code: 'problem.config.colour',
+      params: { field: 'primaryColor' },
+    });
     expect(page.form.getRawValue()['organizationName']).toBe('Kept');
     expect(page.changed()).toBe(true);
   });

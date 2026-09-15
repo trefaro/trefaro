@@ -1,11 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type {
   EventStatus,
   EventTranslation,
@@ -13,8 +6,14 @@ import type {
   OrganizerEvent,
   PublicEvent,
 } from '@trefaro/shared-models';
-import { hasEnded, isTimeZone, publicEventPath } from '@trefaro/shared-models';
+import {
+  hasEnded,
+  isTimeZone,
+  type ProblemCode,
+  publicEventPath,
+} from '@trefaro/shared-models';
 import { AttachmentsService } from '../attachments';
+import { conflict, refuse } from '../common/problem';
 import { isSlug, slugify } from '../common/slug';
 import { EventSeriesService } from '../event-series/event-series.service';
 import {
@@ -51,10 +50,22 @@ const MAX_SLUG_ATTEMPTS = 50;
  * The messages below end up in front of an organizer, and "A online event" is
  * the kind of detail that makes a tool feel unfinished.
  */
-const TYPE_IN_PROSE: Readonly<Record<EventType, string>> = {
-  onsite: 'An on-site event',
-  online: 'An online event',
-  hybrid: 'A hybrid event',
+/**
+ * Which refusal an event type gets when it is published without a place.
+ *
+ * A code per type rather than one code with the type as a value: the type is
+ * the subject of the sentence, and a sentence built around a fragment is not a
+ * translation unit (F79). An online event has no venue to miss and an on-site
+ * one no link, so two of the six combinations do not exist.
+ */
+const VENUE_NEEDED: Readonly<Record<'onsite' | 'hybrid', ProblemCode>> = {
+  onsite: 'problem.event.venueNeeded.onsite',
+  hybrid: 'problem.event.venueNeeded.hybrid',
+};
+
+const LINK_NEEDED: Readonly<Record<'online' | 'hybrid', ProblemCode>> = {
+  online: 'problem.event.linkNeeded.online',
+  hybrid: 'problem.event.linkNeeded.hybrid',
 };
 
 export interface CreateEventInput {
@@ -423,8 +434,11 @@ export class EventsService {
   async delete(id: string): Promise<void> {
     const confirmed = await this.registrations.confirmedForEvent(id);
     if (confirmed > 0) {
-      throw new ConflictException(
-        `This event has ${confirmed} confirmed registration${confirmed === 1 ? '' : 's'} — archive it instead of deleting it.`,
+      throw conflict(
+        confirmed === 1
+          ? 'problem.event.hasRegistrations.one'
+          : 'problem.event.hasRegistrations.many',
+        { count: confirmed },
       );
     }
     const existing = await this.require(id);
@@ -516,18 +530,13 @@ export class EventsService {
   ): void {
     if (status !== 'published') return;
 
-    const needsVenue = place.eventType !== 'online';
-    const needsLink = place.eventType !== 'onsite';
-
-    if (needsVenue && !place.venueName) {
-      throw new BadRequestException(
-        `${TYPE_IN_PROSE[place.eventType]} needs a venue before it can be published`,
-      );
+    // Written as the narrowing rather than as a `needsVenue` flag, so the
+    // compiler knows which of the two tables can be asked.
+    if (place.eventType !== 'online' && !place.venueName) {
+      throw refuse(VENUE_NEEDED[place.eventType]);
     }
-    if (needsLink && !place.onlineUrl) {
-      throw new BadRequestException(
-        `${TYPE_IN_PROSE[place.eventType]} needs a link before it can be published`,
-      );
+    if (place.eventType !== 'onsite' && !place.onlineUrl) {
+      throw refuse(LINK_NEEDED[place.eventType]);
     }
   }
 
@@ -541,10 +550,10 @@ export class EventsService {
     const start = new Date(startsAt);
     const end = new Date(endsAt);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-      throw new BadRequestException('Start and end have to be valid dates');
+      throw refuse('problem.event.unparsableDates');
     }
     if (end.getTime() < start.getTime()) {
-      throw new BadRequestException('An event cannot end before it starts');
+      throw refuse('problem.event.endsBeforeStart');
     }
     return { startsAt: start, endsAt: end };
   }
@@ -552,9 +561,7 @@ export class EventsService {
   private timezone(value: string): string {
     const timezone = value.trim();
     if (!isTimeZone(timezone)) {
-      throw new BadRequestException(
-        `"${value}" is not a time zone — use an IANA name such as Europe/Berlin`,
-      );
+      throw refuse('problem.event.timeZone', { value });
     }
     return timezone;
   }
@@ -564,9 +571,7 @@ export class EventsService {
       ...new Set(values.map((value) => value.trim()).filter(Boolean)),
     ];
     if (languages.length === 0) {
-      throw new BadRequestException(
-        'Name at least one language the event is held in',
-      );
+      throw refuse('problem.event.languagesMissing');
     }
     return languages;
   }
@@ -577,9 +582,7 @@ export class EventsService {
 
     const cleaned = slugify(requested);
     if (!isSlug(cleaned)) {
-      throw new ConflictException(
-        'The address must contain letters or digits — try one made of words and hyphens',
-      );
+      throw conflict('problem.event.slugShape');
     }
     return cleaned;
   }
@@ -602,16 +605,12 @@ export class EventsService {
       if (!taken || taken.id === exceptId) return candidate;
     }
 
-    throw new ConflictException(
-      `Could not derive a free address from "${root}" — please choose one`,
-    );
+    throw conflict('problem.event.noFreeSlug', { root });
   }
 
   private translate(error: unknown): unknown {
     return error instanceof EventSlugTakenError
-      ? new ConflictException(
-          `${error.message} — please choose another address`,
-        )
+      ? conflict('problem.event.slugTaken', { slug: error.slug })
       : error;
   }
 }

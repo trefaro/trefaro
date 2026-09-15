@@ -1,10 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   MyProgramItem,
   MyRegistration,
@@ -17,6 +11,7 @@ import {
   MAX_MY_REGISTRATION_PAGE_SIZE,
 } from '@trefaro/shared-models';
 import { pageWindow } from '../common/page-window';
+import { conflict, refuse } from '../common/problem';
 import { EventsService, type EventLocation } from '../events';
 import { ProgramService, ProgramSignupsService } from '../program';
 import { ParticipantsService } from '../registration';
@@ -265,19 +260,13 @@ export class SelfServiceService {
         : await this.fromAccount(claim.email, claim.registrationId);
 
     if (registration.status === 'cancelled') {
-      throw new ConflictException(
-        'This registration was cancelled. Please register again if you would ' +
-          'like to take part after all.',
-      );
+      throw conflict('problem.registration.cancelled');
     }
     if (registration.status !== 'confirmed') {
       // The link is only ever mailed after a confirmation, so this is a
       // registration an organizer reset — and the way back is the confirmation
       // mail, not this page.
-      throw new ConflictException(
-        'This registration is not confirmed yet. Please use the confirmation ' +
-          'link from your e-mail first.',
-      );
+      throw conflict('problem.registration.notConfirmed');
     }
     return registration;
   }
@@ -292,10 +281,10 @@ export class SelfServiceService {
    */
   private async fromLink(token: string): Promise<RegistrationRecord> {
     const id = this.tokens.verify('registration-self-service', token);
-    if (!id) throw new BadRequestException(INVALID_LINK);
+    if (!id) throw refuse(INVALID_LINK);
 
     const registration = await this.registrations.findById(id);
-    if (!registration) throw new BadRequestException(INVALID_LINK);
+    if (!registration) throw refuse(INVALID_LINK);
     return registration;
   }
 
@@ -364,9 +353,8 @@ const GONE = 'This registration no longer exists.';
  */
 const NOT_YOURS = 'You have no registration with that id.';
 
-const INVALID_LINK =
-  'This link is not valid any more. Ask the organizer to send your ' +
-  'registration details again.';
+/** One refusal for every way a self-service link can fail (E32, F45). */
+const INVALID_LINK = 'problem.selfService.staleLink';
 
 function withSeat(
   item: PublicProgramItem,

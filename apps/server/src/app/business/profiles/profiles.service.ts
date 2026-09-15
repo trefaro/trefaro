@@ -26,10 +26,8 @@ import {
   type ImageUpload,
 } from '../common/image-file.service';
 import { PasswordHasher } from '../common/password-hasher.service';
-import {
-  describePasswordPolicy,
-  isUsablePassword,
-} from '../common/password-policy';
+import { PASSWORD_POLICY, isUsablePassword } from '../common/password-policy';
+import { refuse } from '../common/problem';
 import { ConfigurationService } from '../config';
 import { MailDeliveryError, MailService, PublicLinks } from '../mail';
 import {
@@ -138,7 +136,7 @@ export class ProfilesService {
     // form error, not a secret. The DTO checks the same bounds; this is the
     // check that also covers callers that are not the DTO.
     if (!isUsablePassword(input.password)) {
-      throw new BadRequestException(describePasswordPolicy());
+      throw refuse('problem.password.policy', PASSWORD_POLICY);
     }
 
     const email = normalizeEmail(input.email);
@@ -170,9 +168,7 @@ export class ProfilesService {
   async confirm(token: string): Promise<ProfileConfirmation> {
     const id = this.tokens.verify('profile-confirmation', token);
     if (!id) {
-      throw new BadRequestException(
-        'This confirmation link is not valid any more. Please create your account again to receive a new one.',
-      );
+      throw refuse('problem.profile.confirmationStale');
     }
 
     const profile = await this.require(id);
@@ -243,10 +239,20 @@ export class ProfilesService {
     const changes = {
       ...(update.firstName === undefined
         ? {}
-        : { firstName: required(update.firstName, 'first name') }),
+        : {
+            firstName: required(
+              update.firstName,
+              'problem.profile.firstNameMissing',
+            ),
+          }),
       ...(update.lastName === undefined
         ? {}
-        : { lastName: required(update.lastName, 'last name') }),
+        : {
+            lastName: required(
+              update.lastName,
+              'problem.profile.lastNameMissing',
+            ),
+          }),
       ...(update.preferredLocale === undefined
         ? {}
         : { preferredLocale: update.preferredLocale.trim().toLowerCase() }),
@@ -297,7 +303,7 @@ export class ProfilesService {
     }
 
     if (!isUsablePassword(change.newPassword)) {
-      throw new BadRequestException(describePasswordPolicy());
+      throw refuse('problem.password.policy', PASSWORD_POLICY);
     }
 
     const updated = await this.profiles.update(current.profile.id, {
@@ -395,7 +401,7 @@ export class ProfilesService {
     // After the token, before the write: a password the policy rejects is a
     // form error for somebody who has already proved they hold the address.
     if (!isUsablePassword(password)) {
-      throw new BadRequestException(describePasswordPolicy());
+      throw refuse('problem.password.policy', PASSWORD_POLICY);
     }
 
     const updated = await this.profiles.update(profile.id, {
@@ -565,9 +571,7 @@ function undeliverable(): ServiceUnavailableException {
  * answer — whether this address has an account at all.
  */
 function staleResetLink(): BadRequestException {
-  return new BadRequestException(
-    'This link is not valid any more. Please ask for a new one.',
-  );
+  return refuse('problem.profile.resetLinkStale');
 }
 
 /** Addresses are compared and stored in one form; see `NewUserProfile.email`. */
@@ -576,11 +580,13 @@ function normalizeEmail(email: string): string {
 }
 
 /** A name somebody is addressed by — trimmed, and never emptied. */
-function required(value: string, what: string): string {
+function required(
+  value: string,
+  missing:
+    'problem.profile.firstNameMissing' | 'problem.profile.lastNameMissing',
+): string {
   const trimmed = value.trim();
-  if (trimmed.length === 0) {
-    throw new BadRequestException(`Please give your ${what}.`);
-  }
+  if (trimmed.length === 0) throw refuse(missing);
   return trimmed;
 }
 
@@ -596,9 +602,9 @@ function activityAreas(value: string | null): string | null {
   const trimmed = value.trim();
   if (trimmed.length === 0) return null;
   if (trimmed.length > MAX_ACTIVITY_AREAS_LENGTH) {
-    throw new BadRequestException(
-      `Please keep the field of activity to ${MAX_ACTIVITY_AREAS_LENGTH} characters.`,
-    );
+    throw refuse('problem.profile.activityAreasTooLong', {
+      max: MAX_ACTIVITY_AREAS_LENGTH,
+    });
   }
   return trimmed;
 }

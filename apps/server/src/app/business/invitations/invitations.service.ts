@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   ContactOptOutResult,
   ContactQuery,
@@ -21,6 +16,7 @@ import {
   invitationState,
 } from '@trefaro/shared-models';
 import { pageWindow } from '../common/page-window';
+import { refuse } from '../common/problem';
 import { EventSeriesService } from '../event-series';
 import { EventsService } from '../events';
 import { ContactsService } from '../registration';
@@ -135,14 +131,14 @@ export class InvitationsService {
   async create(seriesId: string, input: InvitationInput): Promise<Invitation> {
     await this.series.getForOrganizer(seriesId);
 
-    const subject = text(input.subject, 'subject');
-    const body = text(input.body, 'message');
+    const subject = text(input.subject, 'problem.invitation.subjectMissing');
+    const body = text(input.body, 'problem.invitation.bodyMissing');
     const eventId = await this.eventOfSeries(seriesId, input.eventId ?? null);
 
     if (input.recipients.length > MAX_INVITATION_RECIPIENTS) {
-      throw new BadRequestException(
-        `One invitation may name at most ${MAX_INVITATION_RECIPIENTS} addresses.`,
-      );
+      throw refuse('problem.invitation.tooManyRecipients', {
+        max: MAX_INVITATION_RECIPIENTS,
+      });
     }
 
     // The gate: every id is looked up again through the audience filter, so
@@ -183,10 +179,7 @@ export class InvitationsService {
   async optOut(token: string): Promise<ContactOptOutResult> {
     const registrationId = this.tokens.verify('invitation-opt-out', token);
     if (!registrationId) {
-      throw new BadRequestException(
-        'This link is not valid any more. Please reply to the invitation and ' +
-          'ask to be removed — a person will read it.',
-      );
+      throw refuse('problem.invitation.optOutLinkStale');
     }
     return this.contacts.optOut(registrationId);
   }
@@ -207,9 +200,7 @@ export class InvitationsService {
 
     const event = await this.events.getForOrganizer(eventId);
     if (event.seriesId !== seriesId) {
-      throw new BadRequestException(
-        'That event belongs to a different event series.',
-      );
+      throw refuse('problem.invitation.foreignEvent');
     }
     return event.id;
   }
@@ -236,10 +227,14 @@ function toInvitation(
 }
 
 /** Trimmed and not empty. The maximum length is the DTO's business. */
-function text(value: string, what: string): string {
+function text(
+  value: string,
+  missing:
+    'problem.invitation.bodyMissing' | 'problem.invitation.subjectMissing',
+): string {
   const trimmed = (value ?? '').trim();
   if (trimmed.length === 0) {
-    throw new BadRequestException(`An invitation needs a ${what}.`);
+    throw refuse(missing);
   }
   return trimmed;
 }

@@ -1,10 +1,4 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  Logger,
-  PayloadTooLargeException,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { BrandingImageKind, BrandingImages } from '@trefaro/shared-models';
 import {
   BRANDING_MIME_TYPES,
@@ -20,6 +14,7 @@ import {
   matchesSignature,
   signatureType,
 } from '../attachments';
+import { refuse, tooLarge } from '../common/problem';
 import { brandingImageUrls } from './branding-url';
 import {
   APP_CONFIG_REPOSITORY,
@@ -236,30 +231,22 @@ export class BrandingService {
    */
   private assertAcceptable(image: BrandingImageUpload): void {
     if (image.bytes.length === 0) {
-      throw new BadRequestException('The uploaded image is empty.');
+      throw refuse('problem.image.empty');
     }
 
     if (image.bytes.length > MAX_BRANDING_BYTES) {
-      throw new PayloadTooLargeException(
-        `A logo or app icon may be up to ${formatBytes(MAX_BRANDING_BYTES)}; ` +
-          `this file is ${formatBytes(image.bytes.length)}. Please export it ` +
-          'at the size it is displayed at.',
-      );
+      throw tooLarge('problem.branding.tooLarge', {
+        max: formatBytes(MAX_BRANDING_BYTES),
+        size: formatBytes(image.bytes.length),
+      });
     }
 
     if (!BRANDING_MIME_TYPES.includes(image.mimeType)) {
-      throw new BadRequestException(
-        `A logo or app icon has to be one of: ${brandingTypeSummary()}. An SVG ` +
-          'is not accepted — it can carry script, and it would be served from ' +
-          'the same origin as the client that displays it.',
-      );
+      throw refuse('problem.branding.type', { types: brandingTypeSummary() });
     }
 
     if (!matchesSignature(image.mimeType, image.bytes)) {
-      throw new BadRequestException(
-        `This file is not ${image.mimeType} — its content does not match the ` +
-          'type it was sent as.',
-      );
+      throw refuse('problem.image.typeMismatch', { type: image.mimeType });
     }
   }
 }

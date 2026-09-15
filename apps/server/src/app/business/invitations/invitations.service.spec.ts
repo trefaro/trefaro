@@ -245,13 +245,13 @@ describe('InvitationsService', () => {
     it('refuses a subject that is only whitespace', async () => {
       await expect(
         service.create('series-1', input({ subject: '   ' })),
-      ).rejects.toThrow(/needs a subject/);
+      ).rejects.toThrow('problem.invitation.subjectMissing');
     });
 
     it('refuses a message that is only whitespace', async () => {
       await expect(
         service.create('series-1', input({ body: '\n\n' })),
-      ).rejects.toThrow(/needs a message/);
+      ).rejects.toThrow('problem.invitation.bodyMissing');
     });
 
     it('keeps an event of the same series', async () => {
@@ -271,7 +271,7 @@ describe('InvitationsService', () => {
       // The link in the mail would point at something these people have nothing
       // to do with — which is the one thing E15 bases the feature on.
       await expect(failure).rejects.toBeInstanceOf(BadRequestException);
-      await expect(failure).rejects.toThrow(/different event series/);
+      await expect(failure).rejects.toThrow('problem.invitation.foreignEvent');
       expect(repository.created).toHaveLength(0);
     });
 
@@ -383,7 +383,7 @@ describe('InvitationsService', () => {
       const expired = tokens.sign('invitation-opt-out', 'registration-1', -1);
 
       await expect(service.optOut(expired)).rejects.toThrow(
-        /reply to the invitation/,
+        'problem.invitation.optOutLinkStale',
       );
     });
   });

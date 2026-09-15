@@ -139,14 +139,14 @@ describe('ImageFileService', () => {
         mimeType: 'image/gif',
         bytes: Buffer.from('GIF89a'),
       }),
-    ).rejects.toThrow(/A profile picture has to be one of/);
+    ).rejects.toThrow('problem.image.avatarType');
 
     await expect(
       service.store('logos', {
         mimeType: 'image/gif',
         bytes: Buffer.from('GIF89a'),
       }),
-    ).rejects.toThrow(/A logo has to be one of/);
+    ).rejects.toThrow('problem.image.logoType');
   });
 
   it('ignores the nulls a caller passes for "there was none"', async () => {

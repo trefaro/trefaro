@@ -1,5 +1,5 @@
 import { adminCookie } from '../support/admin-session';
-import { api } from '../support/api-client';
+import { api, refusalOf } from '../support/api-client';
 import {
   closeDatabase,
   deleteProfiles,
@@ -332,7 +332,11 @@ describe('the discussion forum plug-in', () => {
       const refused = await toggle('profiles', false);
 
       expect(refused.status).toBe(409);
-      expect(problem(refused.body)).toContain(`"${PLUGIN}"`);
+      // The key, not only a refusal — and since AP 5 of phase 5 it travels as
+      // a value beside the code rather than inside an English sentence.
+      const refusal = refusalOf(refused.body);
+      expect(refusal?.code).toMatch(/^problem\.config\.moduleDependants\./);
+      expect(String(refusal?.params['others'])).toContain(`"${PLUGIN}"`);
       expect((await moduleRow('profiles')).enabled).toBe(true);
     });
   });

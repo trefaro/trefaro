@@ -91,8 +91,10 @@ import {
       @if (error(); as problem) {
         <p class="notice" role="alert">
           {{ problem.key | transloco: problem.params }}
-          @if (problem.detail; as detail) {
-            <span class="notice__detail">{{ detail }}</span>
+          @if (problem.reason; as reason) {
+            <span class="notice__detail">{{
+              reason.code | transloco: reason.params
+            }}</span>
           }
         </p>
       }
@@ -324,6 +326,18 @@ export class EventRegistrationPage {
     return event ? formatEventPeriod(event, this.i18n.locale()) : '';
   });
 
+  /**
+   * Counts the reads of the event, so a late answer to an earlier one is
+   * dropped.
+   *
+   * Two loads are in flight the moment somebody switches the language before
+   * the first has arrived, and the answers come back in the order of the
+   * network. The form definition below needs no counter: it carries labels an
+   * organizer wrote, which the server does not translate, so it is not read
+   * again on a switch (AP 5 of phase 5).
+   */
+  private loadSequence = 0;
+
   constructor() {
     // The event is shown for reassurance, not needed to submit: someone who
     // followed a link should see which event they are registering for.
@@ -474,7 +488,7 @@ export class EventRegistrationPage {
         params: {
           fields: missing.map((field) => `"${field.label}"`).join(', '),
         },
-        detail: null,
+        reason: null,
       });
       return;
     }
@@ -516,12 +530,14 @@ export class EventRegistrationPage {
     eventSlug: string,
     locale: string,
   ): Promise<void> {
+    const run = ++this.loadSequence;
     try {
-      this.event.set(await this.events.get(seriesSlug, eventSlug, locale));
+      const event = await this.events.get(seriesSlug, eventSlug, locale);
+      if (run === this.loadSequence) this.event.set(event);
     } catch {
       // Deliberately quiet: the form still works, and the server decides
       // whether this event can be registered for at all.
-      this.event.set(null);
+      if (run === this.loadSequence) this.event.set(null);
     }
   }
 

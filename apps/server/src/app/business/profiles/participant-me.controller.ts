@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -34,6 +33,7 @@ import {
   IMAGE_UPLOAD_OPTIONS,
   type ImageMultipartFile,
 } from '../common/image-upload';
+import { refuse } from '../common/problem';
 import { CoreModuleController, CoreModuleEnabledGuard } from '../config';
 import { CurrentParticipant } from './current-participant.decorator';
 import {
@@ -168,9 +168,9 @@ export class ParticipantMeController {
     @UploadedFile() file: ImageMultipartFile | undefined,
   ): Promise<AvatarImageDto> {
     if (!file) {
-      throw new BadRequestException(
-        `Send the image in a multipart part called "${BRANDING_IMAGE_PART}".`,
-      );
+      throw refuse('problem.branding.imagePartMissing', {
+        part: BRANDING_IMAGE_PART,
+      });
     }
 
     return {

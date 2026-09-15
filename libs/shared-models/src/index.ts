@@ -84,6 +84,14 @@ export {
   type PublicProfile,
 } from './lib/profiles';
 export {
+  PROBLEM_CODES,
+  isProblemCode,
+  readRefusal,
+  type ProblemCode,
+  type ProblemParams,
+  type Refusal,
+} from './lib/problems';
+export {
   CHAT_CONVERSATION,
   CHAT_JOIN,
   CHAT_LEAVE,

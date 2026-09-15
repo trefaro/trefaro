@@ -208,19 +208,20 @@ describe('PersonPage', () => {
     const { text } = await render({
       fails: {
         status: 404,
-        explained: true,
+        refusal: null,
         message: 'No profile of that id is in the participant search.',
       },
     });
 
     expect(text()).toContain('This profile is not available.');
-    // And not the server's sentence beside it: the key already says it, in the
-    // reader's language.
+    // And not the server's sentence beside it. A 404 carries no code at all
+    // since AP 5 of phase 5, so there is nothing for the page to repeat —
+    // which is what F77 asked for and had to do by hand until now.
     expect(text()).not.toContain('participant search');
   });
 
   it('reports anything else as a failure of the page', async () => {
-    const { text } = await render({ fails: { status: 500, explained: false } });
+    const { text } = await render({ fails: { status: 500, refusal: null } });
 
     expect(text()).toContain('This profile could not be loaded.');
   });

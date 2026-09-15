@@ -1,5 +1,5 @@
 import { adminCookie } from '../support/admin-session';
-import { api } from '../support/api-client';
+import { api, refusalOf } from '../support/api-client';
 import {
   closeDatabase,
   deleteProfiles,
@@ -79,12 +79,6 @@ interface PublicConfig {
 
 const PLUGIN = 'personal-program';
 const NOWHERE = '00000000-0000-4000-8000-000000000000';
-
-/** The `message` of a problem answer, or the body as it came (F77). */
-function problem(body: unknown): string {
-  const message = (body as { message?: unknown } | null)?.message;
-  return typeof message === 'string' ? message : JSON.stringify(body);
-}
 
 const stamp = Date.now();
 const DOMAIN = `@plan-${stamp}.example.org`;
@@ -296,7 +290,11 @@ describe('the personal programme plug-in', () => {
       const refused = await toggle(false, 'profiles');
 
       expect(refused.status).toBe(409);
-      expect(problem(refused.body)).toContain(`"${PLUGIN}"`);
+      // The key, not only a refusal — and since AP 5 of phase 5 it travels as
+      // a value beside the code rather than inside an English sentence.
+      const refusal = refusalOf(refused.body);
+      expect(refusal?.code).toMatch(/^problem\.config\.moduleDependants\./);
+      expect(String(refusal?.params['others'])).toContain(`"${PLUGIN}"`);
       expect((await moduleRow('profiles')).enabled).toBe(true);
     });
 

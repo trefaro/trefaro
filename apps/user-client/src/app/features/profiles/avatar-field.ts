@@ -123,8 +123,10 @@ interface PendingPicture {
           @if (error(); as problem) {
             <p class="notice" role="alert">
               {{ problem.key | transloco: problem.params }}
-              @if (problem.detail; as detail) {
-                <span class="notice__detail">{{ detail }}</span>
+              @if (problem.reason; as reason) {
+                <span class="notice__detail">{{
+                  reason.code | transloco: reason.params
+                }}</span>
               }
             </p>
           }
@@ -310,7 +312,7 @@ export class AvatarField {
         key: file.type
           ? 'profile.avatar.typeRefused'
           : 'profile.avatar.typeRefusedUnknown',
-        detail: null,
+        reason: null,
         params: { type: file.type, hint: this.typeHint() },
       });
       this.reset();
@@ -320,7 +322,7 @@ export class AvatarField {
     if (file.size > MAX_BRANDING_BYTES) {
       this.error.set({
         key: 'profile.avatar.tooLarge',
-        detail: null,
+        reason: null,
         params: {
           kilobytes: Math.round(file.size / 1024),
           hint: this.typeHint(),

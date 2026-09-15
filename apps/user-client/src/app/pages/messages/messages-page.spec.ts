@@ -254,7 +254,7 @@ describe('MessagesPage', () => {
       ],
     });
 
-    chat.fails = { status: 500, explained: false };
+    chat.fails = { status: 500, refusal: null };
     await page.loadMore();
 
     expect(page.rows()).toHaveLength(1);

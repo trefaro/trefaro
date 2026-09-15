@@ -53,7 +53,7 @@ class FakeSelfService {
 
   async listMine(locale: string, page = 1): Promise<MyRegistrationPage> {
     this.asked.push({ locale, page });
-    if (this.failing) throw { status: 500, explained: false };
+    if (this.failing) throw { status: 500, refusal: null };
     const found = this.pages[page - 1];
     if (!found) throw new Error(`No page ${page} in this fake`);
     return found;
@@ -160,4 +160,63 @@ describe('MyRegistrationsPage', () => {
     // The same key the organizer client shows for the same state (F83).
     expect(page.statusKey(page.rows()[0])).toBe('registration.status.pending');
   });
+
+  it('keeps the answer to the language it asked for last, whatever arrives later', async () => {
+    const service = new DeferredSelfService();
+    const locale = signal('en');
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideTranslationsForTest(),
+        { provide: SelfServiceService, useValue: service },
+        {
+          provide: TranslationService,
+          useValue: { locale, translate: (key: string) => key },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(MyRegistrationsPage);
+    fixture.detectChanges();
+
+    locale.set('de');
+    fixture.detectChanges();
+    expect(service.calls.map((call) => call.locale)).toEqual(['en', 'de']);
+    const [english, german] = service.calls;
+    const rows = () =>
+      (fixture.componentInstance as unknown as PageInternals).rows();
+
+    // The later request answers first — a loaded server, a slow first byte.
+    german.resolve('Auftakt in Köln');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    fixture.detectChanges();
+    expect(rows().map((row) => row.event.name)).toEqual(['Auftakt in Köln']);
+
+    // And then the answer nobody is waiting for any more. This list is the one
+    // that would not merely be replaced but *appended to* by a late answer,
+    // because a second page arrives the same way.
+    english.resolve('Kickoff in Cologne');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    fixture.detectChanges();
+    expect(rows().map((row) => row.event.name)).toEqual(['Auftakt in Köln']);
+  });
 });
+
+/** The list read, handed out one answer at a time. */
+class DeferredSelfService {
+  readonly calls: { locale: string; resolve: (name: string) => void }[] = [];
+
+  listMine(locale: string, page = 1): Promise<MyRegistrationPage> {
+    return new Promise((resolve) => {
+      this.calls.push({
+        locale,
+        resolve: (name: string) =>
+          resolve({
+            rows: [{ ...summary('registration-1'), event: { ...EVENT, name } }],
+            total: 1,
+            page,
+            pageSize: 10,
+          }),
+      });
+    });
+  }
+}

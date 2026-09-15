@@ -1,10 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   OrganizerEvent,
   ProgramItem,
@@ -19,6 +13,7 @@ import {
   MAX_PROGRAM_ITEM_CAPACITY,
   formatEventPeriod,
 } from '@trefaro/shared-models';
+import { conflict, refuse } from '../common/problem';
 import { EventsService } from '../events';
 import {
   PROGRAM_ITEM_SIGNUP_REPOSITORY,
@@ -176,10 +171,7 @@ export class ProgramService {
 
     const existing = await this.items.findByEvent(eventId);
     if (existing.length >= MAX_PROGRAM_ITEMS) {
-      throw new ConflictException(
-        `A programme holds at most ${MAX_PROGRAM_ITEMS} items. Remove one ` +
-          'before adding another.',
-      );
+      throw conflict('problem.program.tooMany', { max: MAX_PROGRAM_ITEMS });
     }
 
     const period = this.period(input.startsAt, input.endsAt);
@@ -314,21 +306,15 @@ export class ProgramService {
   ): number | null {
     if (capacity === null) return null;
     if (!registrationEnabled) {
-      throw new BadRequestException(
-        'A capacity only means something where sign-up is switched on. Enable ' +
-          'sign-up for this session, or leave the capacity empty.',
-      );
+      throw refuse('problem.program.capacityWithoutSignUp');
     }
     if (!Number.isInteger(capacity) || capacity < 1) {
-      throw new BadRequestException(
-        'A capacity is a whole number of seats, at least one.',
-      );
+      throw refuse('problem.program.capacityShape');
     }
     if (capacity > MAX_PROGRAM_ITEM_CAPACITY) {
-      throw new BadRequestException(
-        `A capacity of more than ${MAX_PROGRAM_ITEM_CAPACITY} is not a limit ` +
-          'anybody meant to set.',
-      );
+      throw refuse('problem.program.capacityTooLarge', {
+        max: MAX_PROGRAM_ITEM_CAPACITY,
+      });
     }
     return capacity;
   }
@@ -347,10 +333,10 @@ export class ProgramService {
     const from = Date.parse(event.startsAt);
     const until = Date.parse(event.endsAt);
     if (period.startsAt.getTime() < from || period.endsAt.getTime() > until) {
-      throw new BadRequestException(
-        'A programme item has to happen while the event does. ' +
-          `"${event.name}" runs ${formatEventPeriod(event)}.`,
-      );
+      throw refuse('problem.program.outsideEvent', {
+        event: event.name,
+        period: formatEventPeriod(event),
+      });
     }
   }
 
@@ -368,12 +354,10 @@ export class ProgramService {
     const start = new Date(startsAt);
     const end = new Date(endsAt);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-      throw new BadRequestException('Start and end have to be valid dates.');
+      throw refuse('problem.program.unparsableDates');
     }
     if (end.getTime() <= start.getTime()) {
-      throw new BadRequestException(
-        'A programme item has to end after it starts.',
-      );
+      throw refuse('problem.program.endsBeforeStart');
     }
     return { startsAt: start, endsAt: end };
   }
@@ -381,9 +365,7 @@ export class ProgramService {
   private title(value: string): string {
     const title = value.trim();
     if (title.length === 0) {
-      throw new BadRequestException(
-        'A programme item needs a title participants read.',
-      );
+      throw refuse('problem.program.titleMissing');
     }
     return title;
   }

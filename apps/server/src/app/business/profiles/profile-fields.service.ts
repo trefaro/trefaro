@@ -1,10 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   CustomFieldValue,
   CustomFieldValues,
@@ -23,6 +17,7 @@ import {
   selectOptions,
   unknownFieldKeys,
 } from '../common/field-kit';
+import { conflict, refuse } from '../common/problem';
 import {
   PROFILE_FIELD_REPOSITORY,
   ProfileFieldKeyTakenError,
@@ -109,16 +104,20 @@ export class ProfileFieldsService {
   async create(input: ProfileFieldInput): Promise<ProfileField> {
     const existing = await this.fields.findAll();
     if (existing.length >= MAX_PROFILE_FIELDS) {
-      throw new ConflictException(
-        `A profile holds at most ${MAX_PROFILE_FIELDS} extra questions. ` +
-          'Remove one before adding another.',
-      );
+      throw conflict('problem.profileField.tooMany', {
+        max: MAX_PROFILE_FIELDS,
+      });
     }
 
-    const label = fieldLabel(input.label, 'participants');
+    const label = fieldLabel(input.label);
     const key = firstFreeFieldKey(
       existing.map((field) => field.key),
-      requestedFieldKey(input.key, label, RESERVED_KEYS, 'a profile'),
+      requestedFieldKey(
+        input.key,
+        label,
+        RESERVED_KEYS,
+        'problem.field.keyReservedByProfile',
+      ),
     );
 
     try {
@@ -153,7 +152,7 @@ export class ProfileFieldsService {
     const updated = await this.fields.update(id, {
       ...(change.label === undefined
         ? {}
-        : { label: fieldLabel(change.label, 'participants') }),
+        : { label: fieldLabel(change.label) }),
       ...(change.helpText === undefined
         ? {}
         : { helpText: optionalHelpText(change.helpText) }),
@@ -196,16 +195,13 @@ export class ProfileFieldsService {
 
     const wanted = new Set(ids);
     if (wanted.size !== ids.length) {
-      throw new BadRequestException('The new order lists a question twice.');
+      throw refuse('problem.profileField.orderTwice');
     }
     if (
       wanted.size !== existing.length ||
       existing.some((field) => !wanted.has(field.id))
     ) {
-      throw new BadRequestException(
-        'The new order has to list every profile question exactly once — ' +
-          'reload the form and try again.',
-      );
+      throw refuse('problem.profileField.orderIncomplete');
     }
 
     return (await this.fields.reorder(ids)).map(toField);
@@ -235,11 +231,9 @@ export class ProfileFieldsService {
     const known = new Set(definitions.map((field) => field.key));
     const unknown = unknownFieldKeys(answers, known);
     if (unknown.length > 0) {
-      throw new BadRequestException(
-        `This profile has no question called ${unknown
-          .map((key) => `"${key}"`)
-          .join(', ')}.`,
-      );
+      throw refuse('problem.profileField.unknown', {
+        keys: unknown.join(', '),
+      });
     }
 
     const stored: Record<string, CustomFieldValue> = {};
@@ -258,7 +252,7 @@ export class ProfileFieldsService {
 
   private translate(error: unknown): unknown {
     return error instanceof ProfileFieldKeyTakenError
-      ? new ConflictException(`${error.message} — please give it another one.`)
+      ? conflict('problem.profileField.keyTaken', { key: error.key })
       : error;
   }
 }

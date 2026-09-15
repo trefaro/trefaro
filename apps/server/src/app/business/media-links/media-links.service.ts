@@ -1,10 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   MediaLink,
   MediaLinkChange,
@@ -18,6 +12,7 @@ import {
   isWebUrl,
   sortMediaLinks,
 } from '@trefaro/shared-models';
+import { conflict, refuse } from '../common/problem';
 import { EventsService } from '../events';
 import { ProgramService } from '../program';
 import {
@@ -104,10 +99,9 @@ export class MediaLinksService {
 
     const existing = await this.links.findByEvent(eventId);
     if (existing.length >= MAX_MEDIA_LINKS_PER_EVENT) {
-      throw new ConflictException(
-        `An event holds at most ${MAX_MEDIA_LINKS_PER_EVENT} media links. ` +
-          'Remove one before adding another.',
-      );
+      throw conflict('problem.mediaLink.tooMany', {
+        max: MAX_MEDIA_LINKS_PER_EVENT,
+      });
     }
 
     return toMediaLink(
@@ -186,9 +180,7 @@ export class MediaLinksService {
 
     const item = await this.program.getForOrganizer(programItemId);
     if (item.eventId !== eventId) {
-      throw new BadRequestException(
-        'A media link can only be attached to a session of its own event.',
-      );
+      throw refuse('problem.mediaLink.foreignSession');
     }
     return item.id;
   }
@@ -196,15 +188,12 @@ export class MediaLinksService {
   private title(value: string): string {
     const title = value.trim();
     if (title.length === 0) {
-      throw new BadRequestException(
-        'A media link needs a title participants read — the instance never ' +
-          'asks the target what it is called.',
-      );
+      throw refuse('problem.mediaLink.titleMissing');
     }
     if (title.length > MAX_MEDIA_LINK_TITLE_LENGTH) {
-      throw new BadRequestException(
-        `A title is at most ${MAX_MEDIA_LINK_TITLE_LENGTH} characters long.`,
-      );
+      throw refuse('problem.mediaLink.titleTooLong', {
+        max: MAX_MEDIA_LINK_TITLE_LENGTH,
+      });
     }
     return title;
   }
@@ -212,15 +201,12 @@ export class MediaLinksService {
   private url(value: string): string {
     const url = value.trim();
     if (!isWebUrl(url)) {
-      throw new BadRequestException(
-        'A media link has to be an http or https address — that is what a ' +
-          'participant can be sent to by clicking it.',
-      );
+      throw refuse('problem.mediaLink.scheme');
     }
     if (url.length > MAX_MEDIA_LINK_URL_LENGTH) {
-      throw new BadRequestException(
-        `An address is at most ${MAX_MEDIA_LINK_URL_LENGTH} characters long.`,
-      );
+      throw refuse('problem.mediaLink.urlTooLong', {
+        max: MAX_MEDIA_LINK_URL_LENGTH,
+      });
     }
     return url;
   }

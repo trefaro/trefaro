@@ -1,10 +1,6 @@
-import {
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { ProgramItemLoad } from '@trefaro/shared-models';
+import { conflict } from '../common/problem';
 import {
   PROGRAM_ITEM_SIGNUP_REPOSITORY,
   type ProgramItemSignupRepository,
@@ -73,12 +69,10 @@ export class ProgramSignupsService {
     const item = await this.require(itemId, actor.eventId);
 
     if (!item.registrationEnabled) {
-      throw new ConflictException(
-        `"${item.title}" does not ask for sign-up — just come along.`,
-      );
+      throw conflict('problem.program.withoutSignUp', { title: item.title });
     }
     if (item.endsAt.getTime() <= Date.now()) {
-      throw new ConflictException(`"${item.title}" has already taken place.`);
+      throw conflict('problem.program.past', { title: item.title });
     }
 
     const outcome = await this.signups.signUp({
@@ -88,10 +82,7 @@ export class ProgramSignupsService {
     });
 
     if (outcome === 'full') {
-      throw new ConflictException(
-        `"${item.title}" is full. Someone may give up a seat — it is worth ` +
-          'looking again later.',
-      );
+      throw conflict('problem.program.full', { title: item.title });
     }
   }
 

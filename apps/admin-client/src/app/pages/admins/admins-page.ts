@@ -37,8 +37,10 @@ import { AuthService } from '../../features/auth/auth.service';
     @if (error(); as problem) {
       <p class="error" role="alert">
         {{ problem.key | transloco }}
-        @if (problem.detail; as detail) {
-          <span class="error__detail">{{ detail }}</span>
+        @if (problem.reason; as reason) {
+          <span class="error__detail">{{
+            reason.code | transloco: reason.params
+          }}</span>
         }
       </p>
     }

@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Get,
@@ -18,6 +17,7 @@ import {
 } from '@nestjs/swagger';
 import { Throttle, minutes } from '@nestjs/throttler';
 import { ApiLocaleQuery, LocaleQueryPipe } from '../common/locale-query.pipe';
+import { refuse } from '../common/problem';
 import { MyRegistrationDto } from './dto/my-registration.dto';
 import { SelfServiceTokenDto } from './dto/self-service-token.dto';
 import { SELF_SERVICE_CALLS_PER_WINDOW } from './self-service.limits';
@@ -104,10 +104,7 @@ export class MyRegistrationController {
  */
 function required(token: string | undefined): string {
   if (!token) {
-    throw new BadRequestException(
-      'This address is missing its token. Please open the whole link from your ' +
-        'e-mail, including everything after the question mark.',
-    );
+    throw refuse('problem.selfService.tokenMissing');
   }
   return token;
 }

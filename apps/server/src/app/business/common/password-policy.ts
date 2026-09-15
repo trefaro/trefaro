@@ -1,6 +1,7 @@
 import {
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
+  type ProblemParams,
 } from '@trefaro/shared-models';
 
 /**
@@ -25,6 +26,25 @@ import {
  */
 export { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH };
 
+/**
+ * The values the policy's refusal is written around (E64).
+ *
+ * The sentence itself lives in the catalogue under
+ * `problem.password.policy`; here are only the two numbers it leaves gaps for,
+ * so the three places that set a password all say the same thing.
+ */
+export const PASSWORD_POLICY: ProblemParams = {
+  min: MIN_PASSWORD_LENGTH,
+  max: MAX_PASSWORD_LENGTH,
+};
+
+/**
+ * The same rule as an English sentence — for an operator's log, never a screen.
+ *
+ * The one place this is still right is the startup check on
+ * `ADMIN_BOOTSTRAP_PASSWORD`: nobody is reading a browser then, and a log line
+ * that said `problem.password.policy` would help nobody.
+ */
 export function describePasswordPolicy(): string {
   return `A password must be at least ${MIN_PASSWORD_LENGTH} and at most ${MAX_PASSWORD_LENGTH} characters long`;
 }

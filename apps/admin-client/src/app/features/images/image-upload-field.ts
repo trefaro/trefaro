@@ -130,8 +130,10 @@ interface PendingImage {
           @if (error(); as problem) {
             <p class="error" role="alert">
               {{ problem.key | transloco: problem.params }}
-              @if (problem.detail; as detail) {
-                <span class="error__detail">{{ detail }}</span>
+              @if (problem.reason; as reason) {
+                <span class="error__detail">{{
+                  reason.code | transloco: reason.params
+                }}</span>
               }
             </p>
           }
@@ -337,7 +339,7 @@ export class ImageUploadField {
         key: file.type
           ? 'admin.design.typeRefused'
           : 'admin.design.typeRefusedUnknown',
-        detail: null,
+        reason: null,
         params: { type: file.type, hint: this.typeHint() },
       });
       this.reset();
@@ -347,7 +349,7 @@ export class ImageUploadField {
     if (file.size > MAX_BRANDING_BYTES) {
       this.error.set({
         key: 'admin.design.tooLarge',
-        detail: null,
+        reason: null,
         params: {
           kilobytes: Math.round(file.size / 1024),
           hint: this.typeHint(),

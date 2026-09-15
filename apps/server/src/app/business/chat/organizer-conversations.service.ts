@@ -1,10 +1,4 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import {
   DEFAULT_MESSAGE_PAGE_SIZE,
   DEFAULT_ORGANIZER_CONVERSATION_PAGE_SIZE,
@@ -32,6 +26,7 @@ import {
 import type { ImageBytes } from '../common/image-file.service';
 import { ImageFileService } from '../common/image-file.service';
 import { pageWindow } from '../common/page-window';
+import { refuse } from '../common/problem';
 import { EventsService, type EventLocation } from '../events';
 import { MailDeliveryError, MailService, PublicLinks } from '../mail';
 import type { ContactAnswerMailContext, MailEvent } from '../mail';
@@ -209,14 +204,12 @@ export class OrganizerConversationsService {
 
     const body = (input.body ?? '').trim();
     if (body.length === 0) {
-      throw new BadRequestException(
-        'An answer needs words. An empty one is not an answer.',
-      );
+      throw refuse('problem.chat.answerEmpty');
     }
     if (body.length > MAX_MESSAGE_LENGTH) {
-      throw new BadRequestException(
-        `A message may be up to ${MAX_MESSAGE_LENGTH} characters.`,
-      );
+      throw refuse('problem.chat.messageTooLong', {
+        max: MAX_MESSAGE_LENGTH,
+      });
     }
 
     const appended = await this.messages.append({
@@ -288,25 +281,20 @@ export class OrganizerConversationsService {
 
     const topic = input.topic.trim();
     if (topic.length === 0) {
-      throw new BadRequestException('A group needs a subject.');
+      throw refuse('problem.chat.groupSubjectMissing');
     }
     if (topic.length > MAX_GROUP_TOPIC_LENGTH) {
-      throw new BadRequestException(
-        `A subject may be up to ${MAX_GROUP_TOPIC_LENGTH} characters.`,
-      );
+      throw refuse('problem.chat.groupSubjectTooLong', {
+        max: MAX_GROUP_TOPIC_LENGTH,
+      });
     }
 
     const profileIds = [...new Set(input.profileIds)];
     if (profileIds.length === 0) {
-      throw new BadRequestException(
-        'A group needs somebody in it. Pick the participants it is for.',
-      );
+      throw refuse('problem.chat.groupMembersMissing');
     }
     if (profileIds.length > MAX_GROUP_MEMBERS) {
-      throw new BadRequestException(
-        `A group may hold up to ${MAX_GROUP_MEMBERS} participants. For more ` +
-          'than that, an invitation reaches everybody at once (FR 2.4).',
-      );
+      throw refuse('problem.chat.groupTooLarge', { max: MAX_GROUP_MEMBERS });
     }
 
     const created = await this.conversations.createGroup({
@@ -315,11 +303,7 @@ export class OrganizerConversationsService {
       profileIds,
     });
     if (!created) {
-      throw new BadRequestException(
-        'A group holds the people the event confirmed. At least one of the ' +
-          'participants you picked has no confirmed registration for it, or ' +
-          'no account any more — nothing was created.',
-      );
+      throw refuse('problem.chat.groupNotConfirmed');
     }
 
     // Read back the way the overview reads it, rather than assembled from what

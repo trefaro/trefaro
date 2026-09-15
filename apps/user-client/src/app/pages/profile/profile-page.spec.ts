@@ -66,7 +66,7 @@ class FakeProfiles {
   passwordFails: unknown = null;
 
   async fields(): Promise<readonly ProfileFieldPublic[]> {
-    if (this.fieldsFail) throw { status: 500, explained: false };
+    if (this.fieldsFail) throw { status: 500, refusal: null };
     return this.definitions;
   }
 
@@ -320,7 +320,7 @@ describe('ProfilePage', () => {
 
   it('keeps what was typed when the password change is refused', async () => {
     const { page } = await render((fake) => {
-      fake.passwordFails = { status: 401, explained: false };
+      fake.passwordFails = { status: 401, refusal: null };
     });
     page.passwordForm.setValue({
       currentPassword: 'the wrong one',

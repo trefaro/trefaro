@@ -218,7 +218,7 @@ describe('ProgramSignupsService', () => {
       const item = items.add({ registrationEnabled: false });
 
       await expect(service.signUp(item.id, ACTOR)).rejects.toThrow(
-        /does not ask for sign-up/,
+        'problem.program.withoutSignUp',
       );
     });
 
@@ -229,7 +229,7 @@ describe('ProgramSignupsService', () => {
       });
 
       await expect(service.signUp(item.id, ACTOR)).rejects.toThrow(
-        /already taken place/,
+        'problem.program.past',
       );
     });
 

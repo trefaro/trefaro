@@ -1,4 +1,4 @@
-import type { Problem } from '@trefaro/shared-http';
+import type { ApiError, Problem } from '@trefaro/shared-http';
 import { provideTranslationsForTest } from '@trefaro/shared-i18n';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -98,7 +98,7 @@ class FakeInvitationsAdminService {
   };
   readonly queries: ContactQuery[] = [];
   readonly sentInput: InvitationInput[] = [];
-  failure: { message: string; explained: boolean } | null = null;
+  failure: ApiError | null = null;
   contactReads = 0;
   invitationReads = 0;
 
@@ -138,7 +138,7 @@ async function render(
   seeded: {
     contactPages?: SeriesContactPage[];
     invitationPage?: InvitationPage;
-    failure?: { message: string; explained: boolean };
+    failure?: ApiError;
   } = {},
 ): Promise<{
   page: PageInternals;
@@ -377,10 +377,13 @@ describe('InvitationsPage', () => {
   it('reports a refused selection instead of pretending it went out', async () => {
     const { page, settle } = await render({
       failure: {
-        message: '1 of the selected addresses can no longer be written to',
+        status: 400,
+        message: 'problem.contacts.someGone',
+        retryable: false,
         // The server's own reason, which is what the page shows beside its
-        // sentence (F77); a status word would not be `explained`.
-        explained: true,
+        // sentence (F77) — a code since AP 5 of phase 5, so the page can draw
+        // it in the language of the reader.
+        refusal: { code: 'problem.contacts.someGone', params: { count: 1 } },
       },
     });
 
@@ -394,7 +397,10 @@ describe('InvitationsPage', () => {
     await settle();
 
     expect(page.error()?.key).toBe('admin.invitations.errorSend');
-    expect(page.error()?.detail).toMatch(/no longer be written to/);
+    expect(page.error()?.reason).toEqual({
+      code: 'problem.contacts.someGone',
+      params: { count: 1 },
+    });
     expect(page.notice()).toBeNull();
   });
 

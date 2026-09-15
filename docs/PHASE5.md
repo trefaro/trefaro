@@ -1012,3 +1012,114 @@ Katalog wächst um **28** Schlüssel auf **1108** (zehn davon Mailtext für die
 zwei neuen Briefe, einer die Zeile in der Mail bei wiederholter Registrierung).
 `todo.md` verliert den Eintrag, der seit Phase 3 die einzige benannte Sackgasse
 war.
+
+### AP 5 — Der Server begründet in der Sprache des Lesers (E64) (erledigt, 15.09.2026)
+
+Umgesetzt:
+
+- **Eine Ablehnung ist ein Katalogschlüssel und seine Werte** (F212). `code` ist
+  keine Nummer und keine Abkürzung, sondern **derselbe** Schlüssel, unter dem
+  der Katalog den Satz hält (`problem.field.required`), und `params` sind die
+  Werte für seine `{{ }}`-Lücken. Damit gibt es nichts dazwischen: kein Präfix,
+  das ein Client anhängen müsste, keine Abbildungstabelle, keine zweite Stelle,
+  die falsch sein kann. Geworfen wird mit `refuse` (400), `conflict` (409) und
+  `tooLarge` (413) aus `business/common/problem.ts` — dieselben Nest-Ausnahmen
+  wie vorher, nur ohne Satz darin; durchgereicht wird es von
+  `AllExceptionsFilter`, der den Rumpf ohnehin neu schreibt und deshalb die
+  einzige Stelle war, die es überhaupt konnte.
+- **Die Liste ist geschlossen, und der Build hält die zwei Hälften zusammen.**
+  `PROBLEM_CODES` in `shared-models` hat **138** Einträge; ein Code, der nicht
+  darin steht, kompiliert nicht, und ein Code darin ohne Satz in **jedem**
+  mitgelieferten Katalog lässt `catalogues.spec.ts` scheitern — in beide
+  Richtungen, denn ein verwaister `problem.*`-Schlüssel im Katalog ist derselbe
+  Fehler von der anderen Seite. `shared-models` ist der Ort, weil der Code ein
+  Vertrag zwischen Server und **beiden** Clients ist und der Katalogtest ihn
+  lesen muss, ohne eine Anwendung zu importieren; Sätze besitzt die Bibliothek
+  weiterhin keine, nur Schlüssel — dieselbe Linie wie `registrationStatusKey`.
+- **144 Wurfstellen in 36 Dateien, Modul für Modul** — Feld-Baukasten, Bild,
+  Passwortregel, Konfiguration, Modulschalter, Event, Reihe, Programm,
+  Programmanmeldung, Anmeldung, Anmeldeformular, Upload, Profil, Profilfragen,
+  Chat, Kontakt, Einladung, Newsletter, Selbstbedienung, Übersetzung, Sprache,
+  Ersteinrichtung. Kein `describePasswordPolicy()` mehr in einer Ablehnung: die
+  Regel steht als `PASSWORD_POLICY` (zwei Zahlen) an einer Stelle, und die
+  englische Fassung der Funktion bleibt genau dort, wo sie richtig ist — in der
+  Startprüfung von `ADMIN_BOOTSTRAP_PASSWORD`, wo niemand einen Browser liest.
+- **Was im Satz steht, wird ein Code; was an seinem Rand steht, ein Wert**
+  (F214). „**A logo** may be up to 2 MB" und „**Ein Logo** darf bis zu 2 MB
+  groß sein" stellen dasselbe Substantiv an verschiedene Stellen — also drei
+  Codes für die drei Bildbereiche statt eines mit dem Substantiv als Wert, zwei
+  für den Besitzer eines reservierten Feldschlüssels, je einer für die
+  Eventtypen, die einen Ort oder einen Link brauchen, und `.one`/`.many` statt
+  eines angehängten Plural-`s` (F81). Ein **Wert** ist, was niemand übersetzen
+  darf: eine Beschriftung, die ein Veranstalter geschrieben hat, ein Slug, ein
+  Modulschlüssel, eine Zahl, eine Dateigröße. Was eine Einheit braucht, reist
+  fertig gesetzt, weil ein Katalogsatz nicht formatieren kann.
+- **404, 401 und 403 bekommen ausdrücklich keinen Code** (F213), und das ist
+  keine Auslassung, sondern die strukturelle Fassung dessen, was F77 von Hand
+  tat: wo kein Code ist, zeigt kein Client mehr einen Grund. Der Satz „No event
+  with id …" bleibt in der Logzeile stehen, wo er hingehört, und verschwindet
+  von der Oberfläche, auf der er nie etwas erklärt hat. Ebenso bleibt die
+  DTO-Prüfung von `class-validator` bei ihren englischen Sätzen — sie reisen als
+  Array und standen deshalb noch nie in einer Oberfläche.
+- **Beide Clients lösen auf, und der Compiler hat jede Stelle gefunden.**
+  `Problem.detail: string | null` heißt jetzt `Problem.reason: Refusal | null`,
+  und die Umbenennung war Absicht: hätte das Feld seinen Namen behalten und nur
+  seine Bedeutung gewechselt, hätte jede vergessene Stelle stillschweigend einen
+  rohen Schlüssel angezeigt. So bricht sie den Build. **46** Stellen in zwei
+  Clients zeichnen den Grund jetzt wie ihre eigene Hälfte:
+  `reason.code | transloco: reason.params`. `ApiError.explained` ist weg —
+  „hat der Server selbst etwas geschrieben" ist seit diesem Paket dieselbe Frage
+  wie „gibt es einen Code".
+- **Die fünf Seiten mit dem ungesicherten Ladevorgang** — der Anhang, den AP 5
+  der Phase 4 angekündigt hatte: Reihe, Startseite, Anmeldung, „meine
+  Anmeldung" und, von jener Liste nicht genannt, die Liste „meine Anmeldungen".
+  Alle fünf zählen ihre Ladevorgänge (`loadSequence`) und schreiben nach einem
+  `await` nur, wenn ihr Lauf noch der jüngste ist; je ein Unit-Test löst die zwei
+  Antworten in der falschen Reihenfolge auf. Die Liste war der schlimmste Fall
+  und stand in keiner der vier Zeilen: eine späte Antwort hätte ihre Zeilen
+  nicht ersetzt, sondern **angehängt**, weil eine zweite Seite denselben Weg
+  nimmt.
+- **Die Vertragssuite behauptet den Code.** `refusalOf(body)` in
+  `support/api-client.ts`, eine neue Datei `problem-codes.spec.ts` für die
+  Gestalt selbst (400 mit Code, Werte, 409 mit Code, vier Ablehnungen aus vier
+  Modulen gegen die geschlossene Liste geprüft, und ein 404 **ohne** Code), und
+  acht bestehende Suiten, die von einem englischen Satzfragment auf den Code
+  umgestellt sind. Das ist das zweite Argument für Codes, jetzt belegt: `/1 of
+the selected addresses/` prüfte eine Formulierung, `{ code, params: { count:
+1 } }` prüft die Aussage.
+
+**Fertig, wenn** — Punkt für Punkt:
+
+| Kriterium                                                     | Beleg                                                                                                                                                                                                |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ein deutscher Browser bekommt einen deutschen Grund           | `registration.spec.ts`: Sprache auf `de`, Bestätigung mit kaputtem Token, und im Alert steht **beides** deutsch — der Satz des Clients und der Grund des Servers; der englische kommt nicht mehr vor |
+| die API-Vertragssuite prüft einen stabilen Code               | `problem-codes.spec.ts` plus acht umgestellte Suiten; `41` Suiten, `709` Tests, EXIT=0                                                                                                               |
+| kein englischer Satz der Geschäftsschicht in einer Oberfläche | strukturell: die Geschäftsschicht hält keinen Satz mehr (144 Wurfstellen), und ohne Code zeichnet kein Client einen Grund; `expectNoRawKeys` auf der deutschen Seite dazu                            |
+| ein Sprachwechsel verwirft die späte Antwort                  | fünf Unit-Tests, je einer je Seite, die die zwei Antworten in der falschen Reihenfolge auflösen                                                                                                      |
+
+**Was anders lief:** die Veranstaltersuite war im ersten vollständigen Lauf mit
+**elf** roten Tests rot, alle in Firefox, alle mit `ECONNREFUSED 127.0.0.1:3000`
+— und keiner davon ein Produktfehler. `serve-e2e` ist ein Watcher, und während
+der Lauf lief, sind drei Docstrings in Serverdateien korrigiert worden; jede
+Korrektur hat einen Neubau und einen Neustart ausgelöst, und der Server war
+genau in den Sekunden weg, in denen Firefox dran war. Die Regel dazu steht seit
+Phase 3 in `docs/rules/tooling-traps.md` und ist hier zum zweiten Mal
+bestätigt: **während eines Browserlaufs wird keine Serverdatei gespeichert.**
+Der saubere Wiederholungslauf: **317** grün, EXIT=0.
+
+**Der Stand nach diesem Paket:** `nx run-many -t lint test build` grün über 19
+Projekte; **1355** Server-Unit-Tests (zehn neu — der Ablehnungsbauer und der
+Ausnahmefilter, der bis heute keinen eigenen Test hatte), **263** im
+Nutzer-Client (fünf neu: je ein Rennen je Seite), **222** im Veranstalter-Client,
+**113** in `shared-models`, **49** in `shared-i18n`, **32** in `shared-http`.
+Vertragssuite **41** Suiten und **709** Tests (eine Datei und fünf Tests neu,
+acht Suiten von Satzfragmenten auf Codes umgestellt), genau **drei** 429 im
+ganzen Lauf — alle drei von der Drosselungssuite erbeten. Browsersuiten
+**264** (drei neu: die deutsche Begründung je Engine) und **317**, beide
+EXIT=0. `tools/shipped-stack/verify.sh` auf `STACK_PORT=8099` erneut gefahren,
+weil der Katalog im Image liegt: sieben Browsertests, alles grün, keine
+Container übrig. Der Katalog wächst um **138** Schlüssel auf **1246** — der
+größte Sprung der Projektgeschichte, und jeder einzelne ist ein Satz, den vorher
+niemand außerhalb des Codes ändern konnte. `todo.md` verliert den ältesten
+offenen Eintrag der Anwendung (seit AP 8 der Phase 2) und schließt die vier
+Seiten, die AP 5 der Phase 4 angekündigt hatte.

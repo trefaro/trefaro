@@ -169,7 +169,7 @@ export class NewsletterSignup {
       // Said by the form rather than by the server: an address that is not one
       // is a form error, and the server's answer must not vary with the
       // address (E45).
-      this.error.set({ key: 'newsletter.invalidEmail', detail: null });
+      this.error.set({ key: 'newsletter.invalidEmail', reason: null });
       return;
     }
 

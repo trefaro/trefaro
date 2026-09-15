@@ -102,8 +102,10 @@ import { PublicProgramService } from '../../features/program/public-program.serv
     @if (error(); as problem) {
       <p class="notice" role="alert">
         {{ problem.key | transloco }}
-        @if (problem.detail; as detail) {
-          <span class="notice__detail">{{ detail }}</span>
+        @if (problem.reason; as reason) {
+          <span class="notice__detail">{{
+            reason.code | transloco: reason.params
+          }}</span>
         }
       </p>
       <p>
@@ -640,7 +642,7 @@ export class EventLandingPage {
       if (!this.isCurrent(run)) return;
       this.error.set(
         (error as ApiError)?.status === 404
-          ? { key: 'event.errorMissing', detail: null }
+          ? { key: 'event.errorMissing', reason: null }
           : problemOf(error, 'event.error'),
       );
       return;

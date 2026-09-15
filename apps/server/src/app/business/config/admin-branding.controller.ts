@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Controller,
   Delete,
   Put,
@@ -23,6 +22,7 @@ import {
   MAX_BRANDING_BYTES,
   brandingTypeSummary,
 } from '@trefaro/shared-models';
+import { refuse } from '../common/problem';
 import { BrandingService } from './branding.service';
 import { BrandingImageUploadDto, BrandingImagesDto } from './dto/branding.dto';
 
@@ -170,9 +170,9 @@ export class AdminBrandingController {
     file: MultipartFile | undefined,
   ): Promise<BrandingImagesDto> {
     if (!file) {
-      throw new BadRequestException(
-        `Send the image in a multipart part called "${BRANDING_IMAGE_PART}".`,
-      );
+      throw refuse('problem.branding.imagePartMissing', {
+        part: BRANDING_IMAGE_PART,
+      });
     }
 
     return this.branding.replace(kind, {

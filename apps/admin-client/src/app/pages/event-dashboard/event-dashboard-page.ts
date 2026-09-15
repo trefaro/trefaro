@@ -77,8 +77,10 @@ import { PublicSite } from '../../features/public-site/public-site.service';
     @if (error(); as problem) {
       <p class="error" role="alert">
         {{ problem.key | transloco }}
-        @if (problem.detail; as detail) {
-          <span class="error__detail">{{ detail }}</span>
+        @if (problem.reason; as reason) {
+          <span class="error__detail">{{
+            reason.code | transloco: reason.params
+          }}</span>
         }
       </p>
     }
@@ -688,7 +690,7 @@ export class EventDashboardPage {
       this.dashboard.set(null);
       this.error.set(
         (error as ApiError)?.status === 404
-          ? { key: 'admin.events.errorMissing', detail: null }
+          ? { key: 'admin.events.errorMissing', reason: null }
           : problemOf(error, 'admin.common.loadingFailed'),
       );
     } finally {

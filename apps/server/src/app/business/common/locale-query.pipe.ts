@@ -1,10 +1,7 @@
-import {
-  BadRequestException,
-  Injectable,
-  type PipeTransform,
-} from '@nestjs/common';
+import { Injectable, type PipeTransform } from '@nestjs/common';
 import { ApiQuery } from '@nestjs/swagger';
 import { canonicalLocaleTag } from '@trefaro/shared-models';
+import { refuse } from './problem';
 
 /**
  * `?locale=` on a public read endpoint (E25).
@@ -40,9 +37,7 @@ export class LocaleQueryPipe implements PipeTransform<
 
     const tag = canonicalLocaleTag(value);
     if (tag === null) {
-      throw new BadRequestException(
-        'locale must be a BCP 47 language tag such as de or de-AT',
-      );
+      throw refuse('problem.locale.tag', { field: 'locale' });
     }
     return tag;
   }

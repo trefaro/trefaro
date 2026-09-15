@@ -1,4 +1,5 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
+import { refusalOf } from '../common/problem';
 import type { ServerPlugin } from '../plugin-api';
 import type { PluginRegistryService } from '../plugin-manager';
 import type { CoreModuleDescriptor } from './core-modules';
@@ -287,10 +288,15 @@ describe('ModuleAdminService', () => {
         ConflictException,
       );
       // The key, not only a refusal: the organizer has to know which other
-      // switch to find, and the key is what the list and the table call it.
-      await expect(service.setEnabled('profile-search', true)).rejects.toThrow(
-        /"profiles"/,
-      );
+      // switch to find, and the key is what the list and the table call it. It
+      // travels as a value now, because the sentence around it is translated.
+      expect(
+        refusalOf(
+          await service
+            .setEnabled('profile-search', true)
+            .catch((error: unknown) => error),
+        )?.params,
+      ).toEqual({ module: 'profile-search', others: '"profiles"' });
 
       // Nothing at all happened — a refused switch leaves the instance as it was.
       expect(repository.written).toEqual([]);
@@ -307,9 +313,16 @@ describe('ModuleAdminService', () => {
       // under a running dependant is not a prerequisite. And it is refused
       // rather than resolved — switching the search off as well would answer a
       // question the organizer did not ask.
-      await expect(service.setEnabled('profiles', false)).rejects.toThrow(
-        /"profile-search"/,
-      );
+      expect(
+        refusalOf(
+          await service
+            .setEnabled('profiles', false)
+            .catch((error: unknown) => error),
+        ),
+      ).toEqual({
+        code: 'problem.config.moduleDependants.one',
+        params: { module: 'profiles', others: '"profile-search"' },
+      });
       expect(repository.written).toEqual([]);
     });
 
@@ -385,9 +398,13 @@ describe('ModuleAdminService', () => {
     it('refuses to switch on while the core module it needs is off', async () => {
       const { service, repository } = withProposals([]);
 
-      await expect(
-        service.setEnabled('program-proposals', true),
-      ).rejects.toThrow(/"profiles"/);
+      const failure = service.setEnabled('program-proposals', true);
+      await expect(failure).rejects.toThrow(
+        'problem.config.moduleRequires.one',
+      );
+      expect(
+        refusalOf(await failure.catch((error: unknown) => error))?.params,
+      ).toEqual({ module: 'program-proposals', others: '"profiles"' });
       // Not a row in `module_config` either: a plug-in whose rows point at
       // `user_profile` must not be switchable on an instance without accounts.
       expect(repository.written).toEqual([]);
@@ -399,9 +416,13 @@ describe('ModuleAdminService', () => {
         'program-proposals',
       ]);
 
-      await expect(service.setEnabled('profiles', false)).rejects.toThrow(
-        /"program-proposals"/,
-      );
+      expect(
+        refusalOf(
+          await service
+            .setEnabled('profiles', false)
+            .catch((error: unknown) => error),
+        )?.params,
+      ).toEqual({ module: 'profiles', others: '"program-proposals"' });
       expect(repository.written).toEqual([]);
     });
 
@@ -437,9 +458,16 @@ describe('ModuleAdminService', () => {
 
       // `false` for an unknown key rather than `true`: a module naming
       // something absent cannot be switched on, and the 409 says which key.
-      await expect(
-        service.setEnabled('program-proposals', true),
-      ).rejects.toThrow(/"a-module-nobody-ships"/);
+      const failure = service.setEnabled('program-proposals', true);
+      await expect(failure).rejects.toThrow(
+        'problem.config.moduleRequires.one',
+      );
+      expect(
+        refusalOf(await failure.catch((error: unknown) => error))?.params,
+      ).toEqual({
+        module: 'program-proposals',
+        others: '"a-module-nobody-ships"',
+      });
     });
   });
 });

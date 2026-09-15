@@ -13,24 +13,41 @@ describe('toApiError', () => {
       retryable: true,
       // Not the server's own words: this library wrote that sentence, and a
       // screen must not repeat it beside its own (F77).
-      explained: false,
+      refusal: null,
     });
   });
 
-  it("uses the server's message when it sends one", () => {
+  it("reads the server's reason as a code and its values", () => {
     const error = toApiError(
       new HttpErrorResponse({
         status: 400,
         error: {
           statusCode: 400,
-          message: 'A room must have a capacity of at least 1',
+          message: 'problem.field.required',
+          code: 'problem.field.required',
+          params: { label: 'Passport scan' },
         },
       }),
     );
 
-    expect(error.message).toBe('A room must have a capacity of at least 1');
+    expect(error.refusal).toEqual({
+      code: 'problem.field.required',
+      params: { label: 'Passport scan' },
+    });
     expect(error.retryable).toBe(false);
-    expect(error.explained).toBe(true);
+  });
+
+  it('keeps whatever text came with the answer, for a console', () => {
+    const error = toApiError(
+      new HttpErrorResponse({
+        status: 404,
+        error: { statusCode: 404, message: 'No event with id "7"' },
+      }),
+    );
+
+    expect(error.message).toBe('No event with id "7"');
+    // …and never for a screen: a 404 carries no code, so no reason is shown.
+    expect(error.refusal).toBeNull();
   });
 
   it('accepts a plain string error body', () => {
@@ -39,6 +56,7 @@ describe('toApiError', () => {
     );
 
     expect(error.message).toBe('Not Found');
+    expect(error.refusal).toBeNull();
   });
 
   it('falls back to the status text when the body carries no message', () => {
@@ -51,8 +69,7 @@ describe('toApiError', () => {
     );
 
     expect(error.message).toBe('Forbidden');
-    // Angular's word for the status code, not a reason anybody wrote down.
-    expect(error.explained).toBe(false);
+    expect(error.refusal).toBeNull();
   });
 
   it("falls back to Angular's own status text when there is nothing else", () => {
@@ -61,6 +78,19 @@ describe('toApiError', () => {
     );
 
     expect(error.message).toBe('Unknown Error');
+  });
+
+  it('ignores a code this build has no sentence for', () => {
+    // A newer server, an older client: the client says its own half and stays
+    // silent about the other rather than printing a key at a reader.
+    const error = toApiError(
+      new HttpErrorResponse({
+        status: 400,
+        error: { code: 'problem.fromTheFuture.entirely' },
+      }),
+    );
+
+    expect(error.refusal).toBeNull();
   });
 
   it('treats server errors and rate limiting as retryable, client errors as not', () => {
@@ -81,7 +111,10 @@ describe('problemOf', () => {
       toApiError(
         new HttpErrorResponse({
           status: 409,
-          error: { message: 'This session is full' },
+          error: {
+            code: 'problem.program.full',
+            params: { title: 'Opening plenary' },
+          },
         }),
       ),
       'mine.error.save',
@@ -89,7 +122,10 @@ describe('problemOf', () => {
 
     expect(problem).toEqual({
       key: 'mine.error.save',
-      detail: 'This session is full',
+      reason: {
+        code: 'problem.program.full',
+        params: { title: 'Opening plenary' },
+      },
     });
   });
 
@@ -101,14 +137,14 @@ describe('problemOf', () => {
       'event.error',
     );
 
-    expect(problem.detail).toBeNull();
+    expect(problem.reason).toBeNull();
   });
 
   it('survives something that is not an ApiError at all', () => {
     expect(problemOf(new Error('boom'), 'start.error')).toEqual({
       key: 'start.error',
-      detail: null,
+      reason: null,
     });
-    expect(problemOf(undefined, 'start.error').detail).toBeNull();
+    expect(problemOf(undefined, 'start.error').reason).toBeNull();
   });
 });

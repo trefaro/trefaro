@@ -186,7 +186,36 @@ test.describe('registering for an event', () => {
     );
     await page.getByRole('button', { name: t('confirm.submit') }).click();
 
-    await expect(page.getByRole('alert')).toContainText('not valid');
+    // The server's own reason, drawn from the catalogue since AP 5 of phase 5
+    // (E64) — named by its key, because the wording is the organization's.
+    await expect(page.getByRole('alert')).toContainText(
+      t('problem.registration.confirmationStale'),
+    );
+  });
+
+  test('gives a German browser a German reason for a refused registration', async ({
+    page,
+  }) => {
+    // The acceptance criterion of AP 5 of phase 5, and the one thing no unit
+    // test can show: the *reason* is the server's, it travels as a code, and it
+    // arrives in the language the reader chose — on a page whose own sentence
+    // was already German before this package.
+    await page.goto(
+      '/registrations/confirm?token=bm90LWEtdG9rZW4.bm90LWEtc2lnbmF0dXJl',
+    );
+    await page.getByRole('combobox').selectOption('de');
+    await page
+      .getByRole('button', { name: t('confirm.submit', {}, 'de') })
+      .click();
+
+    const alert = page.getByRole('alert');
+    await expect(alert).toContainText(t('confirm.error', {}, 'de'));
+    await expect(alert).toContainText(
+      t('problem.registration.confirmationStale', {}, 'de'),
+    );
+    // And not a word of the English one underneath it.
+    await expect(alert).not.toContainText('not valid any more');
+    await expectNoRawKeys(page);
   });
 
   test('offers no registration on an event that is over', async ({ page }) => {

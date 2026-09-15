@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
+import { readRefusal, type ProblemParams } from '@trefaro/shared-models';
 
 /**
  * Client errors that occur in normal operation and say nothing about a fault.
@@ -24,6 +25,17 @@ interface ErrorBody {
   message: string;
   path: string;
   timestamp: string;
+  /**
+   * The catalogue key of the reason, when the business layer gave one (E64).
+   *
+   * Beside {@link message} rather than instead of it: `message` is what a log
+   * line and a stack trace print, and since AP 5 of phase 5 it prints this same
+   * code, because a refusal has no sentence left to print. The field is what
+   * the contract suite asserts and what a client translates.
+   */
+  code?: string;
+  /** The values the reason's sentence has gaps for. */
+  params?: ProblemParams;
 }
 
 /**
@@ -50,6 +62,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
+    const refusal =
+      exception instanceof HttpException
+        ? readRefusal(exception.getResponse())
+        : null;
+
     const body: ErrorBody = {
       statusCode: status,
       // Expected errors carry a client-safe message; anything else does not.
@@ -59,6 +76,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
           : 'Internal server error',
       path: httpAdapter.getRequestUrl(request) ?? '',
       timestamp: new Date().toISOString(),
+      ...(refusal === null
+        ? {}
+        : {
+            code: refusal.code,
+            ...(refusal.params && { params: refusal.params }),
+          }),
     };
 
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {

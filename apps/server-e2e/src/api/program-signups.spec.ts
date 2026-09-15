@@ -1,5 +1,5 @@
 import { adminCookie } from '../support/admin-session';
-import { api, postJson } from '../support/api-client';
+import { api, postJson, refusalOf } from '../support/api-client';
 import {
   clearMailbox,
   confirmationTokenFrom,
@@ -290,7 +290,9 @@ describe('program sign-up API', () => {
       const response = await plan({ ...PLENARY, capacity: 12 }, event.id);
 
       expect(response.status).toBe(400);
-      expect(JSON.stringify(response.body)).toContain('sign-up is switched on');
+      expect(refusalOf(response.body)?.code).toBe(
+        'problem.program.capacityWithoutSignUp',
+      );
     });
 
     it('drops the seats when sign-up is switched off again', async () => {
@@ -381,7 +383,9 @@ describe('program sign-up API', () => {
       const response = await api('/api/user/registrations/me');
 
       expect(response.status).toBe(400);
-      expect(JSON.stringify(response.body)).toContain('missing its token');
+      expect(refusalOf(response.body)?.code).toBe(
+        'problem.selfService.tokenMissing',
+      );
     });
 
     it('refuses a token whose payload was edited', async () => {
@@ -446,7 +450,9 @@ describe('program sign-up API', () => {
       const response = await signUp(item.id, token);
 
       expect(response.status).toBe(409);
-      expect(JSON.stringify(response.body)).toContain('does not ask for');
+      expect(refusalOf(response.body)?.code).toBe(
+        'problem.program.withoutSignUp',
+      );
     });
 
     it('answers a session of another event as absent, not as forbidden', async () => {
@@ -484,7 +490,12 @@ describe('program sign-up API', () => {
       const refused = await signUp(item.id, second);
 
       expect(refused.status).toBe(409);
-      expect(JSON.stringify(refused.body)).toContain('is full');
+      // The title travels as a value: it is what an organizer wrote, and the
+      // sentence around it is the reader's (E64).
+      expect(refusalOf(refused.body)).toEqual({
+        code: 'problem.program.full',
+        params: { title: 'Workshop with one chair' },
+      });
       expect((await load(item.id)).body.signupCount).toBe(1);
     });
 
@@ -613,7 +624,9 @@ describe('program sign-up API', () => {
       // working after a cancellation could take seats for a registration that no
       // longer stands.
       expect(response.status).toBe(409);
-      expect(JSON.stringify(response.body)).toContain('was cancelled');
+      expect(refusalOf(response.body)?.code).toBe(
+        'problem.registration.cancelled',
+      );
     });
   });
 });

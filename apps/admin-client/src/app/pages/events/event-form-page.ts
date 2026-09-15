@@ -73,8 +73,10 @@ import { eventTypeKey } from '../../features/i18n/labels';
     @if (error(); as problem) {
       <p class="error" role="alert">
         {{ problem.key | transloco }}
-        @if (problem.detail; as detail) {
-          <span class="error__detail">{{ detail }}</span>
+        @if (problem.reason; as reason) {
+          <span class="error__detail">{{
+            reason.code | transloco: reason.params
+          }}</span>
         }
       </p>
     }
@@ -457,7 +459,7 @@ export class EventFormPage {
       return;
     }
     if (this.languages().length === 0) {
-      this.error.set({ key: 'admin.events.errorNoLanguage', detail: null });
+      this.error.set({ key: 'admin.events.errorNoLanguage', reason: null });
       return;
     }
 
@@ -533,7 +535,7 @@ export class EventFormPage {
     } catch (error: unknown) {
       this.error.set(
         (error as ApiError)?.status === 404
-          ? { key: 'admin.events.errorMissing', detail: null }
+          ? { key: 'admin.events.errorMissing', reason: null }
           : problemOf(error, 'admin.common.loadingFailed'),
       );
     }

@@ -1399,7 +1399,7 @@ entry, the answer is noted below rather than repeated.
       say. Nothing about it got harder to do in the meantime: `imageDimensions`
       is there, and the upload answer is the only thing that has to grow.
 
-- [ ] **The server refuses in English, whatever language the page is in.** Since
+- [x] **The server refuses in English, whatever language the page is in.** Since
       AP 8 and AP 9 of phase 2 both clients say their own half from the catalogue
       and put the server's reason beside it (F77) — "Die Anmeldung konnte nicht
       gesendet werden." followed by `"Passport scan" takes files up to 5 MB`. It
@@ -1416,10 +1416,13 @@ entry, the answer is noted below rather than repeated.
       browser gets a German reason for a refused registration, and the API
       contract suite still asserts something stable — which is the second
       argument for codes.
-      **Moved to phase 5 in AP 13 of phase 2.** It is the last piece of chapter 4
-      that phase 2 did not deliver, and it is deliberately not a text extraction:
-      it is an error-code contract through the whole business layer, which is
-      hardening work and wants the API contract suite settled around it.
+      **Done in AP 5 of phase 5** (E64, F212–F214): 138 codes in
+      `PROBLEM_CODES` (`shared-models`), a sentence each in both shipped
+      catalogues, `refuse`/`conflict`/`tooLarge` in `business/common/problem.ts`
+      instead of a sentence at 144 throw sites, `Problem.reason` as a key plus
+      its values in both clients, and a contract suite that asserts the code.
+      404, 401 and 403 deliberately carry none — a client knows those reasons
+      itself, and their sentences stay in the log (F213).
 
 - [ ] **A shared link into the participant client does not carry its language.**
       The reader's language lives in `localStorage` (AP 6), so a link somebody
@@ -1617,11 +1620,14 @@ entry, the answer is noted below rather than repeated.
       sequence (a late answer to a question nobody is asking any more is
       dropped) and a unit test that resolves the two answers out of order. The
       same shape — `load(…, i18n.locale())` in an `effect`, writes after an
-      `await` without a guard — still stands in `series-detail-page.ts`,
+      `await` without a guard — still stood in `series-detail-page.ts`,
       `start-page.ts`, `event-registration-page.ts` and
-      `my-registration-page.ts`; nothing has caught them yet, and a quick
-      switch on a slow connection would. Phase 5, together, with one test
-      each. **The newsletter half followed in AP 6** and was not a race
+      `my-registration-page.ts`; nothing had caught them, and a quick switch on
+      a slow connection would have. **Closed in AP 5 of phase 5**, all four
+      with a test each that resolves the two answers out of order — and a fifth
+      the four-line list had missed, `my-registrations-page.ts`, where a late
+      answer would not have replaced the rows but **appended** to them, because
+      a second page arrives the same way. **The newsletter half followed in AP 6** and was not a race
       either: after the click on a series, the test found the newsletter
       region of the **start page** — the same component stands on both pages
       (F182) — filled it, and the navigation threw it away; the submit landed

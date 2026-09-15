@@ -104,8 +104,10 @@ import { SetupService } from '../../features/setup/setup.service';
           @if (error(); as problem) {
             <p class="error" role="alert">
               {{ problem.key | transloco }}
-              @if (problem.detail; as detail) {
-                <span class="error__detail">{{ detail }}</span>
+              @if (problem.reason; as reason) {
+                <span class="error__detail">{{
+                  reason.code | transloco: reason.params
+                }}</span>
               }
             </p>
           }
@@ -238,8 +240,10 @@ import { SetupService } from '../../features/setup/setup.service';
           @if (error(); as problem) {
             <p class="error" role="alert">
               {{ problem.key | transloco }}
-              @if (problem.detail; as detail) {
-                <span class="error__detail">{{ detail }}</span>
+              @if (problem.reason; as reason) {
+                <span class="error__detail">{{
+                  reason.code | transloco: reason.params
+                }}</span>
               }
             </p>
           }
@@ -530,10 +534,10 @@ export class SetupPage {
  */
 function tokenProblem(error: ApiError): Problem {
   if (error?.status === 401) {
-    return { key: 'admin.setup.errorToken', detail: null };
+    return { key: 'admin.setup.errorToken', reason: null };
   }
   if (error?.status === 404) {
-    return { key: 'admin.setup.errorClaimed', detail: null };
+    return { key: 'admin.setup.errorClaimed', reason: null };
   }
   return problemOf(error, 'admin.setup.errorTokenGeneric');
 }
@@ -545,7 +549,7 @@ function tokenProblem(error: ApiError): Problem {
  */
 function submitProblem(error: ApiError): Problem {
   if (error?.status === 404) {
-    return { key: 'admin.setup.errorClaimedMeanwhile', detail: null };
+    return { key: 'admin.setup.errorClaimedMeanwhile', reason: null };
   }
   return problemOf(error, 'admin.setup.error');
 }

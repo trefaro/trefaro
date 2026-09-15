@@ -1,10 +1,11 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import {
   FALLBACK_LOCALE,
   isLocaleTag,
   type TranslationCatalogue,
 } from '@trefaro/shared-models';
+import { refuse } from '../common/problem';
 import { ConfigurationService } from '../config';
 import {
   SHIPPED_CATALOGUE_READER,
@@ -172,9 +173,7 @@ export class CatalogueService {
     // catalogue reader: the tag arrives in a URL, and what it must not be able to
     // do is describe a path.
     if (!isLocaleTag(tag)) {
-      throw new BadRequestException(
-        'locale must be a BCP 47 language tag such as de or de-AT',
-      );
+      throw refuse('problem.locale.tag', { field: 'locale' });
     }
     return tag.toLowerCase();
   }

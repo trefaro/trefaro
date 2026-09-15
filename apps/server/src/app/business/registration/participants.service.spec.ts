@@ -625,7 +625,9 @@ describe('ParticipantsService', () => {
       // Nothing would tell a hand-set status from a real double opt-in
       // afterwards, so this would quietly devalue the consent record (E5, F23).
       await expect(failure).rejects.toBeInstanceOf(ConflictException);
-      await expect(failure).rejects.toThrow(/submit the form again/);
+      await expect(failure).rejects.toThrow(
+        'problem.registration.neverConfirmed',
+      );
       expect(repository.updates).toHaveLength(0);
     });
 

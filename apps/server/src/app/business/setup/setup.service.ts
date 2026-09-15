@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Inject,
   Injectable,
   Logger,
@@ -13,6 +12,7 @@ import type {
 } from '@trefaro/shared-models';
 import type { TrefaroEnv } from '../../core/config/env';
 import { ENV } from '../../core/config/env.module';
+import { refuse } from '../common/problem';
 import { ConfigurationService } from '../config';
 import { AdminUserService } from '../login';
 import { MailCatalogue } from '../mail';
@@ -138,9 +138,9 @@ export class SetupService implements OnApplicationBootstrap {
       // compiled in. A locale that fails it would send English confirmations
       // while claiming to be German (E24), which is exactly the state the
       // wizard must not be able to produce.
-      throw new BadRequestException(
-        `defaultLocale must be one of the languages this instance can send mail in: ${locales.join(', ')}`,
-      );
+      throw refuse('problem.setup.defaultLocaleUnsendable', {
+        locales: locales.join(', '),
+      });
     }
 
     const settings = await this.configuration.updateSettings({

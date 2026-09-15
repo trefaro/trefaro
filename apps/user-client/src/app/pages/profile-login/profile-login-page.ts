@@ -35,8 +35,10 @@ import { ParticipantSessionService } from '../../features/auth/participant-sessi
     @if (error(); as problem) {
       <p class="notice" role="alert">
         {{ problem.key | transloco }}
-        @if (problem.detail; as detail) {
-          <span class="notice__detail">{{ detail }}</span>
+        @if (problem.reason; as reason) {
+          <span class="notice__detail">{{
+            reason.code | transloco: reason.params
+          }}</span>
         }
       </p>
     }
@@ -200,18 +202,18 @@ export class ProfileLoginPage {
  * 401 says nothing about which half was wrong, on purpose (E32). 403 is the one
  * refusal with a way forward — the address exists and is not confirmed — and the
  * sentence points at the mail and at the registration form, which sends the link
- * again. 429 would otherwise arrive as an English sentence about a rate limit on
- * a German form.
+ * again. 429 comes from the throttler rather than from the business layer, so
+ * it carries no code of its own and this form says the sentence itself.
  */
 function problemFor(error: ApiError): Problem {
   if (error?.status === 429) {
-    return { key: 'profile.login.errorThrottled', detail: null };
+    return { key: 'profile.login.errorThrottled', reason: null };
   }
   if (error?.status === 403) {
-    return { key: 'profile.login.errorUnconfirmed', detail: null };
+    return { key: 'profile.login.errorUnconfirmed', reason: null };
   }
   if (error?.status === 401) {
-    return { key: 'profile.login.errorCredentials', detail: null };
+    return { key: 'profile.login.errorCredentials', reason: null };
   }
   return problemOf(error, 'profile.login.failed');
 }

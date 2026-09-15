@@ -32,3 +32,28 @@ export const postJson = <T = unknown>(path: string, payload: unknown) =>
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(payload),
   });
+
+/**
+ * The reason a refusal gave, as it travels on the wire (E64).
+ *
+ * The contract this suite asserts from AP 5 of phase 5 on: a refused request
+ * answers with a **code** and its values, never with a sentence. Asserting the
+ * code is the second argument for having codes at all — a suite that matched
+ * on English prose broke whenever somebody improved the prose, and said nothing
+ * when the meaning changed underneath it.
+ */
+export interface Refusal {
+  readonly code: string;
+  readonly params: Readonly<Record<string, unknown>>;
+}
+
+/** The refusal in a response body, or `null` when it carries none. */
+export function refusalOf(body: unknown): Refusal | null {
+  const problem = body as { code?: unknown; params?: unknown } | null;
+  if (typeof problem?.code !== 'string') return null;
+  const params =
+    typeof problem.params === 'object' && problem.params !== null
+      ? (problem.params as Record<string, unknown>)
+      : {};
+  return { code: problem.code, params };
+}

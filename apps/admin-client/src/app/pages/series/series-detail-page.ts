@@ -41,8 +41,10 @@ import { eventTypeKey } from '../../features/i18n/labels';
     @if (error(); as problem) {
       <p class="error" role="alert">
         {{ problem.key | transloco }}
-        @if (problem.detail; as detail) {
-          <span class="error__detail">{{ detail }}</span>
+        @if (problem.reason; as reason) {
+          <span class="error__detail">{{
+            reason.code | transloco: reason.params
+          }}</span>
         }
       </p>
     }
@@ -388,7 +390,7 @@ export class SeriesDetailPage {
     } catch (error: unknown) {
       this.error.set(
         (error as ApiError)?.status === 404
-          ? { key: 'admin.series.errorMissing', detail: null }
+          ? { key: 'admin.series.errorMissing', reason: null }
           : problemOf(error, 'admin.common.loadingFailed'),
       );
     } finally {

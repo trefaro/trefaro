@@ -1,6 +1,10 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { FALLBACK_LOCALE, isTranslationKey } from '@trefaro/shared-models';
+import {
+  FALLBACK_LOCALE,
+  PROBLEM_CODES,
+  isTranslationKey,
+} from '@trefaro/shared-models';
 import type { TranslationCatalogue } from '@trefaro/shared-models';
 
 /**
@@ -46,6 +50,23 @@ describe('the shipped catalogues', () => {
 
   it('has keys to translate at all', () => {
     expect(englishKeys.length).toBeGreaterThan(0);
+  });
+
+  it('has a sentence for every reason the server can give', () => {
+    // The other half of the closed list in `shared-models` (E64): a code
+    // without a sentence would reach a screen as the key itself, and nothing
+    // between the throw and the reader would have noticed. German follows from
+    // the completeness test below — English is the key list.
+    const missing = PROBLEM_CODES.filter((code) => !(code in english));
+    expect(missing).toEqual([]);
+  });
+
+  it('spends its problem keys, so a retired code does not linger', () => {
+    const codes: ReadonlySet<string> = new Set(PROBLEM_CODES);
+    const orphans = englishKeys.filter(
+      (key) => key.startsWith('problem.') && !codes.has(key),
+    );
+    expect(orphans).toEqual([]);
   });
 
   for (const locale of shippedLocales) {

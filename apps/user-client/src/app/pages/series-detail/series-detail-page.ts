@@ -32,8 +32,10 @@ import { PublicEventsService } from '../../features/events/public-events.service
     @if (error(); as problem) {
       <p class="notice" role="alert">
         {{ problem.key | transloco }}
-        @if (problem.detail; as detail) {
-          <span class="notice__detail">{{ detail }}</span>
+        @if (problem.reason; as reason) {
+          <span class="notice__detail">{{
+            reason.code | transloco: reason.params
+          }}</span>
         }
       </p>
     } @else if (series(); as item) {
@@ -200,6 +202,16 @@ export class SeriesDetailPage {
       .reverse(),
   );
 
+  /**
+   * Counts the reads, so a late answer to an earlier one is dropped.
+   *
+   * Two loads are in flight the moment somebody switches the language before
+   * the first has arrived, and the answers come back in the order of the
+   * network. Without this, a slow English answer painted an English series
+   * under a German page (AP 5 of phase 5).
+   */
+  private loadSequence = 0;
+
   constructor() {
     // The language is read here so a switch re-runs the effect: names and
     // descriptions are translated on the server (FR 3.12), and a page that only
@@ -240,6 +252,7 @@ export class SeriesDetailPage {
   }
 
   private async load(slug: string, locale: string): Promise<void> {
+    const run = ++this.loadSequence;
     this.error.set(null);
     this.loadingEvents.set(true);
     try {
@@ -247,18 +260,20 @@ export class SeriesDetailPage {
         this.seriesService.bySlug(slug, locale),
         this.eventsService.listBySeries(slug, locale),
       ]);
+      if (run !== this.loadSequence) return;
       this.series.set(series);
       this.events.set(events);
     } catch (error: unknown) {
+      if (run !== this.loadSequence) return;
       // A 404 needs no reason from the server: this client already knows the
       // only two it can be, and repeating "Not Found" underneath would be noise.
       this.error.set(
         (error as ApiError)?.status === 404
-          ? { key: 'series.errorMissing', detail: null }
+          ? { key: 'series.errorMissing', reason: null }
           : problemOf(error, 'series.error'),
       );
     } finally {
-      this.loadingEvents.set(false);
+      if (run === this.loadSequence) this.loadingEvents.set(false);
     }
   }
 }

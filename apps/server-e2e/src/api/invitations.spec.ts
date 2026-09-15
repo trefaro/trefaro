@@ -1,5 +1,5 @@
 import { adminCookie } from '../support/admin-session';
-import { api } from '../support/api-client';
+import { api, refusalOf } from '../support/api-client';
 import {
   closeDatabase,
   deleteSeries,
@@ -446,7 +446,7 @@ describe('invitations API', () => {
       );
 
       expect(status).toBe(400);
-      expect(JSON.stringify(body)).toMatch(/different event series/);
+      expect(refusalOf(body)?.code).toBe('problem.invitation.foreignEvent');
     });
 
     it('refuses a registration of another series (F55)', async () => {

@@ -98,8 +98,10 @@ interface LinkDraft {
       @if (error(); as problem) {
         <p class="error" role="alert">
           {{ problem.key | transloco }}
-          @if (problem.detail; as detail) {
-            <span class="error__detail">{{ detail }}</span>
+          @if (problem.reason; as reason) {
+            <span class="error__detail">{{
+              reason.code | transloco: reason.params
+            }}</span>
           }
         </p>
       }
@@ -512,7 +514,7 @@ export class MediaLinksPage {
     // title instead of the address should not have to wait for a round trip to
     // find out.
     if (!isWebUrl(raw.url)) {
-      this.error.set({ key: 'admin.mediaLinks.errorUrl', detail: null });
+      this.error.set({ key: 'admin.mediaLinks.errorUrl', reason: null });
       return;
     }
 
@@ -530,7 +532,7 @@ export class MediaLinksPage {
   protected async save(link: MediaLink): Promise<void> {
     const draft = this.draft(link.id);
     if (!isWebUrl(draft.url)) {
-      this.error.set({ key: 'admin.mediaLinks.errorUrl', detail: null });
+      this.error.set({ key: 'admin.mediaLinks.errorUrl', reason: null });
       return;
     }
 

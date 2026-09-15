@@ -1,4 +1,4 @@
-import { api, postJson } from '../support/api-client';
+import { api, postJson, refusalOf } from '../support/api-client';
 import { adminCookie } from '../support/admin-session';
 import {
   closeDatabase,
@@ -484,7 +484,9 @@ describe('participant overview API', () => {
       // Nothing would tell a hand-set status from a real double opt-in
       // afterwards (E5, F23).
       expect(response.status).toBe(409);
-      expect(JSON.stringify(response.body)).toMatch(/submit the form again/);
+      expect(refusalOf(response.body)?.code).toBe(
+        'problem.registration.neverConfirmed',
+      );
     });
 
     it('rejects a status that is not one', async () => {

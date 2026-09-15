@@ -1,5 +1,4 @@
 import {
-  ConflictException,
   Inject,
   Injectable,
   Logger,
@@ -10,9 +9,11 @@ import type { TrefaroEnv } from '../../core/config/env';
 import { ENV } from '../../core/config/env.module';
 import { PasswordHasher } from '../common/password-hasher.service';
 import {
+  PASSWORD_POLICY,
   describePasswordPolicy,
   isUsablePassword,
 } from '../common/password-policy';
+import { conflict } from '../common/problem';
 import {
   ADMIN_USER_REPOSITORY,
   AdminEmailTakenError,
@@ -115,7 +116,7 @@ export class AdminUserService implements OnApplicationBootstrap {
     password: string;
   }): Promise<AdminSummary> {
     if (!isUsablePassword(input.password)) {
-      throw new ConflictException(describePasswordPolicy());
+      throw conflict('problem.password.policy', PASSWORD_POLICY);
     }
 
     try {
@@ -128,7 +129,7 @@ export class AdminUserService implements OnApplicationBootstrap {
       return toAdminSummary(created);
     } catch (error: unknown) {
       if (error instanceof AdminEmailTakenError) {
-        throw new ConflictException(error.message);
+        throw conflict('problem.admin.emailTaken', { email: error.email });
       }
       throw error;
     }
@@ -137,9 +138,7 @@ export class AdminUserService implements OnApplicationBootstrap {
   /** Deleting an account also ends its sessions — the foreign key cascades. */
   async delete(id: string, actingAdminId: string): Promise<void> {
     if (id === actingAdminId) {
-      throw new ConflictException(
-        'An administrator cannot delete their own account — ask a colleague to do it',
-      );
+      throw conflict('problem.admin.lastOwnAccount');
     }
 
     if (!(await this.admins.delete(id))) {

@@ -256,7 +256,7 @@ describe('ProgramService', () => {
           startsAt: '2027-06-15T07:00:00.000Z',
           endsAt: '2027-06-15T08:00:00.000Z',
         }),
-      ).rejects.toThrow(/June 14, 2027, 08:00–18:00/);
+      ).rejects.toThrow('problem.program.outsideEvent');
     });
 
     it('accepts a session that fills the event exactly', async () => {
@@ -560,7 +560,7 @@ describe('ProgramService', () => {
     it('refuses a capacity without sign-up switched on', async () => {
       await expect(
         service.create(EVENT.id, { ...KEYNOTE, capacity: 12 }),
-      ).rejects.toThrow(/sign-up is switched on/);
+      ).rejects.toThrow('problem.program.capacityWithoutSignUp');
     });
 
     it('accepts a capacity with sign-up switched on', async () => {

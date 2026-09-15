@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import type {
   ContactRequestAcknowledgement,
   ContactRequestInput,
@@ -16,6 +11,7 @@ import {
 } from '@trefaro/shared-models';
 import type { TrefaroEnv } from '../../core/config/env';
 import { ENV } from '../../core/config/env.module';
+import { refuse } from '../common/problem';
 import { EventSeriesService } from '../event-series';
 import { EventsService } from '../events';
 import { MailDeliveryError, MailService, PublicLinks } from '../mail';
@@ -101,17 +97,15 @@ export class OrganizerContactService {
     const body = input.body.trim();
 
     if (name.length === 0) {
-      throw new BadRequestException('Please say who is writing.');
+      throw refuse('problem.chat.senderMissing');
     }
     if (body.length === 0) {
-      throw new BadRequestException(
-        'A message needs words. An empty one is not a message.',
-      );
+      throw refuse('problem.chat.contactMessageEmpty');
     }
     if (body.length > MAX_MESSAGE_LENGTH) {
-      throw new BadRequestException(
-        `A message may be up to ${MAX_MESSAGE_LENGTH} characters.`,
-      );
+      throw refuse('problem.chat.messageTooLong', {
+        max: MAX_MESSAGE_LENGTH,
+      });
     }
 
     // The conversation and its first line in one transaction: an

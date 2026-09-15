@@ -33,8 +33,10 @@ import { PublicEventSeriesService } from '../../features/event-series/public-eve
     @if (error(); as problem) {
       <p class="notice" role="alert">
         {{ problem.key | transloco }}
-        @if (problem.detail; as detail) {
-          <span class="notice__detail">{{ detail }}</span>
+        @if (problem.reason; as reason) {
+          <span class="notice__detail">{{
+            reason.code | transloco: reason.params
+          }}</span>
         }
       </p>
     } @else if (loading()) {
@@ -127,11 +129,22 @@ export class StartPage {
   /**
    * What went wrong, as a key plus the server's reason if it gave one (F77).
    *
-   * A sentence assembled here would be English on a German page, so this client
-   * says its half in the reader's language and puts the server's half — always
-   * English — beside it.
+   * Two halves, because they come from two places: this client says *what* did
+   * not work, the server says *why*. Both are catalogue keys since AP 5 of
+   * phase 5 (E64), so both are drawn in the language of the reader.
    */
   protected readonly error = signal<Problem | null>(null);
+
+  /**
+   * Counts the reads, so a late answer to an earlier one is dropped.
+   *
+   * Two loads are in flight the moment somebody switches the language before
+   * the first one has arrived, and the answers come back in the order of the
+   * network. Without this, a slow English answer painted an English list under
+   * a German page (AP 5 of phase 5; the landing page has had it since AP 5 of
+   * phase 4).
+   */
+  private loadSequence = 0;
 
   constructor() {
     // An effect rather than one call: series names and descriptions are
@@ -143,9 +156,13 @@ export class StartPage {
   }
 
   private async load(locale: string): Promise<void> {
+    const run = ++this.loadSequence;
     try {
-      this.series.set(await this.seriesService.list(locale));
+      const rows = await this.seriesService.list(locale);
+      if (run !== this.loadSequence) return;
+      this.series.set(rows);
     } catch (error: unknown) {
+      if (run !== this.loadSequence) return;
       this.error.set(
         problemOf(
           error,
@@ -153,7 +170,7 @@ export class StartPage {
         ),
       );
     } finally {
-      this.loading.set(false);
+      if (run === this.loadSequence) this.loading.set(false);
     }
   }
 }

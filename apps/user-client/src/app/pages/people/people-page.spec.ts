@@ -158,7 +158,7 @@ describe('PeoplePage', () => {
   it('keeps the rows on screen when a further page fails', async () => {
     const { page } = await render();
 
-    people.fails = { status: 500, explained: false };
+    people.fails = { status: 500, refusal: null };
     await page.loadMore();
 
     // A failed second page is no reason to take the first one away.

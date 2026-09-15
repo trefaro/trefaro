@@ -355,15 +355,21 @@ describe('ModulesPage', () => {
     const page = render({ modules: [core('media-links', true)] });
     await page.settle();
     page.admin.failWith = {
-      status: 404,
-      message: 'No module "media-links"',
-      explained: true,
+      status: 409,
+      message: 'problem.config.moduleDependants.one',
+      refusal: {
+        code: 'problem.config.moduleDependants.one',
+        params: { module: 'media-links', others: '"forum"' },
+      },
     };
 
     page.buttons()[0].click();
     await page.settle();
 
-    expect(page.text()).toContain('No module');
+    // The code, not a sentence: this spec runs on an empty catalogue, so what
+    // it can prove is that the page draws the server's reason through the
+    // catalogue at all (E64) — the sentences are the catalogue's own test.
+    expect(page.text()).toContain('problem.config.moduleDependants.one');
     // Still enabled: the page shows what the server says, not what was clicked.
     expect(page.buttons()[0].textContent?.trim()).toBe('Disable');
     expect(page.reloads()).toBe(0);

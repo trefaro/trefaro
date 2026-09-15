@@ -84,8 +84,10 @@ import { ParticipantProfileService } from '../../features/profiles/participant-p
       @if (error(); as problem) {
         <p class="notice" role="alert">
           {{ problem.key | transloco }}
-          @if (problem.detail; as detail) {
-            <span class="notice__detail">{{ detail }}</span>
+          @if (problem.reason; as reason) {
+            <span class="notice__detail">{{
+              reason.code | transloco: reason.params
+            }}</span>
           }
         </p>
       }
@@ -178,8 +180,10 @@ import { ParticipantProfileService } from '../../features/profiles/participant-p
           @if (passwordError(); as problem) {
             <p class="notice" role="alert">
               {{ problem.key | transloco }}
-              @if (problem.detail; as detail) {
-                <span class="notice__detail">{{ detail }}</span>
+              @if (problem.reason; as reason) {
+                <span class="notice__detail">{{
+                  reason.code | transloco: reason.params
+                }}</span>
               }
             </p>
           }

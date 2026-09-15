@@ -240,7 +240,9 @@ describe('SelfServiceService', () => {
     it('says a cancelled registration was cancelled', async () => {
       rows.set(CONFIRMED.id, { ...CONFIRMED, status: 'cancelled' });
 
-      await expect(service.view(linkFor())).rejects.toThrow(/was cancelled/);
+      await expect(service.view(linkFor())).rejects.toThrow(
+        'problem.registration.cancelled',
+      );
     });
 
     it('sends an unconfirmed registration back to the confirmation mail', async () => {

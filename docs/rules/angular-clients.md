@@ -55,9 +55,13 @@ besteht. Jede Zeile hier hat einmal einen halben Tag gekostet.
   das, was `content-translations.spec.ts` unter acht Arbeitern zweimal fand
   und allein gefahren nie. Die Event-Landingpage zählt deshalb ihre
   Ladevorgänge (`loadSequence`) und schreibt nach einem `await` nur, wenn ihr
-  Lauf noch der jüngste ist. Dieselbe Bauweise fehlt noch an vier Seiten mit
-  demselben Effekt (Reihe, Startseite, Anmeldung, „meine Anmeldung"), siehe
-  `todo.md` unter Phase 5.
+  Lauf noch der jüngste ist. **Seit AP 5 der Phase 5 gilt das an jeder Seite mit
+  demselben Effekt** — Reihe, Startseite, Anmeldung, „meine Anmeldung" und die
+  Liste „meine Anmeldungen", je mit einem Test, der die zwei Antworten in der
+  falschen Reihenfolge auflöst. Die Liste ist der schlimmste Fall und stand in
+  keiner der vier Zeilen, die AP 5 der Phase 4 benannt hatte: eine späte Antwort
+  würde ihre Zeilen nicht ersetzen, sondern **anhängen**, weil eine zweite Seite
+  denselben Weg nimmt.
 - **Ein laufender Client wird nur von seiner eigenen Seite umgefärbt.** Die
   Design-Seite ruft `ThemeService.apply()` mit dem Entwurf; `DestroyRef` stellt
   beim Verlassen wieder her, `Discard` beim Klick. Nach jedem Schreiben wird

@@ -7,6 +7,18 @@ Diese Formen sind mehrfach gegen Alternativen entschieden worden; die
 Alternativen waren jeweils ein offener Endpunkt, eine Sackgasse oder ein toter
 Link.
 
+- **Eine Ablehnung reist als Code, nicht als Satz** (E64, F212). Der Rumpf einer
+  abgelehnten Anfrage trägt `code` — einen Katalogschlüssel aus der
+  geschlossenen Liste in `shared-models` — und `params`, die Werte, für die der
+  Satz Lücken hat. `message` trägt **denselben Code**, weil eine Logzeile und
+  ein Stacktrace etwas zu nennen brauchen und es keinen Satz mehr gibt. Gebaut
+  wird das mit `refuse` (400), `conflict` (409) und `tooLarge` (413) aus
+  `business/common/problem.ts`; durchgereicht wird es vom
+  `AllExceptionsFilter`, der den Rumpf ohnehin neu schreibt. **404, 401 und 403
+  bekommen keinen Code** (F213): sie haben keinen Grund, den ein Mensch liest —
+  der Client weiß ihn selbst —, und ein `message` ohne Code zeigt kein Client
+  mehr an. Die Vertragssuite prüft ab AP 5 der Phase 5 **den Code**, nie den
+  Satz: `refusalOf(body)` in `support/api-client.ts`.
 - **Drei Präfixe, drei Zugangsstufen** (E33): `/api/user` ist der anonyme
   Besucher, `/api/participant` der angemeldete Mensch, `/api/admin` der
   Veranstalter. Jede Stufe hat ihren Guard am **deklarierten** Pfad und ihr

@@ -88,8 +88,10 @@ interface LocaleRow {
     @if (error(); as problem) {
       <p class="error" role="alert">
         {{ problem.key | transloco }}
-        @if (problem.detail; as detail) {
-          <span class="error__detail">{{ detail }}</span>
+        @if (problem.reason; as reason) {
+          <span class="error__detail">{{
+            reason.code | transloco: reason.params
+          }}</span>
         }
       </p>
     }
@@ -700,7 +702,7 @@ export class LanguagesPage {
     this.notice.set(null);
 
     if (!isLocaleTag(tag)) {
-      this.error.set({ key: 'admin.languages.errorTag', detail: null });
+      this.error.set({ key: 'admin.languages.errorTag', reason: null });
       return;
     }
 

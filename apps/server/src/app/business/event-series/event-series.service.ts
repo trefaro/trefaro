@@ -1,9 +1,4 @@
-import {
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   EventSeries,
   EventSeriesStatus,
@@ -11,6 +6,7 @@ import type {
   PublicEventSeries,
 } from '@trefaro/shared-models';
 import { AttachmentsService } from '../attachments';
+import { conflict } from '../common/problem';
 import { isSlug, slugify } from '../common/slug';
 import {
   LogoImageService,
@@ -285,8 +281,11 @@ export class EventSeriesService {
   async delete(id: string): Promise<void> {
     const confirmed = await this.registrations.confirmedForSeries(id);
     if (confirmed > 0) {
-      throw new ConflictException(
-        `This series has ${confirmed} confirmed registration${confirmed === 1 ? '' : 's'} across its events — archive it instead of deleting it.`,
+      throw conflict(
+        confirmed === 1
+          ? 'problem.series.hasRegistrations.one'
+          : 'problem.series.hasRegistrations.many',
+        { count: confirmed },
       );
     }
     // Resolves the series, so a mistyped id changes nothing.
@@ -388,9 +387,7 @@ export class EventSeriesService {
 
     const cleaned = slugify(requested);
     if (!isSlug(cleaned)) {
-      throw new ConflictException(
-        'The address must contain letters or digits — try one made of words and hyphens',
-      );
+      throw conflict('problem.series.slugShape');
     }
     return cleaned;
   }
@@ -413,18 +410,14 @@ export class EventSeriesService {
       if (!taken || taken.id === exceptId) return candidate;
     }
 
-    throw new ConflictException(
-      `Could not derive a free address from "${root}" — please choose one`,
-    );
+    throw conflict('problem.series.noFreeSlug', { root });
   }
 
   private translate(error: unknown): unknown {
     // Two organizers creating the same series at the same moment: the unique
     // index decides, and the loser gets a message they can act on.
     return error instanceof EventSeriesSlugTakenError
-      ? new ConflictException(
-          `${error.message} — please choose another address`,
-        )
+      ? conflict('problem.series.slugTaken', { slug: error.slug })
       : error;
   }
 }

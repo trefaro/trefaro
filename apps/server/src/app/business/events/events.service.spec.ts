@@ -9,6 +9,7 @@ import type {
   PublicEventSeries,
 } from '@trefaro/shared-models';
 import type { AttachmentsService } from '../attachments';
+import { refusalOf } from '../common/problem';
 import type { EventSeriesService } from '../event-series/event-series.service';
 import type { LogoImageService, LogoUpload } from '../logo-files';
 import type { EventChangeNotice, PushService } from '../push';
@@ -362,7 +363,7 @@ describe('EventsService', () => {
           eventType: 'hybrid',
           status: 'published',
         }),
-      ).rejects.toThrow(/needs a link/);
+      ).rejects.toThrow('problem.event.linkNeeded.hybrid');
     });
 
     it('publishes a hybrid event that has both', async () => {
@@ -384,7 +385,7 @@ describe('EventsService', () => {
           ...onsite,
           endsAt: '2027-03-14T07:00:00.000Z',
         }),
-      ).rejects.toThrow(/cannot end before it starts/);
+      ).rejects.toThrow('problem.event.endsBeforeStart');
     });
 
     it('accepts an event that starts and ends at the same instant', async () => {
@@ -399,7 +400,7 @@ describe('EventsService', () => {
     it('refuses a time zone that is not one', async () => {
       await expect(
         service.create('series-1', { ...onsite, timezone: 'Europe/Atlantis' }),
-      ).rejects.toThrow(/is not a time zone/);
+      ).rejects.toThrow('problem.event.timeZone');
     });
 
     it('drops duplicate languages and keeps the order', async () => {
@@ -414,7 +415,7 @@ describe('EventsService', () => {
     it('refuses an event with no language left after trimming', async () => {
       await expect(
         service.create('series-1', { ...onsite, languages: ['  '] }),
-      ).rejects.toThrow(/at least one language/);
+      ).rejects.toThrow('problem.event.languagesMissing');
     });
 
     it('turns an emptied optional field into null, not an empty string', async () => {
@@ -477,7 +478,7 @@ describe('EventsService', () => {
 
       await expect(
         service.update(created.id, { status: 'published' }),
-      ).rejects.toThrow(/needs a link/);
+      ).rejects.toThrow('problem.event.linkNeeded.hybrid');
     });
 
     it('checks the new end against the stored start', async () => {
@@ -485,7 +486,7 @@ describe('EventsService', () => {
 
       await expect(
         service.update(created.id, { endsAt: '2027-03-13T08:00:00.000Z' }),
-      ).rejects.toThrow(/cannot end before it starts/);
+      ).rejects.toThrow('problem.event.endsBeforeStart');
     });
 
     it('refuses an unknown event', async () => {
@@ -974,11 +975,15 @@ describe('EventsService', () => {
       const created = await service.create('series-1', onsite);
       tally.confirmedPerEvent = 1;
 
-      // Singular, because "1 confirmed registrations" is the kind of detail that
-      // makes an organizer distrust the number.
-      await expect(service.delete(created.id)).rejects.toThrow(
-        /1 confirmed registration —/,
-      );
+      // Singular, because "1 confirmed registrations" is the kind of detail
+      // that makes an organizer distrust the number — and with no plural module
+      // installed, a singular is its own key (F81).
+      expect(
+        refusalOf(await service.delete(created.id).catch((e: unknown) => e)),
+      ).toEqual({
+        code: 'problem.event.hasRegistrations.one',
+        params: { count: 1 },
+      });
     });
   });
 

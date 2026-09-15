@@ -1,10 +1,6 @@
-import {
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { ModuleSummary } from '@trefaro/shared-models';
+import { conflict } from '../common/problem';
 import type { ServerPlugin } from '../plugin-api';
 import { PluginRegistryService } from '../plugin-manager';
 import type { CoreModuleDescriptor } from './core-modules';
@@ -108,9 +104,11 @@ export class ModuleAdminService {
     );
     if (missing.length === 0) return;
 
-    throw new ConflictException(
-      `Module "${moduleKey}" needs ${quote(missing)}, which ` +
-        `${missing.length === 1 ? 'is' : 'are'} switched off`,
+    throw conflict(
+      missing.length === 1
+        ? 'problem.config.moduleRequires.one'
+        : 'problem.config.moduleRequires.many',
+      { module: moduleKey, others: quote(missing) },
     );
   }
 
@@ -130,9 +128,11 @@ export class ModuleAdminService {
     );
     if (dependants.length === 0) return;
 
-    throw new ConflictException(
-      `Module "${moduleKey}" is needed by ${quote(dependants)}, which ` +
-        `${dependants.length === 1 ? 'is' : 'are'} switched on`,
+    throw conflict(
+      dependants.length === 1
+        ? 'problem.config.moduleDependants.one'
+        : 'problem.config.moduleDependants.many',
+      { module: moduleKey, others: quote(dependants) },
     );
   }
 

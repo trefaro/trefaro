@@ -245,9 +245,9 @@ describe('MessagesService', () => {
         BadRequestException,
       );
       // And a body of spaces is nothing.
-      expect(
-        await refusal(service.send(ME, 'c1', { body: '   ' }, null)),
-      ).toContain('needs text');
+      expect(await refusal(service.send(ME, 'c1', { body: '   ' }, null))).toBe(
+        'problem.chat.messageEmpty',
+      );
       expect(appended).toEqual([]);
     });
 

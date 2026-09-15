@@ -254,7 +254,9 @@ describe('ConversationsService', () => {
       await expect(service.start(ME, ME)).rejects.toBeInstanceOf(
         BadRequestException,
       );
-      expect(await refusal(service.start(ME, ME))).toContain('two sides');
+      expect(await refusal(service.start(ME, ME))).toBe(
+        'problem.chat.withOneself',
+      );
     });
 
     it('answers with the conversation’s real unread count, not a zero', async () => {

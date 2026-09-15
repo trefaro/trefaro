@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type {
   AppConfig,
   AppConfigChange,
@@ -15,6 +15,7 @@ import {
   isLocaleTag,
 } from '@trefaro/shared-models';
 import { ENV } from '../../core/config/env.module';
+import { refuse } from '../common/problem';
 import { brandingImageUrls } from './branding-url';
 import type { TrefaroEnv } from '../../core/config/env';
 import { PluginRegistryService } from '../plugin-manager';
@@ -131,9 +132,9 @@ export class ConfigurationService {
     if (change.organizationName !== undefined) {
       const name = change.organizationName.trim();
       if (name.length === 0 || name.length > MAX_ORGANIZATION_NAME_LENGTH) {
-        throw new BadRequestException(
-          `organizationName must be between 1 and ${MAX_ORGANIZATION_NAME_LENGTH} characters`,
-        );
+        throw refuse('problem.config.organizationName', {
+          max: MAX_ORGANIZATION_NAME_LENGTH,
+        });
       }
       sanitized.organizationName = name;
     }
@@ -142,9 +143,7 @@ export class ConfigurationService {
       const value = change[key];
       if (value === undefined) continue;
       if (!isHexColor(value)) {
-        throw new BadRequestException(
-          `${key} must be a hexadecimal colour such as #1f6f5c`,
-        );
+        throw refuse('problem.config.colour', { field: key });
       }
       // Lower-cased so the stored value is canonical: `#ABC` and `#abc` are the
       // same colour, and an `<input type="color">` sends the lower-cased form
@@ -154,9 +153,7 @@ export class ConfigurationService {
 
     if (change.fontFamily !== undefined) {
       if (!isFontFamilyKey(change.fontFamily)) {
-        throw new BadRequestException(
-          'fontFamily must be one of the fonts this instance ships',
-        );
+        throw refuse('problem.config.fontFamily');
       }
       sanitized.fontFamily = change.fontFamily;
     }
@@ -238,9 +235,9 @@ export class ConfigurationService {
     const active = [...new Set([FALLBACK_UI_LOCALE, ...requested])];
 
     if (active.length > MAX_ACTIVE_LOCALES) {
-      throw new BadRequestException(
-        `activeLocales must not contain more than ${MAX_ACTIVE_LOCALES} languages`,
-      );
+      throw refuse('problem.config.tooManyLocales', {
+        max: MAX_ACTIVE_LOCALES,
+      });
     }
 
     const defaultLocale = canonicalLocale(
@@ -248,9 +245,7 @@ export class ConfigurationService {
       'defaultLocale',
     );
     if (!active.includes(defaultLocale)) {
-      throw new BadRequestException(
-        'defaultLocale must be one of the active locales',
-      );
+      throw refuse('problem.config.defaultLocaleInactive');
     }
 
     const record = await this.appConfig.setLocales({
@@ -276,9 +271,7 @@ export class ConfigurationService {
 function canonicalLocale(locale: string, field: string): string {
   const tag = locale.trim();
   if (!isLocaleTag(tag)) {
-    throw new BadRequestException(
-      `${field} must be a BCP 47 language tag such as de or de-AT`,
-    );
+    throw refuse('problem.locale.tag', { field });
   }
   return tag.toLowerCase();
 }

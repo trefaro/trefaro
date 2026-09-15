@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   HttpCode,
@@ -17,6 +16,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Throttle, minutes } from '@nestjs/throttler';
+import { refuse } from '../common/problem';
 import { ContactOptOutResultDto } from './dto/invitation.dto';
 import { InvitationOptOutDto } from './dto/opt-out.dto';
 import { OPT_OUT_CALLS_PER_WINDOW } from './invitations.limits';
@@ -136,11 +136,10 @@ export class PublicInvitationOptOutController {
     @Body() body: unknown,
   ): Promise<void> {
     if (!oneClickRequest(body)) {
-      throw new BadRequestException(
-        `This endpoint answers the one-click unsubscribe of RFC 8058 only: ` +
-          `the request body has to be \`${ONE_CLICK_FIELD}=${ONE_CLICK_VALUE}\`. ` +
-          'A person objecting reads the link in the invitation instead.',
-      );
+      throw refuse('problem.invitation.oneClickBody', {
+        field: ONE_CLICK_FIELD,
+        value: ONE_CLICK_VALUE,
+      });
     }
     await this.invitations.optOut(token ?? '');
   }

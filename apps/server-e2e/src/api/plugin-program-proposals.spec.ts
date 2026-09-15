@@ -1,5 +1,5 @@
 import { adminCookie } from '../support/admin-session';
-import { api } from '../support/api-client';
+import { api, refusalOf, type Refusal } from '../support/api-client';
 import {
   closeDatabase,
   deleteProfiles,
@@ -91,12 +91,6 @@ interface PublicConfig {
 }
 
 const PLUGIN = 'program-proposals';
-
-/** The `message` of a problem answer, or the body as it came (F77). */
-function problem(body: unknown): string {
-  const message = (body as { message?: unknown } | null)?.message;
-  return typeof message === 'string' ? message : JSON.stringify(body);
-}
 
 const stamp = Date.now();
 const DOMAIN = `@proposals-${stamp}.example.org`;
@@ -273,7 +267,7 @@ describe('the programme proposals plug-in', () => {
    * and the instance put back before a single `expect` runs.
    */
   describe('the prerequisite, in both directions (E47)', () => {
-    let refusedOn: { status: number; message: string };
+    let refusedOn: { status: number; refusal: Refusal | null };
     let stayedOff = true;
     /** Whether accounts could be withdrawn at all once nothing needed them. */
     let accountsWentOff = 0;
@@ -286,7 +280,7 @@ describe('the programme proposals plug-in', () => {
       accountsWentOff = (await toggle('profiles', false)).status;
 
       const refused = await toggle(PLUGIN, true);
-      refusedOn = { status: refused.status, message: problem(refused.body) };
+      refusedOn = { status: refused.status, refusal: refusalOf(refused.body) };
       stayedOff = (await moduleRow(PLUGIN)).enabled;
 
       await toggle('profiles', true);
@@ -299,8 +293,12 @@ describe('the programme proposals plug-in', () => {
       expect(refusedOn.status).toBe(409);
       // The key, not only a refusal: an organizer has to know which other
       // switch to find, and the key is what the list and `module_config` call
-      // the thing.
-      expect(refusedOn.message).toContain('"profiles"');
+      // the thing. It travels as a value beside the code since AP 5 of phase 5,
+      // because the sentence around it is the reader's, not the server's.
+      expect(refusedOn.refusal).toEqual({
+        code: 'problem.config.moduleRequires.one',
+        params: { module: PLUGIN, others: '"profiles"' },
+      });
       // Nothing was written: a refused switch leaves the instance as it was.
       expect(stayedOff).toBe(false);
     });
@@ -311,7 +309,9 @@ describe('the programme proposals plug-in', () => {
       const refused = await toggle('profiles', false);
 
       expect(refused.status).toBe(409);
-      expect(problem(refused.body)).toContain(`"${PLUGIN}"`);
+      const refusal = refusalOf(refused.body);
+      expect(refusal?.code).toBe('problem.config.moduleDependants.many');
+      expect(String(refusal?.params['others'])).toContain(`"${PLUGIN}"`);
       expect((await moduleRow('profiles')).enabled).toBe(true);
     });
   });

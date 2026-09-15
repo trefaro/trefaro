@@ -54,6 +54,10 @@ async function render(
           'mail again — the whole link, including everything after the ' +
           'question mark.',
         'optOut.error': 'This could not be saved.',
+        // The server's half, drawn from the same catalogue as this client's
+        // own (E64) — which is the whole claim of AP 5 of phase 5.
+        'problem.invitation.optOutLinkStale':
+          'Please reply to the invitation and ask to be removed.',
       }),
       { provide: InvitationOptOutService, useValue: service },
     ],
@@ -148,20 +152,21 @@ describe('InvitationOptOutPage', () => {
       token: 'abc.def',
       failure: {
         status: 400,
-        message: 'This link is not valid any more.',
+        message: 'problem.invitation.optOutLinkStale',
         retryable: false,
-        explained: true,
+        refusal: { code: 'problem.invitation.optOutLinkStale' },
       },
     });
 
     await page.optOut();
     await settle();
 
-    // Both halves (F77): this client's sentence in the reader's language, and
-    // the server's reason — which is the half that says *why* — beside it.
+    // Both halves (F77), and since AP 5 of phase 5 both in the language of the
+    // reader: this client's sentence for *what*, and the server's code resolved
+    // out of the same catalogue for *why*.
     const alert = element.querySelector('[role="alert"]')?.textContent;
     expect(alert).toContain('This could not be saved.');
-    expect(alert).toContain('not valid any more');
+    expect(alert).toContain('Please reply to the invitation');
     // And the button stays, so a temporary failure can be retried.
     expect(element.querySelector('button')).not.toBeNull();
   });
@@ -173,7 +178,7 @@ describe('InvitationOptOutPage', () => {
         status: 0,
         message: 'The server could not be reached.',
         retryable: true,
-        explained: false,
+        refusal: null,
       },
     });
 

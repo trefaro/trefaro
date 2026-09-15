@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   ContactOptOutResult,
   ContactQuery,
@@ -15,6 +10,7 @@ import {
   MAX_CONTACT_PAGE_SIZE,
 } from '@trefaro/shared-models';
 import { pageWindow } from '../common/page-window';
+import { refuse } from '../common/problem';
 import { searchTerms } from '../common/search-terms';
 import {
   REGISTRATION_REPOSITORY,
@@ -103,7 +99,7 @@ export class ContactsService {
   ): Promise<readonly SeriesContact[]> {
     const unique = [...new Set(registrationIds)];
     if (unique.length === 0) {
-      throw new BadRequestException('Select at least one address to write to.');
+      throw refuse('problem.contacts.noneSelected');
     }
 
     const found = await this.registrations.findSeriesContacts(seriesId, unique);
@@ -111,11 +107,7 @@ export class ContactsService {
     const missing = unique.filter((id) => !addressed.has(id));
 
     if (missing.length > 0) {
-      throw new BadRequestException(
-        `${missing.length} of the selected addresses can no longer be written ` +
-          'to — a registration was cancelled, or somebody objected to being ' +
-          'contacted. Please reload the list and select again.',
-      );
+      throw refuse('problem.contacts.someGone', { count: missing.length });
     }
 
     return found.map(toContact);

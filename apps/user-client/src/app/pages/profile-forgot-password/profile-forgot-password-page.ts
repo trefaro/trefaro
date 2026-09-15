@@ -49,8 +49,10 @@ import { ParticipantSessionService } from '../../features/auth/participant-sessi
       @if (error(); as problem) {
         <p class="notice" role="alert">
           {{ problem.key | transloco }}
-          @if (problem.detail; as detail) {
-            <span class="notice__detail">{{ detail }}</span>
+          @if (problem.reason; as reason) {
+            <span class="notice__detail">{{
+              reason.code | transloco: reason.params
+            }}</span>
           }
         </p>
       }
@@ -189,15 +191,15 @@ export class ProfileForgotPasswordPage {
 /**
  * The refusals this form can explain itself (F77).
  *
- * 429 is the only one worth its own sentence: it is the answer somebody gets
- * for asking twice in a row, and the server's English line about a rate limit
- * would otherwise land on a German form. Everything else keeps the server's
- * reason beside this client's — "no mail could be sent" is the difference
- * between trying again and telling somebody at the organization.
+ * 429 is the only one worth its own sentence: it comes from the throttler
+ * rather than from the business layer, so it carries no code the catalogue
+ * could answer. Everything else keeps the server's reason beside this
+ * client's — "no mail could be sent" is the difference between trying again
+ * and telling somebody at the organization.
  */
 function problemFor(error: ApiError): Problem {
   if (error?.status === 429) {
-    return { key: 'profile.forgot.errorThrottled', detail: null };
+    return { key: 'profile.forgot.errorThrottled', reason: null };
   }
   return problemOf(error, 'profile.forgot.failed');
 }

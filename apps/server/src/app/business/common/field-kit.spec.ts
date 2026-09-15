@@ -13,6 +13,11 @@ import {
   unknownFieldKeys,
 } from './field-kit';
 
+/** Spelled out here so a spec reads like a call site does. */
+const PROFILE_RESERVED = 'problem.field.keyReservedByProfile' as const;
+const REGISTRATION_RESERVED =
+  'problem.field.keyReservedByRegistration' as const;
+
 /**
  * The rules both field kits obey (E35).
  *
@@ -85,7 +90,7 @@ describe('the shared field kit', () => {
 
       expect(checkAnswer(select, ' Europe ')).toBe('Europe');
       expect(() => checkAnswer(select, 'Antarctica')).toThrow(
-        BadRequestException,
+        'problem.field.notAChoice',
       );
     });
 
@@ -107,27 +112,35 @@ describe('the shared field kit', () => {
 
   describe('keys', () => {
     it('derives a key from a label, and takes a given one literally', () => {
-      expect(requestedFieldKey(undefined, 'Local group', [], 'a profile')).toBe(
-        'local-group',
-      );
       expect(
-        requestedFieldKey('crm-member-id', 'Member number', [], 'a profile'),
+        requestedFieldKey(undefined, 'Local group', [], PROFILE_RESERVED),
+      ).toBe('local-group');
+      expect(
+        requestedFieldKey(
+          'crm-member-id',
+          'Member number',
+          [],
+          PROFILE_RESERVED,
+        ),
       ).toBe('crm-member-id');
     });
 
     it('refuses a given key that is not a key', () => {
       expect(() =>
-        requestedFieldKey('Not A Key', 'Anything', [], 'a profile'),
+        requestedFieldKey('Not A Key', 'Anything', [], PROFILE_RESERVED),
       ).toThrow(BadRequestException);
     });
 
     it('names who owns a reserved key, because two kits reserve different ones', () => {
+      // Two codes rather than one with the owner as a value: the owner sits in
+      // the middle of the sentence, and a sentence built around a fragment is
+      // not a translation unit (F79).
       expect(() =>
-        requestedFieldKey(undefined, 'Email', ['email'], 'the registration'),
-      ).toThrow(/the registration already calls/);
+        requestedFieldKey(undefined, 'Email', ['email'], REGISTRATION_RESERVED),
+      ).toThrow('problem.field.keyReservedByRegistration');
       expect(() =>
-        requestedFieldKey(undefined, 'Email', ['email'], 'a profile'),
-      ).toThrow(/a profile already calls/);
+        requestedFieldKey(undefined, 'Email', ['email'], PROFILE_RESERVED),
+      ).toThrow('problem.field.keyReservedByProfile');
     });
 
     it('numbers around a collision and gives up rather than looping forever', () => {
@@ -145,11 +158,9 @@ describe('the shared field kit', () => {
   });
 
   describe('labels, help texts and choices', () => {
-    it('trims a label and refuses an empty one, naming who reads it', () => {
-      expect(fieldLabel('  Local group  ', 'participants')).toBe('Local group');
-      expect(() => fieldLabel('   ', 'participants')).toThrow(
-        /a label participants read/,
-      );
+    it('trims a label and refuses an empty one', () => {
+      expect(fieldLabel('  Local group  ')).toBe('Local group');
+      expect(() => fieldLabel('   ')).toThrow('problem.field.labelMissing');
     });
 
     it('turns an emptied help text into no help text', () => {

@@ -105,7 +105,10 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   kann; `expectNoRawKeys(page)` findet jede Lücke der Extraktion auf einer
   besuchten Seite — **nicht** auf der Sprachverwaltung, die zeigt Schlüssel als
   Funktion. Verglichen werden **ganze** Textknoten. Literal bleibt nur
-  Fixture-Text, ein Bezeichner, eine Uhrzeit — oder eine **Server**meldung (F77).
+  Fixture-Text, ein Bezeichner oder eine Uhrzeit. Eine **Server**meldung war
+  hier bis AP 5 der Phase 5 die vierte Ausnahme (F77); sie ist keine mehr, weil
+  der Grund seit E64 ein Katalogschlüssel ist — also `t('problem.…')` wie jeder
+  andere Satz, und in der Sprache, in der die Seite steht.
 - **Ein Aufräumcode, der über alle Katalogschlüssel läuft, wächst mit dem
   Katalog.** `resetLocale()` schickte ein `DELETE` je Schlüssel und lief bei 149
   in den Timeout; es **fragt** jetzt, welche Schlüssel eine Zeile haben.

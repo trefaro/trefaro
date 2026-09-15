@@ -1,6 +1,4 @@
 import {
-  BadRequestException,
-  ConflictException,
   Inject,
   Injectable,
   Logger,
@@ -16,6 +14,7 @@ import type {
 } from '@trefaro/shared-models';
 import { SELF_SERVICE_PATH, hasEnded } from '@trefaro/shared-models';
 import { AttachmentsService, type UploadedFile } from '../attachments';
+import { conflict, refuse } from '../common/problem';
 import { EventsService } from '../events';
 import { MailDeliveryError, MailService, PublicLinks } from '../mail';
 import type { MailEvent, RegistrationMailContext } from '../mail';
@@ -83,7 +82,7 @@ export class RegistrationService {
     // that is not public — cannot be registered for at all (F26).
     const event = await this.events.getPublic(seriesSlug, eventSlug);
     if (hasEnded(event)) {
-      throw new ConflictException('This event has already taken place.');
+      throw conflict('problem.registration.eventPast');
     }
 
     const email = normalizeEmail(input.email);
@@ -126,9 +125,7 @@ export class RegistrationService {
   async confirm(token: string): Promise<RegistrationConfirmation> {
     const id = this.tokens.verify('registration-confirmation', token);
     if (!id) {
-      throw new BadRequestException(
-        'This confirmation link is not valid any more. Please register again to receive a new one.',
-      );
+      throw refuse('problem.registration.confirmationStale');
     }
 
     const registration = await this.require(id);
@@ -145,9 +142,7 @@ export class RegistrationService {
       return { state: 'already-confirmed', ...about };
     }
     if (registration.status === 'cancelled') {
-      throw new ConflictException(
-        'This registration was cancelled. Please register again if you would like to take part.',
-      );
+      throw conflict('problem.registration.cancelled');
     }
 
     const confirmed = await this.registrations.update(registration.id, {

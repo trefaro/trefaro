@@ -185,8 +185,11 @@ describe('ImageUploadField', () => {
     const { fixture, field, changed } = render();
     admin.failWith = {
       status: 400,
-      message: 'Those bytes are not a PNG.',
-      explained: true,
+      message: 'problem.image.typeMismatch',
+      refusal: {
+        code: 'problem.image.typeMismatch',
+        params: { type: 'image/png' },
+      },
     };
     field.choose(chooseEvent(file({ type: 'image/png' })));
     fixture.detectChanges();
@@ -196,7 +199,10 @@ describe('ImageUploadField', () => {
 
     // This client's sentence, and the server's reason beside it (F77).
     expect(field.error()?.key).toBe('admin.design.errorImage');
-    expect(field.error()?.detail).toBe('Those bytes are not a PNG.');
+    expect(field.error()?.reason).toEqual({
+      code: 'problem.image.typeMismatch',
+      params: { type: 'image/png' },
+    });
     expect(changed()).toBe(0);
   });
 });

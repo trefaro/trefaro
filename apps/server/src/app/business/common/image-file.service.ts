@@ -1,16 +1,11 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  Logger,
-  PayloadTooLargeException,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   BRANDING_MIME_TYPES,
-  MAX_BRANDING_BYTES,
-  MAX_MESSAGE_IMAGE_BYTES,
   brandingTypeSummary,
   formatBytes,
+  MAX_BRANDING_BYTES,
+  MAX_MESSAGE_IMAGE_BYTES,
+  type ProblemCode,
 } from '@trefaro/shared-models';
 import {
   FILE_STORE,
@@ -18,6 +13,7 @@ import {
   matchesSignature,
   signatureType,
 } from '../attachments';
+import { refuse, tooLarge } from './problem';
 
 /** An image on its way in, in the business layer's own terms. */
 export interface ImageUpload {
@@ -48,16 +44,25 @@ export interface ImageBytes {
 export type ImageArea = 'logos' | 'avatars' | 'messages';
 
 /**
- * What each area's images are called, for the sentences a refusal is made of.
+ * Which refusal an area gets for a file that is too heavy.
  *
- * One word per area rather than a parameter at every call site: the rules are
- * identical, only the noun differs, and an organizer uploading a picture
- * deserves a message that names what they were uploading.
+ * A code per area rather than one code with the noun as a value (F214): the
+ * rules are identical and only the noun differs, but the noun is the subject of
+ * the sentence, and German neither puts it where English does nor leaves it
+ * uninflected. Somebody uploading a picture of themselves should not read a
+ * sentence about logos, and a translator should not be handed a fragment.
  */
-const NOUN: Record<ImageArea, string> = {
-  logos: 'A logo',
-  avatars: 'A profile picture',
-  messages: 'A picture in a message',
+const TOO_LARGE: Record<ImageArea, ProblemCode> = {
+  logos: 'problem.image.logoTooLarge',
+  avatars: 'problem.image.avatarTooLarge',
+  messages: 'problem.image.messagePictureTooLarge',
+};
+
+/** The same, for a file of a type this instance does not serve. */
+const WRONG_TYPE: Record<ImageArea, ProblemCode> = {
+  logos: 'problem.image.logoType',
+  avatars: 'problem.image.avatarType',
+  messages: 'problem.image.messagePictureType',
 };
 
 /**
@@ -210,33 +215,23 @@ export class ImageFileService {
    * would be the one worth attacking.
    */
   private assertAcceptable(area: ImageArea, upload: ImageUpload): void {
-    const noun = NOUN[area];
     const ceiling = CEILING[area];
 
-    if (upload.bytes.length === 0) {
-      throw new BadRequestException('The uploaded image is empty.');
-    }
+    if (upload.bytes.length === 0) throw refuse('problem.image.empty');
 
     if (upload.bytes.length > ceiling) {
-      throw new PayloadTooLargeException(
-        `${noun} may be up to ${formatBytes(ceiling)}; this file is ` +
-          `${formatBytes(upload.bytes.length)}.`,
-      );
+      throw tooLarge(TOO_LARGE[area], {
+        max: formatBytes(ceiling),
+        size: formatBytes(upload.bytes.length),
+      });
     }
 
     if (!BRANDING_MIME_TYPES.includes(upload.mimeType)) {
-      throw new BadRequestException(
-        `${noun} has to be one of: ${brandingTypeSummary()}. An SVG is not ` +
-          'accepted — it can carry script, and it would be served from the ' +
-          'same origin as the client that displays it.',
-      );
+      throw refuse(WRONG_TYPE[area], { types: brandingTypeSummary() });
     }
 
     if (!matchesSignature(upload.mimeType, upload.bytes)) {
-      throw new BadRequestException(
-        `This file is not ${upload.mimeType} — its content does not match the ` +
-          'type it was sent as.',
-      );
+      throw refuse('problem.image.typeMismatch', { type: upload.mimeType });
     }
   }
 }

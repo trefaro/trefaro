@@ -1,4 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { readRefusal, type Refusal } from '@trefaro/shared-models';
 
 /**
  * A failed request in terms the UI can act on.
@@ -15,32 +16,34 @@ export interface ApiError {
   /** True when retrying later could plausibly succeed. */
   readonly retryable: boolean;
   /**
-   * Whether {@link message} is the server's own reason for refusing.
+   * The server's own reason for refusing, or `null` when it gave none.
    *
-   * False for everything this library made up on the server's behalf — the
-   * offline case, and the status text Angular fills in when a response carries
-   * no body. The difference matters from AP 8 of phase 2: a screen says what
-   * happened in the reader's language and adds the server's reason beside it
-   * (F77), and "Not Found" is not a reason worth repeating.
+   * A catalogue key and its values since AP 5 of phase 5 (E64), so the reason
+   * can be read in the language of the reader. `null` for everything this
+   * library made up on the server's behalf — the offline case, the status text
+   * Angular fills in — and for every answer that carries no code: a 404, a
+   * failed DTO validation, an error from outside the business layer.
+   * {@link message} keeps whatever text came with the answer, for a console and
+   * never for a screen.
    */
-  readonly explained: boolean;
+  readonly refusal: Refusal | null;
 }
 
 /**
  * What a screen shows about a failed request (F77, AP 8 of phase 2).
  *
- * Two parts, because they come from different places and only one of them can
- * be translated: {@link key} is this client's own sentence, in the catalogue,
- * in the reader's language; {@link detail} is the server's reason, in English,
- * shown beside it when there is one. Dropping the reason would cost a
- * participant the one sentence that says *why* — that the last seat has gone,
- * or which file is too large.
+ * Two parts, because they come from different places: {@link key} is this
+ * client's own sentence for what did not work, {@link reason} is the server's
+ * for why. Dropping the reason would cost a participant the one sentence that
+ * says *why* — that the last seat has gone, or which file is too large.
+ *
+ * Both halves are catalogue keys since AP 5 of phase 5 (E64). Until then the
+ * second one was an English sentence the server had written, which is what F77
+ * settled for and what this package finally undid.
  */
 export interface Problem {
   /** Catalogue key of what this client can say about it. */
   readonly key: string;
-  /** The server's own reason, or `null` when it gave none. */
-  readonly detail: string | null;
   /**
    * Values for the `{{ }}` placeholders in {@link key}, when it has any.
    *
@@ -49,15 +52,21 @@ export interface Problem {
    * message survive a language switch (F72).
    */
   readonly params?: Readonly<Record<string, unknown>>;
+  /**
+   * The server's reason, as a catalogue key and its values, or `null`.
+   *
+   * A key and not a sentence since AP 5 of phase 5: the half a person reads for
+   * the *why* is now in their language too. A screen draws it the same way it
+   * draws {@link key} — `reason.code | transloco: reason.params` — and drawing
+   * nothing when there is nothing is the normal case, not an error.
+   */
+  readonly reason: Refusal | null;
 }
 
 /** A {@link Problem} from a caught error and the key that describes it. */
 export function problemOf(error: unknown, key: string): Problem {
   const api = error as ApiError | undefined;
-  return {
-    key,
-    detail: api?.explained ? api.message : null,
-  };
+  return { key, reason: api?.refusal ?? null };
 }
 
 interface ServerErrorBody {
@@ -73,7 +82,7 @@ export function toApiError(response: HttpErrorResponse): ApiError {
       status: 0,
       message: 'The server could not be reached.',
       retryable: true,
-      explained: false,
+      refusal: null,
     };
   }
 
@@ -88,7 +97,7 @@ export function toApiError(response: HttpErrorResponse): ApiError {
     message: sent ?? response.statusText,
     // A client error will fail the same way on retry; a server error may not.
     retryable: response.status >= 500 || response.status === 429,
-    explained: sent !== null,
+    refusal: readRefusal(response.error),
   };
 }
 

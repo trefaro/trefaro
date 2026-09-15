@@ -290,7 +290,7 @@ describe('NewsletterService', () => {
       await repository.remove('subscription-1');
 
       await expect(service.confirm('token-for-subscription-1')).rejects.toThrow(
-        /not valid any more/i,
+        'problem.newsletter.staleLink',
       );
     });
   });

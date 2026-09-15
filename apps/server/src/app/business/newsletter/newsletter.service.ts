@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import type {
   NewsletterAudiencePage,
   NewsletterConfirmation,
@@ -17,6 +12,7 @@ import {
   NEWSLETTER_CONFIRMATION_PATH,
 } from '@trefaro/shared-models';
 import { pageWindow } from '../common/page-window';
+import { refuse } from '../common/problem';
 import { EventSeriesService } from '../event-series';
 import { MailDeliveryError, MailService, PublicLinks } from '../mail';
 import { CONFIRMATION_TOKEN_TTL_MS, TokenSigner } from '../security';
@@ -111,14 +107,14 @@ export class NewsletterService {
    */
   async confirm(token: string): Promise<NewsletterConfirmation> {
     const id = this.tokens.verify('newsletter-confirmation', token);
-    if (!id) throw new BadRequestException(INVALID_LINK);
+    if (!id) throw refuse(INVALID_LINK);
 
     const existing = await this.subscriptions.findById(id);
-    if (!existing) throw new BadRequestException(INVALID_LINK);
+    if (!existing) throw refuse(INVALID_LINK);
     if (existing.confirmedAt) return { state: 'already-confirmed' };
 
     const confirmed = await this.subscriptions.confirm(id);
-    if (!confirmed) throw new BadRequestException(INVALID_LINK);
+    if (!confirmed) throw refuse(INVALID_LINK);
     return { state: 'confirmed' };
   }
 
@@ -226,9 +222,14 @@ export class NewsletterService {
   }
 }
 
-const INVALID_LINK =
-  'This confirmation link is not valid any more. Please sign up again to ' +
-  'receive a new one.';
+/**
+ * One refusal for every way a confirmation link can fail (E32).
+ *
+ * Forged, expired, already used, or pointing at a sign-up somebody has since
+ * withdrawn: for the person holding the link these are one situation, and the
+ * answer is the same in all of them — sign up again.
+ */
+const INVALID_LINK = 'problem.newsletter.staleLink';
 
 function toConsent(
   row: NewsletterConsentRow,

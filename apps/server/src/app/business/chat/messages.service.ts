@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
   DEFAULT_MESSAGE_PAGE_SIZE,
   MAX_MESSAGE_LENGTH,
@@ -18,6 +13,7 @@ import {
   type ImageBytes,
 } from '../common/image-file.service';
 import { pageWindow } from '../common/page-window';
+import { refuse } from '../common/problem';
 import { ChatNotificationsService } from './chat-notifications.service';
 import { ChatRealtimeService } from './chat-realtime.service';
 import { ConversationsService } from './conversations.service';
@@ -141,15 +137,12 @@ export class MessagesService {
 
     const body = (input.body ?? '').trim();
     if (body.length > MAX_MESSAGE_LENGTH) {
-      throw new BadRequestException(
-        `A message may be up to ${MAX_MESSAGE_LENGTH} characters.`,
-      );
+      throw refuse('problem.chat.messageTooLong', {
+        max: MAX_MESSAGE_LENGTH,
+      });
     }
     if (body.length === 0 && !image) {
-      throw new BadRequestException(
-        'A message needs text, a picture, or both. An empty one is not a ' +
-          'message.',
-      );
+      throw refuse('problem.chat.messageEmpty');
     }
 
     // Checked and written before the row that will name it, so a refused

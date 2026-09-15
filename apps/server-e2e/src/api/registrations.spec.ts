@@ -1,4 +1,4 @@
-import { api, postJson } from '../support/api-client';
+import { api, postJson, refusalOf } from '../support/api-client';
 import { adminCookie } from '../support/admin-session';
 import {
   clearMailbox,
@@ -294,8 +294,12 @@ describe('registrations API', () => {
     expect(deleteEvent.status).toBe(409);
     expect(deleteSeries.status).toBe(409);
     // The count is the only place AP 4 makes the registrations visible; the
-    // overview that shows them arrives in AP 5.
-    expect(JSON.stringify(deleteEvent.body)).toMatch(/confirmed registration/);
+    // overview that shows them arrives in AP 5. It travels as a value beside
+    // the code since AP 5 of phase 5, and the code says which plural it needs.
+    expect(refusalOf(deleteEvent.body)).toEqual({
+      code: 'problem.event.hasRegistrations.many',
+      params: { count: 3 },
+    });
   });
 
   it('does not let anyone delete a registration without a session', async () => {

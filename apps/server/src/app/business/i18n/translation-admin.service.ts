@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   FALLBACK_LOCALE,
   MAX_REPORTED_IGNORED_KEYS,
@@ -14,6 +14,7 @@ import {
   type TranslationEntry,
   type TranslationWriteResult,
 } from '@trefaro/shared-models';
+import { refuse } from '../common/problem';
 import { ConfigurationService } from '../config';
 import {
   SHIPPED_CATALOGUE_READER,
@@ -168,12 +169,12 @@ export class TranslationAdminService {
     const keys = Object.keys(entries);
 
     if (keys.length === 0) {
-      throw new BadRequestException('entries must contain at least one key');
+      throw refuse('problem.translation.entriesEmpty');
     }
     if (keys.length > MAX_TRANSLATION_WRITE_ENTRIES) {
-      throw new BadRequestException(
-        `entries must not contain more than ${MAX_TRANSLATION_WRITE_ENTRIES} keys`,
-      );
+      throw refuse('problem.translation.entriesTooMany', {
+        max: MAX_TRANSLATION_WRITE_ENTRIES,
+      });
     }
 
     const english = await this.englishCatalogue();
@@ -193,12 +194,13 @@ export class TranslationAdminService {
     for (const key of keys) {
       const value = entries[key];
       if (typeof value !== 'string') {
-        throw new BadRequestException(`entries.${key} must be a string`);
+        throw refuse('problem.translation.valueNotAString', { key });
       }
       if (value.length > MAX_TRANSLATION_VALUE_LENGTH) {
-        throw new BadRequestException(
-          `entries.${key} must be at most ${MAX_TRANSLATION_VALUE_LENGTH} characters`,
-        );
+        throw refuse('problem.translation.valueTooLong', {
+          key,
+          max: MAX_TRANSLATION_VALUE_LENGTH,
+        });
       }
 
       // Both a malformed key and a key this image does not have end up here: to
@@ -363,9 +365,7 @@ export class TranslationAdminService {
   private canonical(locale: string): string {
     const tag = locale.trim();
     if (!isLocaleTag(tag)) {
-      throw new BadRequestException(
-        'locale must be a BCP 47 language tag such as de or de-AT',
-      );
+      throw refuse('problem.locale.tag', { field: 'locale' });
     }
     return tag.toLowerCase();
   }

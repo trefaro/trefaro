@@ -33,20 +33,20 @@ ausführlich woanders und wird hier nur mit ihrer Nummer zitiert:
 
 ## Vor der Arbeit an … zuerst lesen
 
-| Bereich                                                | Datei                                    |
-| ------------------------------------------------------ | ---------------------------------------- |
-| Servercode strukturieren, Module schneiden             | [server-layers.md](server-layers.md)     |
-| einen Endpunkt anlegen oder ändern                     | [api-contracts.md](api-contracts.md)     |
-| eine Entity oder Migration schreiben                   | [data-model.md](data-model.md)           |
-| ausgehende Mail                                        | [mail.md](mail.md)                       |
-| Übersetzungsschlüssel, Inhaltsübersetzungen            | [i18n.md](i18n.md)                       |
-| Client-Templates, Formulare, berechnete Beschriftungen | [angular-clients.md](angular-clients.md) |
-| eine Browsersuite anfassen                             | [e2e-tests.md](e2e-tests.md)             |
-| Farben, Branding-Dateien, Icons, Manifest              | [whitelabel-pwa.md](whitelabel-pwa.md)   |
-| Umgebungsvariablen, Proxy, TLS, Prüfskripte            | [deployment.md](deployment.md)           |
-| Ports, Plug-in-Schalter, geteilte Bibliotheken         | [infrastructure.md](infrastructure.md)   |
-| unerklärliche Zählwerte oder Pfade in Tests            | [tooling-traps.md](tooling-traps.md)     |
-| eine schon getroffene Entscheidung in Frage stellen    | [decisions.md](decisions.md)             |
+| Bereich                                                  | Datei                                    |
+| -------------------------------------------------------- | ---------------------------------------- |
+| Servercode strukturieren, Module schneiden               | [server-layers.md](server-layers.md)     |
+| einen Endpunkt anlegen oder ändern                       | [api-contracts.md](api-contracts.md)     |
+| eine Entity oder Migration schreiben                     | [data-model.md](data-model.md)           |
+| ausgehende Mail                                          | [mail.md](mail.md)                       |
+| Übersetzungsschlüssel, Fehlercodes, Inhaltsübersetzungen | [i18n.md](i18n.md)                       |
+| Client-Templates, Formulare, berechnete Beschriftungen   | [angular-clients.md](angular-clients.md) |
+| eine Browsersuite anfassen                               | [e2e-tests.md](e2e-tests.md)             |
+| Farben, Branding-Dateien, Icons, Manifest                | [whitelabel-pwa.md](whitelabel-pwa.md)   |
+| Umgebungsvariablen, Proxy, TLS, Prüfskripte              | [deployment.md](deployment.md)           |
+| Ports, Plug-in-Schalter, geteilte Bibliotheken           | [infrastructure.md](infrastructure.md)   |
+| unerklärliche Zählwerte oder Pfade in Tests              | [tooling-traps.md](tooling-traps.md)     |
+| eine schon getroffene Entscheidung in Frage stellen      | [decisions.md](decisions.md)             |
 
 ## Pflege
 
