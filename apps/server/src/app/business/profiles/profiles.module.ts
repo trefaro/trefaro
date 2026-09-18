@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { CommonModule } from '../common/common.module';
 import { ConfigurationModule } from '../config';
 import { MailModule } from '../mail';
+import { PrivacyModule } from '../privacy';
 import { SecurityModule } from '../security';
 import { AdminProfileFieldsController } from './admin-profile-fields.controller';
 import { ParticipantAuthController } from './participant-auth.controller';
@@ -37,9 +38,20 @@ import { UserSessionService } from './user-session.service';
  * one module about the other would be the first step towards a foreign key
  * nobody wants. Not `LogoFilesModule` either — what the avatar shares with a
  * row logo is `ImageFileService`, and that is in `business/common/`.
+ *
+ * `PrivacyModule` is imported rather than given a controller of its own, and
+ * the direction is the point: an export and an erasure are asked for from the
+ * profile page (F49), and the password that authorizes a deletion may only be
+ * verified where the stored hash may be read — here (E65).
  */
 @Module({
-  imports: [CommonModule, ConfigurationModule, MailModule, SecurityModule],
+  imports: [
+    CommonModule,
+    ConfigurationModule,
+    MailModule,
+    PrivacyModule,
+    SecurityModule,
+  ],
   controllers: [
     PublicProfilesController,
     ParticipantAuthController,

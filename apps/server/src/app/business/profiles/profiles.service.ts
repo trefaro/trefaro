@@ -13,6 +13,7 @@ import {
   PROFILE_LOGIN_PATH,
   PROFILE_NEW_PASSWORD_PATH,
   PROFILE_REGISTRATION_PATH,
+  type ParticipantAccountDeletion,
   type ParticipantPasswordChange,
   type ParticipantProfileUpdate,
   type PasswordResetAcknowledgement,
@@ -30,6 +31,7 @@ import { PASSWORD_POLICY, isUsablePassword } from '../common/password-policy';
 import { refuse } from '../common/problem';
 import { ConfigurationService } from '../config';
 import { MailDeliveryError, MailService, PublicLinks } from '../mail';
+import { PrivacyService } from '../privacy';
 import {
   CONFIRMATION_TOKEN_TTL_MS,
   PASSWORD_RESET_TTL_MS,
@@ -127,6 +129,8 @@ export class ProfilesService {
     private readonly images: ImageFileService,
     // A password change ends the other sessions of the same account.
     private readonly sessions: UserSessionService,
+    // Export and erasure, which reach far past an account (E65).
+    private readonly privacy: PrivacyService,
   ) {}
 
   async register(
@@ -312,6 +316,35 @@ export class ProfilesService {
     if (!updated) throw new NotFoundException(GONE);
 
     await this.sessions.revokeOthers(current.profile.id, current.sessionId);
+  }
+
+  /**
+   * Deletes this account and everything that hangs on it (E65).
+   *
+   * The password is checked here and the work is done elsewhere, and that split
+   * is the point: a stored hash may only be read inside this module, and what
+   * has to happen afterwards reaches across nine tables that are not this
+   * module's. So the one thing an account module can decide — is this really
+   * the account holder — is decided here, and `PrivacyService` does the rest.
+   *
+   * No confirmation mail and no undo period. A letter would go to an address
+   * that is about to stop existing, and a grace period is a copy of somebody's
+   * data kept after they asked for it to be gone.
+   */
+  async deleteAccount(
+    current: AuthenticatedParticipant,
+    deletion: ParticipantAccountDeletion,
+  ): Promise<void> {
+    if (
+      !(await this.hasher.verify(
+        current.profile.passwordHash,
+        deletion.password,
+      ))
+    ) {
+      throw new UnauthorizedException('The current password is not right.');
+    }
+
+    await this.privacy.erase(current.profile.id);
   }
 
   /**

@@ -25,10 +25,16 @@ dass das Werkzeug etwas anderes tut als erwartet.
   neben `targets` auf Projektebene, `"// dependsOn"` neben `dependsOn` **im**
   Ziel. Diese Falle hat in Phase 5 zweimal zugeschlagen, in AP 1 und in AP 2,
   und beim zweiten Mal stand sie schon in dieser Datei.
-- **Ein UPDATE über `repository.query()` antwortet `[rows, rowCount]`** — zwei
-  Elemente, immer. `rows.length` meldet also „zwei Zeilen geändert", auch wenn
-  nichts geändert wurde. Wer eine Anzahl braucht, nimmt den Query-Builder und
-  `result.affected`.
+- **Ein UPDATE oder DELETE über `repository.query()` antwortet
+  `[rows, rowCount]`** — zwei Elemente, immer, und **auch mit `RETURNING`**.
+  `rows.length` meldet also „zwei Zeilen geändert", auch wenn nichts geändert
+  wurde, und `result.map(row => row.id)` gibt zwei `undefined` statt der
+  zurückgegebenen Ids. Der zweite Teil dieses Satzes hat in AP 6 der Phase 5
+  eine Aufräumbedingung stillgelegt und drei Zählwerte in einer Logzeile zu
+  „2, 2, 2" gemacht — der Eintrag stand da schon, nur eben für `UPDATE`. Wer
+  eine Anzahl braucht, nimmt den Query-Builder und `result.affected`; wer die
+  Zeilen braucht, packt `result[0]` **einmal** in einen Helfer aus, nicht an
+  jeder Aufrufstelle.
 - **Jest und Vitest starten aus verschiedenen Verzeichnissen.** `process.cwd()`
   ist unter Vitest (`libs/*`) der Arbeitsbereich und unter Jest (`apps/server`)
   das Projektverzeichnis. Wer in einem Servertest eine Datei des Arbeitsbereichs
@@ -172,5 +178,11 @@ from migrations order by timestamp desc limit 1"`), nicht der Health-Endpunkt.
   wird deshalb als Literal geschrieben und mit `as const satisfies
 Record<string, string>` festgenagelt: der Punktzugriff funktioniert, und ein
   Schlüssel, den es nicht gibt, ist ein Build-Fehler.
+- **Das `unzip` von Debian kann kein Unicode.** Info-ZIP 6.00 ist ohne
+  `UNICODE_SUPPORT` gebaut und liest einen UTF-8-Namen, als wäre er CP437: aus
+  `lebenslauf-öäü.txt` wird beim Entpacken eine Datei mit einem anderen Namen
+  auf der Platte, obwohl das Archiv korrekt ist und Bit 11 gesetzt hat. Ein
+  Test, der ein selbst geschriebenes ZIP prüft, nimmt deshalb Pythons
+  `zipfile` — es ehrt das Flag und prüft nebenbei jede CRC.
 
 Siehe auch: [Browsersuiten und E2E-Tests](e2e-tests.md), [Schichten und Ports im Server](server-layers.md).

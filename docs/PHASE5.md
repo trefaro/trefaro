@@ -1123,3 +1123,157 @@ größte Sprung der Projektgeschichte, und jeder einzelne ist ein Satz, den vorh
 niemand außerhalb des Codes ändern konnte. `todo.md` verliert den ältesten
 offenen Eintrag der Anwendung (seit AP 8 der Phase 2) und schließt die vier
 Seiten, die AP 5 der Phase 4 angekündigt hatte.
+
+### AP 6 — Löschen: was geht, was bleibt, und was keinen Namen mehr trägt (E65) (erledigt, 18.09.2026) → **Meilenstein M14**
+
+Zwei Funktionen, die in jeder Beschreibung fünf sind — Auskunft, Export,
+Löschung, Anonymisierung, Aufbewahrung —, und die hier **eine** Frage
+beantworten: was hält diese Instanz über einen Menschen? Der Export beantwortet
+sie von vorn, die Löschung von hinten, und beide müssen dieselbe Antwort geben.
+Genau deshalb teilen sie sich **einen** Port mit **einer** Implementierung:
+`ParticipantDataRepository` mit `collect` und `erase`, und in dieser einen Datei
+ist jede Tabelle genannt, die einen Menschen kennt. Eine Tabelle, die der Export
+vergisst, vergisst auch die Löschung — und beides sieht von außen gleich aus,
+nämlich nach nichts.
+
+**Drei Wege, wie eine Zeile auf einen Menschen zeigt, und jeder wird anders
+gelesen.** (1) Ein **Fremdschlüssel auf `user_profile`**: `user_session`,
+`push_subscription` und in den Plug-ins `plugin_forum_post`,
+`plugin_forum_thread`, `plugin_program_proposals_proposal`,
+`plugin_personal_program_entry`. Ein `DELETE` der Profilzeile erledigt alle
+sechs, und jede dieser Tabellen entscheidet **selbst**, was das für sie heißt.
+(2) Die **Adresse**, die die Identität ist (E31): `registration` und
+`newsletter_subscription`, ohne Fremdschlüssel gefunden und mit `lower()`
+verglichen wie jede andere Adresssuche; das Löschen einer Anmeldung kaskadiert
+weiter in `attachment`, `program_item_signup`, `invitation_recipient` und
+`plugin_qr_checkin_ticket`. (3) Eine **Spalte ganz ohne Fremdschlüssel** —
+`conversation_member.member_id` und `message.sender_id`, die eine bewusste Lücke
+des Schemas (E39). Für die gibt es kein Automatikverhalten, und sie werden in
+**entgegengesetzte** Richtungen behandelt: die Mitgliedschaft geht, denn sie
+sagt „dieser Mensch ist in diesem Gespräch"; die Nachricht bleibt, denn die
+Gegenseite hat sie gelesen.
+
+**Die drei Kategorien aus dem Titel, und die Grenze zwischen ihnen ist, wer
+etwas geschrieben hat** (F215). **Weg** ist, was einem Menschen allein gehört —
+Konto, Sitzungen, Push-Anmeldungen, Mitgliedschaften, Newsletter-Einwilligungen,
+Anmeldungen samt hochgeladener Dateien, Beiträge, Vorschläge, der persönliche
+Programmplan, das Profilbild. **Stehen** bleiben die Gespräche mit allem, was
+darin steht, und die Forum-Themen: beides sind Behälter für die Worte anderer,
+und ein Gespräch, dem die Hälfte fehlt, ist eine Fälschung dessen, was die
+Gegenseite gelesen hat (E14, E40). **Keinen Namen** tragen danach genau diese:
+`message.sender_id` zeigt ins Leere, `plugin_forum_thread.created_by` ist
+`NULL`, und die Clients zeichnen dafür einen Satz statt eines erfundenen Namens.
+
+**Die Anmeldungen werden gelöscht und nicht anonymisiert** — die eine
+Entscheidung, bei der das Paket von seinem eigenen Titel abweicht, und sie ist
+begründet: „eine einzelne Anmeldung ist immer löschbar (DSGVO-Vorarbeit)" steht
+seit Phase 1 im Datenmodell, eine anonymisierte Zeile hätte eine neue Spalte,
+einen eindeutigen Platzhalter in einer eindeutigen Adresse und eine
+Sonderdarstellung in zwei Clients gebraucht, und E14 schützt einen Veranstalter
+davor, eine Reihe mit Anmeldungen wegzuwerfen — nicht eine Kopfzahl davor, dass
+ein Mensch geht. Wer eine bevorstehende Teilnahme absagen will, storniert sie
+vorher; eine Löschung sagt nichts darüber, ob jemand kommt, und der Bildschirm
+sagt das auch so.
+
+**Die Löschung nennt keine einzige Plug-in-Tabelle** (F217), und das ist F21
+rückwärts gelesen: ein Plug-in darf auf eine Kerntabelle zeigen, weil das das
+Plug-in bindet und nicht den Kern — also sagt genau dieser Fremdschlüssel, was
+ein gelöschtes Konto für seine Zeilen bedeutet. Aufgezählt und je Tabelle
+begründet: Beiträge und Vorschläge kaskadieren, weil ein Beitrag von Natur aus
+zugeschrieben ist (E58); der persönliche Plan kaskadiert, weil er niemandem
+sonst gehört; die Eintrittskarte hängt an der Anmeldung; Räume und
+Raumzuordnungen kennen keinen Menschen; `decided_by` und `checked_in_by` zeigen
+auf `admin_user` und sind ohnehin `SET NULL`. Genau **eine** Zeile war falsch —
+`plugin_forum_thread.created_by` kaskadierte, und ein Thread ist der Behälter
+für die Beiträge anderer. Er wird nullbar mit `SET NULL`, in **einer Migration
+des Plug-ins**: eine Kernmigration an dieser Tabelle wäre das Spiegelbild
+dessen, was F21 verbietet. Die Nutzlast musste nicht angefasst werden — der
+`author` eines Threads ist seit F195 nullbar, weil ein Thread aus seinen
+Beiträgen gezeichnet wird.
+
+**Der Export ist ein Archiv, und darin stehen Daten und Sätze getrennt** (F216).
+`GET /api/participant/me/export` antwortet mit einem ZIP: `export.json` mit
+englischen Feldnamen und ISO-Zeitstempeln, weil ein Export auch von einem
+Programm gelesen werden können muss und ein JSON, dessen Schlüssel mit der
+Sprache wechseln, das nicht kann; `README.txt` mit **jedem** Satz, in der
+Sprache des Kontos und aus dem Katalog (E22, E64); daneben die hochgeladenen
+Dateien unter ihren eigenen Namen, jede auch in der JSON benannt, und eine
+Datei, deren Bytes das Volume nicht mehr hält, steht dort mit `null` statt zu
+verschwinden. Das ZIP ist von Hand geschrieben, ohne Abhängigkeit und ohne
+Kompression: was darin liegt, ist JPEG, PNG oder PDF und damit schon
+komprimiert, und was von einer ZIP-Bibliothek ohne Kompression und ohne
+Streaming übrig bleibt, ist genau das Byte-Layout in `zip-archive.ts`. Beide
+Prüfungen lesen es mit einem **fremden** Leser zurück — ein Test, der
+zurückliest, was dieses Modul geschrieben hat, bestätigt einen Fehler, statt ihn
+zu finden.
+
+**Was der Export ausdrücklich nicht enthält**, und die README sagt alle drei
+Punkte, statt sie wegzulassen: Zugangsdaten (Sitzungs-Token, Push-Schlüssel —
+damit wird ein Gerät angesprochen, nicht ein Mensch beschrieben);
+Kontaktanfragen ohne Konto, weil nichts die Adresse belegt hat und sie
+zusammenzufassen hieße zu behaupten, zwei Fremde seien einer (F133); und was die
+Plug-ins speichern. Der letzte Punkt ist die einzige Lücke dieses Pakets und
+steht als eigener Eintrag in `todo.md`: dafür bräuchte der Vertrag einen Port,
+ein Port ist ein Vertragsschritt, und den macht AP 11 zum letzten Mal. Die
+**Löschung** braucht ihn nicht — dort sagt jeder Fremdschlüssel schon, was
+gemeint ist.
+
+**Die Löschung wird mit dem Passwort autorisiert** (F218), im Kontenmodul
+geprüft und nirgends sonst, weil ein gespeicherter Hash dieses Modul nicht
+verlassen darf. Kein Bestätigungsbrief — er ginge an eine Adresse, die gleich
+aufhört zu existieren —, keine Karenzzeit — das wäre eine Kopie nach der Bitte,
+sie zu löschen — und kein abzutippendes Wort. Ein Gespräch, in dem **beide**
+Seiten gelöscht haben, wird ganz entfernt: was übrig bliebe, wären die
+Nachrichten zweier Menschen hinter einer Zeile, die niemand mehr öffnen kann.
+
+**Fertig, wenn** — Punkt für Punkt:
+
+| Kriterium                                                        | Beleg                                                                                                                                                                                                                   |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ein Mensch bekommt seinen Export, und nichts fehlt darin         | `privacy.spec.ts`: Archiv entpackt mit Pythons `zipfile`, darin Konto, Anmeldung über die Adressgleichheit, **beide** Hälften des Gesprächs, die Sitzungen — und das hochgeladene Bild als Datei; kein Token, kein Hash |
+| sein Konto ist löschbar                                          | `DELETE /api/participant/me` mit Passwort → 204; Profil, Sitzungen, Anmeldungen, Mitgliedschaften weg, die nächste Anfrage 401; ein falsches Passwort ändert nichts (401)                                               |
+| ein Gespräch ist danach lesbar und benennt niemanden             | die Gegenseite liest beide Nachrichten weiter, `counterparts` ist leer, `message`-Zeilen stehen; im Client `chat.deletedAccount` statt eines Namens (zwei Unit-Tests)                                                   |
+| ein Thread mit gelöschtem Eröffner bleibt samt fremder Antworten | `threadOpener(threadId)` ist `NULL`, `thread.author` ist `null`, und die freigegebene Antwort des anderen ist weiter lesbar                                                                                             |
+| nichts davon fasst eine Plug-in-Tabelle an                       | strukturell: die Löschung schreibt vier Anweisungen, keine nennt eine Plug-in-Tabelle. Beleg ist die Folge — der Thread steht mit leerem Eröffner, was nur sein eigener Fremdschlüssel bewirkt haben kann               |
+
+**Was anders lief:** der Trick mit den zwei Elementen. TypeORMs
+PostgreSQL-Treiber antwortet auf ein `DELETE` mit `[rows, rowCount]` statt mit
+den Zeilen — **auch mit `RETURNING`** —, und der Eintrag dazu stand seit Phase 3
+in `docs/rules/tooling-traps.md`, nur für `UPDATE`. Die Folge war still und
+sichtbar zugleich: die Logzeile einer Löschung meldete dreimal „2" (zweimal
+falsch), und die Aufräumbedingung für ein Gespräch, in dem niemand mehr ist,
+bekam zwei `undefined` statt zweier Ids und lief nie. Gefunden wurde es nicht
+von einem Test, sondern beim Lesen der Logzeile im Browserlauf — die Zahl
+„2, 2, 2" passte zu keinem Konto. Der Test, der es gefunden **hätte**, gibt es
+jetzt: beide Seiten eines Gesprächs löschen ihr Konto, und danach ist die Zeile
+weg. Dafür bekam `seedProfile` in der Vertragssuite ein optionales Passwort mit
+echtem Argon2-Hash — ein Konto, das sich selbst löschen kann, ohne eine der
+zwanzig Anmeldungen je fünf Minuten auszugeben (E4). Die Regel in
+`tooling-traps.md` ist um `DELETE` und um `RETURNING` ergänzt.
+
+Dazu eine kleinere Fundsache: das `unzip` von Debian ist ohne
+`UNICODE_SUPPORT` gebaut und schreibt einen UTF-8-Dateinamen unter einem
+anderen Namen auf die Platte, obwohl das Archiv korrekt ist. Beide
+Archiv-Prüfungen nehmen deshalb Pythons `zipfile`, das das Flag ehrt und
+nebenbei jede CRC prüft.
+
+**Der Stand nach diesem Paket:** `nx run-many -t lint test build
+--skip-nx-cache` grün über 19 Projekte; **1375** Server-Unit-Tests (zwanzig
+neu: der Archivschreiber gegen einen fremden Leser, das Layout des Archivs, der
+Dienst und die zwei Wege durch das Löschen), **270** im Nutzer-Client (sieben
+neu: die Komponente und zweimal der gelöschte Gegenüber im Chat), **222** im
+Veranstalter-Client — dort war nichts zu ändern, weil seine Gesprächsansicht
+schon vorher niemanden benannte, den sie nicht findet —, **113** in
+`shared-models`, **49** in `shared-i18n`, **32** in `shared-http`. Vertragssuite
+**42** Suiten und **718** Tests (eine Datei und neun Tests neu), genau **drei**
+429 im ganzen Lauf, alle drei von der Drosselungssuite erbeten. Browsersuiten
+**264** und **317**, beide EXIT=0 — die Teilnehmersuite fährt den Export und die
+Löschung am Ende des Passwort-vergessen-Tests, weil dessen Konto ohnehin für
+diesen Test existiert und eine eigene Datei drei weitere Anmeldungen gekostet
+hätte. `tools/shipped-stack/verify.sh` auf `STACK_PORT=8099` (8080 hält ein
+anderes Projekt): „the shipped stack is good", sieben Browsertests, 137 s, keine
+Container übrig — und damit ist die Plug-in-Migration einmal aus **leerem
+Volume** gelaufen. Zusätzlich sind `down` und `up` der Migration einzeln gegen
+die Entwicklungsdatenbank ausgeführt worden, und die Spalte hat beide Male ihre
+Gestalt gewechselt (`is_nullable` und `confdeltype` gelesen). Der Katalog wächst
+um **24** Schlüssel auf **1270**.

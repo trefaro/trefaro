@@ -119,6 +119,16 @@ Link.
   `publicEventPath`, `publicSeriesPath`, `publicUrl(origin, pfad)` in
   `shared-models` (F112) — den Origin kennt nur das Deployment
   (`publicUserClientUrl` aus `/api/config`). Verlinkt wird nur Veröffentlichtes.
+- **Export und Löschung hängen an `participant/me`** (E65, F216, F218).
+  `GET /api/participant/me/export` antwortet mit **einem** ZIP: `export.json`
+  mit den Daten (englische Feldnamen, ISO-Zeitstempel), `README.txt` mit jedem
+  Satz in der Sprache des Kontos und aus dem Katalog, und daneben die
+  hochgeladenen Dateien. `DELETE /api/participant/me` trägt das **aktuelle
+  Passwort** im Rumpf, antwortet 204 und löscht das Sitzungs-Cookie. Beide
+  liegen am Profilbildschirm (F49) und nicht in einem eigenen Controller, weil
+  das Passwort dort geprüft werden muss, wo der gespeicherte Hash gelesen
+  werden darf. Keine eigene Drosselungsart (E60): beide stehen hinter einer
+  Sitzung, und die konfigurierbaren Grenzen zählen die Türen **ohne** Sitzung.
 - **Ein Endpunkt für einen Bildschirm** (F49). Das Dashboard ist eine Anfrage,
   nicht vier. `GET …/events/:id/translations` bringt Event **und** Programm;
   geschrieben wird aber je Ding und je Sprache (F97), damit ein Fehler in der

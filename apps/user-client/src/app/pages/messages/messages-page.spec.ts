@@ -162,6 +162,25 @@ describe('MessagesPage', () => {
     expect(text()).toContain('Amina Okonkwo');
   });
 
+  it('says a one-to-one conversation is with a deleted account (E65)', async () => {
+    // A direct conversation has exactly two members, so an empty counterpart
+    // list means the other one erased their account. The history stays
+    // readable; what it no longer does is name anybody.
+    const row: ConversationSummary = {
+      ...direct('c3', 'Amina Okonkwo'),
+      counterparts: [],
+    };
+    const { page } = await render({
+      answers: [{ rows: [row], total: 1, page: 1, pageSize: 20 }],
+    });
+
+    // The key rather than the sentence, like the conversation page's own spec:
+    // `translate()` is the imperative call and answers with the key until
+    // Transloco has the language in hand (F72) — and what is under test here is
+    // *which* key this row is named by, not how it is worded.
+    expect(page.name(page.rows()[0])).toBe('chat.deletedAccount');
+  });
+
   it('names a group by its topic', async () => {
     const row: ConversationSummary = {
       ...direct('c2', 'Bo Chen'),

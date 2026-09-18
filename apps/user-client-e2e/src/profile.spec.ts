@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import { expectNoRawKeys, t } from './support/catalogue';
 import {
@@ -545,5 +546,53 @@ test.describe('a participant account', () => {
     await expect(page).toHaveURL(/\/profile$/);
     await expect(page.getByText(email)).toBeVisible();
     await expectNoRawKeys(page);
+
+    // --- everything about me, and then nothing (E65) ----------------------
+    // In this test rather than one of its own: an erasure needs an account
+    // that may end, and this one exists only for this test. A file of its own
+    // would also mean three more logins out of twenty per five minutes (E4).
+    await expect(
+      page.getByRole('heading', { name: t('profile.myData.heading') }),
+    ).toBeVisible();
+    await expectNoRawKeys(page);
+
+    const [archive] = await Promise.all([
+      page.waitForEvent('download'),
+      page
+        .getByRole('button', { name: t('profile.myData.export.action') })
+        .click(),
+    ]);
+    expect(archive.suggestedFilename()).toMatch(
+      /^trefaro-export-\d{4}-\d{2}-\d{2}\.zip$/,
+    );
+    const saved = await archive.path();
+    // The first four bytes of a ZIP. What is *in* it is asserted where it can
+    // be unpacked — in the unit test of the writer and in the contract suite.
+    expect((await readFile(saved)).subarray(0, 4).toString('latin1')).toBe(
+      'PK\u0003\u0004',
+    );
+
+    await page
+      .getByRole('button', { name: t('profile.myData.delete.start') })
+      .click();
+    // Two steps, and the second one is the password: of everything a session
+    // can do, this is the one that cannot be taken back.
+    await page
+      .getByLabel(t('profile.myData.delete.password'))
+      .fill(NEW_PASSWORD);
+    await page
+      .getByRole('button', { name: t('profile.myData.delete.confirm') })
+      .click();
+
+    await expect(page).toHaveURL(CLIENT_URL + '/');
+    await expect(
+      page
+        .getByRole('navigation', { name: t('app.nav.label') })
+        .getByRole('link', { name: t('profile.login.title') }),
+    ).toBeVisible();
+    // And the session is really gone, not only hidden: the profile page sends
+    // whoever asks for it back to the login form.
+    await page.goto('/profile');
+    await expect(page).toHaveURL(/\/profile\/login/);
   });
 });

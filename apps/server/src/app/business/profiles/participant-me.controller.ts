@@ -3,10 +3,15 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   HttpCode,
   HttpStatus,
+  Inject,
+  NotFoundException,
   Patch,
   Put,
+  Res,
+  StreamableFile,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -17,6 +22,7 @@ import {
   ApiBody,
   ApiConsumes,
   ApiNoContentResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiPayloadTooLargeResponse,
@@ -29,12 +35,17 @@ import {
   PROFILES_MODULE_KEY,
   brandingTypeSummary,
 } from '@trefaro/shared-models';
+import type { Response } from 'express';
+import type { TrefaroEnv } from '../../core/config/env';
+import { ENV } from '../../core/config/env.module';
+import { contentDisposition } from '../attachments/file-name';
 import {
   IMAGE_UPLOAD_OPTIONS,
   type ImageMultipartFile,
 } from '../common/image-upload';
 import { refuse } from '../common/problem';
 import { CoreModuleController, CoreModuleEnabledGuard } from '../config';
+import { PrivacyService } from '../privacy';
 import { CurrentParticipant } from './current-participant.decorator';
 import {
   AvatarImageDto,
@@ -45,10 +56,15 @@ import {
 import {
   AvatarUploadDto,
   ChangePasswordDto,
+  DeleteAccountDto,
   UpdateProfileDto,
 } from './dto/update-profile.dto';
 import type { AuthenticatedParticipant } from './ports/user-session.repository';
 import { ProfilesService } from './profiles.service';
+import {
+  USER_SESSION_COOKIE,
+  userSessionCookieOptions,
+} from './user-session-cookie';
 
 /**
  * The participant's own account and profile (FR 4.2, FR 4.3).
@@ -67,7 +83,14 @@ import { ProfilesService } from './profiles.service';
 @CoreModuleController(PROFILES_MODULE_KEY)
 @Controller('participant/me')
 export class ParticipantMeController {
-  constructor(private readonly profiles: ProfilesService) {}
+  constructor(
+    private readonly profiles: ProfilesService,
+    // The archive is built here rather than in the accounts module: what it
+    // holds reaches across registrations, conversations and consents (E65).
+    private readonly privacy: PrivacyService,
+    // For the cookie's flags, which have to match the ones it was set with.
+    @Inject(ENV) private readonly env: TrefaroEnv,
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -194,5 +217,78 @@ export class ParticipantMeController {
     @CurrentParticipant() current: AuthenticatedParticipant,
   ): Promise<AvatarImageDto> {
     return { avatarUrl: await this.profiles.removeAvatar(current.profile.id) };
+  }
+
+  @Get('export')
+  // The archive holds a passport scan as readily as a name; nothing about it
+  // belongs in a shared cache, and nothing in it may be sniffed into a type.
+  @Header('Cache-Control', 'private, no-store')
+  @Header('X-Content-Type-Options', 'nosniff')
+  @ApiOperation({
+    summary: 'Download everything this instance stores about me',
+    description:
+      'One request, one archive (E65). `export.json` holds the data — the ' +
+      'account, every registration made with this address, the programme ' +
+      'sign-ups, the newsletter consents, the conversations and the sessions ' +
+      '— and beside it lie the files that were uploaded, under the names they ' +
+      'were uploaded with. `README.txt` says what is in it and what is not, ' +
+      "in this account's language. Credentials are left out on purpose: a " +
+      'session token and the keys of a push subscription are what a device ' +
+      'authenticates with, not something a person needs a copy of.',
+  })
+  @ApiOkResponse({
+    description: 'The archive.',
+    content: {
+      'application/zip': { schema: { type: 'string', format: 'binary' } },
+    },
+  })
+  @ApiUnauthorizedResponse({ description: 'No valid session.' })
+  @ApiNotFoundResponse({ description: 'The account is gone.' })
+  async exportData(
+    @CurrentParticipant() current: AuthenticatedParticipant,
+  ): Promise<StreamableFile> {
+    const archive = await this.privacy.exportFor(current.profile.id);
+    // A session can outlive its profile by the width of a request — a second
+    // tab that deleted the account. That is a 404, not a failure.
+    if (!archive) throw new NotFoundException('This account no longer exists.');
+
+    return new StreamableFile(archive.bytes, {
+      type: 'application/zip',
+      disposition: contentDisposition(archive.fileName),
+      length: archive.bytes.length,
+    });
+  }
+
+  @Delete()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Delete this account',
+    description:
+      'With the current password, for the reason the password change asks ' +
+      'for it: of everything a session can do, this is the one that cannot be ' +
+      'taken back. What happens is three things and they are different from ' +
+      'one another (E65) — the account, its sessions, its subscriptions, its ' +
+      'consents and the files it uploaded **go**; the conversations it took ' +
+      'part in and the forum threads it opened **stay**, because somebody ' +
+      'else wrote in them; and its registrations **stop naming anybody**, so ' +
+      'that an event that happened still says how many people were at it. ' +
+      'Somebody who wants to withdraw from an event ahead of them cancels it ' +
+      'first: an erasure says nothing about whether they are coming.',
+  })
+  @ApiNoContentResponse({ description: 'Gone. The session cookie is cleared.' })
+  @ApiUnauthorizedResponse({
+    description: 'No valid session, or the password is not right.',
+  })
+  async deleteAccount(
+    @CurrentParticipant() current: AuthenticatedParticipant,
+    @Body() body: DeleteAccountDto,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<void> {
+    await this.profiles.deleteAccount(current, body);
+    // The session rows went with the account; this is the browser's copy.
+    response.clearCookie(
+      USER_SESSION_COOKIE,
+      userSessionCookieOptions(this.env),
+    );
   }
 }

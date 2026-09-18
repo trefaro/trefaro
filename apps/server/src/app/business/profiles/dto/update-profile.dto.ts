@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import type {
   CustomFieldValues,
+  ParticipantAccountDeletion,
   ParticipantPasswordChange,
   ParticipantProfileUpdate,
 } from '@trefaro/shared-models';
@@ -119,6 +120,21 @@ export class ChangePasswordDto implements ParticipantPasswordChange {
   @IsString()
   @Length(MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH)
   newPassword!: string;
+}
+
+/**
+ * What the "delete my account" form sends (E65).
+ *
+ * The current password, verified against the stored hash exactly as a password
+ * change verifies it. No length rule beyond the maximum: this is a password
+ * being checked, not one being set, and a policy here would tell somebody with
+ * an older password that theirs is too short to delete their account with.
+ */
+export class DeleteAccountDto implements ParticipantAccountDeletion {
+  @ApiProperty({ description: 'Verified against the stored hash.' })
+  @IsString()
+  @Length(1, MAX_PASSWORD_LENGTH)
+  password!: string;
 }
 
 /**

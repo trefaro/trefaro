@@ -4,6 +4,7 @@ import {
   BRANDING_IMAGE_PART,
   type AvatarImage,
   type ParticipantAccount,
+  type ParticipantAccountDeletion,
   type ParticipantPasswordChange,
   type ParticipantProfileUpdate,
   type ProfileFieldPublic,
@@ -60,5 +61,21 @@ export class ParticipantProfileService {
     return firstValueFrom(
       this.api.delete<AvatarImage>('participant/me/avatar'),
     );
+  }
+
+  /**
+   * Everything this instance stores about this account, as one archive (E65).
+   *
+   * Fetched rather than linked to, for the reason the organizer's attachment
+   * download gives: the bytes come through the session, and a link opened in a
+   * new tab is a request this client did not make.
+   */
+  exportArchive(): Promise<Blob> {
+    return firstValueFrom(this.api.file('participant/me/export'));
+  }
+
+  /** @throws ApiError — 401 when the password is not right. */
+  deleteAccount(deletion: ParticipantAccountDeletion): Promise<void> {
+    return firstValueFrom(this.api.delete<void>('participant/me', deletion));
   }
 }

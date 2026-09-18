@@ -104,6 +104,24 @@ Entscheidungsprotokoll (`docs/Anforderungsanalyse_und_Umsetzungsplan.md`).
 - **Ein Widerspruch gehört dem Menschen, nicht der Zeile** (F57): `contact_opt_out`
   wird auf **allen** Anmeldungen einer Adresse in der ganzen Instanz gesetzt; nur
   die noch nicht widersprochenen werden gezählt.
+- **Eine Löschung kennt drei Kategorien: weg, bleibt, trägt keinen Namen mehr**
+  (E65, F215, AP 6 der Phase 5). **Weg** ist, was einem Menschen allein gehört —
+  `user_profile` samt Kaskade, `conversation_member` (ohne Fremdschlüssel, E39:
+  die einzige Zeile, die von Hand gelöscht wird), `newsletter_subscription` und
+  `registration` über Adressgleichheit, samt deren Kaskade und den Dateien
+  dazu. **Bleiben** Gespräche und Forum-Themen, denn dort stehen die Worte
+  anderer. **Keinen Namen** tragen genau diese danach: `message.sender_id`
+  zeigt ins Leere, `plugin_forum_thread.created_by` ist `NULL`. Anmeldungen
+  werden **gelöscht, nicht anonymisiert** — „eine einzelne Anmeldung ist immer
+  löschbar" war von Anfang an die DSGVO-Vorarbeit, und E14 schützt einen
+  Veranstalter vor sich selbst, nicht eine Kopfzahl vor einem Menschen, der
+  geht. Alles in **einer** Transaktion; die Dateien danach (F158).
+- **Die Löschung nennt keine Plug-in-Tabelle** (F21 rückwärts gelesen, F217).
+  Ein Plug-in darf auf eine Kerntabelle zeigen, also sagt sein eigener
+  Fremdschlüssel, was ein gelöschtes Konto für seine Zeilen bedeutet — und wenn
+  er das Falsche sagt, ändert ihn eine **Migration des Plug-ins**, nie eine des
+  Kerns. Faustregel wie oben: Beiträge kaskadieren (E58), Behälter für fremde
+  Beiträge werden `SET NULL`.
 - **Die Adresse ist der Mensch** (E31): `user_profile.email` ist instanzweit
   eindeutig (`lower(email)`) und **die** Identität eines Teilnehmerkontos.
   `registration` bekommt **keine** `user_id` — die Anmeldungen einer Person

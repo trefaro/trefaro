@@ -33,6 +33,7 @@ import {
   type AnswerControl,
 } from '../../features/fields/field-answers';
 import { AvatarField } from '../../features/profiles/avatar-field';
+import { MyData } from '../../features/profiles/my-data';
 import { ParticipantProfileService } from '../../features/profiles/participant-profile.service';
 
 /**
@@ -66,6 +67,7 @@ import { ParticipantProfileService } from '../../features/profiles/participant-p
   imports: [
     AvatarField,
     CustomField,
+    MyData,
     NotificationSettings,
     ReactiveFormsModule,
     TranslocoPipe,
@@ -234,6 +236,10 @@ import { ParticipantProfileService } from '../../features/profiles/participant-p
       <!-- Notifications belong to a person and to a device at once, so the
            switch is here and the offer is in the shell (FR 3.15, E43). -->
       <trefaro-notification-settings />
+
+      <!-- Last on the page, because one of its two buttons ends the page
+           (E65). -->
+      <trefaro-my-data />
     }
   `,
   styles: `

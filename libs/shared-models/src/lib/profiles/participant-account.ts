@@ -131,6 +131,20 @@ export interface ParticipantPasswordChange {
 }
 
 /**
+ * What the "delete my account" form posts (E65).
+ *
+ * The current password, and nothing else. It is the same guard the password
+ * change has and it is there for the same reason: whoever is holding this
+ * session may have found the screen unlocked, and of everything a session can
+ * do, this is the one thing that cannot be taken back. No second field, no
+ * typed-out confirmation word — a checkbox or a phrase to copy is a hurdle,
+ * not proof, and the proof already exists.
+ */
+export interface ParticipantAccountDeletion {
+  readonly password: string;
+}
+
+/**
  * What the "I have forgotten my password" form posts (E10, E32).
  *
  * An address and nothing else. No name, no old password, no question to answer:

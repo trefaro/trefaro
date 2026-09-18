@@ -4,6 +4,7 @@ import {
   type ServerPlugin,
 } from '../../app/business/plugin-api';
 import { CreateForumSchema1787890000000 } from './data-access/migrations/1787890000000-CreateForumSchema';
+import { ThreadOutlivesItsOpener1787911000000 } from './data-access/migrations/1787911000000-ThreadOutlivesItsOpener';
 import { PostEntity } from './data-access/entities/post.entity';
 import { ThreadEntity } from './data-access/entities/thread.entity';
 import { ForumModule } from './forum.module';
@@ -46,7 +47,10 @@ export const forumPlugin: ServerPlugin = {
     // Stamped after the core migrations that create `event`, `user_profile`
     // and `admin_user`: both streams are ordered together by timestamp, and a
     // reference cannot precede the table it points at.
-    migrations: [CreateForumSchema1787890000000],
+    migrations: [
+      CreateForumSchema1787890000000,
+      ThreadOutlivesItsOpener1787911000000,
+    ],
   },
   requires: [PROFILES_MODULE_KEY],
   client: {

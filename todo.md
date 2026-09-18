@@ -1302,6 +1302,20 @@ entry, the answer is noted below rather than repeated.
 
 ## Checkable after phase 5 — hardening and release
 
+- [ ] **A data export carries nothing a plug-in stores.** The archive of AP 6
+      holds the core's tables in full, and the `README.txt` says so plainly —
+      but a forum post, a programme proposal and a personal programme are rows
+      about a person all the same. The core cannot read them: a plug-in owns
+      its tables, and reaching into them from the core is the mirror image of
+      what F21 forbids (F217). What is missing is a **port**, and a port is a
+      versioned change to the plug-in contract — which AP 11 opens for the last
+      time and closes at 1.3.0 (E69). So: decide it there, along with the zone
+      at the port. Either the contract gets an optional "what do you hold about
+      this account" read and the archive grows, or the answer stays "ask the
+      organization" and that sentence is the deliberate one. **Erasure is not
+      affected** and needs no port: every plug-in's own foreign key already
+      says what a deleted account means for its rows, and AP 6 checked all six.
+
 - [ ] **A personal plan does not say where I hold a seat.** E55 has two halves:
       putting a session in a plan books nothing (built, F201) — and "the plan
       shows where I have a seat", which AP 9 did **not** build. The reason is
@@ -1346,7 +1360,7 @@ entry, the answer is noted below rather than repeated.
       of `PLUGIN_API_VERSION` with its compatibility case, and one line in each
       of the two bundles that render a time.
 
-- [ ] **A deleted account takes the threads it opened — replies of others
+- [x] **A deleted account takes the threads it opened — replies of others
       included.** `plugin_forum_thread.created_by` cascades, as the plan’s
       schema says (AP 4 of phase 4), and for a **post** that is right: a post
       is attributed by nature (E58). A thread is different — it is a container
@@ -1356,6 +1370,10 @@ entry, the answer is noted below rather than repeated.
       `created_by` with `SET NULL` keeps the thread (the first post cascades
       either way, and a thread with no published post is invisible), and the
       thread’s `author` is already nullable in the payload.
+      **Decided and built exactly that way in AP 6 of phase 5** (F217): the
+      column is nullable with `ON DELETE SET NULL`, in a migration of the
+      forum plug-in rather than of the core, and the payload needed no change
+      at all. A post still cascades — it is one person's words (E58).
 
 - [x] **Resetting a forgotten participant password — done in AP 4 of phase 5**
       (F209–F211). Two routes under `/api/user/profiles`, a fourth token purpose
@@ -1537,8 +1555,18 @@ entry, the answer is noted below rather than repeated.
 - [ ] **Security review.** Auth, upload validation, plug-in isolation, and
       whether the OpenAPI description should keep being served publicly (it is
       today, on the grounds that the source is AGPL anyway).
-- [ ] **GDPR functions.** Data export and deletion, which the schema was designed
-      for but which nothing implements.
+- [x] **GDPR functions — done in AP 6 of phase 5** (E65, F215–F218). Both, as
+      one subject rather than two features, on the profile page:
+      `GET /api/participant/me/export` answers one ZIP — `export.json` with the
+      data, `README.txt` with every sentence in the account's language and out
+      of the catalogue, and beside them the uploaded files under the names they
+      were uploaded with. `DELETE /api/participant/me` carries the current
+      password and erases in one transaction: the account and everything that
+      hangs on it goes, the conversations and the forum threads stay because
+      other people wrote in them, and what stays names nobody afterwards. One
+      migration, and it belongs to the forum plug-in —
+      `plugin_forum_thread.created_by` becomes nullable with `SET NULL`,
+      because the core never names a plug-in's table.
 - [ ] **Load tests** (NFR 12).
 - [ ] **socket.io shared adapter** — only if more than one server container is
       ever run. Not needed for one instance per organization.
@@ -1782,7 +1810,7 @@ entry, the answer is noted below rather than repeated.
       `ConfiguredIoAdapter`; the forwarded client address is read the way
       Express reads it under `trust proxy: 1`.
 
-- [ ] **A deleted profile leaves its conversations standing** —
+- [x] **A deleted profile leaves its conversations standing** —
       `conversation_member.member_id` carries no foreign key (E39), on purpose.
       Nothing can delete a profile today (there is no endpoint, by design), so
       this is erasure work for **phase 5**, together with the rest of it: what a
@@ -1793,6 +1821,12 @@ entry, the answer is noted below rather than repeated.
       somebody else wrote it, and what a conversation looks like when one side
       is gone. Nothing can delete a profile today, so nothing is broken in the
       meantime.
+      **Answered in AP 6 of phase 5** (F215): the membership goes — it is the
+      one column with no foreign key behind it (E39) — and the messages stay,
+      because the other side read them. The conversation is therefore readable
+      and names nobody: the client draws `chat.deletedAccount` where a name
+      used to be, and a one-to-one conversation whose **both** members have
+      erased their accounts is removed, since nobody can open it any more.
 
 - [ ] **A `select` profile question whose choices shrink leaves answers behind
       that are no longer offered.** The same situation as a deleted question

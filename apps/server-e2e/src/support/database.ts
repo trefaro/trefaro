@@ -1,3 +1,4 @@
+import { argon2id, hash } from 'argon2';
 import { createHash, randomBytes } from 'node:crypto';
 import { Pool } from 'pg';
 
@@ -260,6 +261,16 @@ export interface SeededProfile {
   readonly confirmed?: boolean;
   readonly customFields?: Readonly<Record<string, string | boolean>>;
   readonly preferredLocale?: string;
+  /**
+   * A password this account can actually be authenticated with.
+   *
+   * Left out, the row carries a hash nothing verifies, which is enough for
+   * every suite that seeds a session instead of logging in. It is **not**
+   * enough for the one call that asks for a password rather than for a session
+   * — deleting one's own account (E65) — and hashing it here is what keeps
+   * that test from spending one of the twenty logins per five minutes (E4).
+   */
+  readonly password?: string;
 }
 
 /** Inserts one profile and returns its id. */
@@ -268,7 +279,7 @@ export async function seedProfile(profile: SeededProfile): Promise<string> {
     `INSERT INTO user_profile
        (email, password_hash, first_name, last_name, preferred_locale,
         activity_areas, custom_fields_json, searchable, confirmed_at)
-     VALUES ($1, 'not-a-usable-hash', $2, $3, $4, $5, $6::jsonb, $7,
+     VALUES ($1, $9, $2, $3, $4, $5, $6::jsonb, $7,
              CASE WHEN $8 THEN now() ELSE NULL END)
      RETURNING id`,
     [
@@ -280,6 +291,9 @@ export async function seedProfile(profile: SeededProfile): Promise<string> {
       JSON.stringify(profile.customFields ?? {}),
       profile.searchable ?? false,
       profile.confirmed ?? true,
+      profile.password === undefined
+        ? 'not-a-usable-hash'
+        : await hash(profile.password, { type: argon2id }),
     ],
   );
   return result.rows[0].id;
@@ -607,6 +621,74 @@ export async function markContactOptOut(email: string): Promise<void> {
     'UPDATE registration SET contact_opt_out = true WHERE lower(email) = lower($1)',
     [email],
   );
+}
+
+/**
+ * What is left of one person after an erasure (E65).
+ *
+ * Six questions rather than one `query(sql)`, and for the reason every other
+ * helper in this file is shaped that way: a test that spells its own SQL is a
+ * test that can accidentally ask a different question than the one the package
+ * promised to answer. Each of these is one clause of AP 6's criterion.
+ */
+export async function profileExists(id: string): Promise<boolean> {
+  const result = await pool.query('SELECT 1 FROM user_profile WHERE id = $1', [
+    id,
+  ]);
+  return result.rowCount === 1;
+}
+
+export async function sessionCount(profileId: string): Promise<number> {
+  const result = await pool.query(
+    'SELECT 1 FROM user_session WHERE user_id = $1',
+    [profileId],
+  );
+  return result.rowCount ?? 0;
+}
+
+/** Found by address, because that is what ties a registration to a person (E31). */
+export async function registrationCount(email: string): Promise<number> {
+  const result = await pool.query(
+    'SELECT 1 FROM registration WHERE lower(email) = lower($1)',
+    [email],
+  );
+  return result.rowCount ?? 0;
+}
+
+/** The column with no foreign key behind it — nothing removes these for us (E39). */
+export async function conversationMemberCount(
+  profileId: string,
+): Promise<number> {
+  const result = await pool.query(
+    "SELECT 1 FROM conversation_member WHERE member_type = 'user' AND member_id = $1",
+    [profileId],
+  );
+  return result.rowCount ?? 0;
+}
+
+export async function messageCount(conversationId: string): Promise<number> {
+  const result = await pool.query(
+    'SELECT 1 FROM message WHERE conversation_id = $1',
+    [conversationId],
+  );
+  return result.rowCount ?? 0;
+}
+
+/**
+ * Who a forum thread says opened it.
+ *
+ * Three answers, and the middle one is the package: `undefined` is no such
+ * thread, `null` is a thread whose opener was erased and which stands anyway
+ * (AP 6 of phase 5), an id is an ordinary thread.
+ */
+export async function threadOpener(
+  threadId: string,
+): Promise<string | null | undefined> {
+  const result = await pool.query<{ created_by: string | null }>(
+    'SELECT created_by FROM plugin_forum_thread WHERE id = $1',
+    [threadId],
+  );
+  return result.rows[0]?.created_by;
 }
 
 export async function closeDatabase(): Promise<void> {

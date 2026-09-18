@@ -38,8 +38,9 @@ export class ThreadEntity {
   @Column({ type: 'varchar', length: 200 })
   title!: string;
 
-  @Column({ name: 'created_by', type: 'uuid' })
-  createdBy!: string;
+  /** `null` once that account has been erased — the thread stays (E65). */
+  @Column({ name: 'created_by', type: 'uuid', nullable: true })
+  createdBy!: string | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;

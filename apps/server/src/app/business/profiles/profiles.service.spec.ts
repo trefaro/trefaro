@@ -9,6 +9,7 @@ import { ImageFileService } from '../common/image-file.service';
 import type { PasswordHasher } from '../common/password-hasher.service';
 import type { ConfigurationService } from '../config';
 import { MailDeliveryError, type MailService, type PublicLinks } from '../mail';
+import type { PrivacyService } from '../privacy';
 import type { TokenSigner } from '../security';
 import type {
   NewProfileField,
@@ -179,6 +180,7 @@ describe('ProfilesService', () => {
   let files: FakeFileStore;
   let revokedOthers: { userId: string; keepSessionId: string }[];
   let revokedAll: string[];
+  let erased: string[];
   let service: ProfilesService;
   let sent: { kind: string; to: string; context: unknown }[];
   let failMail: boolean;
@@ -216,6 +218,7 @@ describe('ProfilesService', () => {
     files = new FakeFileStore();
     revokedOthers = [];
     revokedAll = [];
+    erased = [];
     secrets.clear();
     sent = [];
     failMail = false;
@@ -281,6 +284,13 @@ describe('ProfilesService', () => {
       },
     } as unknown as UserSessionService;
 
+    const privacy = {
+      erase: (profileId: string) => {
+        erased.push(profileId);
+        return Promise.resolve();
+      },
+    } as unknown as PrivacyService;
+
     service = new ProfilesService(
       profiles,
       hasher,
@@ -294,6 +304,7 @@ describe('ProfilesService', () => {
       new ProfileFieldsService(fields),
       new ImageFileService(files),
       sessions,
+      privacy,
     );
   });
 
@@ -672,6 +683,37 @@ describe('ProfilesService', () => {
       expect(revokedOthers).toEqual([
         { userId: 'profile-1', keepSessionId: 'session-1' },
       ]);
+    });
+  });
+
+  describe('deleteAccount', () => {
+    const current = async (): Promise<AuthenticatedParticipant> => {
+      await service.register(registration);
+      await service.confirm('token-for-profile-1');
+      return {
+        sessionId: 'session-1',
+        lastSeenAt: new Date(),
+        expiresAt: new Date(Date.now() + 3_600_000),
+        profile: profiles.rows[0],
+      };
+    };
+
+    it('refuses a wrong password, and erases nothing', async () => {
+      const session = await current();
+
+      await expect(
+        service.deleteAccount(session, { password: 'not-the-passphrase' }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(erased).toEqual([]);
+    });
+
+    it('erases the account once the password is right', async () => {
+      const session = await current();
+
+      await service.deleteAccount(session, { password: PASSWORD });
+
+      expect(erased).toEqual(['profile-1']);
     });
   });
 

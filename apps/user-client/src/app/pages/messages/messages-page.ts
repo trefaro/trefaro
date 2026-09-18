@@ -271,7 +271,13 @@ export class MessagesPage {
     // Read for the dependency: this string is chosen in TypeScript, so nothing
     // marks it for redrawing after a language switch on its own (F72).
     this.i18n.locale();
-    return this.i18n.translate('chat.unnamed');
+    // A one-to-one conversation has exactly two members, so an empty list of
+    // counterparts says the other one erased their account (E65). Saying that
+    // is more use than "Conversation", and it is the only place a reader can
+    // learn why the history below has nobody's name on it.
+    return this.i18n.translate(
+      row.type === 'direct' ? 'chat.deletedAccount' : 'chat.unnamed',
+    );
   }
 
   /** The first counterpart's picture — a group is drawn by whoever is first. */

@@ -62,6 +62,7 @@ export {
   PROFILE_SEARCH_MODULE_KEY,
   type AvatarImage,
   type ParticipantAccount,
+  type ParticipantAccountDeletion,
   type ParticipantLoginRequest,
   type ParticipantPasswordChange,
   type ParticipantProfileUpdate,

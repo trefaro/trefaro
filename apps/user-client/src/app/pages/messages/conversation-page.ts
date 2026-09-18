@@ -439,9 +439,12 @@ export class ConversationPage {
     if (row.topic) return row.topic;
 
     const names = row.counterparts.map((one) => one.name).filter(Boolean);
-    return names.length > 0
-      ? names.join(', ')
-      : this.i18n.translate('chat.unnamed');
+    if (names.length > 0) return names.join(', ');
+    // Two members, none left but the reader: the other side erased their
+    // account (E65). The history stays readable and names nobody.
+    return this.i18n.translate(
+      row.type === 'direct' ? 'chat.deletedAccount' : 'chat.unnamed',
+    );
   });
 
   protected readonly avatarUrl = computed(
@@ -524,9 +527,16 @@ export class ConversationPage {
     );
     if (named) return named.name;
 
+    if (message.senderType === 'admin') {
+      return this.i18n.translate('chat.thread.organizer');
+    }
+    // In a one-to-one conversation there is only one other person, so a line
+    // whose sender is not among the counterparts was written by an account
+    // that has since been erased (E65). In a group it may also be somebody who
+    // left, and there the vaguer word is the honest one.
     return this.i18n.translate(
-      message.senderType === 'admin'
-        ? 'chat.thread.organizer'
+      this.conversation()?.type === 'direct'
+        ? 'chat.deletedAccount'
         : 'chat.thread.other',
     );
   }

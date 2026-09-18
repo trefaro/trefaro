@@ -36,7 +36,15 @@ export interface ThreadRecord {
   readonly id: string;
   readonly eventId: string;
   readonly title: string;
-  readonly createdBy: string;
+  /**
+   * Who opened it, or `null` once that account was erased (E65).
+   *
+   * A thread outlives its opener because it is the container for other
+   * people's posts; a post does not, because a post is one person's words
+   * (E58). The payload has carried a nullable author since F195, so nothing
+   * above this line had to change when the column became nullable.
+   */
+  readonly createdBy: string | null;
   readonly createdAt: Date;
   /** The latest published post, or `createdAt` while there is none (F195). */
   readonly lastPostAt: Date;

@@ -23,6 +23,7 @@ import { MODULE_CONFIG_REPOSITORY } from '../business/config/ports/module-config
 import { SEARCHABLE_PROFILE_REPOSITORY } from '../business/common/ports/searchable-profile.repository';
 import { NEWSLETTER_REPOSITORY } from '../business/newsletter/ports/newsletter.repository';
 import { PROFILE_FIELD_REPOSITORY } from '../business/profiles/ports/profile-field.repository';
+import { PARTICIPANT_DATA_REPOSITORY } from '../business/privacy/ports/participant-data.repository';
 import { PROFILE_NAME_REPOSITORY } from '../business/profiles/ports/profile-name.repository';
 import { PROGRAM_ITEM_SIGNUP_REPOSITORY } from '../business/program/ports/program-item-signup.repository';
 import { PROGRAM_ITEM_TRANSLATION_REPOSITORY } from '../business/program/ports/program-item-translation.repository';
@@ -74,6 +75,7 @@ import { TypeormPushSubscriptionRepository } from './repositories/typeorm-push-s
 import { TypeormRegistrationFieldRepository } from './repositories/typeorm-registration-field.repository';
 import { TypeormRegistrationRepository } from './repositories/typeorm-registration.repository';
 import { TypeormTranslationOverrideRepository } from './repositories/typeorm-translation-override.repository';
+import { TypeormParticipantDataRepository } from './repositories/typeorm-participant-data.repository';
 import { TypeormUserProfileRepository } from './repositories/typeorm-user-profile.repository';
 import { TypeormUserSessionRepository } from './repositories/typeorm-user-session.repository';
 
@@ -136,6 +138,7 @@ export class DataAccessModule {
         TypeormRegistrationRepository,
         TypeormRegistrationFieldRepository,
         TypeormTranslationOverrideRepository,
+        TypeormParticipantDataRepository,
         TypeormUserProfileRepository,
         TypeormUserSessionRepository,
         BundledCatalogueReader,
@@ -280,6 +283,13 @@ export class DataAccessModule {
         // Participant accounts and their sessions (E31, E34). Two ports beside
         // the administrative pair rather than one shared pair: the two kinds of
         // identity share a shape and nothing else.
+        // Export and erasure (E65). Its own class rather than a method on the
+        // profile repository: what it reads and deletes is nine tables wide,
+        // and every one of them is named in that one file on purpose.
+        {
+          provide: PARTICIPANT_DATA_REPOSITORY,
+          useExisting: TypeormParticipantDataRepository,
+        },
         {
           provide: USER_PROFILE_REPOSITORY,
           useExisting: TypeormUserProfileRepository,
@@ -345,6 +355,7 @@ export class DataAccessModule {
         MODULE_CONFIG_REPOSITORY,
         PROFILE_DIRECTORY,
         PROFILE_FIELD_REPOSITORY,
+        PARTICIPANT_DATA_REPOSITORY,
         PROFILE_NAME_REPOSITORY,
         SEARCHABLE_PROFILE_REPOSITORY,
         PROGRAM_ITEM_REPOSITORY,

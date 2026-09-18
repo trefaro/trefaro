@@ -103,7 +103,7 @@ export class ForumService {
       rows(window),
     );
     const authors = await this.authorsOf(
-      slice.rows.map((row) => row.createdBy),
+      slice.rows.map((row) => row.createdBy).filter(isId),
     );
     return {
       rows: slice.rows.map((row) => toThread(row, authors)),
@@ -182,7 +182,7 @@ export class ForumService {
     if (!found) throw unknownThread(threadId);
 
     const authors = await this.authorsOf([
-      found.thread.createdBy,
+      ...[found.thread.createdBy].filter(isId),
       ...found.rows.map((row) => row.authorId),
     ]);
     return {
@@ -338,9 +338,11 @@ function toThread(
     id: row.id,
     eventId: row.eventId,
     title: row.title,
-    // Absent rather than invented: an id with no confirmed account behind it is
-    // a row whose owner closed it, and a placeholder name would be a person.
-    author: authors.get(row.createdBy) ?? null,
+    // Absent rather than invented: an id with no confirmed account behind it —
+    // or no id at all, once that account was erased (E65) — is a row whose
+    // owner is gone, and a placeholder name would be a person.
+    author:
+      row.createdBy === null ? null : (authors.get(row.createdBy) ?? null),
     createdAt: row.createdAt.toISOString(),
     lastPostAt: row.lastPostAt.toISOString(),
   };
@@ -369,4 +371,9 @@ function toModeratedPost(
     ...toPost(row, authors),
     thread: { id: row.threadId, title: row.threadTitle },
   };
+}
+
+/** Narrows away the openers that erasure left empty (E65). */
+function isId(id: string | null): id is string {
+  return id !== null;
 }

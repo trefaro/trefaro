@@ -292,6 +292,27 @@ describe('ConversationPage', () => {
     expect(text()).toContain('Amina Okonkwo');
   });
 
+  it('names the erased other side, and keeps the history readable (E65)', async () => {
+    // A one-to-one conversation has exactly two members, so no counterpart at
+    // all means that one erased their account. What stands is what both wrote;
+    // what is gone is the name on it.
+    const { page } = await render({
+      row: { ...summary, counterparts: [] },
+      windows: [
+        {
+          rows: [message('m1', { senderId: 'them', body: 'Bis Samstag.' })],
+          hasMore: false,
+        },
+      ],
+    });
+
+    expect(page.title()).toBe('chat.deletedAccount');
+    expect(page.senderName(message('m1', { senderId: 'them' }))).toBe(
+      'chat.deletedAccount',
+    );
+    expect(page.lines()).toHaveLength(1);
+  });
+
   it('names the organizer as a side rather than as a person', async () => {
     const { page } = await render();
 
