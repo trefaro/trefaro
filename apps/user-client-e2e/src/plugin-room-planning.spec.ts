@@ -125,7 +125,9 @@ test.describe('the room planning plug-in on an event page', () => {
     await expect(tile).toBeVisible();
     await expect(tile).toHaveAttribute('href', /#plugin-room-planning$/);
     // The glyph the descriptor has named since phase 0 (E49).
-    expect(await tile.locator('svg path').getAttribute('d')).toMatch(/^M/);
+    expect(
+      await tile.locator('.tile__icon svg path').getAttribute('d'),
+    ).toMatch(/^M/);
 
     // The plan itself, not an invitation: the rooms are there.
     await expect(element.locator('.room')).toHaveCount(2);

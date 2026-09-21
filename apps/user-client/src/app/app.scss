@@ -3,8 +3,8 @@
 .app-header {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
   background: var(--trefaro-color-primary);
   color: var(--trefaro-color-on-primary);
 }
@@ -13,6 +13,7 @@
   display: block;
   inline-size: 2rem;
   block-size: 2rem;
+  flex: none;
   background-image: var(--trefaro-logo-url);
   background-size: contain;
   background-repeat: no-repeat;
@@ -20,6 +21,15 @@
 }
 
 .app-header__title {
+  /* Takes what is left and gives it back: at 390 pixels the hamburger, the
+     logo and the language switch come first, and a long organization name
+     wraps rather than pushing anything off the edge. */
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-inline-size: 0;
+  /* It is a link home, so it is a target for a thumb like any other (E67). */
+  min-block-size: 2.75rem;
   font-size: 1.1rem;
   font-weight: 600;
   color: inherit;
@@ -27,54 +37,17 @@
 }
 
 .app-main {
-  /* Room for the fixed navigation, plus the safe area on notched phones. */
-  padding: 1rem 1rem calc(4.5rem + env(safe-area-inset-bottom));
-}
-
-.app-nav {
-  position: fixed;
-  inset-block-end: 0;
-  inset-inline: 0;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
-  background: var(--trefaro-color-primary-soft);
-  border-block-start: 1px solid var(--trefaro-color-primary-muted);
-}
-
-.app-nav__link {
-  color: var(--trefaro-color-primary-strong);
-  font-weight: 500;
-  text-decoration: none;
-}
-
-/* Looks like the links beside it and behaves like the button it is: signing
-   out changes something, so it must not be a link. */
-.app-nav__signout {
-  margin-inline-start: auto;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--trefaro-color-primary-strong);
-  font: inherit;
-  font-weight: 500;
-  text-decoration: underline;
-  cursor: pointer;
+  /* The safe area on notched phones; the navigation is a drawer since AP 7 of
+     phase 5 and no longer takes a strip off the bottom of every page. */
+  padding: 1rem 1rem calc(2rem + env(safe-area-inset-bottom));
 }
 
 @media (min-width: 48rem) {
-  /* Also usable on a desktop, as NFR 6 requires — mobile-first, not mobile-only. */
-  .app-nav {
-    position: static;
-    padding-block-end: 0.75rem;
-    border-block-start: none;
-    border-block-end: 1px solid var(--trefaro-color-primary-muted);
-  }
-
+  /* Also usable on a desktop, as NFR 6 requires — mobile-first, not
+     mobile-only. The navigation stays the drawer at every width; what changes
+     is only how far a line of text is allowed to run. */
   .app-main {
     max-inline-size: 60rem;
     margin-inline: auto;
-    padding-block-end: 2rem;
   }
 }

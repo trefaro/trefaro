@@ -306,10 +306,6 @@ import { ParticipantProfileService } from '../../features/profiles/participant-p
       gap: 0.5rem;
     }
 
-    .tick input {
-      inline-size: auto;
-    }
-
     .actions {
       display: flex;
       align-items: center;

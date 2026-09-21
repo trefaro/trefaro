@@ -23,8 +23,15 @@ repository: an instance builds from a checkout without it, the same reason the
 `.woff2` files were copied in rather than pulled from `node_modules` at build
 time. The version above is what to update against.
 
-Seven glyphs, chosen because something names them: five plug-ins of phase 4
-(`meeting_room`, `lightbulb`, `forum`, `qr_code_2`, `event_note`) and the two
-core tiles of the participant's event page (`event`, `link`). The set is closed
-and the names live in `ICON_NAMES` in `@trefaro/shared-models` — adding one
-means adding both halves, and the compiler says so if only one arrives.
+Seventeen glyphs, chosen because something names them: five plug-ins of
+phase 4 (`meeting_room`, `lightbulb`, `forum`, `qr_code_2`, `event_note`), the
+two core tiles of the participant's event page (`event`, `link`), and since
+AP 7 of phase 5 the ten of the participant client's navigation drawer
+(`menu`, `close`, `home`, `event_available`, `group`, `mail`, `person`,
+`chevron_right`, `login`, `logout`). The set is closed and the names live in
+`ICON_NAMES` in `@trefaro/shared-models` — adding one means adding both halves,
+and the compiler says so if only one arrives.
+
+Copied unmodified means unmodified: `close` begins with a relative moveto
+(`m…`) where the others begin with an absolute one, and the test that checks
+every glyph is a real path accepts both rather than the data being rewritten.

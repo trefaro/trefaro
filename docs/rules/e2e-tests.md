@@ -59,9 +59,11 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   findet, hat **nicht** gezeigt, welche der beiden Anwendungen antwortet — er
   wird grün, wenn der Nutzer-Client auf `/admin/` ausgeliefert wird, was genau
   der Fehler vom 28.08.2026 war. Was unterscheidet: `base href` (`/` gegen
-  `/admin/`) und die Hüllen selbst — `main.app-main` und `nav.app-nav` beim
-  Nutzer-Client, `div.layout > aside.sidebar` und `main.content` beim
-  Veranstalter-Client.
+  `/admin/`) und die Hüllen selbst — `header.app-header` und `main.app-main`
+  beim Nutzer-Client, `div.layout > aside.sidebar` und `main.content` beim
+  Veranstalter-Client. (Bis AP 7 der Phase 5 stand hier `nav.app-nav`; die
+  Leiste gibt es nicht mehr, die Navigation ist eine Lade und im Ruhezustand
+  gar nicht im DOM.)
 - **Playwrights `name` vergleicht Teilstrings**, nicht ganze Namen:
   `getByRole('link', { name: 'Participants' })` traf auch „All participants".
   Wo eine Seite zwei Wege zur selben Ansicht anbietet, braucht der Test
@@ -278,6 +280,47 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   gibt ihn nach acht Sekunden zu (F169), also ist er in einer normalen
   Zusicherung prüfbar. **Netz und Socket sind zwei Banner** — wer eines prüft,
   hat das andere nicht geprüft.
+- **Das vierte Playwright-Projekt heißt `phone` und läuft nur `@design`**
+  (E68, AP 7 der Phase 5). Die drei Desktop-Projekte tragen
+  `grepInvert: /@design/`, das Telefonprojekt `grep: /@design/` und
+  `viewport: { width: 390, height: 844 }` — die Breite ist ausgeschrieben und
+  nicht aus dem Geräteprofil geerbt, denn die Zahl ist die Entscheidung. Was
+  es kostet, ist zwei Tests, die Seiten **lesen**: die Auswahl registriert
+  niemanden, bestätigt nichts und meldet sich über kein Formular an (die eine
+  Sitzung ist geseedet, F164), also verbraucht sie von keinem Budget etwas.
+  Wer eine `@design`-Prüfung dazuschreibt, prüft vorher, ob sie wirklich nur
+  bei 390 Pixeln etwas aussagt — alles andere gehört in die Suiten, die es
+  schon gibt.
+- **Ein viertes Projekt verschiebt die Verteilung der Tests, und damit die
+  Wettläufe** (AP 7 der Phase 5). Mit dem `phone`-Projekt fielen die
+  Plug-in-Suiten anders auf die acht lokalen Arbeiter, und der Vergleich
+  „montierte Kacheln gegen `/api/config`" in `plugin-forum.spec.ts` war
+  plötzlich in **jedem** Lauf rot statt in keinem: die Seite montiert, was sie
+  beim Laden wusste, ein frischer Aufruf nennt, was eine andere Suite
+  inzwischen eingeschaltet hat, und beide haben recht. Die Abhilfe stand seit
+  AP 6 der Phase 4 in `start-up.spec.ts` und musste hier nur wiederholt
+  werden: die Antwort abfangen, die **diese** Seite bekommen hat
+  (`page.waitForResponse` vor `goto`), und nur das DOM dagegen pollen. Wer ein
+  Projekt hinzufügt, rechnet mit dieser Sorte Rot — sie ist kein Produktfehler
+  und auch kein Fehler des neuen Projekts.
+- **Eine Zusicherung über Farbe muss wissen, in welcher Schreibweise sie
+  liest** (AP 7 der Phase 5). `getComputedStyle(el).color` gibt für die
+  `color-mix()`-Schattierungen des Themes ein `color(srgb 0.07 0.2 0.16)`
+  zurück — Komponenten von **null bis eins**, nicht bis 255. Wer die Zahlen
+  wie `rgb()` liest, hält jede getönte Fläche für schwarz: der erste Lauf der
+  Kontrastprüfung meldete sieben gut lesbare Stellen als unsichtbar. Beide
+  Schreibweisen lesen, alles andere überspringen — geraten wird nicht.
+- **Ein Überlappungstest gegen eine fixierte Leiste ist immer rot** (AP 7 der
+  Phase 5). Inhalt, der unter einer `position: fixed`-Leiste durchscrollt,
+  überschneidet sie per Definition; die Messung war richtig gerechnet und
+  falsch gedeutet. Die Prüfung sagt erst etwas aus, seit es keine feste Leiste
+  mehr gibt.
+- **Wer Seiten reihum misst, prüft, wo er gelandet ist.** Die
+  Bestandsaufnahme von AP 7 fuhr mit einer geseedeten Sitzung; `/profile/login`,
+  `/profile/register` und `/profile/forgot-password` liegen hinter dem
+  Anonym-Guard und leiten dann auf `/profile` um. Der Bericht zeigte dreimal
+  dieselbe Seite unter drei Namen. Dieselbe Klasse wie „nicht sichtbar ist auf
+  einer leeren Seite auch wahr".
 - **Was „auf einem Telefon benutzbar" heißt, prüft man auf einem Telefon.** Die
   drei Engines laufen in Desktop-Größen; `chat.spec.ts` setzt zu Beginn
   390 × 844 und fährt den ganzen Gang dort, samt einer Zusicherung, dass

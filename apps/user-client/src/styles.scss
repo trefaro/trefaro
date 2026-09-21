@@ -36,6 +36,39 @@ button {
   font: inherit;
 }
 
+/* Thumb-sized targets, everywhere (E67, WCAG 2.2 SC 2.5.5).
+
+   This client is designed at 390 CSS pixels, and AP 7 of phase 5 measured
+   what that had come to mean in practice: text fields were 43 pixels high
+   because their padding said `0.6rem`, the buttons of the data export 30, a
+   file picker 21 and a tick box 18. None of that is visible on a desktop, and
+   all of it is a miss on a phone. One rule here rather than a line in each of
+   nineteen components — a minimum is exactly the kind of thing a baseline is
+   for, and a component that needs more still says so itself. */
+button,
+select,
+textarea,
+input:not([type='checkbox'], [type='radio'], [type='hidden']) {
+  min-block-size: 2.75rem;
+}
+
+/* A tick box keeps its own size — 44 pixels of empty square would be a
+   drawing of a button — and gets its target from the label around it, which
+   is what a click lands on anyway. */
+input[type='checkbox'],
+input[type='radio'] {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+}
+
+/* Only the height, and nothing about the arrangement: how a tick box and its
+   words sit together is the component's decision, and a rule with a `:has()`
+   in it outweighs the plain class that made that decision. */
+label:has(> input[type='checkbox']),
+label:has(> input[type='radio']) {
+  min-block-size: 2.75rem;
+}
+
 :focus-visible {
   /* The darkened shade, not the raw accent: a two-pixel line on a white page
      is the strictest contrast case there is (WCAG 2.2 SC 1.4.11 asks 3:1), and

@@ -37,6 +37,39 @@ describe('deriveThemeVariables', () => {
     }
   });
 
+  it('defines every property a client renders against, brand or not', () => {
+    // AP 7 of phase 5 found the reason this test exists: three pages of the
+    // participant client drew `border: 1px solid var(--trefaro-color-border)`
+    // against a property nobody set, and an unresolvable `var()` makes the
+    // whole declaration invalid — so the search fields of the participant
+    // directory had **no border at all** and were invisible on the page. A
+    // shade nobody publishes is not a shade, it is a missing rule.
+    const variables = deriveThemeVariables(theme);
+
+    for (const key of [
+      '--trefaro-color-border',
+      '--trefaro-color-surface',
+      '--trefaro-color-on-surface',
+      '--trefaro-radius-sm',
+      '--trefaro-radius-md',
+    ]) {
+      expect(variables[key]).toBeDefined();
+    }
+  });
+
+  it('keeps a border visible against the page (WCAG 2.2 SC 1.4.11)', () => {
+    // The boundary of a text field is what says it is one, so it is an
+    // essential visual — 3:1 against the page, like any other user interface
+    // component. Not derived from the brand colour: a pale brand would make
+    // the field vanish exactly where the contrast rule matters most, and the
+    // whitelabel names two colours (E17), not a palette.
+    const border = deriveThemeVariables(theme)['--trefaro-color-border'];
+
+    expect(contrastRatio(border, PAGE_BACKGROUND_COLOR)).toBeGreaterThanOrEqual(
+      MIN_SURFACE_CONTRAST,
+    );
+  });
+
   it('wraps a logo in url() and uses none when there is no logo', () => {
     expect(deriveThemeVariables(theme)['--trefaro-logo-url']).toBe(
       'url("/api/media/branding/logo?v=1787790100000")',

@@ -1277,3 +1277,240 @@ Volume** gelaufen. Zusätzlich sind `down` und `up` der Migration einzeln gegen
 die Entwicklungsdatenbank ausgeführt worden, und die Spalte hat beide Male ihre
 Gestalt gewechselt (`is_nullable` und `confdeltype` gelesen). Der Katalog wächst
 um **24** Schlüssel auf **1270**.
+
+### AP 7 — Die Mockups gegen den Bau: der Nutzer-Client wird mobile-first (E66, E67, E68) (erledigt, 21.09.2026)
+
+Das Paket, das prüft **und** behebt — und dessen Größe beim Start nicht bekannt
+war. Sie ist es jetzt: **zwanzig Seiten** in der Bestandsaufnahme (der Plan
+zählte sechzehn; gezählt wurden damals Verzeichnisse, und seither sind die zwei
+Passwortseiten aus AP 4 dazugekommen), **drei benannte Struktur-Abweichungen**
+behoben, **eine vierte** gefunden und behoben, die niemand vermutet hatte, und
+ein eigenes Playwright-Projekt bei 390 Pixeln, das beides bewacht.
+
+#### Erst die Bestandsaufnahme
+
+Gemessen wurde nicht mit dem Auge, sondern im Browser: eine Wegwerf-Suite fuhr
+jede Seite bei **390, 768 und 1280** CSS-Pixeln an und protokollierte je Seite
+drei Zahlen — die Breite des Dokuments gegen die des Fensters, jedes
+Bedienelement unter 44 Pixeln Höhe und jedes Paar von Bedienelementen, das sich
+überlappt. Dazu ein Bildschirmfoto je Seite bei 390, gegen die vier Bögen
+gehalten. Die Suite ist wieder weg; ihr Ergebnis ist die Tabelle unten und die
+Liste der Behebungen.
+
+Zwei Befunde der Messung waren es wert, die ganze Mühe zu machen:
+
+- **Nichts scrollt seitwärts, auf keiner Seite und in keiner Breite.** Das war
+  die Frage, mit der die Messung angefangen hat, und die Antwort war die
+  langweilige — gut zu wissen und nicht der Rede wert, wenn man sie hat.
+- **Die Suchfelder der Teilnehmersuche hatten überhaupt keinen Rahmen.** Nicht
+  einen zu blassen: gar keinen. `border: 1px solid var(--trefaro-color-border)`
+  stand da, und `--trefaro-color-border` hat **nie jemand gesetzt** — ein
+  `var()` ohne Fallback macht nicht die Farbe ungültig, sondern die ganze
+  Deklaration, und `border-style` fällt auf `none` zurück. Dasselbe traf
+  `--trefaro-radius-sm`/`-md` und damit die Kartenzeilen der eigenen
+  Anmeldungen und der Nachrichten. Auf einem Bildschirmfoto ist ein Feld ohne
+  Rahmen nicht zu übersehen; in keiner Testsuite dieses Repositories ist es
+  vorgekommen (F222).
+
+#### Die Tabelle
+
+| Seite (Datei unter `apps/user-client/src/app/`)                                   | Im Mockup                                         | Befund                                                                                                                                                                      | Entscheidung                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| --------------------------------------------------------------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hülle: Kopfzeile und Navigation (`app.html`, `features/navigation/nav-drawer.ts`) | _Navigationsleiste_                               | Leiste am unteren Rand, ab 48rem statisch oben; kein Bild, kein Name, keine Adresse; nichts angeheftet                                                                      | **abgedriftet → behoben**: eingeschobene Lade mit Hamburger, Bild/Name/Adresse oben, Einträgen mit Icon und Chevron, angehefteter Fußzeile. **Bewusst anders**: kein Eintrag „Einstellungen" (dieser Bau hat keine zweite Seite dafür — unten steht die Sitzung); der Sprachumschalter bleibt in der Kopfzeile; kein Eintrag für das gerade gelesene Event                                                                                                                                                      |
+| `pages/start/start-page.ts`                                                       | _Startseite Teilnehmersicht_                      | Liste der Reihen mit Bild, Name, Beschreibung — wie gezeichnet; Ziele unter 44 px                                                                                           | **abgedriftet → behoben**: Zielgrößen. **Bewusst anders**: kein Hero-Band mit dem Organisationsnamen (den trägt die Kopfzeile auf jeder Seite, ein Band daneben nennte ihn zweimal); kein „More…"-Link — die ganze Zeile ist der Link und damit ein größeres Ziel                                                                                                                                                                                                                                               |
+| `pages/series-detail/series-detail-page.ts`                                       | —                                                 | Kopf, Beschreibung, kommende und vergangene Events als Zeilen                                                                                                               | **im Mockup nicht vorgesehen**: der Bogen springt von der Liste zur Event-Seite. Folgt den Regeln der Bögen (dieselben Zeilen wie die Startseite)                                                                                                                                                                                                                                                                                                                                                               |
+| `pages/event-landing/event-landing-page.ts`                                       | _Event Landingpage_ **und** _Event Detailansicht_ | Kacheln in einem `auto-fit`-Raster; Anmeldeknopf **hinter** dem ganzen Programm; Programm ohne Zeitmarken (die Uhrzeit stand unter 30rem über dem Punkt); Ziele unter 44 px | **abgedriftet → behoben**: gestapelte Zeilen mit Icon und Chevron, Anmeldeknopf über dem Programm, Zeitmarken als Plakette an einer Schiene, Zielgrößen. **Bewusst anders**: **eine** Seite statt zweier Bildschirme — die Kacheln sind Sprungmarken in dieselbe Seite (F47), also gibt es nichts, wohin ein zweiter Bildschirm führen könnte; „Informationen" steht vor der Beschreibung, weil „wann und wo" die Frage des ersten Bildschirms ist und eine Beschreibung unbekannter Länge sie sonst wegschiebt |
+| `pages/event-landing/event-contact-form.ts`                                       | _Veranstalter kontaktieren_                       | Aufklappbares Formular am Fuß der Event-Seite; Thema als Freitext-Betreff statt Auswahl; Auslöseknopf 30 px hoch                                                            | **abgedriftet → behoben**: Zielgröße. **Bewusst anders**: kein eigener Bildschirm (die Anfrage gehört zu dem Event, das man gerade liest, und ohne Konto gibt es keinen Weg zurück zu einer eigenen Seite); das „Thema" ist ein Betreff, weil eine Auswahlliste eine Konfiguration wäre, die keine Organisation gepflegt hat                                                                                                                                                                                    |
+| `pages/event-registration/event-registration-page.ts`                             | _Registrierung für ein Event_                     | Beschriftung über dem Feld, Pflichtstern, Häkchen für den Newsletter, Absenden am Ende — wie gezeichnet; Kästchen 18 px, Dateifeld 21 px, Felder 43 px                      | **abgedriftet → behoben**: Zielgrößen. **Bewusst anders**: die Überschrift ist „Registrierung", der Eventname steht als eigene Zeile darunter (mit dem Datum) statt in der Überschrift                                                                                                                                                                                                                                                                                                                          |
+| `pages/registration-confirm/registration-confirm-page.ts`                         | —                                                 | Eine Meldung und ein Weg weiter                                                                                                                                             | **im Mockup nicht vorgesehen** (die Seite eines Mail-Links)                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `pages/my-registration/my-registration-page.ts`                                   | _Programmplan_ (zur Hälfte)                       | Programmpunkte mit Anmeldeknopf — wie gezeichnet; Uhrzeit ohne Marke; Knöpfe 34 px                                                                                          | **abgedriftet → behoben**: dieselbe Zeitleiste wie auf der Event-Seite, Zielgrößen. Die eigene Anmeldung ist an der gefüllten Marke zu erkennen statt an einem Rand                                                                                                                                                                                                                                                                                                                                             |
+| `pages/my-registrations/my-registrations-page.ts`                                 | —                                                 | Liste der eigenen Anmeldungen                                                                                                                                               | **im Mockup nicht vorgesehen** (2024 gab es keinen Teilnehmer-Login)                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `pages/newsletter-confirm/newsletter-confirm-page.ts`                             | —                                                 | Eine Meldung                                                                                                                                                                | **im Mockup nicht vorgesehen**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `pages/invitation-opt-out/invitation-opt-out-page.ts`                             | —                                                 | Eine Meldung und ein Knopf                                                                                                                                                  | **im Mockup nicht vorgesehen**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `pages/profile/profile-page.ts`                                                   | _Profil bearbeiten_                               | Bild oben, Felder, Sprache, Weg zu den eigenen Anmeldungen — wie gezeichnet; Datenknöpfe 30 px, Dateifeld 13 px                                                             | **abgedriftet → behoben**: Zielgrößen. **Bewusst anders**: gespeichert wird mit einem Knopf unter dem Formular statt mit einem Disketten-Icon in der Kopfzeile (ein Formular wird von seinem Absenden gespeichert, und ein seitenspezifisches Bedienelement in der Hülle wäre eine zweite Wahrheit darüber, was die Hülle ist); „Meine Event Registrierungen" ist ein Eintrag der Lade statt eines Knopfes auf dieser Seite                                                                                     |
+| `pages/profile-register/profile-register-page.ts`                                 | —                                                 | Formular                                                                                                                                                                    | **im Mockup nicht vorgesehen**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `pages/profile-confirm/profile-confirm-page.ts`                                   | —                                                 | Eine Meldung                                                                                                                                                                | **im Mockup nicht vorgesehen**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `pages/profile-login/profile-login-page.ts`                                       | —                                                 | Formular                                                                                                                                                                    | **im Mockup nicht vorgesehen**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `pages/profile-forgot-password/profile-forgot-password-page.ts`                   | —                                                 | Formular                                                                                                                                                                    | **im Mockup nicht vorgesehen** (AP 4 dieser Phase)                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `pages/profile-new-password/profile-new-password-page.ts`                         | —                                                 | Formular                                                                                                                                                                    | **im Mockup nicht vorgesehen** (AP 4 dieser Phase)                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `pages/people/people-page.ts`                                                     | _Teilnehmersuche_                                 | Zwei Suchfelder mit Knopf und Kartenzeilen mit Bild; **die Suchfelder hatten überhaupt keinen Rahmen**                                                                      | **abgedriftet → behoben**: die fehlenden Design-Token (siehe unten) und die Zielgrößen. **Bewusst anders**: zwei Felder und ein Knopf statt eines Feldes mit Lupe (FR 4.4 filtert auch über Tätigkeitsbereiche, und eine Suche bei jedem Tastenanschlag ist eine Anfrage bei jedem Tastenanschlag gegen einen gedrosselten Endpunkt, E4); Bild und Tätigkeitsbereich in der Zeile (das Profil von 2026 hat beides, der Bogen von 2024 kannte es nicht); „Vorname Nachname" statt „Nachname, Vorname"            |
+| `pages/people/person-page.ts`                                                     | —                                                 | Fremdes Profil                                                                                                                                                              | **im Mockup nicht vorgesehen**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `pages/messages/messages-page.ts`                                                 | —                                                 | Gesprächsliste                                                                                                                                                              | **im Mockup nicht vorgesehen** (die Lade zeigt „Meine Nachrichten", der Bildschirm dahinter ist nicht gezeichnet)                                                                                                                                                                                                                                                                                                                                                                                               |
+| `pages/messages/conversation-page.ts`                                             | —                                                 | Gespräch mit Verfassen-Feld                                                                                                                                                 | **im Mockup nicht vorgesehen**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `pages/spike-console/spike-console-page.ts`                                       | —                                                 | Werkzeugseite aus Phase 0                                                                                                                                                   | **im Mockup nicht vorgesehen** und keine Teilnehmerseite; unangetastet                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+
+#### Dann die Behebung
+
+**Die Navigationsleiste ist die eingeschobene Lade geworden**
+(`features/navigation/nav-drawer.ts`, acht Unit-Tests). Ein Hamburger links in
+der Kopfzeile, darüber die Lade mit Bild, Name und Adresse oben, den Orten als
+Zeilen mit Icon und Chevron, dem Einhängepunkt der Plug-ins und einer
+angehefteten Fußzeile. Escape schließt, der Fokus geht in die Lade und kommt
+zurück, Tab bleibt drin. **Bei jeder Breite dieselbe Lade** — die alte Regel
+stellte die Leiste ab 48rem statisch, und zwei Darstellungen einer Navigation
+sind zwei Dinge, die auseinanderlaufen; NFR 6 verlangt „auf dem Desktop
+benutzbar", nicht einen zweiten Entwurf. Was die Leiste sonst wusste, weiß
+jetzt die Lade: welche Einträge eine Instanz überhaupt hat (E42, F53) und dass
+Abmelden ein Knopf ist und kein Link.
+
+**Was unten angeheftet ist, ist die Sitzung und nicht „Einstellungen".** Der
+Bogen heftet dort einen Eintrag mit Zahnrad an. Dieser Bau hat keine zweite
+Seite dafür: die Sprache steht in der Kopfzeile, und alles andere, was ein
+Konto einstellen kann — Benachrichtigungen, Auffindbarkeit, Passwort, Export —
+steht auf der Profilseite, die schon eine eigene Zeile hat. Ein zweiter Weg zur
+selben Seite wäre genau die Drift, die dieses Paket wegräumt. Also trägt der
+angeheftete Platz das, was kein Ort ist: abmelden, oder anmelden.
+
+**Die Event-Detailkacheln sind gestapelte Zeilen geworden.** `auto-fit,
+minmax(11rem, 1fr)` setzte bei 390 Pixeln zwei schmale Spalten nebeneinander
+und schnitt die Beschriftungen ab; der Bogen zeichnet Zeilen über die volle
+Breite mit dem Glyph links. Jetzt auch mit Chevron rechts — dieselbe Zusage wie
+in der Lade: diese Zeile führt woandershin.
+
+**Die Programm-Zeitleiste hat ihre Zeitmarken.** Die Uhrzeit stand unter 30rem
+**über** dem Programmpunkt, also auf jedem Telefon — die Zeitleiste hatte dort
+gar keine Spalte. Jetzt steht die Zeit in beiden Bögen wie gezeichnet: als
+Plakette in einer eigenen Spalte, mit einer Schiene, die von einer Marke zur
+nächsten läuft. Auf der Event-Seite und auf „meine Anmeldung", denn das ist der
+Bildschirm, den der Bogen _Programmplan_ zeigt — der mit den Anmeldeknöpfen.
+Wer dort einen Platz hat, erkennt es an der gefüllten Marke.
+
+**Der Anmeldeknopf steht über dem Programm.** Im Bogen sitzt er im Kopf der
+Landingpage; im Bau stand er hinter der ganzen Zeitleiste, also auf einem
+Telefon mehrere Bildschirme weiter unten — das Letzte, was jemand findet, der
+sich längst entschieden hat.
+
+**Jedes Ziel ist 44 Pixel hoch** (F221). Gemessen worden waren: Textfelder 43,
+der Anmeldeknopf 43, die Knöpfe des Datenexports 30, der Auslöser des
+Kontaktformulars 30, ein Dateifeld 21, ein Kästchen 18, der Sprachumschalter 28. Behoben mit **einer** Regel in `apps/user-client/src/styles.scss` statt mit
+einer Zeile in neunzehn Bauteilen; ausgenommen sind Kästchen (die ihr Ziel vom
+Label um sie herum bekommen) und Links mitten im Text (die Text sind). Der
+Sprachumschalter hat seine Mindesthöhe selbst bekommen, weil er in beiden
+Clients steht.
+
+**Der Sprachumschalter wird kompakt** (`compact`, ein `input()` wie bei F182).
+Die Kopfzeile trägt bei 390 Pixeln jetzt Hamburger, Logo, Organisationsnamen
+und ihn; das geschriebene Wort „Sprache" ist das, was dabei weichen muss — und
+nur das Wort: der zugängliche Name zieht auf `aria-label` um. In der
+Seitenleiste des Veranstalters bleibt er, wie er war.
+
+**Die fehlenden Design-Token sind da** — `--trefaro-color-border`,
+`--trefaro-color-surface`, `--trefaro-radius-sm` und `--trefaro-radius-md`
+werden jetzt von `deriveThemeVariables()` mit ausgeliefert, also auch an die
+Plug-ins. Die Randfarbe ist **nicht** aus der Marke abgeleitet, sondern das
+hellste Grau, das gegen die Seite noch 3:1 erreicht (WCAG 2.2 SC 1.4.11): eine
+blasse Markenfarbe ließe das Feld genau dort verschwinden, wo die Regel zählt.
+Ein Unit-Test verlangt beides — dass die Eigenschaften existieren und dass der
+Kontrast reicht.
+
+**Zehn Glyphen sind dazugekommen** (`menu`, `close`, `home`,
+`event_available`, `group`, `mail`, `person`, `chevron_right`, `login`,
+`logout`), aus derselben Quelle und nach derselben Regel wie die sieben davor
+(E49): Name in `shared-models`, Pfad in `shared-theming`, keiner ohne den
+anderen.
+
+#### Und dann der Wächter
+
+`apps/user-client-e2e/src/design.spec.ts`, zwei Tests, ein eigenes
+Playwright-Projekt `phone` bei **390 × 844** auf WebKit. Die drei
+Desktop-Projekte laufen mit `grepInvert: /@design/`, das Telefonprojekt mit
+`grep: /@design/` — die markierte kleine Auswahl aus E68, und sie **registriert
+niemanden**: sechs Seiten werden gelesen, die eine Sitzung ist geseedet (F164),
+und das Anmeldebudget bleibt unangetastet.
+
+Was er prüft, ist die Gestalt und nicht das Wort: nichts steht seitlich heraus,
+kein Bedienelement liegt auf einem anderen, jedes Ziel ist 44 Pixel hoch, und
+die Lade öffnet, nennt den Menschen, lässt eine Handbreit Seite daneben stehen,
+schließt auf Escape und gibt den Fokus zurück. Elemente eines Plug-ins sind
+ausgenommen — ein Bündel bringt sein eigenes CSS mit, und dieser Test darf
+nicht rot werden, weil eine fremde Suite gerade ein Plug-in eingeschaltet hat.
+
+**Zweimal Gegenprobe gefahren**, und beide Male rot an genau der Stelle, die
+sie prüfen sollte:
+
+- Mit **zurückgedrehter 44-Pixel-Regel** in `styles.scss` fällt der Seitengang
+  mit `33px button[submit] "Send message" is under 44px` — der Auslöser des
+  Kontaktformulars, der seine Höhe von nichts anderem bekommt.
+- Mit **weggenommenem `color`** an der Lade fällt der Ladentest mit sieben
+  Befunden, alle bei `(1:1)`: „Pia Phone", „Event series", „My registrations",
+  „Find participants", „Messages", „Your profile", „Sign out" — also genau der
+  Fehler, den dieses Paket selbst gebaut hatte und den ein Bildschirmfoto
+  gefunden hat, bevor es die Prüfung gab.
+
+Beide Male blieb der jeweils andere Test grün, und die drei Desktop-Projekte
+sehen diese Tests gar nicht.
+
+#### Was anders lief
+
+- **Ein Backtick in einem Kommentar beendet auch einen `styles`-Block.** Die
+  Regel kannte das Repository für Template-Kommentare; hier stand
+  `` `styles.scss` `` in einem CSS-Kommentar, und der Compiler meldete „Failed
+  to resolve @Component.styles to a string or an array of strings" — eine
+  Meldung, die nach einem kaputten Dekorator klingt und nicht nach einem
+  Satzzeichen.
+- **Ein Glyph fängt nicht immer mit `M` an.** `close` beginnt mit einem
+  relativen `m`, und der Test, der jeden Pfad auf „fängt mit M an" prüfte,
+  wurde davon rot. Geändert wurde der Test, nicht die Daten: die Icons werden
+  unverändert übernommen, und das ist die Zusage, die in ihrer README steht.
+- **Die Messung fand die Profilseite dreimal.** Die Wegwerf-Suite fuhr mit
+  einer geseedeten Sitzung, und `/profile/login`, `/profile/register` und
+  `/profile/forgot-password` liegen hinter dem Anonym-Guard — sie leiten dann
+  auf `/profile` um, und der Bericht zeigte dreimal dieselbe Seite. Ein zweiter
+  Durchgang ohne Sitzung hat die drei nachgeholt. Dieselbe Klasse wie „nicht
+  sichtbar ist auf einer leeren Seite auch wahr": eine Messung, die nicht
+  prüft, **wo** sie steht, misst etwas anderes.
+- **Der erste Überlappungsbefund war keiner.** Die Messung meldete auf jeder
+  Seite Überschneidungen zwischen Seiteninhalt und der festen unteren Leiste —
+  richtig gerechnet und falsch gedeutet: Inhalt, der unter einer festen Leiste
+  durchscrollt, überschneidet sie immer. Mit der Lade ist die Leiste weg und
+  die Frage damit auch; für den Wächter bleibt die Regel stehen, weil sie ohne
+  feste Leiste wieder etwas aussagt.
+
+#### Der Stand nach diesem Paket
+
+`nx run-many -t lint test build --skip-nx-cache` grün über **19 Projekte**.
+Unit-Tests: **1375** im Server (unverändert — dieses Paket fasst keinen
+Servercode an), **282** im Nutzer-Client (zwölf neu: acht für die Lade, einer
+für die gestapelten Zeilen, zwei für die Zeitleiste und den Anmeldeknopf der
+Event-Seite, einer für die Zeitleiste auf „meine Anmeldung"), **222** im
+Veranstalter-Client, **113** in `shared-models`, **50** in `shared-i18n` (einer
+neu: der kompakte Umschalter behält seinen zugänglichen Namen), **32** in
+`shared-theming` (zwei neu: dass jede Eigenschaft ausgeliefert wird und dass
+der Rand gegen die Seite 3:1 erreicht), **32** in `shared-http`, dazu die
+Plug-in-Bündel unverändert.
+
+Browsersuiten: **266** in der Teilnehmersuite (264 wie bisher, plus die zwei
+des Telefonprojekts), **317** in der Veranstaltersuite, beide EXIT=0.
+Vertragssuite **42** Suiten und **718** Tests, EXIT=0, genau **drei** 429 im
+ganzen Lauf — alle drei von der Drosselungssuite erbeten.
+`tools/shipped-stack/verify.sh` auf `STACK_PORT=8099`: „the shipped stack is
+good", sieben Browsertests, 141 s, keine Container übrig — womit auch der
+Produktionsbuild des Clients mit der neuen Grundlage einmal wirklich gelaufen
+ist. Der Katalog wächst um **zwei** Schlüssel auf **1272**.
+
+**Vier fremde Zusicherungen mussten mitgeändert werden**, alle aus demselben
+Grund — sie zeigten auf Struktur, die dieses Paket bewegt hat:
+
+- Fünf Plug-in-Suiten lasen den Glyph einer Kachel als `a.tile svg path`; eine
+  Zeile hat jetzt **zwei** SVGs, also heißt es `.tile__icon svg path`.
+- Zwei Sprachtests warteten auf das sichtbare Wort „Language" beziehungsweise
+  „Sprache"; der Umschalter ist im Nutzer-Client kompakt, also ist es sein
+  **zugänglicher** Name (`toHaveAccessibleName`).
+- Der Widerspruchstest bestand auf „kein Knopf auf dieser Seite" — jede Seite
+  hat jetzt einen: den Hamburger. Er zählt die Knöpfe in `main`.
+- `profile.spec.ts` navigierte über die Leiste; dafür gibt es jetzt
+  `openNavigation(page)` in `support/navigation.ts`, das die Lade öffnet und
+  ihren Landmark zurückgibt.
+
+**Und eine, die keine Strukturänderung war, sondern ein Wettlauf, den das
+vierte Projekt sichtbar gemacht hat.** `plugin-forum.spec.ts` vergleicht die
+montierten Plug-in-Kacheln gegen `/api/config` — und las die Konfiguration
+**frisch**, Sekunden nachdem die Seite geladen war. Sobald eine andere Suite in
+diesem Moment ein Plug-in einschaltet, sind beide Antworten richtig und sie
+widersprechen sich: die Seite hat montiert, was sie wusste, der neue Aufruf
+nennt eines mehr. Mit dem `phone`-Projekt verschob sich die Verteilung der
+Tests auf die acht lokalen Arbeiter gerade so weit, dass daraus der Normalfall
+wurde — drei Läufe hintereinander rot, allein gefahren grün. Behoben wie in
+`start-up.spec.ts` seit AP 6 der Phase 4: der Test fängt die Antwort ab, die
+**diese** Seite bekommen hat (`page.waitForResponse` vor `goto`), und vergleicht
+nur noch das DOM dagegen. Danach: vier Läufe, der letzte grün mit 266.

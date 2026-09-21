@@ -170,7 +170,9 @@ test.describe('the personal programme plug-in on an event page', () => {
     await expect(tile).toBeVisible();
     await expect(tile).toHaveAttribute('href', /#plugin-personal-program$/);
     // The glyph the descriptor has named since AP 1 (E49).
-    expect(await tile.locator('svg path').getAttribute('d')).toMatch(/^M/);
+    expect(
+      await tile.locator('.tile__icon svg path').getAttribute('d'),
+    ).toMatch(/^M/);
     await expectNoRawKeys(page);
   });
 

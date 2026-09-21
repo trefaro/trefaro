@@ -47,18 +47,22 @@ test.describe('participant client language', () => {
     const switcher = page.getByRole('combobox');
 
     // The switcher's own label is a catalogue key, so it is the smallest piece
-    // of visible text that proves the catalogue arrived and is in use.
-    await expect(page.getByText('Language', { exact: true })).toBeVisible();
+    // of the interface that proves the catalogue arrived and is in use. Its
+    // **accessible** name since AP 7 of phase 5: in the participant client the
+    // control is compact — the word moved to `aria-label`, because at 390
+    // pixels the header already carries a hamburger, a logo and the
+    // organization's name (F220).
+    await expect(switcher).toHaveAccessibleName('Language');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 
     await switcher.selectOption('de');
 
-    await expect(page.getByText('Sprache', { exact: true })).toBeVisible();
+    await expect(switcher).toHaveAccessibleName('Sprache');
     await expect(page.locator('html')).toHaveAttribute('lang', 'de');
 
     await switcher.selectOption('en');
 
-    await expect(page.getByText('Language', { exact: true })).toBeVisible();
+    await expect(switcher).toHaveAccessibleName('Language');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   });
 
@@ -72,7 +76,7 @@ test.describe('participant client language', () => {
     // In `localStorage`, not in a cookie: nothing on the server reads it, and a
     // participant who switched once should not switch again tomorrow.
     await expect(page.locator('html')).toHaveAttribute('lang', 'de');
-    await expect(page.getByText('Sprache', { exact: true })).toBeVisible();
+    await expect(page.getByRole('combobox')).toHaveAccessibleName('Sprache');
   });
 
   test('follows a browser that asks for German', async ({ browser }) => {

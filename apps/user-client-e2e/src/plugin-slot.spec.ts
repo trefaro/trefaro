@@ -108,8 +108,10 @@ test.describe('a plug-in at the event detail hook point', () => {
     await expect(tile).toHaveAttribute('href', /#plugin-room-planning$/);
 
     // Path data from this instance's own bundle — the field the contract
-    // carried since phase 0 and nobody drew until now.
-    const glyph = tile.locator('svg path');
+    // carried since phase 0 and nobody drew until now. Named by its class
+    // since AP 7 of phase 5: a tile is a row with two glyphs now, the
+    // plug-in's in front and the chevron behind it.
+    const glyph = tile.locator('.tile__icon svg path');
     await expect(glyph).toHaveCount(1);
     expect(await glyph.getAttribute('d')).toMatch(/^M/);
   });

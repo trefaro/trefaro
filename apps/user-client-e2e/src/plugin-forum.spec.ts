@@ -217,32 +217,44 @@ test.describe('the discussion forum plug-in on an event page', () => {
       new RegExp(`#plugin-${PLUGIN_KEY}$`),
     );
     // The glyph its descriptor names, drawn from this instance's own files.
-    expect(await tile.locator('svg path').getAttribute('d')).toMatch(/^M/);
+    expect(
+      await tile.locator('.tile__icon svg path').getAttribute('d'),
+    ).toMatch(/^M/);
     await expectNoRawKeys(page);
   });
 
   test('does with every plug-in the configuration names what it does with one', async ({
     page,
-    request,
     browserName,
   }) => {
     test.skip(browserName !== 'chromium', 'switches the shared module_config');
 
+    // The configuration **this page** was given, caught on its way in — not a
+    // fresh read afterwards. Another file may switch a plug-in on a second
+    // after this page has loaded, and then both answers are right and they
+    // disagree: the page mounted what it knew, the new read names one more.
+    // `start-up.spec.ts` learned this in AP 6 of phase 4; this test learned it
+    // in AP 7 of phase 5, where a fourth Playwright project shifted the
+    // scheduling enough to make the race the normal case.
+    const arriving = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname.endsWith('/api/config') &&
+        response.request().method() === 'GET',
+    );
     await page.goto(eventPath);
+    const delivered: { plugins: { key: string; mountPoints: string[] }[] } =
+      await (await arriving).json();
     await expect(element(page)).toBeAttached();
 
-    // Whatever is on right now — this file's plug-in at least, and whatever
-    // another suite has switched on beside it — has one mounted element and
-    // one tile pointing at it, in the order the plug-ins are registered.
-    // Compared against the instance rather than a constant, because another
-    // file may flip a switch while this one reads (`e2e-tests.md`).
-    const configured = async (): Promise<string[]> => {
-      const config: { plugins: { key: string; mountPoints: string[] }[] } =
-        await (await request.get('/api/config')).json();
-      return config.plugins
+    // Whatever was on when this page loaded — this file's plug-in at least,
+    // and whatever another suite had switched on beside it — has one mounted
+    // element and one tile pointing at it, in the order the plug-ins are
+    // registered. Compared against the instance rather than a constant
+    // (`e2e-tests.md`).
+    const configured = (): string[] =>
+      delivered.plugins
         .filter((plugin) => plugin.mountPoints.includes('event-detail'))
         .map((plugin) => plugin.key);
-    };
     const mounted = (): Promise<(string | null)[]> =>
       page
         .locator('.trefaro-plugin-slot[data-mount-point="event-detail"] > *')
@@ -261,11 +273,8 @@ test.describe('the discussion forum plug-in on an event page', () => {
 
     await expect
       .poll(async () => {
-        const [keys, inDom, inTiles] = await Promise.all([
-          configured(),
-          mounted(),
-          linked(),
-        ]);
+        const keys = configured();
+        const [inDom, inTiles] = await Promise.all([mounted(), linked()]);
         const same =
           keys.join(', ') === inDom.join(', ') &&
           keys.join(', ') === inTiles.join(', ');

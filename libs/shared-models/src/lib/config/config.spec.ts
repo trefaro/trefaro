@@ -220,8 +220,12 @@ describe('the icon catalogue (E49)', () => {
       'utf8',
     );
 
+    // `M` or `m`: a path starts with a moveto, and whether the optimizer made
+    // it absolute or relative is not this test's business — `close` arrived
+    // in AP 7 of phase 5 with a relative one, and the glyphs are vendored
+    // unmodified.
     for (const name of ICON_NAMES) {
-      const declaration = new RegExp(`\\b${name}:\\s*\\n?\\s*'M`);
+      const declaration = new RegExp(`\\b${name}:\\s*\\n?\\s*'[Mm]`);
       expect(declaration.test(paths)).toBe(true);
     }
   });

@@ -1,4 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  input,
+} from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { TranslationService } from './translation.service';
 
@@ -31,12 +36,17 @@ import { TranslationService } from './translation.service';
   template: `
     @if (i18n.availableLocales().length > 1) {
       <label class="language-switcher">
-        <span class="language-switcher__label">
-          {{ 'language.switcher.label' | transloco }}
-        </span>
+        @if (!compact()) {
+          <span class="language-switcher__label">
+            {{ 'language.switcher.label' | transloco }}
+          </span>
+        }
         <select
           class="language-switcher__select"
           [disabled]="i18n.switching()"
+          [attr.aria-label]="
+            compact() ? ('language.switcher.label' | transloco) : null
+          "
           (change)="choose($event)"
         >
           @for (locale of i18n.availableLocales(); track locale) {
@@ -62,12 +72,15 @@ import { TranslationService } from './translation.service';
     }
 
     .language-switcher__select {
+      /* A thumb-sized target, because the participant client is designed at
+         390 pixels (E67) — and the organizer's sidebar loses nothing by it. */
+      min-block-size: 2.75rem;
       font: inherit;
       color: inherit;
       background: transparent;
       border: 1px solid currentcolor;
       border-radius: 0.25rem;
-      padding: 0.15rem 0.3rem;
+      padding: 0.15rem 0.4rem;
     }
 
     .language-switcher__select:disabled {
@@ -76,6 +89,19 @@ import { TranslationService } from './translation.service';
   `,
 })
 export class LanguageSwitcher {
+  /**
+   * Whether to drop the written label and keep only the control (AP 7 of
+   * phase 5).
+   *
+   * One component in two places, and the difference is an input — the same
+   * shape as the newsletter form's two placements (F182). The participant
+   * client's header is 390 pixels wide and has a hamburger, a logo and the
+   * organization's name in it before this control gets its turn; the
+   * organizer's sidebar has room for the word. What never goes is the
+   * accessible name: compact moves it to `aria-label`.
+   */
+  readonly compact = input(false);
+
   protected readonly i18n = inject(TranslationService);
 
   protected async choose(event: Event): Promise<void> {

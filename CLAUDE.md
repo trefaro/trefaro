@@ -130,7 +130,11 @@ Regel steht in `docs/rules/README.md`.
   durch die Organisation pflegbar** sein (kein Compile-Time-only-i18n).
 - Whitelabel: Primär- + Akzentfarbe (mit berechneten Abstufungen), Logo,
   Schriftart — Änderung wirkt sofort auf beide Clients und alle Plug-ins. Fonts
-  lokal hosten (**kein Google-Fonts-CDN**).
+  lokal hosten (**kein Google-Fonts-CDN**). Was kein `--trefaro-*` ausliefert,
+  darf kein Bauteil nennen (F222).
+- **Die Mockups der Thesis sind die Referenz des Nutzer-Clients** (E66), er
+  wird bei **390** Pixeln entworfen (E67), und seine Navigation ist seit AP 7
+  der Phase 5 eine eingeschobene Lade — bei jeder Breite.
 - Diskussionsforum und Programmvorschläge haben einen **Freigabe-Workflow**
   (Veranstalter moderiert vor Veröffentlichung), bei minimalem Aufwand.
 - Gamification ist bewusst **nicht** Teil des Kerns (Umfrage: niedrigste
@@ -180,15 +184,15 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    International (Pilotpartner), Doku, Release v1.0 → `docs/PHASE5.md` —
    vierzehn Pakete, **M13–M16**, E60–E71, F203 ff., und jeder der
    zweiunddreißig Einträge aus `todo.md` unter _Checkable after phase 5_ ist
-   einem Paket zugeordnet. **Freigegeben wird Paket für Paket** (AP 1 bis AP 6
+   einem Paket zugeordnet. **Freigegeben wird Paket für Paket** (AP 1 bis AP 7
    sind erledigt, **M13 und M14 sind erreicht**; der Stand je Paket steht unter
    _Fortschritt_). **v1.0 taggt Marius, nicht ein Paket** (E71).
 
 **Der Stand in Zahlen:** Entscheidungen **E1–E59** vergeben (E46–E59 in Phase 4,
-in AP 10 gegen die Umsetzung geprüft); Nachträge **F1–F218** stehen vollständig
+in AP 10 gegen die Umsetzung geprüft); Nachträge **F1–F222** stehen vollständig
 im Referenzdokument (F62 und F129–F131 bleiben unvergeben; F203–F205 kamen in
 AP 2 der Phase 5 dazu, F206–F208 in AP 3, F209–F211 in AP 4, F212–F214 in
-AP 5, F215–F218 in AP 6); Katalog **1270** Schlüssel. Was in einem Paket tatsächlich passierte, steht im Phasenprotokoll,
+AP 5, F215–F218 in AP 6, F219–F222 in AP 7); Katalog **1272** Schlüssel. Was in einem Paket tatsächlich passierte, steht im Phasenprotokoll,
 und was man beim Bauen daraus braucht, in `docs/rules/` — **hier nicht noch
 einmal.**
 

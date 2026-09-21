@@ -1302,6 +1302,26 @@ entry, the answer is noted below rather than repeated.
 
 ## Checkable after phase 5 — hardening and release
 
+- [ ] **Two theme properties still exist only in a fallback.** AP 7 published
+      the four the participant client was using without anybody setting them
+      (F222) — but `--trefaro-color-surface-muted` and
+      `--trefaro-color-surface-accent` are still named only in the organizer
+      client, each with a literal fallback behind it. A fallback keeps the page
+      correct and hides the question: either they belong in
+      `deriveThemeVariables()` like the others, or the two places that use them
+      should say the colour outright. **For AP 8**, which is the organizer
+      client's package.
+
+- [ ] **The contrast the design project guards is 3:1, not 4.5:1.** The check
+      added in AP 7 catches text written in the colour it stands on — it was
+      built for a ratio of 1:1, and it is deliberately below what SC 1.4.3 asks
+      of body text, because several muted greys of this client sit between the
+      two (`--trefaro-color-…-strong` at 65 % over white is about 4.1:1).
+      Raising the threshold to 4.5 is a decision about the palette and not
+      about the test: it would ask for darker muted text on half a dozen
+      screens. Worth deciding once, with the pilot partner's eyes on a real
+      phone.
+
 - [ ] **A data export carries nothing a plug-in stores.** The archive of AP 6
       holds the core's tables in full, and the `README.txt` says so plainly —
       but a forum post, a programme proposal and a personal programme are rows

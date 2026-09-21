@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import { expectNoRawKeys, t } from './support/catalogue';
+import { openNavigation } from './support/navigation';
 import {
   accountConfirmationPathFrom,
   passwordResetPathFrom,
@@ -342,9 +343,10 @@ test.describe('a participant account', () => {
     }
 
     // The navigation entry that was missing until there was a login to put in
-    // front of it (E11).
-    await page
-      .getByRole('navigation', { name: t('app.nav.label') })
+    // front of it (E11) — behind the hamburger since AP 7 of phase 5.
+    await (
+      await openNavigation(page)
+    )
       .getByRole('link', { name: t('mine.list.title') })
       .click();
     await expect(page).toHaveURL(/\/registrations$/);
@@ -415,8 +417,9 @@ test.describe('a participant account', () => {
     await page.reload();
     await expect(page.getByLabel(t('profile.searchable'))).toBeChecked();
 
-    await page
-      .getByRole('navigation', { name: t('app.nav.label') })
+    await (
+      await openNavigation(page)
+    )
       .getByRole('link', { name: t('people.title') })
       .click();
     await expect(page).toHaveURL(/\/participants$/);
@@ -450,12 +453,16 @@ test.describe('a participant account', () => {
     await expect(page).toHaveURL(/\/participants$/);
 
     // --- signing out ------------------------------------------------------
-    await page.getByRole('button', { name: t('app.nav.signOut') }).click();
+    await (
+      await openNavigation(page)
+    )
+      .getByRole('button', { name: t('app.nav.signOut') })
+      .click();
     await expect(page).toHaveURL(CLIENT_URL + '/');
     await expect(
-      page
-        .getByRole('navigation', { name: t('app.nav.label') })
-        .getByRole('link', { name: t('profile.login.title') }),
+      (await openNavigation(page)).getByRole('link', {
+        name: t('profile.login.title'),
+      }),
     ).toBeVisible();
   });
 
@@ -586,9 +593,9 @@ test.describe('a participant account', () => {
 
     await expect(page).toHaveURL(CLIENT_URL + '/');
     await expect(
-      page
-        .getByRole('navigation', { name: t('app.nav.label') })
-        .getByRole('link', { name: t('profile.login.title') }),
+      (await openNavigation(page)).getByRole('link', {
+        name: t('profile.login.title'),
+      }),
     ).toBeVisible();
     // And the session is really gone, not only hidden: the profile page sends
     // whoever asks for it back to the login form.

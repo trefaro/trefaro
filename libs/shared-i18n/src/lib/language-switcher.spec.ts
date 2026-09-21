@@ -31,7 +31,7 @@ class FakeTranslations {
 describe('LanguageSwitcher', () => {
   let translations: FakeTranslations;
 
-  function render() {
+  function render(compact = false) {
     TestBed.resetTestingModule();
     translations = new FakeTranslations();
     TestBed.configureTestingModule({
@@ -42,6 +42,7 @@ describe('LanguageSwitcher', () => {
     });
 
     const fixture = TestBed.createComponent(LanguageSwitcher);
+    fixture.componentRef.setInput('compact', compact);
     fixture.detectChanges();
 
     const element = fixture.nativeElement as HTMLElement;
@@ -65,6 +66,17 @@ describe('LanguageSwitcher', () => {
 
   it('labels itself from the catalogue', () => {
     expect(render().text()).toContain('Language');
+  });
+
+  it('keeps its label for a screen reader where the words do not fit (AP 7 of phase 5)', () => {
+    // The participant client's header carries a hamburger, a logo, the
+    // organization's name and this control; at 390 pixels the written word
+    // "Language" is what has to go, and only the word. A control without an
+    // accessible name would be a select somebody has to open to understand.
+    const view = render(true);
+
+    expect(view.text()).not.toContain('Language');
+    expect(view.select()?.getAttribute('aria-label')).toBe('Language');
   });
 
   it('renders nothing while there is only one language', () => {

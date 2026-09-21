@@ -17,6 +17,26 @@ Kontrast auf ihrem Startbildschirm landet.
   **Akzentfarbe** bekommt **keine** Warnung — sie ist immer _in_ etwas, und die
   Vorgabe `#e8a33d` liegt bei 2,2:1, eine Warnung erschiene ab Werk. Der
   Fokusring beider Clients nimmt `--trefaro-color-accent-strong`.
+- **Was `deriveThemeVariables()` nicht ausliefert, gibt es nicht** (F222, AP 7
+  der Phase 5). Der Satz der `--trefaro-*`-Eigenschaften ist die vollständige
+  Liste dessen, worauf ein Bauteil oder ein Plug-in zeigen darf: die zwei
+  Markenfarben mit ihren Abstufungen, Schrift und Logo — und seit AP 7 auch
+  `--trefaro-color-surface`, `--trefaro-color-on-surface`,
+  `--trefaro-color-border`, `--trefaro-radius-sm` und `--trefaro-radius-md`,
+  die drei Seiten des Nutzer-Clients längst benutzten, **ohne dass sie jemand
+  gesetzt hatte**. Ein `var()`, das nicht auflöst und keinen Rückfall hat,
+  macht die ganze Deklaration ungültig: aus `border: 1px solid var(…)` wird
+  `border-style: none`, und ein Eingabefeld hat gar keinen Rahmen mehr. Die
+  vier neuen sind **nicht** aus der Marke abgeleitet, und die Randfarbe ist es
+  am wenigsten: sie ist das hellste Grau, das gegen die Seite noch 3:1
+  erreicht (SC 1.4.11) — markenabgeleitet verschwände das Feld bei einer
+  blassen Marke genau dort, wo die Regel zählt. Ein Unit-Test verlangt beides,
+  die Existenz jeder Eigenschaft und diesen Kontrast.
+- **Eine Fläche außerhalb des Seitenflusses erbt die falsche Schriftfarbe.**
+  Die Navigationslade steht im Markup in der Kopfzeile, die in der Markenfarbe
+  mit heller Schrift gemalt ist — ohne eigenes `color` war die Lade weiß auf
+  weiß. Deshalb gibt es `--trefaro-color-on-surface`: `background` und `color`
+  werden zusammen gesetzt, beide aus dem Theme.
 - **Schriftarten sind ein mitgelieferter, selbst gehosteter Katalog** (E18) — kein
   Google-Fonts-CDN, kein Upload (vorerst).
 - **`/api/media/branding/…` nimmt keinen Pfad vom Aufrufer** (E19). Branding ist
@@ -56,7 +76,11 @@ Kontrast auf ihrem Startbildschirm landet.
   nimmt ihn aus `@material-symbols/svg-400` (Apache-2.0, `outlined`), trägt
   Namen **und** Pfad ein und aktualisiert
   `libs/shared-theming/assets/icons/README.md`; das Paket bleibt bewusst keine
-  Abhängigkeit dieses Repositories, wie bei den Schriften.
+  Abhängigkeit dieses Repositories, wie bei den Schriften. **Siebzehn Glyphen**
+  seit AP 7 der Phase 5 — die zehn der Navigationslade sind dazugekommen —, und
+  sie werden **unverändert** übernommen: `close` fängt mit einem relativen `m`
+  an, wo die anderen mit `M` anfangen, und geändert wurde daraufhin der Test,
+  nicht die Daten.
 
 - **Der QR-Code ist die eine Ausnahme vom Whitelabel** (AP 8 der Phase 4).
   Jedes Bauteil dieser Anwendung nimmt seine Farben aus den

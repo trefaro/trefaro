@@ -35,6 +35,23 @@ export function deriveThemeVariables(theme: Theme): Record<string, string> {
       'color-mix(in oklab, var(--trefaro-color-accent) 78%, black)',
     '--trefaro-color-on-accent': readableTextColor(theme.accentColor),
 
+    // The five below are not derived from the brand, and they are here for
+    // the reason {@link PAGE_BACKGROUND_COLOR} is a constant: the whitelabel
+    // names two colours (E17), and everything else a page needs still has to
+    // be published *somewhere*, because an unresolvable `var()` does not fall
+    // back — it invalidates the whole declaration. AP 7 of phase 5 found what
+    // that looks like: `border: 1px solid var(--trefaro-color-border)` on the
+    // participant directory's search fields drew no border at all.
+    '--trefaro-color-surface': PAGE_BACKGROUND_COLOR,
+    '--trefaro-color-on-surface': PAGE_TEXT_COLOR,
+    // The lightest grey that still reaches 3:1 against the page — the
+    // threshold SC 1.4.11 sets for the boundary of a control, which is what
+    // tells somebody that a field is a field. Brand-derived it would vanish
+    // for a pale brand colour, exactly where the rule matters most.
+    '--trefaro-color-border': '#949494',
+    '--trefaro-radius-sm': '0.4rem',
+    '--trefaro-radius-md': '0.6rem',
+
     '--trefaro-font-family': theme.fontFamily,
     // `none` rather than an empty value: a CSS `url()` with an empty string
     // resolves against the current document and would refetch the page.
@@ -96,6 +113,18 @@ export const MIN_SURFACE_CONTRAST = 3;
  * cannot read TypeScript.
  */
 export const PAGE_BACKGROUND_COLOR = '#ffffff';
+
+/**
+ * The ink both clients write with, also stated in `styles.scss`.
+ *
+ * Published as a property for the same reason as the background above: a
+ * surface that is drawn *outside* the flow of the page — the navigation
+ * drawer, which lives inside a header that is painted in the brand colour —
+ * has to be able to say which ink belongs on it. Inheriting was wrong there
+ * in exactly the way that is invisible in a unit test: white text on a white
+ * drawer.
+ */
+export const PAGE_TEXT_COLOR = '#1a1a1a';
 
 /**
  * The contrast ratio between two colours, per WCAG 2.2.

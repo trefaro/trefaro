@@ -152,7 +152,11 @@ import {
               <ol class="sessions">
                 @for (session of day.items; track session.id) {
                   <li class="session" [class.session--mine]="session.signedUp">
-                    <p class="session__clock">{{ clock(mine, session) }}</p>
+                    <p class="session__clock">
+                      <span class="session__time">{{
+                        clock(mine, session)
+                      }}</span>
+                    </p>
                     <div>
                       <h4 class="session__title">{{ session.title }}</h4>
                       @if (session.speaker) {
@@ -275,28 +279,58 @@ import {
       list-style: none;
     }
 
+    /* The timeline of the mockups, the same one the public page draws: the
+       time as a mark in its own column, the session beside it (AP 7 of
+       phase 5). */
     .session {
       display: grid;
-      gap: 0.15rem 0.9rem;
-      padding-inline-start: 0.75rem;
-      border-inline-start: 2px solid
-        color-mix(in oklab, var(--trefaro-color-accent) 60%, transparent);
-    }
-
-    .session--mine {
-      border-inline-start-color: var(--trefaro-color-primary);
-    }
-
-    @media (min-width: 30rem) {
-      .session {
-        grid-template-columns: 7.5rem 1fr;
-      }
+      grid-template-columns: auto 1fr;
+      gap: 0.15rem 0.75rem;
     }
 
     .session__clock {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      grid-row: 1 / -1;
       margin: 0;
+    }
+
+    .session__time {
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      background: var(--trefaro-color-primary-soft);
+      color: var(--trefaro-color-primary-strong);
+      font-size: 0.9rem;
       font-weight: 600;
       font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    /* A seat of one's own is worth seeing at a glance, so it is the mark that
+       says it — the filled one, where the others are outlined. */
+    .session--mine .session__time {
+      background: var(--trefaro-color-primary);
+      color: var(--trefaro-color-on-primary);
+    }
+
+    .session__clock::after {
+      content: '';
+      flex: 1;
+      /* A minimum, so a session whose row is no taller than its mark still
+         shows the line the next mark hangs from. */
+      min-block-size: 0.6rem;
+      inline-size: 2px;
+      margin-block-start: 0.35rem;
+      background: color-mix(
+        in oklab,
+        var(--trefaro-color-accent) 60%,
+        transparent
+      );
+    }
+
+    .session--mine .session__clock::after {
+      background: var(--trefaro-color-primary);
     }
 
     .session__title {
@@ -313,6 +347,8 @@ import {
 
     button {
       margin-block-start: 0.4rem;
+      /* A thumb-sized target, like every other control of this client (E67). */
+      min-block-size: 2.75rem;
       padding: 0.4rem 0.9rem;
       border: 1px solid color-mix(in oklab, currentColor 30%, transparent);
       border-radius: 0.4rem;

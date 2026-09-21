@@ -7,6 +7,7 @@ import {
   TranslationService,
 } from '@trefaro/shared-i18n';
 import type {
+  MyProgramItem,
   MyRegistration,
   PluginDescriptor,
   PluginMountPoint,
@@ -37,6 +38,22 @@ const EVENT: PublicEvent = {
   followUpBody: null,
 };
 
+/** What the page's programme shows in a test that asks for one. */
+let programItems: readonly MyProgramItem[] = [];
+
+const SESSION: MyProgramItem = {
+  id: 'item-1',
+  title: 'Opening keynote',
+  description: null,
+  speaker: null,
+  startsAt: '2099-06-14T07:00:00.000Z',
+  endsAt: '2099-06-14T08:00:00.000Z',
+  registrationEnabled: false,
+  capacity: null,
+  signupCount: 0,
+  signedUp: false,
+};
+
 const registration = (
   status: RegistrationStatus = 'confirmed',
 ): MyRegistration => ({
@@ -49,7 +66,7 @@ const registration = (
   customFields: {},
   seriesSlug: 'buergerraete',
   event: EVENT,
-  program: [],
+  program: programItems,
 });
 
 /** Records which credential the page presented (E11, E31). */
@@ -159,6 +176,23 @@ describe('MyRegistrationPage', () => {
 
     return { fixture, text: () => String(fixture.nativeElement.textContent) };
   }
+
+  it('gives every session a time mark of its own (mockups 5.2)', async () => {
+    programItems = [SESSION, { ...SESSION, id: 'item-2', signedUp: true }];
+    try {
+      const { fixture } = await render({ id: 'reg-1' });
+
+      // The same timeline as the public page, and for the same reason: this
+      // is the screen the mockup calls "Programmplan", the one with the
+      // sign-up buttons beside the sessions.
+      const element = fixture.nativeElement as HTMLElement;
+      expect(
+        element.querySelectorAll('.session__clock .session__time'),
+      ).toHaveLength(2);
+    } finally {
+      programItems = [];
+    }
+  });
 
   it('resolves the registration by session when there is no token', async () => {
     await render({ id: 'registration-1' });

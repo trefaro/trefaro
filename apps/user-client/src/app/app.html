@@ -3,6 +3,9 @@
 <trefaro-offline-banner />
 
 <header class="app-header">
+  <!-- The navigation itself, as the mockups draw it: a hamburger here and a
+       drawer over the page (AP 7 of phase 5). -->
+  <trefaro-nav-drawer />
   @if (theme.hasLogo()) {
   <!-- Decorative: the organization's name is the link right next to it, and
        announcing both would read the same thing twice. -->
@@ -11,9 +14,12 @@
   <a class="app-header__title" routerLink="/"
     >{{ config.organizationName() }}</a
   >
-  <!-- In the header rather than in the bottom navigation: that bar is where a
-       participant goes somewhere, and a language is not a somewhere. -->
-  <trefaro-language-switcher />
+  <!-- In the header rather than in the drawer: a language is chosen before the
+       interface is understood, and behind a hamburger it is not. Compact,
+       because at 390 pixels this row already carries the hamburger, the logo
+       and the organization's name — the written word goes, the accessible
+       name stays. -->
+  <trefaro-language-switcher [compact]="true" />
 </header>
 
 <main class="app-main">
@@ -27,47 +33,3 @@
      (E43). -->
 <trefaro-install-hint />
 <trefaro-notification-offer />
-
-<nav class="app-nav" [attr.aria-label]="'app.nav.label' | transloco">
-  <a class="app-nav__link" routerLink="/">{{ 'app.nav.series' | transloco }}</a>
-  <!-- Only where this instance keeps accounts at all (F53). An organization
-       that runs events and no community would otherwise carry a sign-in link
-       to a form the server answers 404 to. -->
-  @if (session.accountsEnabled()) { @if (session.isLoggedIn()) {
-  <!-- The entry that was missing until there was a login to put in front of it
-       (E11): a link in the navigation would have led to a page asking for a
-       token. -->
-  <a class="app-nav__link" routerLink="/registrations"
-    >{{ 'mine.list.title' | transloco }}</a
-  >
-  <!-- Only where the directory is switched on (E42): an instance may keep
-       accounts and still not let the people in them find each other. -->
-  @if (peopleEnabled()) {
-  <a class="app-nav__link" routerLink="/participants"
-    >{{ 'people.title' | transloco }}</a
-  >
-  }
-  <!-- Only where messaging is switched on (E42), for the same reason as the
-       directory above: an instance may keep accounts, let people find each
-       other, and still not run a chat. -->
-  @if (chatEnabled()) {
-  <a class="app-nav__link" routerLink="/messages"
-    >{{ 'chat.title' | transloco }}</a
-  >
-  }
-  <a class="app-nav__link" routerLink="/profile"
-    >{{ 'profile.title' | transloco }}</a
-  >
-  <!-- A button, not a link: signing out changes something (F44 in miniature),
-       and a link previewer must not be able to end somebody's session. -->
-  <button type="button" class="app-nav__signout" (click)="signOut()">
-    {{ 'app.nav.signOut' | transloco }}
-  </button>
-  } @else {
-  <a class="app-nav__link" routerLink="/profile/login"
-    >{{ 'profile.login.title' | transloco }}</a
-  >
-  } }
-  <!-- Plug-in hook point one: the navigation bar. -->
-  <trefaro-plugin-slot mountPoint="navigation" />
-</nav>

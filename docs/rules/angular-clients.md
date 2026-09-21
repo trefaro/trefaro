@@ -9,9 +9,12 @@ besteht. Jede Zeile hier hat einmal einen halben Tag gekostet.
 
 - **`private` reicht für ein Angular-Template nicht**, und `tsc --noEmit` merkt
   das nicht — Template-Prüfung passiert erst im Testbuild des Clients.
-- **Keine Backticks in Angular-Template-Kommentaren.** Sie beenden das
-  Template-Literal, und der Compiler meldet die Folgefehler an ganz anderen
-  Stellen.
+- **Keine Backticks in Angular-Template-Kommentaren — und auch nicht in
+  `styles`-Kommentaren.** Sie beenden das Template-Literal, und der Compiler
+  meldet die Folgefehler an ganz anderen Stellen. Im `styles`-Block ist die
+  Meldung besonders irreführend: „Failed to resolve @Component.styles to a
+  string or an array of strings" klingt nach einem kaputten Dekorator und ist
+  ein Satzzeichen in einem CSS-Kommentar (AP 7 der Phase 5).
 - **Ein `<select>`, dessen Optionen aus einem `@for` kommen, nimmt kein
   `[value]`** — Angular schreibt die Eigenschaft, bevor die Optionen existieren,
   und die Zuweisung fällt wortlos weg. `[selected]` an den Optionen; mit
@@ -166,6 +169,30 @@ besteht. Jede Zeile hier hat einmal einen halben Tag gekostet.
   zweimal. Und geschickt wird nur, wenn der Browser überhaupt ein Abonnement
   hält: Anmelden abonniert niemanden — das ist eine Entscheidung mit einem
   Browserdialog darin.
+- **Eine Fläche, die außerhalb des Seitenflusses gezeichnet wird, nennt ihre
+  eigene Farbe** (AP 7 der Phase 5). Die Navigationslade des Nutzer-Clients
+  steht im Markup **in der Kopfzeile**, und die ist in der Markenfarbe mit
+  heller Schrift gemalt — eine fixiert positionierte weiße Fläche darin erbt
+  weiße Schrift und ist dann weiß auf weiß. Kein Unit-Test sieht das, kein
+  Build meckert, und ein Bildschirmfoto zeigt es sofort. Also: `background`
+  und `color` gehören zusammen, und beide kommen aus dem Theme
+  (`--trefaro-color-surface` / `--trefaro-color-on-surface`).
+- **Eine Eigenschaft, die niemand setzt, löscht die ganze Deklaration** (F222).
+  `border: 1px solid var(--trefaro-color-border)` ohne Rückfall ist kein
+  schwacher Rahmen, sondern **kein** Rahmen: ein nicht auflösendes `var()`
+  macht den Wert ungültig, und die Kurzform fällt auf `border-style: none`
+  zurück. Was `deriveThemeVariables()` nicht ausliefert, darf kein Bauteil
+  nennen — oder es schreibt einen Rückfall hin.
+- **Ziele sind 44 Pixel hoch, und die Regel steht einmal** (F221, E67). Die
+  Grundlage in `apps/user-client/src/styles.scss` gibt jedem `button`,
+  `select`, `textarea` und Eingabefeld eine Mindesthöhe; ein Bauteil wiederholt
+  sie nicht, sondern sagt nur, wenn es **mehr** braucht. Kästchen behalten ihre
+  Größe und bekommen das Ziel von ihrem `label`.
+- **Die Navigation des Nutzer-Clients ist eine Lade, bei jeder Breite** (AP 7
+  der Phase 5). Es gibt keine Leiste mehr und keine Media-Query, die eine
+  zweite Darstellung daraus macht; wer im Browser irgendwohin navigieren will,
+  klickt zuerst auf den Hamburger. Für die Suiten steht dafür
+  `openNavigation(page)` in `apps/user-client-e2e/src/support/navigation.ts`.
 - **Client-Start-Sequenz:** erst Konfiguration (Design + aktivierte Module) laden,
   dann Theming anwenden, dann die Plug-in-Webkomponenten laden.
 - **Ein `OnPush`-Bauteil wird für einen Wert, der kein Signal ist, nicht neu

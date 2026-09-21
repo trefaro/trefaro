@@ -187,7 +187,9 @@ test.describe('the programme proposals plug-in on an event page', () => {
       new RegExp(`#plugin-${PLUGIN_KEY}$`),
     );
     // The glyph its descriptor names, drawn from this instance's own files.
-    expect(await tile.locator('svg path').getAttribute('d')).toMatch(/^M/);
+    expect(
+      await tile.locator('.tile__icon svg path').getAttribute('d'),
+    ).toMatch(/^M/);
     await expectNoRawKeys(page);
   });
 

@@ -17,8 +17,11 @@ describe('the icon glyphs', () => {
     // The compiler already refuses a missing name — `ICON_PATHS` is a complete
     // record over `IconName`. What it cannot see is an entry that is there and
     // says nothing, which would be a name that renders an empty `<path>`.
+    // Upper *or* lower case: a path begins with a moveto, and whether it is
+    // absolute or relative is the optimizer's business — `close` arrived in
+    // AP 7 of phase 5 starting with `m`, and the data is copied unmodified.
     for (const name of ICON_NAMES) {
-      expect(ICON_PATHS[name].startsWith('M')).toBe(true);
+      expect(ICON_PATHS[name]).toMatch(/^[Mm]/);
       expect(ICON_PATHS[name].length).toBeGreaterThan(20);
     }
   });

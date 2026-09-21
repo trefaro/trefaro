@@ -191,7 +191,7 @@ describe('EventDetailTiles', () => {
     // field that had no reader at all until AP 1 of phase 4.
     const drawn = [
       ...(fixture.nativeElement as HTMLElement).querySelectorAll(
-        'a.tile svg path',
+        'a.tile .tile__icon svg path',
       ),
     ].map((path) => path.getAttribute('d'));
     expect(drawn).toHaveLength(3);
@@ -210,7 +210,29 @@ describe('EventDetailTiles', () => {
     // the glyph and nothing else, and the organizer's module page reports it.
     const [tile] = tiles(fixture);
     expect(tile.textContent).toContain('Room planning');
-    expect(tile.querySelector('svg')).toBeNull();
+    expect(tile.querySelector('.tile__icon svg')).toBeNull();
+    // The chevron is the row's own, not the descriptor's, so it stays.
+    expect(tile.querySelector('.tile__chevron svg')).not.toBeNull();
+  });
+
+  it('draws a row per tile, with the glyph in front and the chevron behind (mockups 5.2)', () => {
+    const fixture = render();
+    fixture.componentInstance.sessions.set(2);
+    fixture.componentInstance.mediaLinks.set(1);
+    fixture.detectChanges();
+
+    // Until AP 7 of phase 5 these were cards in an `auto-fit` grid; the
+    // mockup's event detail view is a stack of full-width rows with an icon
+    // on the left, and on a phone that is the difference between two columns
+    // of clipped labels and a list somebody can read with a thumb.
+    for (const tile of tiles(fixture)) {
+      expect(tile.querySelector('.tile__icon')).not.toBeNull();
+      expect(tile.querySelector('.tile__chevron')).not.toBeNull();
+      // The glyph comes before the words, the chevron after them.
+      const parts = [...tile.children].map((child) => child.className);
+      expect(parts[0]).toContain('tile__icon');
+      expect(parts[parts.length - 1]).toContain('tile__chevron');
+    }
   });
 
   it('counts one session in the singular', () => {

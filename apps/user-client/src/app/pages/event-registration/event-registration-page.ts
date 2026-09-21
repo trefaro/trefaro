@@ -237,9 +237,9 @@ import {
       font-weight: 400;
     }
 
+    /* The size of the box itself comes from the client's baseline; what is
+       this form's own is where it sits next to a label of several lines. */
     .check input {
-      inline-size: 1.1rem;
-      block-size: 1.1rem;
       margin-block-start: 0.15rem;
     }
 

@@ -26,6 +26,26 @@
 export const ICON_NAMES = [
   /** Programme of an event — the participant's timeline tile. */
   'event',
+  /** The way on, at the end of a row that leads somewhere (AP 7 of phase 5). */
+  'chevron_right',
+  /** Closing the navigation drawer. */
+  'close',
+  /** What somebody is registered for — "my registrations". */
+  'event_available',
+  /** The participant directory: other people. */
+  'group',
+  /** The start page, which is the list of event series. */
+  'home',
+  /** Signing in, at the foot of the drawer. */
+  'login',
+  /** Signing out, in the same place for somebody who is signed in. */
+  'logout',
+  /** Messages between participants. */
+  'mail',
+  /** Opening the navigation drawer — the hamburger of the mockups. */
+  'menu',
+  /** The account of the person reading. */
+  'person',
   /** A personal selection of sessions (FR 3.17). */
   'event_note',
   /** Discussion forum (FR 4.6). */

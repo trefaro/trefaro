@@ -163,6 +163,28 @@ import { PublicProgramService } from '../../features/program/public-program.serv
 
         <p class="description">{{ item.description }}</p>
 
+        <!-- Above the programme, where the mockup of the landing page has it:
+             on a phone the timeline is several screens long, and a button
+             behind it is the last thing somebody finds who has already
+             decided to come. -->
+        @if (!isOver()) {
+          <p class="cta">
+            <a
+              class="cta__button"
+              [routerLink]="[
+                '/series',
+                seriesSlug(),
+                'events',
+                eventSlug(),
+                'register',
+              ]"
+            >
+              {{ 'event.register' | transloco }}
+            </a>
+            <small>{{ 'event.registerHint' | transloco }}</small>
+          </p>
+        }
+
         <!-- What this event offers, as jump links to the sections below
              (mockups 5.2). Nothing here navigates: a plug-in at the event detail
              hook point renders further down this page. -->
@@ -221,7 +243,9 @@ import { PublicProgramService } from '../../features/program/public-program.serv
                      item above, and shadowing it here would be a trap. -->
                 @for (session of day.items; track session.id) {
                   <li class="session">
-                    <p class="session__clock">{{ clock(session) }}</p>
+                    <p class="session__clock">
+                      <span class="session__time">{{ clock(session) }}</span>
+                    </p>
                     <div>
                       <h4 class="session__title">{{ session.title }}</h4>
                       @if (session.speaker) {
@@ -254,24 +278,6 @@ import { PublicProgramService } from '../../features/program/public-program.serv
               </ol>
             }
           </section>
-        }
-
-        @if (!isOver()) {
-          <p class="cta">
-            <a
-              class="cta__button"
-              [routerLink]="[
-                '/series',
-                seriesSlug(),
-                'events',
-                eventSlug(),
-                'register',
-              ]"
-            >
-              {{ 'event.register' | transloco }}
-            </a>
-            <small>{{ 'event.registerHint' | transloco }}</small>
-          </p>
         }
 
         <!-- Reaching the organizers without an account (FR 3.4, UC 14, F11) —
@@ -401,26 +407,51 @@ import { PublicProgramService } from '../../features/program/public-program.serv
       list-style: none;
     }
 
-    /* Mobile-first: the clock sits above the session and moves beside it as
-       soon as there is room for a column of times. */
+    /* Two columns at every width, as both mockup sheets draw a programme:
+       the time as a mark on the left, the session beside it, and a line
+       running from one mark to the next. The mark is short enough for a
+       phone — it is a time, not a sentence. */
     .session {
       display: grid;
-      gap: 0.15rem 0.9rem;
-      padding-inline-start: 0.75rem;
-      border-inline-start: 2px solid
-        color-mix(in oklab, var(--trefaro-color-accent) 60%, transparent);
-    }
-
-    @media (min-width: 30rem) {
-      .session {
-        grid-template-columns: 7.5rem 1fr;
-      }
+      grid-template-columns: auto 1fr;
+      gap: 0.15rem 0.75rem;
     }
 
     .session__clock {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      grid-row: 1 / -1;
       margin: 0;
+    }
+
+    .session__time {
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      background: var(--trefaro-color-primary-soft);
+      color: var(--trefaro-color-primary-strong);
+      font-size: 0.9rem;
       font-weight: 600;
       font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    /* The rail: it starts under the mark and runs to the end of the row, so
+       between two sessions there is a line and after the last one there is
+       none worth seeing. */
+    .session__clock::after {
+      content: '';
+      flex: 1;
+      /* A minimum, so a session whose row is no taller than its mark still
+         shows the line the next mark hangs from. */
+      min-block-size: 0.6rem;
+      inline-size: 2px;
+      margin-block-start: 0.35rem;
+      background: color-mix(
+        in oklab,
+        var(--trefaro-color-accent) 60%,
+        transparent
+      );
     }
 
     .session__title {
@@ -458,6 +489,9 @@ import { PublicProgramService } from '../../features/program/public-program.serv
     }
 
     .cta__button {
+      display: inline-flex;
+      align-items: center;
+      min-block-size: 2.75rem;
       padding: 0.6rem 1.1rem;
       border-radius: 0.4rem;
       background: var(--trefaro-color-primary);

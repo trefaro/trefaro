@@ -43,20 +43,39 @@ export default defineConfig({
   /* Removes the seeded event series again, so a developer's instance does not
    * fill up with test data. */
   globalTeardown: './src/support/clean-up.ts',
+  /* Three desktop engines and one phone. The phone project runs the `@design`
+   * selection and nothing else, and the three engines run everything but it
+   * (E68): a fourth full run would double the wall clock and — worse — the
+   * budgets all e2e projects share (E4). What the phone project costs is two
+   * tests that read pages and register nobody. */
   projects: [
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      grepInvert: /@design/,
     },
 
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
+      grepInvert: /@design/,
     },
 
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
+      grepInvert: /@design/,
+    },
+
+    {
+      /* 390 × 844: the width the participant client is designed at (E67), on
+       * the engine of the phone that width comes from. The viewport is spelled
+       * out rather than taken from the device profile, because the number is
+       * the decision — a device whose default height changes must not change
+       * what this project measures. */
+      name: 'phone',
+      grep: /@design/,
+      use: { ...devices['iPhone 12'], viewport: { width: 390, height: 844 } },
     },
 
     // Uncomment for mobile browsers support

@@ -59,10 +59,24 @@ class DeferredEvents {
 }
 
 class QuietProgram {
+  items: readonly PublicProgramItem[] = [];
+
   list(): Promise<readonly PublicProgramItem[]> {
-    return Promise.resolve([]);
+    return Promise.resolve(this.items);
   }
 }
+
+const SESSION: PublicProgramItem = {
+  id: 'item-1',
+  title: 'Opening keynote',
+  description: null,
+  speaker: null,
+  startsAt: '2099-06-14T07:00:00.000Z',
+  endsAt: '2099-06-14T08:00:00.000Z',
+  registrationEnabled: false,
+  capacity: null,
+  signupCount: 0,
+};
 
 class QuietMediaLinks {
   list(): Promise<readonly PublicMediaLink[]> {
@@ -122,16 +136,18 @@ async function settle(fixture: { detectChanges(): void }): Promise<void> {
 describe('EventLandingPage', () => {
   let events: DeferredEvents;
   let translations: FakeTranslations;
+  let program: QuietProgram;
 
   function render() {
     events = new DeferredEvents();
     translations = new FakeTranslations();
+    program = new QuietProgram();
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
         provideTranslationsForTest(),
         { provide: PublicEventsService, useValue: events },
-        { provide: PublicProgramService, useValue: new QuietProgram() },
+        { provide: PublicProgramService, useValue: program },
         { provide: PublicMediaLinksService, useValue: new QuietMediaLinks() },
         { provide: AppConfigService, useValue: new StubAppConfig() },
         { provide: PluginLoaderService, useValue: new StubLoader() },
@@ -149,6 +165,39 @@ describe('EventLandingPage', () => {
   const heading = (fixture: ReturnType<typeof render>): string | null =>
     (fixture.nativeElement as HTMLElement).querySelector('h1')?.textContent ??
     null;
+
+  it('gives every session a time mark of its own (mockups 5.2)', async () => {
+    const fixture = render();
+    program.items = [SESSION, { ...SESSION, id: 'item-2' }];
+    events.calls[0].resolve(EVENT);
+    await settle(fixture);
+
+    // Both mockup sheets that show a programme draw the time as a mark beside
+    // the session, with a line running between the marks. Until AP 7 of
+    // phase 5 the clock was a paragraph that sat *above* the session below
+    // 30rem — which is every phone — so the timeline had no column at all.
+    const element = fixture.nativeElement as HTMLElement;
+    const marks = element.querySelectorAll('.session__clock .session__time');
+    expect(marks).toHaveLength(2);
+    expect(marks[0].textContent?.trim()).not.toBe('');
+  });
+
+  it('offers the registration before the whole programme, not after it', async () => {
+    const fixture = render();
+    program.items = [SESSION];
+    events.calls[0].resolve(EVENT);
+    await settle(fixture);
+
+    // The mockup puts "jetzt registrieren" at the top of the landing page.
+    // Reading order is the argument, not taste: on a phone the programme is
+    // several screens long, and the button behind it was the last thing
+    // somebody found who had already decided to come.
+    const element = fixture.nativeElement as HTMLElement;
+    const order = [...element.querySelectorAll('.cta, #program')].map(
+      (part) => part.className || part.id,
+    );
+    expect(order).toEqual(['cta', 'program']);
+  });
 
   it('asks again in the new language when the reader switches (FR 3.12)', async () => {
     const fixture = render();

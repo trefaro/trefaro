@@ -251,6 +251,8 @@ test.describe('objecting to further invitations', () => {
     await page.goto('/invitations/unsubscribe');
 
     await expect(page.getByRole('alert')).toHaveText(t('optOut.noToken'));
-    await expect(page.getByRole('button')).toHaveCount(0);
+    // Inside the page, not on the screen: since AP 7 of phase 5 every screen
+    // has one button in its header — the one that opens the navigation.
+    await expect(page.locator('main').getByRole('button')).toHaveCount(0);
   });
 });

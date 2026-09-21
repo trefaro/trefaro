@@ -35,6 +35,13 @@ interface DetailTile {
  * the proposals, and show tiles only for modules the organization has enabled.
  * Four decisions turn that drawing into this component:
  *
+ * A fifth arrived with AP 7 of phase 5, and it is a correction: the mockup
+ * draws **stacked rows over the full width** with the glyph on the left, not a
+ * grid of cards. The grid (`auto-fit, minmax(11rem, 1fr)`) fitted two narrow
+ * columns onto a phone and clipped the labels in them. The name "tile" stays,
+ * because it is what the thesis calls them and what every test and every
+ * plug-in descriptor already says.
+ *
  * 1. **A tile is a jump link, not a route.** Everything it can lead to renders on
  *    the landing page itself — the programme as a timeline (AP 8 of phase 1), the
  *    media links as a section, a plug-in as a web component at the event detail
@@ -80,44 +87,63 @@ interface DetailTile {
       <nav class="tiles" [attr.aria-label]="'event.tiles.label' | transloco">
         @for (tile of tiles(); track tile.target) {
           <a class="tile" [routerLink]="[]" [fragment]="tile.target">
-            <span class="tile__label">
-              <trefaro-icon [name]="tile.icon" />
-              {{ tile.label }}
+            <trefaro-icon class="tile__icon" [name]="tile.icon" />
+            <span class="tile__body">
+              <span class="tile__label">{{ tile.label }}</span>
+              <span class="tile__hint">{{ tile.hint }}</span>
             </span>
-            <span class="tile__hint">{{ tile.hint }}</span>
+            <trefaro-icon class="tile__chevron" name="chevron_right" />
           </a>
         }
       </nav>
     }
   `,
   styles: `
-    /* Mobile-first: one column, then as many as fit. */
+    /* Stacked rows over the full width, the way the mockup's event detail
+       view draws them — not a grid of cards (AP 7 of phase 5). */
     .tiles {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-      gap: 0.6rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
       max-inline-size: 40rem;
       margin-block: 1.5rem;
     }
 
     .tile {
       display: flex;
-      flex-direction: column;
-      gap: 0.15rem;
+      align-items: center;
+      gap: 0.75rem;
+      /* A row is a target for a thumb before it is a shape (SC 2.5.5). */
+      min-block-size: 3.25rem;
       padding: 0.7rem 0.9rem;
       border: 1px solid
         color-mix(in oklab, var(--trefaro-color-primary) 35%, transparent);
-      border-radius: 0.5rem;
+      border-radius: var(--trefaro-radius-sm);
       background: var(--trefaro-color-primary-muted);
       color: inherit;
       text-decoration: none;
     }
 
-    .tile__label {
+    .tile__icon {
+      --trefaro-icon-size: 1.5rem;
+      color: var(--trefaro-color-primary-strong);
+    }
+
+    .tile__body {
       display: flex;
-      align-items: center;
-      gap: 0.4rem;
+      flex-direction: column;
+      gap: 0.1rem;
+      min-inline-size: 0;
+    }
+
+    .tile__label {
       font-weight: 600;
+    }
+
+    .tile__chevron {
+      margin-inline-start: auto;
+      --trefaro-icon-size: 1.2rem;
+      color: color-mix(in oklab, currentColor 45%, transparent);
     }
 
     .tile__hint {
