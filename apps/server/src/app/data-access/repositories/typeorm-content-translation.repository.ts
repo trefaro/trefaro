@@ -5,7 +5,6 @@ import {
   type ObjectLiteral,
   type Repository,
 } from 'typeorm';
-import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import type {
   ContentTranslationRecord,
   ContentTranslationRepository,
@@ -106,10 +105,15 @@ export abstract class TypeormContentTranslationRepository<
     };
     for (const field of this.fields) row[field] = texts[field] ?? null;
 
-    await this.rows
-      .createQueryBuilder()
-      .insert()
-      .values(row as QueryDeepPartialEntity<Row>)
+    // The value type is derived from the builder rather than imported from
+    // `typeorm/query-builder/QueryPartialEntity`. The deep path resolves for
+    // the application build and not for the spec compilation, so importing it
+    // made this file — and therefore anything that reaches the composition
+    // root — impossible to pull into a unit test (AP 9 of phase 5,
+    // `docs/rules/tooling-traps.md`).
+    const insert = this.rows.createQueryBuilder().insert();
+    await insert
+      .values(row as unknown as Parameters<typeof insert.values>[0])
       .orUpdate(
         [...this.fields.map((field) => this.columnName(field)), 'updated_at'],
         [this.columnName(this.parentKey), 'locale'],

@@ -10,6 +10,7 @@ export {
   MIN_PASSWORD_LENGTH,
   type AdminAccount,
   type AdminLoginRequest,
+  type AdminPasswordChange,
   type AdminSessionInfo,
 } from './lib/auth';
 export {

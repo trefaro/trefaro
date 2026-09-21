@@ -674,5 +674,44 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   auch **Bedienelemente unter dem Boden** und **den Rahmen, der scrollen
   soll** — und macht einmal ein Bildschirmfoto, denn die Quetschung sieht man
   nur dort.
+- **`--parallel=1` ist nicht Vorsicht, sondern Bedingung** (gemessen in AP 9
+  der Phase 5). Über allen benannten Grenzwerten liegt ein **globaler** Zähler:
+  `GLOBAL_LIMIT = 300` Anfragen je **Minute** und Absender, und er steht
+  bewusst **nicht** im Testprofil (`.env.serve-e2e`) — ein Grenzwert, der
+  überall angehoben ist, wird nirgends geprüft (E4). Ein `nx run-many -t e2e`
+  **ohne** die Flagge fährt die drei Projekte gleichzeitig gegen einen Server:
+  dann antwortet `/api/config` mit 429, `keyCount` in der i18n-Vertragssuite
+  wird zu `4` statt 1288, `enabledModules` ist `undefined`, und am Ende steht
+  ein `ECONNREFUSED`, weil das erste fertige Projekt den gemeinsamen
+  `server:serve` mitnimmt. Keiner dieser Fehlschläge nennt die Drosselung. Die
+  CI ruft deshalb `npx nx run-many -t e2e --parallel=1` auf, und wer von Hand
+  prüft, ruft dasselbe auf.
+- **Ein abgebrochener Lauf lässt einen Schalter umgelegt liegen** (AP 9 der
+  Phase 5). Wer `nx run-many -t e2e` mittendrin abbricht, unterbricht eine
+  Suite zwischen ihrem `beforeAll` und ihrem `afterAll` — und die
+  Plug-in-Suiten schalten in genau diesem Fenster ein Plug-in **ein**. Der
+  nächste Lauf findet es eingeschaltet, und was dann rot wird, sagt nichts
+  davon: das Event-Dashboard zählt `9` Zeilen statt `6`, weil ein zusätzlicher
+  Abschnitt eine zusätzliche Tabelle mitbringt, und ein Layout-Test des Forums
+  findet seine Nachbarkachel nicht. Vor einem Lauf nach einem Abbruch lohnt
+  ein Blick: `SELECT module_key, enabled FROM module_config` — die fünf
+  kuratierten Plug-ins stehen im Auslieferungszustand alle auf `f`.
+- **Eine Suite, die Zugangsdaten ändert, arbeitet auf einem Wegwerfkonto** (AP 9
+  der Phase 5). `admin-password.spec.ts` prüft den Passwortwechsel eines
+  Veranstalters — und jede andere Vertragssuite meldet sich mit den
+  Bootstrap-Zugangsdaten aus der `.env` an. Sie legt deshalb über die API ein
+  eigenes Konto an, wechselt **dessen** Passwort und löscht es hinterher; sie
+  räumt außerdem zu Beginn ihre eigenen Reste weg, denn ein Lauf, der auf halber
+  Strecke starb, ließe das Konto stehen und das Anlegen antwortete 409. Vier
+  Anmeldungen kostet sie, gegen die 300 des Testprofils — zwei, um zwei
+  Sitzungen desselben Kontos gleichzeitig zu halten (das ist die Hälfte, die
+  „alle anderen enden" überhaupt prüfbar macht), zwei für altes und neues
+  Passwort.
+- **Die Browsersuite eines Clients ändert dieses Passwort nicht.** Alle Specs
+  teilen sich **eine** geseedete Sitzung eines Kontos (F164), also würde ein
+  Test, der dessen Passwort wechselt, jede andere Sitzung beenden und den Rest
+  des Laufs mitnehmen. `account.spec.ts` prüft deshalb den Weg zur Seite, die
+  Gestalt des Formulars und dass ein zu kurzes Passwort den Browser gar nicht
+  verlässt — der Wechsel selbst steht in der Vertragssuite.
 
 Siehe auch: [Fallen in den Angular-Clients](angular-clients.md), [Deployment und Prüfung](deployment.md).

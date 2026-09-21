@@ -100,5 +100,18 @@ Datenschutzbruch, bei der Plug-in-Aktivierung Datenverlust.
   Echtzeit von AP 7 eine Annahme über den Betrieb macht.
 - Alle vier Spikes der Phase 0 sind verifiziert: `docs/spikes/01-client-plugin`,
   `02-server-plugin`, `03-web-push`, `04-websocket-through-nginx`.
+- **`add_header` in einem `location`-Block schaltet die geerbten ab.** Die
+  klassische nginx-Falle, und in AP 9 der Phase 5 fast getreten: die
+  Content-Security-Policy sollte nur an den zwei Client-Locations hängen — dann
+  hätten genau diese zwei `X-Content-Type-Options`, `X-Frame-Options` und
+  `Referrer-Policy` verloren, weil eine Ebene, die selbst ein `add_header`
+  setzt, gar keins mehr erbt. Alle Kopfzeilen stehen deshalb auf **Server-Ebene**
+  in `trefaro-locations.conf`, und wer eine hinzufügt, fügt sie dort hinzu.
+- **Eine Kopfzeile auf Server-Ebene liegt auch auf den `/api/`-Antworten.** Das
+  ist gewollt und nicht folgenlos: eine Medienroute setzt für ihre Bytes selbst
+  `default-src 'none'; sandbox`, und der Browser bekommt dann **zwei**
+  `Content-Security-Policy`-Zeilen und setzt beide durch. Für hochgeladene Bytes
+  ist die Schnittmenge genau richtig; wer die Regel der Seite lockert, lockert
+  damit nicht die der Datei.
 
 Siehe auch: [Deployment und Prüfung](deployment.md), [Schichten und Ports im Server](server-layers.md).

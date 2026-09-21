@@ -348,5 +348,21 @@ besteht. Jede Zeile hier hat einmal einen halben Tag gekostet.
   auf `<nav>` — womit auch die Einträge mitgehen, die ein Plug-in beiträgt.
   `NavigationEnd` **und** `NavigationSkipped`: wer den Eintrag der Seite
   wählt, auf der er schon steht, löst kein `NavigationEnd` aus.
+- **Der Produktionsbuild schreibt einen Inline-Handler in `index.html`, wenn
+  man ihn lässt** (AP 9 der Phase 5). `optimization` ist in einer
+  Produktionskonfiguration standardmäßig `true`, und darin steckt
+  `styles.inlineCritical`: Angular hängt das kritische CSS in ein `<style>` und
+  schiebt das eigentliche Stylesheet auf —
+  `<link rel="stylesheet" media="print" onload="this.media='all'">`. Mit der
+  Content-Security-Policy des Proxys (`script-src 'self'`) führt der Browser
+  diesen Handler **nicht** aus: das Stylesheet bleibt `media="print"`, und die
+  Seite rendert mit dem eingebetteten Bruchstück allein. Sichtbar wird das nur
+  im ausgelieferten Build hinter dem echten Proxy — `nx serve` optimiert nicht
+  und schickt keine Kopfzeilen. Beide Clients setzen deshalb
+  `optimization.styles.inlineCritical: false`, mit der Begründung als
+  `"// build"` in ihrer `project.json`. **Die Richtlinie ist nicht das, was man
+  lockert**: `'unsafe-hashes'` plus der Hash von `this.media='all'` kauft ein
+  paar Millisekunden Erstdarstellung in einer Anwendung, die ohnehin auf
+  `/api/config` wartet.
 
 Siehe auch: [Browsersuiten und E2E-Tests](e2e-tests.md), [Mehrsprachigkeit und Katalog](i18n.md), [Whitelabel und PWA](whitelabel-pwa.md).

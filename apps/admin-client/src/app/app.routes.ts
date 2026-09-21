@@ -199,6 +199,14 @@ export const appRoutes: Route[] = [
         title: 'admin.admins.title',
       },
       {
+        // One's own account, which is a different subject from the list of
+        // colleagues above — see `account-page.ts`.
+        path: 'account',
+        loadComponent: () =>
+          import('./pages/account/account-page').then((m) => m.AccountPage),
+        title: 'admin.account.title',
+      },
+      {
         path: 'design',
         loadComponent: () =>
           import('./pages/design/design-page').then((m) => m.DesignPage),

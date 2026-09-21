@@ -101,6 +101,30 @@ export class SessionService
     await this.sessions.deleteByTokenHash(hashSessionToken(token));
   }
 
+  /**
+   * Ends every other session of one organizer (AP 9 of phase 5).
+   *
+   * By session id rather than by token, because its caller has resolved a
+   * session already and the token never travels further than the guard. The
+   * count goes in the log for the operator and nowhere else: a screen that
+   * said "3 other sessions ended" would be telling somebody who just proved
+   * they know the password something they did not ask about.
+   */
+  async revokeOthers(
+    adminUserId: string,
+    keepSessionId: string,
+  ): Promise<void> {
+    const ended = await this.sessions.deleteForAdminExcept(
+      adminUserId,
+      keepSessionId,
+    );
+    if (ended > 0) {
+      this.logger.log(
+        `Ended ${ended} other session(s) of administrator ${adminUserId} after a password change`,
+      );
+    }
+  }
+
   private expiryFrom(now: Date): Date {
     return new Date(
       now.getTime() + this.env.adminAuth.sessionTtlHours * 60 * 60_000,

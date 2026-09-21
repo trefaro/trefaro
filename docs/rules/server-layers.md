@@ -301,5 +301,18 @@ PushModule` einen Kreis, und der Server startete nicht mehr („The module at
   dazukam, ist eine Frage nach **einem Menschen** — „hält dieses Konto einen
   Platz" wäre eine Teilnehmerliste durch die Hintertür, und ein Platz gehört
   einer Anmeldung, ein Plan einem Konto.
+- **„Ein Plug-in fasst keine Kerntabelle an" ist seit AP 9 der Phase 5 ein
+  Test** (F21, F231). `apps/server/src/plugins/plugin-schema.spec.ts` liest die
+  Migrationen aller Plug-ins als Text und nennt jede Tabelle, auf die sich ein
+  `CREATE`/`ALTER`/`DROP TABLE`, ein `CREATE INDEX` oder ein `TRUNCATE`
+  richtet; keine darf ohne `plugin_` anfangen. Ein Fremdschlüssel **in** eine
+  Kerntabelle bleibt erlaubt — so hängt sich ein Plug-in überhaupt an ein
+  Event. Wer eine Kernspalte braucht, bekommt sie in einer **Kern**-Migration
+  oder gar nicht.
+- **Eine neue Pfadspalte im Schema ist zwei Änderungen.** Die Spalte, und
+  `PATH_COLUMNS` in `tools/upload-sweep/sweep.mjs`. Der Kehrbesen fragt vor
+  jedem Urteil `information_schema`, ob es eine Spalte gibt, die nach einem
+  Pfad aussieht und die er nicht kennt — findet er eine, meldet er **gar
+  nichts**, statt jede Datei eines neuen Moduls „vergessen" zu nennen.
 
 Siehe auch: [Verträge der Endpunkte](api-contracts.md), [Regeln des Datenmodells](data-model.md).

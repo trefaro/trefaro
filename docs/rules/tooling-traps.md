@@ -184,5 +184,16 @@ Record<string, string>` festgenagelt: der Punktzugriff funktioniert, und ein
   auf der Platte, obwohl das Archiv korrekt ist und Bit 11 gesetzt hat. Ein
   Test, der ein selbst geschriebenes ZIP prüft, nimmt deshalb Pythons
   `zipfile` — es ehrt das Flag und prüft nebenbei jede CRC.
+- **Ein tiefer Typ-Import in ein Paket hinein löst sich für den Build auf und
+  für die Spec-Übersetzung nicht.** `typeorm-content-translation.repository.ts`
+  holte `QueryDeepPartialEntity` über
+  `typeorm/query-builder/QueryPartialEntity`; `tsconfig.app.json` fand den Pfad,
+  die Jest-Übersetzung nicht. Die Folge sah nach etwas ganz anderem aus: **jede**
+  Spec, die irgendwie bis zur Zusammensetzung reichte — in AP 9 der Phase 5 ein
+  Inventar, das `AppModule` importieren wollte —, scheiterte mit `TS2307` in
+  einer Datei, mit der sie nichts zu tun hatte, und ein Build hätte es nie
+  gezeigt. Der Ausweg ist, den Typ aus dem Ausdruck abzuleiten, der ihn braucht
+  (`Parameters<typeof insert.values>[0]`), statt ihn aus dem Inneren eines
+  Pakets zu importieren.
 
 Siehe auch: [Browsersuiten und E2E-Tests](e2e-tests.md), [Schichten und Ports im Server](server-layers.md).

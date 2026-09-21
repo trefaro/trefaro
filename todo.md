@@ -1600,9 +1600,23 @@ entry, the answer is noted below rather than repeated.
       limit would have frozen it at build time. `infra/docker-compose.yml`
       passes all five through, empty by default, so the numbers live in exactly
       one place.
-- [ ] **Security review.** Auth, upload validation, plug-in isolation, and
-      whether the OpenAPI description should keep being served publicly (it is
-      today, on the grounds that the source is AGPL anyway).
+- [x] **Security review — done in AP 9 of phase 5** (F227–F231). Auth, upload
+      validation, plug-in isolation, and the OpenAPI question, with a protocol
+      that carries a finding and a decision per point:
+      [`docs/SECURITY-REVIEW.md`](docs/SECURITY-REVIEW.md). Twenty-six points,
+      ten findings, six fixed, one decided, three recorded below. The heaviest
+      was one nobody had named: **an organizer could not change their own
+      password** — the only rotation was creating a second account and deleting
+      the first, which takes that account's moderation decisions with it
+      (`decided_by` is `SET NULL`). The one with the widest reach was that the
+      two clients had **no content security policy at all**: every route that
+      served stored bytes set one for those bytes, and the documents that
+      render them set none. The OpenAPI question got two answers rather than
+      one: the description stays public everywhere (it is derivable from AGPL
+      source), the browsable console does not run in production (it is
+      third-party JavaScript on the organizer client's own origin). Every fixed
+      finding has a test that turns red again — a fixed finding without a guard
+      is one that comes back.
 - [x] **GDPR functions — done in AP 6 of phase 5** (E65, F215–F218). Both, as
       one subject rather than two features, on the profile page:
       `GET /api/participant/me/export` answers one ZIP — `export.json` with the
@@ -1615,6 +1629,41 @@ entry, the answer is noted below rather than repeated.
       migration, and it belongs to the forum plug-in —
       `plugin_forum_thread.created_by` becomes nullable with `SET NULL`,
       because the core never names a plug-in's table.
+- [ ] **There is no way to report a security hole.** Found by the security
+      review of AP 9 (point E3): the repository has a README and a licence and
+      no `SECURITY.md`, so somebody who finds a vulnerability has no channel
+      but a public issue. The file itself is twenty lines and most of its
+      content is already decided — supported versions (there is one, the
+      current `main`, until v1.0 is tagged), what counts as a vulnerability
+      here, and that a self-hosted instance's operator has to be told too. What
+      is **not** decided and cannot be decided in this repository is the one
+      thing the file exists for: the channel. Two options, both a few minutes
+      of work for Marius — switch on GitHub's private vulnerability reporting
+      for `trefaro/trefaro`, or name an address somebody reads. Pick one, and
+      the file follows.
+- [ ] **The proxy's body limit and the application's are held together by a
+      comment.** Found by the security review of AP 9 (point B2):
+      `client_max_body_size 25m` in `infra/nginx/trefaro-locations.conf` is
+      deliberately above `MAX_SUBMISSION_BYTES` (20 MB), so that a body too
+      large is refused by the application with its own sentence rather than by
+      nginx with a page nobody wrote. Both numbers are right today; nothing
+      catches the day one moves. A mechanical check needs either a test that
+      reads an infrastructure file from inside the server project — which Nx's
+      cache would then wrongly consider fresh when only `infra/` changed — or a
+      25 MB upload against the real proxy in `apps/stack-e2e`. The second is
+      the honest one and costs a fixture with a file field; worth doing if the
+      pair ever has to move.
+- [ ] **The health endpoint talks to the database itself.** Found by the
+      security review of AP 9 (point E2): `core/health/health.controller.ts`
+      injects the `DataSource` and runs `SELECT 1`. Not a rule violation — the
+      strict-layering lint rules cover `src/app/business/**` and
+      `src/plugins/**`, not `src/app/core/**` — and not a security finding, but
+      it is a place outside the data access layer that speaks PostgreSQL, and
+      the thesis' promise is that swapping the database means replacing one
+      layer. The fix is a port of about twenty lines (`DATABASE_HEALTH`,
+      implemented beside the repositories, injected here). **Before AP 12**,
+      which describes the architecture and must not describe something that is
+      not true.
 - [ ] **Load tests** (NFR 12).
 - [ ] **socket.io shared adapter** — only if more than one server container is
       ever run. Not needed for one instance per organization.
@@ -1664,14 +1713,20 @@ entry, the answer is noted below rather than repeated.
       `apps/server-e2e/src/api/rate-limits.spec.ts`. Default five per five
       minutes — the legitimate ceiling decides it, and that is a household
       signing its members up for one event.
-- [ ] **A sweep over the upload volume.** `AttachmentsService` compensates where
-      the database and the volume can disagree, and it compensates towards
-      keeping bytes rather than losing them — so a crash between two steps can
-      leave a file that no row references. It is logged when it happens by
-      compensation, but nothing finds one left by a crash. A sweep that lists the
-      volume, joins it against `attachment.file_path` and reports (not deletes)
-      what nothing points at would close it. Phase 5: right now it would be
-      stock-keeping against a problem no instance has yet.
+- [x] **A sweep over the upload volume — done in AP 9 of phase 5** (F231).
+      `tools/upload-sweep/sweep.mjs`: it lists the volume in the server
+      container, joins it against **all six** path columns rather than the one
+      this entry named (`attachment.file_path`, both of `app_config`,
+      `event_series.logo_path`, `event.logo_path`, `user_profile.avatar_path` —
+      with only one of them every logo would read as forgotten), and reports in
+      **both** directions, because a row whose file is gone is the more serious
+      half and costs nothing to find. It deletes nothing and never will. Two
+      things the entry did not foresee: a **grace period** of fifteen minutes,
+      because `store()` writes the file before the row and a busy instance
+      would otherwise report its own in-flight uploads; and a refusal to judge
+      at all when `information_schema` shows a path column the sweep does not
+      know — otherwise the first module that stores a file has all of its files
+      called forgotten, and somebody deletes them.
 - [ ] **Two participant-client specs race under eight workers.** In the full
       local run of 04.09.2026 (`nx run-many -t e2e --parallel=1`, Playwright's
       own default of eight workers) `content-translations.spec.ts` did not find

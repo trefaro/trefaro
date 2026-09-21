@@ -120,7 +120,22 @@
 }
 
 .sidebar__account-name {
+  display: inline-block;
+  padding: 0.2rem 0.4rem;
+  margin-inline-start: -0.4rem;
+  border-radius: 0.4rem;
+  color: inherit;
   font-weight: 600;
+  text-decoration: none;
+}
+
+.sidebar__account-name:hover,
+.sidebar__account-name.is-active {
+  background: color-mix(
+    in oklab,
+    var(--trefaro-color-on-primary) 18%,
+    transparent
+  );
 }
 
 .sidebar__signout {

@@ -239,7 +239,20 @@ test(
       page.getByRole('button', { name: t('admin.nav.close') }),
     ).toHaveAttribute('aria-expanded', 'true');
     // A drawer lies over the page; it does not push it.
-    expect(await main.boundingBox()).toEqual(before);
+    //
+    // Where the content box *starts* and how wide it is, and deliberately not
+    // how tall: the series list keeps loading while this runs, so its height
+    // changes between the two readings for a reason that has nothing to do
+    // with the drawer — which is what made this flake in AP 9 of phase 5, on a
+    // database that happened to hold a few hundred leftover rows. Pushing
+    // would show up in `y` (stacked above) or in `x` and `width` (pushed
+    // aside); both are read.
+    const after = await main.boundingBox();
+    expect({ x: after?.x, y: after?.y, width: after?.width }).toEqual({
+      x: before?.x,
+      y: before?.y,
+      width: before?.width,
+    });
 
     await page.keyboard.press('Escape');
     await expect(menu).toBeHidden();

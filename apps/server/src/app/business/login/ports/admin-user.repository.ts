@@ -41,6 +41,17 @@ export interface AdminUserRepository {
   findByEmail(email: string): Promise<AdminUserRecord | null>;
   /** @throws AdminEmailTakenError */
   create(user: NewAdminUser): Promise<AdminUserRecord>;
+  /**
+   * Writes a new password hash, and nothing else (AP 9 of phase 5).
+   *
+   * Its own method rather than a general `update`, for the reason the whole
+   * record is readonly: the one column an organizer may change about
+   * themselves is this one, and a method that could write `email` would make
+   * the account list a place where somebody renames a colleague.
+   *
+   * @returns false when the account was already gone.
+   */
+  updatePassword(id: string, passwordHash: string): Promise<boolean>;
   /** Returns false when the account was already gone. */
   delete(id: string): Promise<boolean>;
   recordLogin(id: string, at: Date): Promise<void>;

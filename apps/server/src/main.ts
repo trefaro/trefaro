@@ -5,6 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ThrottlerStorage } from '@nestjs/throttler';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app/app.module';
+import { servesApiConsole } from './app/core/config/api-docs';
 import type { TrefaroEnv } from './app/core/config/env';
 import { ENV } from './app/core/config/env.module';
 import { rateLimitWarnings } from './app/core/config/rate-limits';
@@ -68,6 +69,8 @@ async function bootstrap(): Promise<void> {
 
   // The OpenAPI description is served in every environment on purpose: the
   // source is public anyway (AGPL), and NFR 8 asks for thorough documentation.
+  // The browsable console beside it is not — `api-docs.ts` says why, and it is
+  // the one half of this the security review of AP 9 changed.
   SwaggerModule.setup(
     `${GLOBAL_PREFIX}/docs`,
     app,
@@ -83,6 +86,7 @@ async function bootstrap(): Promise<void> {
         .setVersion(env.nodeEnv === 'production' ? '1' : 'dev')
         .build(),
     ),
+    { swaggerUiEnabled: servesApiConsole(env.nodeEnv) },
   );
 
   // Containers stop by signal; without this, shutdown hooks never run and

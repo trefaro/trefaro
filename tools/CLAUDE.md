@@ -1,6 +1,6 @@
 # Hinweise für diesen Teilbaum
 
-Vier Werkzeuge, und sie unterscheiden sich darin, **wer die Instanz hochfährt**:
+Fünf Werkzeuge, und sie unterscheiden sich darin, **wer die Instanz hochfährt**:
 
 - `spike-verification/` und `demo-seed/` laufen gegen eine **laufende** Instanz,
   die jemand anders gestartet hat, nicht im CI — jenes prüft ein Deployment,
@@ -10,6 +10,12 @@ Vier Werkzeuge, und sie unterscheiden sich darin, **wer die Instanz hochfährt**
   leerem Volume, geführte Ersteinrichtung, ein Browser darauf, danach `down -v`.
   Es läuft lokal und im CI-Job `stack` mit demselben Kommando, damit „bei mir
   lief es" und „die CI sagt grün" dieselbe Sache bedeuten.
+- `upload-sweep/` läuft wie die ersten beiden gegen eine **laufende** Instanz,
+  greift aber als einziges Werkzeug an der API vorbei: es listet das Volume im
+  Server-Container und liest die Pfadspalten im Datenbank-Container, weil genau
+  die Frage, die es stellt, keine API beantwortet — welche Bytes im Volume
+  liegen, auf die keine Zeile zeigt. Es **löscht nichts** und urteilt nicht über
+  ein Schema, dessen Pfadspalten es nicht alle kennt.
 - `secure-mail/` **erzeugt seinen eigenen Gegenspieler**: einen Mailserver, der
   ohne Anmeldung und ohne STARTTLS ablehnt (Compose-Profil `secure-mail`), und
   einen Server daneben, der trotzdem durchkommt. Es beantwortet die eine Frage,

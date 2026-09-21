@@ -4,7 +4,9 @@ import {
   Logger,
   NotFoundException,
   OnApplicationBootstrap,
+  UnauthorizedException,
 } from '@nestjs/common';
+import type { AdminPasswordChange } from '@trefaro/shared-models';
 import type { TrefaroEnv } from '../../core/config/env';
 import { ENV } from '../../core/config/env.module';
 import { PasswordHasher } from '../common/password-hasher.service';
@@ -13,13 +15,15 @@ import {
   describePasswordPolicy,
   isUsablePassword,
 } from '../common/password-policy';
-import { conflict } from '../common/problem';
+import { conflict, refuse } from '../common/problem';
 import {
   ADMIN_USER_REPOSITORY,
   AdminEmailTakenError,
   type AdminUserRecord,
   type AdminUserRepository,
 } from './ports/admin-user.repository';
+import type { AuthenticatedAdmin } from './ports/admin-session.repository';
+import { SessionService } from './session.service';
 
 /** Name given to the account created from the environment (F22). */
 const BOOTSTRAP_ADMIN_NAME = 'Administrator';
@@ -59,6 +63,9 @@ export class AdminUserService implements OnApplicationBootstrap {
     private readonly admins: AdminUserRepository,
     @Inject(ENV) private readonly env: TrefaroEnv,
     private readonly hasher: PasswordHasher,
+    // Only for the password change, which has to end the other sessions in the
+    // same breath — see `changePassword`.
+    private readonly sessions: SessionService,
   ) {}
 
   /** Runs after the migrations, so writing the first account is safe here. */
@@ -136,6 +143,59 @@ export class AdminUserService implements OnApplicationBootstrap {
   }
 
   /** Deleting an account also ends its sessions — the foreign key cascades. */
+  /**
+   * Changes one's own password (AP 9 of phase 5, FR 1.2).
+   *
+   * The finding this closes, in one sentence: until here an organizer's
+   * password was whatever it had been set to when the account was created —
+   * typed into a `.env` by whoever installed the instance, or chosen by a
+   * colleague — and there was no way to change it. The only rotation was
+   * deleting the account and making a new one, which takes the moderation
+   * decisions it had signed with it (`decided_by` is `SET NULL`).
+   *
+   * The current password is required, for the reason the participant's change
+   * requires it: this session may be an unlocked laptop. Afterwards every
+   * **other** session of this account ends — somebody changing their password
+   * because a device is not theirs any more has said something about that
+   * device too.
+   *
+   * There is deliberately **no reset link** to go with it. A reset is a mail
+   * to the address of the account, and an organizer's address is the one this
+   * instance sends *from*; an instance whose mail is misconfigured would hand
+   * out a way in that nobody can receive. An organizer who is locked out is
+   * let back in by another organizer, or by the operator who owns the `.env`.
+   */
+  async changePassword(
+    current: AuthenticatedAdmin,
+    change: AdminPasswordChange,
+  ): Promise<void> {
+    if (
+      !(await this.hasher.verify(
+        current.admin.passwordHash,
+        change.currentPassword,
+      ))
+    ) {
+      throw new UnauthorizedException('The current password is not right.');
+    }
+
+    if (!isUsablePassword(change.newPassword)) {
+      throw refuse('problem.password.policy', PASSWORD_POLICY);
+    }
+
+    const written = await this.admins.updatePassword(
+      current.admin.id,
+      await this.hasher.hash(change.newPassword),
+    );
+    if (!written) {
+      throw new NotFoundException(
+        `No administrator with id "${current.admin.id}"`,
+      );
+    }
+
+    await this.sessions.revokeOthers(current.admin.id, current.sessionId);
+    this.logger.log(`Administrator ${current.admin.id} changed their password`);
+  }
+
   async delete(id: string, actingAdminId: string): Promise<void> {
     if (id === actingAdminId) {
       throw conflict('problem.admin.lastOwnAccount');

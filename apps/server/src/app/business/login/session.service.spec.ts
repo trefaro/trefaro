@@ -26,7 +26,10 @@ class FakeSessionRepository implements AdminSessionRepository {
   stored: StoredSession | null = null;
   readonly touched: { sessionId: string; seenAt: Date; expiresAt: Date }[] = [];
   readonly revokedHashes: string[] = [];
+  readonly revokedOthers: { adminUserId: string; keepSessionId: string }[] = [];
   readonly sweptAt: Date[] = [];
+  /** What the next `deleteForAdminExcept` reports having ended. */
+  othersToEnd = 0;
 
   async create(session: NewAdminSession): Promise<void> {
     this.stored = { ...session, id: 'session-1', lastSeenAt: new Date() };
@@ -55,6 +58,14 @@ class FakeSessionRepository implements AdminSessionRepository {
   async deleteByTokenHash(tokenHash: string): Promise<void> {
     this.revokedHashes.push(tokenHash);
     if (this.stored?.tokenHash === tokenHash) this.stored = null;
+  }
+
+  async deleteForAdminExcept(
+    adminUserId: string,
+    keepSessionId: string,
+  ): Promise<number> {
+    this.revokedOthers.push({ adminUserId, keepSessionId });
+    return this.othersToEnd;
   }
 
   async deleteExpired(now: Date): Promise<number> {
@@ -166,5 +177,23 @@ describe('SessionService', () => {
     await expect(service.onApplicationBootstrap()).resolves.toBeUndefined();
 
     service.onApplicationShutdown();
+  });
+
+  describe('revokeOthers', () => {
+    it('asks for every session of that account but the one given', async () => {
+      await service.revokeOthers('admin-1', 'session-1');
+
+      expect(sessions.revokedOthers).toEqual([
+        { adminUserId: 'admin-1', keepSessionId: 'session-1' },
+      ]);
+    });
+
+    it('is not an error when there was no other session', async () => {
+      sessions.othersToEnd = 0;
+
+      await expect(
+        service.revokeOthers('admin-1', 'session-1'),
+      ).resolves.toBeUndefined();
+    });
   });
 });

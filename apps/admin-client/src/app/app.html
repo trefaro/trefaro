@@ -76,7 +76,16 @@
       <!-- Above the account, not in the navigation: choosing a language is not
            a place in the application. -->
       <trefaro-language-switcher />
-      <span class="sidebar__account-name">{{ auth.admin()?.name }}</span>
+      <!-- The name is the way to one's own account (AP 9): it is not a place
+           in the application the way a series is, so it belongs beside the way
+           out rather than in the navigation above. -->
+      <a
+        class="sidebar__account-name"
+        routerLink="/account"
+        routerLinkActive="is-active"
+      >
+        {{ auth.admin()?.name }}
+      </a>
       <button type="button" class="sidebar__signout" (click)="signOut()">
         {{ 'admin.nav.signOut' | transloco }}
       </button>

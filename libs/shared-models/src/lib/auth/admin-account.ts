@@ -27,3 +27,22 @@ export interface AdminSessionInfo {
   /** ISO 8601 — the client can warn before an idle session lapses. */
   readonly expiresAt: string;
 }
+
+/**
+ * Changing one's own password as an organizer (AP 9 of phase 5).
+ *
+ * The same two fields the participant's change has, and deliberately the same
+ * shape rather than a shared type: the two accounts are different subjects
+ * with different tables and different cookies (E33, E34), and one type used by
+ * both would be the first place somebody wired one side's form to the other's
+ * endpoint.
+ *
+ * There is no reset beside it, and that is a decision rather than an omission.
+ * A reset link is a mail to an address, and the address of an organizer is the
+ * one this instance sends *from* — the security review of AP 9 says why in
+ * `docs/SECURITY-REVIEW.md`.
+ */
+export interface AdminPasswordChange {
+  readonly currentPassword: string;
+  readonly newPassword: string;
+}

@@ -63,6 +63,11 @@ export class TypeormAdminUserRepository implements AdminUserRepository {
     }
   }
 
+  async updatePassword(id: string, passwordHash: string): Promise<boolean> {
+    const result = await this.repository.update({ id }, { passwordHash });
+    return (result.affected ?? 0) > 0;
+  }
+
   async delete(id: string): Promise<boolean> {
     const result = await this.repository.delete({ id });
     return (result.affected ?? 0) > 0;

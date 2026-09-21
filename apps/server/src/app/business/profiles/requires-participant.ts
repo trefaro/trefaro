@@ -1,7 +1,8 @@
 import { ExecutionContext, SetMetadata } from '@nestjs/common';
 import type { Reflector } from '@nestjs/core';
 
-const REQUIRES_PARTICIPANT_METADATA = 'trefaro:requiresParticipant';
+/** Exported for the route inventory — see `ALLOW_ANONYMOUS_METADATA`. */
+export const REQUIRES_PARTICIPANT_METADATA = 'trefaro:requiresParticipant';
 
 /**
  * Demands a participant session on a route whose path does not say so.

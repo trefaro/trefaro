@@ -1,7 +1,11 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { STARTUP_TIMEOUT_MS } from '@trefaro/shared-config';
 import { ApiClient } from '@trefaro/shared-http';
-import type { AdminAccount, AdminSessionInfo } from '@trefaro/shared-models';
+import type {
+  AdminAccount,
+  AdminPasswordChange,
+  AdminSessionInfo,
+} from '@trefaro/shared-models';
 import { firstValueFrom, timeout } from 'rxjs';
 
 /**
@@ -16,6 +20,12 @@ export const AUTH_PROBE_PATHS = [
   'admin/auth/me',
   'admin/auth/login',
   'setup/',
+  // The fourth, and the least obvious (AP 9 of phase 5): the password change
+  // answers 401 for "the current password is not right", because the server
+  // cannot spell that any other way. Reading it as an expiry would sign
+  // somebody out and blame their session for a typo. The participant client
+  // has the same entry for the same route on its own side.
+  'admin/me/password',
 ] as const;
 
 /**
@@ -79,6 +89,20 @@ export class AuthService {
         }),
       ),
     );
+  }
+
+  /**
+   * Changes the password of the account this session belongs to (AP 9).
+   *
+   * Nothing here changes: the session stays, and the server ends the *other*
+   * ones. Which is why this is on the auth service rather than on an accounts
+   * service — the subject is this session's own account, not a row in a list.
+   *
+   * @throws ApiError — 401 when the current password is wrong, 400 when the
+   * new one is outside the policy.
+   */
+  async changePassword(change: AdminPasswordChange): Promise<void> {
+    await firstValueFrom(this.api.put<void>('admin/me/password', change));
   }
 
   async logout(): Promise<void> {

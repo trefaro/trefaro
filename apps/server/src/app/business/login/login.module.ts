@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { CommonModule } from '../common/common.module';
 import { AdminUserService } from './admin-user.service';
 import { AdminGuard } from './admin.guard';
+import { AdminMeController } from './admin-me.controller';
 import { AdminsController } from './admins.controller';
 import { AuthController } from './auth.controller';
 import { SessionService } from './session.service';
@@ -22,7 +23,7 @@ import { SessionService } from './session.service';
  */
 @Module({
   imports: [CommonModule],
-  controllers: [AuthController, AdminsController],
+  controllers: [AuthController, AdminsController, AdminMeController],
   providers: [
     SessionService,
     AdminUserService,

@@ -153,5 +153,20 @@ Beispiele haben je eine frische Produktionsinstanz unbenutzbar gemacht.
   Instanz und übersetzt einen Teil des Inhalts; die Bilder werden **erzeugt**
   (`demoPng`), nicht eingecheckt, weil der Server die ersten Bytes liest (F38) und
   den Kopf für die Größe (F106). `--reset` nimmt die Marke **nicht** zurück.
+- **`tools/upload-sweep/` greift als einziges Werkzeug an der API vorbei** — es
+  listet das Volume mit `docker exec … find` im Server-Container und liest die
+  Pfadspalten mit `psql` im Datenbank-Container, weil keine API die Frage
+  beantwortet, welche Bytes im Volume liegen, auf die keine Zeile zeigt. Beide
+  Containernamen kommen aus `SERVER_CONTAINER` und `POSTGRES_CONTAINER`; wer
+  rät, listet das eine Volume gegen die Zeilen des anderen. Es **löscht nichts**,
+  meldet in beide Richtungen und gibt **0 / 2 / 1** zurück (einig / etwas
+  gefunden / Lauf nicht möglich), damit ein Cron-Eintrag die drei Lagen
+  auseinanderhalten kann.
+- **Was nur hinter dem echten Proxy gilt, wird hinter dem echten Proxy
+  geprüft.** Die Sicherheitskopfzeilen und die in Produktion abgeschaltete
+  API-Konsole (F229, F230) haben ihre Tests in `apps/stack-e2e`, nicht in einer
+  Client-Suite: ein Entwicklungsserver schickt keine dieser Kopfzeilen und läuft
+  nicht mit `NODE_ENV=production`, also würde eine Suite dort eine Regel
+  behaupten, die niemand ausgeliefert bekommt.
 
 Siehe auch: [Browsersuiten und E2E-Tests](e2e-tests.md), [Whitelabel und PWA](whitelabel-pwa.md), [Infrastruktur-Entscheidungen](infrastructure.md).

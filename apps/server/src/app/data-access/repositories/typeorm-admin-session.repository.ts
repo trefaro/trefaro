@@ -64,6 +64,19 @@ export class TypeormAdminSessionRepository implements AdminSessionRepository {
     await this.repository.delete({ tokenHash });
   }
 
+  async deleteForAdminExcept(
+    adminUserId: string,
+    keepSessionId: string,
+  ): Promise<number> {
+    const result = await this.repository
+      .createQueryBuilder()
+      .delete()
+      .where('admin_user_id = :adminUserId', { adminUserId })
+      .andWhere('id <> :keepSessionId', { keepSessionId })
+      .execute();
+    return result.affected ?? 0;
+  }
+
   async deleteExpired(now: Date): Promise<number> {
     const result = await this.repository.delete({
       expiresAt: LessThanOrEqual(now),

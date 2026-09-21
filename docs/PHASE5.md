@@ -1479,6 +1479,19 @@ sehen diese Tests gar nicht.
   die Frage damit auch; für den Wächter bleibt die Regel stehen, weil sie ohne
   feste Leiste wieder etwas aussagt.
 
+**Die Richtlinie zerbrach die zwei Seiten, und der Test sagte es.** Der erste
+Stack-Lauf mit der neuen CSP meldete in beiden Clients „Executing inline event
+handler violates … `script-src 'self'`" — und der Handler war keiner aus
+diesem Repository: Angulars Produktionsbuild schiebt das Stylesheet auf und
+schreibt dafür `<link rel="stylesheet" media="print" onload="this.media='all'">`
+in `index.html`. Ohne den Handler bleibt das Blatt `media="print"`, und die
+Seite rendert mit dem eingebetteten Bruchstück allein. Abgeschaltet wird
+deshalb das Aufschieben (`optimization.styles.inlineCritical: false` in beiden
+`project.json`, mit der Begründung daneben) und **nicht** die Richtlinie
+gelockert. Das ist der Grund, warum zwei der sechs Kopfzeilentests eine Seite
+**öffnen** statt eine Kopfzeile zu lesen: eine zu strenge Richtlinie zerbricht
+leise, und `nx serve` schickt keine.
+
 #### Der Stand nach diesem Paket
 
 `nx run-many -t lint test build --skip-nx-cache` grün über **19 Projekte**.
@@ -1752,3 +1765,244 @@ der Satz zum App-Symbol) und ein Eintrag: die Lade des **Nutzer**-Clients
 animiert ohne Ausnahme für `prefers-reduced-motion` — aufgefallen beim
 Entscheiden gegen eine Animation hier, und dort kostet die Ausnahme nichts,
 weil jener Client ohnehin mehrere `@media`-Abfragen hat.
+
+### AP 9 — Security-Review und der Blick ins Volume (erledigt, 21.09.2026)
+
+Zwei Hälften, die nichts miteinander zu tun haben außer dem Paket: ein Review
+über vier Bereiche, das ein Protokoll hinterlässt, und ein Werkzeug, das eine
+Frage beantwortet, die keine API beantwortet. Das Protokoll steht in
+[`docs/SECURITY-REVIEW.md`](SECURITY-REVIEW.md) — **sechsundzwanzig Punkte,
+zehn Befunde, sechs behoben, einer entschieden, drei mit Begründung in
+`todo.md`** —, und hier steht, was beim Suchen passiert ist.
+
+#### Erst die Adressen
+
+Der Einstieg war nicht der Code, sondern eine Liste, die es nicht gab. Die zwei
+Sitzungswächter sind global und entscheiden am **deklarierten** Pfad (E16,
+E33) — genau die Eigenschaft, die ein vergessenes `@UseGuards` harmlos macht,
+und genau die, die niemanden sagen lässt, welche Endpunkte diese Instanz offen
+anbietet. Also wurde die Liste erzeugt, und sie ist geblieben:
+
+| Zugang                  | Adressen |
+| ----------------------- | -------- |
+| Veranstaltersitzung     | **98**   |
+| Teilnehmersitzung       | **32**   |
+| ohne Sitzung erreichbar | **41**   |
+| **zusammen**            | **171**  |
+
+Die einundvierzig sind einzeln durchgegangen worden, und sie zerfallen in vier
+Gruppen mit je einem Grund: die vier Türen in eine Sitzung, das, was das Produkt
+ohne Login verspricht (Startseite, Landingpage, Programm, Konfiguration,
+Katalog, die vier Medienrouten), neun öffentliche Schreibzugriffe — jeder
+namentlich gedrosselt, drei davon zusätzlich je Empfängeradresse — und die
+token-autorisierte Selbstbedienung von E11. Kein Fund, aber auch keine
+Überraschung mehr.
+
+#### Dann die Bereiche
+
+**Authentifizierung** hatte den schwersten Befund, und er stand nicht auf der
+Liste möglicher Befunde: **ein Veranstalter konnte sein Passwort nicht
+ändern.** `admins.controller.ts` hatte drei Routen — auflisten, anlegen,
+löschen. Das Passwort eines Kontos war das, was bei seiner Entstehung gesetzt
+wurde: in eine `.env` getippt oder von einer Kollegin gewählt. Der einzige
+Wechsel war „zweites Konto anlegen, erstes löschen", und das nimmt die
+Moderationsentscheidungen des Kontos mit (`decided_by` ist `SET NULL`). Alles
+andere in diesem Bereich hielt: 256 Bit Sitzungsgeheimnis mit nur dem Hash in
+der Datenbank, argon2id mit Zeitangleichung gegen Kontoaufzählung, die Flags
+der zwei Cookies, `trust proxy 1`, der Startbericht.
+
+**Upload-Validierung** hatte keinen echten Befund, und das war die
+Überraschung — sieben Punkte, sieben Mal „stimmt": geschlossener Typkatalog mit
+Signaturprüfung, Grenzen je Datei, je Einreichung, je Anzahl, `safeFileName`
+auf dem Hin- und auf dem Rückweg, `Content-Disposition` immer `attachment`,
+fünf getrennte Teilbäume mit generierten Namen ohne Endung, `nosniff` und
+`sandbox` auf jeder Route, die Bytes ausliefert, ein selbst gebautes ZIP ohne
+Verzeichniseinträge, und Bildmaße, die aus dem Kopf gelesen und nie dekodiert
+werden. Der einzige Punkt mit einem Vermerk ist ein Paar Zahlen: der Proxy
+lässt 25 MB durch, die Anwendung 20, und zusammengehalten werden sie von einem
+Kommentar.
+
+**Plug-in-Isolation** hatte einen: „ein Plug-in fasst keine Kerntabelle an"
+(F21) stand in drei Docstrings und wurde von nichts geprüft. Importe prüft eine
+ESLint-Regel, Adressen und Schalter prüft `plugin-controllers.spec.ts` — das
+Schema prüfte niemand.
+
+**Die OpenAPI-Frage** stellte sich beim Nachsehen als zwei Fragen heraus, und
+das ist die ganze Antwort. Unter derselben Adresse liegen eine Beschreibung und
+eine bedienbare Konsole.
+
+#### Die Behebung
+
+**1. Das Adressinventar wird ein Test** (`app/route-access.spec.ts`, F227). Er
+liest die Deklarationen aller Controller des Images — Kern und Plug-ins —,
+rechnet aus, was die Wächter daraus machen, und vergleicht die offenen mit
+einer eingecheckten Liste, die nach dem **Grund** gruppiert ist. Gelesen wird
+der Quellbaum und nicht der Modulgraph: so braucht der Test die
+Datenzugriff-Schicht nicht, und er überschätzt in die sichere Richtung.
+
+**2. Ein Veranstalter wechselt sein Passwort** (`admin-me.controller.ts`,
+`pages/account/`, F228). `PUT /api/admin/me/password`, mit dem aktuellen
+Passwort, danach enden alle anderen Sitzungen dieses Kontos. Ein eigener
+Controller `admin/me`, weil dort das Subjekt die Sitzung ist und es keine Id
+gibt, die man verwechseln kann. Eine eigene Seite unter `/account`, erreichbar
+über den Namen im Menü. **Kein Zurücksetzen-Link** — er ginge an die Adresse,
+von der diese Instanz ihre eigene Post verschickt —, und die Seite sagt das.
+
+**3. Das Plug-in-Schema bekommt seinen Wächter**
+(`plugins/plugin-schema.spec.ts`, F231). Die Migrationen aller Plug-ins werden
+als Text gelesen; jede Tabelle, auf die sich ein `CREATE`/`ALTER`/`DROP TABLE`,
+ein `CREATE INDEX` oder ein `TRUNCATE` richtet, muss mit `plugin_` anfangen.
+Ein Fremdschlüssel **in** eine Kerntabelle bleibt erlaubt.
+
+**4. Die Beschreibung bleibt, die Konsole geht** (`core/config/api-docs.ts`,
+F230). `/api/docs-json` überall, weil jede Adresse darin aus der AGPL-Quelle
+herzuleiten ist und Verstecken NFR 8 kostet und sonst nichts bringt.
+`/api/docs` nicht in Produktion, weil Swagger UI fremdes JavaScript im Ursprung
+des Veranstalter-Clients ist und sein „Try it out" eine authentifizierte
+Anfragekonsole, die jeder erreicht, der einem Veranstalter einen Link schickt.
+
+**5. Die Seiten bekommen eine Inhaltsrichtlinie**
+(`infra/nginx/trefaro-locations.conf`, F229). Der Befund, der beim Lesen von
+Punkt 4 auffiel: jede Route, die Bytes ausliefert, setzte eine CSP für diese
+Bytes — die Dokumente, die sie anzeigen, setzten keine. Jetzt ist alles
+`'self'`, mit zwei engen Ausnahmen (`style-src 'unsafe-inline'` für Angulars
+Komponentenstile, `img-src blob: data:` für die Vorschau einer gewählten
+Datei), und `script-src` bekommt keine — womit auch ein Plug-in-Bündel nichts
+von außen nachlädt. Zwei Zeilen sind Produktregeln geworden: `frame-src 'none'`
+ist „externe Medien werden verlinkt, nie eingebettet", und
+`Permissions-Policy: camera=(self), …` sagt, dass von allen Gerätefähigkeiten
+genau eine gebraucht wird. Sie steht auf **Server-Ebene**, weil ein
+`add_header` in einem `location`-Block die geerbten abschaltet — die Falle
+steht jetzt in `docs/rules/infrastructure.md`.
+
+**6. Ein tiefer Typ-Import verschwindet.** Fiel auf, als das Inventar zuerst
+über `AppModule` laufen sollte: `typeorm-content-translation.repository.ts`
+importierte `QueryDeepPartialEntity` über einen Pfad in das Paket hinein, den
+der Anwendungsbuild auflöst und die Spec-Übersetzung nicht — also scheiterte
+**jede** Spec, die bis zur Zusammensetzung reichte, an einem `TS2307` in einer
+fremden Datei. Der Typ wird jetzt aus dem Query Builder abgeleitet.
+
+#### Der Kehrbesen
+
+`tools/upload-sweep/sweep.mjs`, das fünfte Werkzeug unter `tools/` und das
+einzige, das an der API vorbeigreift — weil die Frage, die es stellt, keine API
+beantwortet: welche Bytes liegen im Volume, auf die keine Zeile zeigt.
+`AttachmentsService` gleicht Datenbank und Volume zugunsten der **Bytes** aus,
+und die Folge stand seit Phase 1 in seinem Klassenkommentar: ein Absturz
+zwischen zwei Schritten kann eine Datei hinterlassen, die niemand mehr
+erreicht.
+
+Drei Dinge daran sind Entscheidungen und keine Umsetzungsdetails:
+
+- **Sechs Spalten, nicht eine.** `todo.md` nannte `attachment.file_path`; mit
+  nur der wäre jedes Logo und jeder Avatar „vergessen". Gelesen werden
+  `attachment.file_path`, beide Spalten von `app_config`,
+  `event_series.logo_path`, `event.logo_path` und `user_profile.avatar_path`.
+- **Er urteilt nicht über ein Schema, das er nicht ganz kennt.** Vor dem ersten
+  Vergleich fragt er `information_schema`, welche Spalten nach einem Pfad
+  aussehen; findet er eine, die er nicht kennt, meldet er **gar nichts**. Sonst
+  wäre die erste Tabelle eines neuen Moduls, die eine Datei speichert, eine
+  Liste von „verwaisten" Dateien — und jemand löscht sie.
+- **Er löscht nichts, und er meldet in beide Richtungen.** Die Gegenrichtung
+  (eine Zeile, deren Datei fehlt) ist die ernstere Hälfte: sie ist ein
+  Download, der einem Veranstalter 404 antwortet, und der Server sagt das erst,
+  wenn zufällig jemand fragt.
+
+Dazu eine Karenzzeit von fünfzehn Minuten, weil `store()` erst die Datei und
+dann die Zeile schreibt — ohne sie meldete der Lauf auf einer beschäftigten
+Instanz ihre eigenen laufenden Uploads.
+
+#### Und dann die Probe
+
+Jeder behobene Befund hat einen Wächter, und jeder Wächter wurde einmal
+absichtlich gebrochen:
+
+| Mutation                                                         | Was rot wird                                            |
+| ---------------------------------------------------------------- | ------------------------------------------------------- |
+| `@Controller('admin/attachments')` → `@Controller('downloads')`  | Inventar, mit `+ "GET /api/downloads/:id"`              |
+| `ALTER TABLE "plugin_forum_thread"` → `ALTER TABLE "admin_user"` | Schema-Wächter, mit Datei- und Tabellennamen            |
+| `this.form.reset()` aus der Kontoseite entfernt                  | „sendet beide Passwörter und leert danach das Formular" |
+
+#### Was anders lief
+
+**Die Frage des Pakets hatte eine Antwort, die nicht auf der Liste stand.** Vier
+Bereiche waren benannt, und der schwerste Befund lag in keinem davon dort, wo
+man ihn gesucht hätte: nicht in einem Wächter, einem Token oder einer
+Signaturprüfung — sondern in einer Route, die es nicht gab. „Ein Veranstalter
+kann sein Passwort nicht ändern" findet man nicht, indem man Code liest, in dem
+etwas falsch ist; man findet es, indem man den Controller aufmacht und
+nachzählt, was er kann.
+
+**Und ein Fund kam aus einer anderen Frage.** Die Content-Security-Policy stand
+in keinem der vier Bereiche. Sie fiel beim Nachlesen der OpenAPI-Frage an:
+„Swagger UI läuft im Ursprung des Veranstalter-Clients" führt sofort zu „und
+was schützt diesen Ursprung eigentlich" — und die Antwort war: drei Kopfzeilen,
+von denen keine sagt, woher ein Skript kommen darf. Ein Review, das seine vier
+Bereiche abarbeitet und nur die vier, hätte das nicht gesehen.
+
+**Das Inventar wollte über den Modulgraphen laufen und ging daran kaputt.** Der
+erste Versuch importierte `AppModule` — und scheiterte an `TS2307` in
+`typeorm-content-translation.repository.ts`, einer Datei, die mit Adressen
+nichts zu tun hat: ein tiefer Typ-Import in `typeorm` hinein, den der
+Anwendungsbuild auflöst und die Spec-Übersetzung nicht. Behoben ist beides —
+der Import und die Falle in `docs/rules/tooling-traps.md` —, aber der Test
+liest jetzt trotzdem den Quellbaum, und aus besseren Gründen als dem Unfall:
+er braucht die Datenzugriff-Schicht nicht, und er überschätzt in die sichere
+Richtung.
+
+**Ein Lauf ohne `--parallel=1` beweist nichts, und er sagt es nicht.** Der
+erste Volldurchlauf dieses Pakets lief mit Nx' Vorgabe, also fuhren die drei
+E2E-Projekte gleichzeitig gegen einen Server. Was dabei herauskam, sah nach
+einem kaputten Katalog aus: `keyCount` war **4** statt 1288, `enabledModules`
+war `undefined`, eine Suite brach mit `ECONNREFUSED` ab. Die Ursache ist der
+**globale** Zähler — 300 Anfragen je Minute, und bewusst der einzige, den das
+Testprofil **nicht** anhebt (E4). Die CI ruft seit jeher `--parallel=1` auf; die
+Regel stand nur nicht dabei, warum. Jetzt steht sie in
+`docs/rules/e2e-tests.md`.
+
+**Ein Test von AP 8 war flackerig, und der Volldurchlauf hat es gezeigt.** „Die
+Lade schiebt die Seite nicht" verglich den ganzen Kasten von `main` vor und
+nach dem Öffnen — und die Reihenliste lädt weiter, während gemessen wird, also
+wuchs die Höhe zwischen den zwei Messungen von 976 auf 16536 Pixel. Auf einer
+Datenbank mit wenigen Zeilen fällt das nie auf. Verglichen werden jetzt `x`,
+`y` und `width`: ein Schieben zeigte sich in denen, die Höhe sagt dazu nichts.
+
+#### Der Stand nach diesem Paket
+
+`nx run-many -t lint test build` grün über **19 Projekte**. Unit-Tests:
+**1395** im Server (fünfzehn neu: drei für das Adressinventar, drei für das
+Plug-in-Schema, zwei für die Entscheidung über die API-Konsole, fünf für den
+Passwortwechsel und zwei dafür, dass „alle anderen Sitzungen" die richtige
+Sitzung stehen lässt), **244** im Veranstalter-Client (fünf neu: die
+Kontoseite), **282** im Nutzer-Client, **117** in `shared-models`, **50** in
+`shared-i18n` und **33** in `shared-theming` unverändert.
+
+Browsersuiten: **330** in der Veranstaltersuite (321 wie bisher, plus drei
+Tests der Kontoseite über drei Engines), **266** in der Teilnehmersuite, beide
+EXIT=0. Vertragssuite **43** Suiten und **725** Tests (eine Suite und fünf
+Tests neu: der Passwortwechsel auf einem Wegwerfkonto), EXIT=0, genau **drei**
+429 im ganzen Lauf — alle drei von der Drosselungssuite erbeten.
+`tools/shipped-stack/verify.sh` auf `STACK_PORT=8099`: „the shipped stack is
+good", **13** Browsertests (sieben wie bisher, sechs neu: zwei für die
+Kopfzeilen, zwei, die die Seiten öffnen und die Konsole lesen, zwei für die
+Beschreibung und die fehlende Konsole), zweimal gefahren — der erste Lauf
+(121 s) mit zwei roten, die das Aufschieben des Stylesheets fanden, der zweite
+(85 s) grün —, keine Container übrig.
+
+Der Kehrbesen ist gegen dieselbe Instanz gefahren, mit drei Proben: eine
+künstlich verwaiste Datei neben einem hochgeladenen Logo — **genau die eine**
+wird genannt, das Logo nicht (`EXIT=2`); dann das Logo aus dem Volume gelöscht
+— beide Richtungen werden gemeldet, die Zeile mit ihrem Besitzer
+(`branding/… (app_config 1)`); und eine Spalte `event.brochure_path`
+hinzugefügt — der Lauf meldet **gar nichts** und bricht mit `EXIT=1` ab, weil
+er ein Schema nicht beurteilt, das er nicht ganz kennt. Die Spalte wurde
+danach wieder entfernt.
+
+Der Katalog wächst um **elf** Schlüssel auf **1288** (alle für die Kontoseite,
+einer davon der Satz, dass es kein Zurücksetzen gibt). In `todo.md` sind zwei
+Haken dazugekommen — das Sicherheitsreview und der Kehrbesen — und **drei**
+Einträge: kein Weg, eine Lücke zu melden (der Kanal ist eine Entscheidung, die
+hier niemand treffen kann); das Zahlenpaar von Proxy und Anwendung, das ein
+Kommentar zusammenhält; und der Health-Endpunkt, der selbst mit der Datenbank
+spricht — der letzte **vor AP 12**, das die Architektur beschreibt und nichts
+beschreiben darf, was nicht stimmt.

@@ -1,7 +1,15 @@
 import { ExecutionContext, SetMetadata } from '@nestjs/common';
 import type { Reflector } from '@nestjs/core';
 
-const ALLOW_ANONYMOUS_METADATA = 'trefaro:allowAnonymous';
+/**
+ * The key under which the mark is stored.
+ *
+ * Exported since AP 9 of phase 5 for one reader that has no
+ * `ExecutionContext` to ask with: the route inventory, which reads the
+ * declarations of every controller in the image rather than a request
+ * passing through one (`app/route-access.spec.ts`).
+ */
+export const ALLOW_ANONYMOUS_METADATA = 'trefaro:allowAnonymous';
 
 /**
  * Marks a route below a guarded prefix as reachable without a session.

@@ -506,5 +506,26 @@ conversations` ist der Fall: Lesen und Antworten sind FR 3.4 und damit **P1**,
   abgelaufen, verbraucht, vom Profil überholt. Für den Menschen mit dem Link
   sind sie eine Lage mit einer Antwort (neuen anfordern), und auseinanderhalten
   hieße sagen, ob es zu der Adresse ein Konto gibt.
+- **Wer einen Endpunkt anlegt, ändert eine Liste** (AP 9 der Phase 5, F227).
+  `apps/server/src/app/route-access.spec.ts` kennt jede Adresse dieses Images
+  und vergleicht die **offenen** mit einer eingecheckten Liste. Eine neue Route
+  unter `admin/`, `participant/` oder `user/` merkt der Test gar nicht; eine
+  unter einem neuen Präfix — oder mit `@AllowAnonymous()` — macht ihn rot, und
+  der Ausweg ist die Liste zu erweitern **und daneben zu schreiben, warum**.
+  Das ist Absicht: die Wächter entscheiden am deklarierten Pfad, also ist ein
+  offener Endpunkt keine fehlende Zeile, sondern eine Zeile, die niemandem
+  auffällt.
+- **Eine Route über das eigene Konto nimmt keine Id** (F228). `admin/me` und
+  `participant/me` sind eigene Controller neben `admin/admins` und der
+  Profilverwaltung, und der Unterschied ist nicht Ordnung: dort ist das Subjekt
+  jemand anderes und kommt aus einer Tabelle, hier ist es die Sitzung. Ein
+  Passwortwechsel, der eine Id annähme, wäre eine fehlende Prüfung davon
+  entfernt, das Passwort einer Kollegin zu setzen.
+- **Ein 401, der „das Passwort im Body stimmt nicht" heißt, gehört in die
+  Sondenliste des Clients.** Beide Clients lesen sonst jeden 401 als abgelaufene
+  Sitzung und melden ab — bei einem Tippfehler im Feld „aktuelles Passwort" ist
+  das die falsche Antwort. `AUTH_PROBE_PATHS` (Veranstalter) und
+  `PARTICIPANT_PROBE_PATHS` (Teilnehmer) führen die Ausnahmen, und der
+  Passwortwechsel steht in beiden.
 
 Siehe auch: [Schichten und Ports im Server](server-layers.md), [Mehrsprachigkeit und Katalog](i18n.md).

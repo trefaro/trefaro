@@ -28,6 +28,7 @@ werden müssen:
 | Phase 4: Pakete, E46–E59, F186–F202, Stand je Paket       | **`docs/PHASE4.md`** (Plan oben, _Fortschritt_ unten)                                     |
 | Phase 5: Pakete, E60–E71, F203 ff., Stand je Paket        | **`docs/PHASE5.md`** (Plan oben, _Fortschritt_ unten)                                     |
 | Installation, TLS, Betrieb                                | `docs/INSTALL.md`                                                                         |
+| Was das Sicherheitsreview ansah und entschied             | **`docs/SECURITY-REVIEW.md`** (Befund und Entscheidung je Punkt, AP 9 der Phase 5)        |
 | Offene Punkte, bekannte Lücken, Pilotpartner-Fragen       | `todo.md` (nach Phase gruppiert, nach jeder Phase durchgehen)                             |
 | Diagramme der Thesis                                      | `docs/thesis/`                                                                            |
 | **Regeln, die man beim Bauen braucht**                    | **`docs/rules/`** (Index in `docs/rules/README.md`)                                       |
@@ -150,7 +151,9 @@ Regel steht in `docs/rules/README.md`.
   Anmeldungen gehen, Gespräche und Forum-Themen bleiben und benennen niemanden
   mehr). Externe Medien werden
   verlinkt, nie eingebettet (kein fremder Code auf einer Seite, die das Gegenteil
-  verspricht).
+  verspricht) — seit AP 9 der Phase 5 sagt das auch eine Kopfzeile des Proxys:
+  alles `'self'`, `frame-src 'none'`, und `script-src` ohne Ausnahme, was auch
+  für ein Plug-in-Bündel gilt.
 
 ## Prioritäten-Kompass (Umfrageergebnisse)
 
@@ -189,16 +192,16 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    International (Pilotpartner), Doku, Release v1.0 → `docs/PHASE5.md` —
    vierzehn Pakete, **M13–M16**, E60–E71, F203 ff., und jeder der
    zweiunddreißig Einträge aus `todo.md` unter _Checkable after phase 5_ ist
-   einem Paket zugeordnet. **Freigegeben wird Paket für Paket** (AP 1 bis AP 8
+   einem Paket zugeordnet. **Freigegeben wird Paket für Paket** (AP 1 bis AP 9
    sind erledigt, **M13 und M14 sind erreicht**; der Stand je Paket steht unter
    _Fortschritt_). **v1.0 taggt Marius, nicht ein Paket** (E71).
 
 **Der Stand in Zahlen:** Entscheidungen **E1–E59** vergeben (E46–E59 in Phase 4,
-in AP 10 gegen die Umsetzung geprüft); Nachträge **F1–F226** stehen vollständig
+in AP 10 gegen die Umsetzung geprüft); Nachträge **F1–F231** stehen vollständig
 im Referenzdokument (F62 und F129–F131 bleiben unvergeben; F203–F205 kamen in
 AP 2 der Phase 5 dazu, F206–F208 in AP 3, F209–F211 in AP 4, F212–F214 in
-AP 5, F215–F218 in AP 6, F219–F222 in AP 7, F223–F226 in AP 8); Katalog
-**1277** Schlüssel. Was in einem Paket tatsächlich passierte, steht im Phasenprotokoll,
+AP 5, F215–F218 in AP 6, F219–F222 in AP 7, F223–F226 in AP 8, F227–F231 in
+AP 9); Katalog **1288** Schlüssel. Was in einem Paket tatsächlich passierte, steht im Phasenprotokoll,
 und was man beim Bauen daraus braucht, in `docs/rules/` — **hier nicht noch
 einmal.**
 

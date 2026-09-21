@@ -1,6 +1,11 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import type { TrefaroEnv } from '../../core/config/env';
 import { AdminUserService } from './admin-user.service';
+import type { SessionService } from './session.service';
 import type { PasswordHasher } from '../common/password-hasher.service';
 import {
   AdminEmailTakenError,
@@ -47,6 +52,13 @@ class FakeAdminUserRepository implements AdminUserRepository {
     return created;
   }
 
+  async updatePassword(id: string, passwordHash: string): Promise<boolean> {
+    const index = this.rows.findIndex((row) => row.id === id);
+    if (index < 0) return false;
+    this.rows[index] = { ...this.rows[index], passwordHash };
+    return true;
+  }
+
   async delete(id: string): Promise<boolean> {
     const index = this.rows.findIndex((row) => row.id === id);
     if (index < 0) return false;
@@ -63,6 +75,8 @@ describe('AdminUserService', () => {
   let admins: FakeAdminUserRepository;
   let equalized: string[];
   let hasher: PasswordHasher;
+  let revokedOthers: { adminId: string; keep: string }[];
+  let sessions: SessionService;
 
   function serviceWith(env: Partial<TrefaroEnv> = {}): AdminUserService {
     return new AdminUserService(
@@ -72,12 +86,20 @@ describe('AdminUserService', () => {
         ...env,
       } as TrefaroEnv,
       hasher,
+      sessions,
     );
   }
 
   beforeEach(() => {
     admins = new FakeAdminUserRepository();
     equalized = [];
+    revokedOthers = [];
+    sessions = {
+      revokeOthers: (adminId: string, keep: string) => {
+        revokedOthers.push({ adminId, keep });
+        return Promise.resolve();
+      },
+    } as unknown as SessionService;
     hasher = {
       hash: (password: string) => Promise.resolve(`hashed:${password}`),
       verify: (passwordHash: string, password: string) =>
@@ -268,6 +290,95 @@ describe('AdminUserService', () => {
       await service.onApplicationBootstrap();
 
       expect(admins.rows).toHaveLength(0);
+    });
+  });
+
+  describe('changePassword', () => {
+    /** An organizer with a session, the way the guard hands one over. */
+    async function signedIn(): Promise<{
+      admin: AdminUserRecord;
+      sessionId: string;
+    }> {
+      const admin = await admins.create({
+        email: 'organizer@example.org',
+        name: 'Alex Weber',
+        passwordHash: 'hashed:the-old-one-is-long',
+      });
+      return { admin, sessionId: 'session-1' };
+    }
+
+    it('writes the new hash when the current password is right', async () => {
+      const service = serviceWith();
+      const { admin, sessionId } = await signedIn();
+
+      await service.changePassword(
+        { admin, sessionId, lastSeenAt: new Date(), expiresAt: new Date() },
+        {
+          currentPassword: 'the-old-one-is-long',
+          newPassword: 'a-longer-new-secret',
+        },
+      );
+
+      expect(admins.rows[0].passwordHash).toBe('hashed:a-longer-new-secret');
+    });
+
+    it('ends every other session of that account, and not the current one', async () => {
+      const service = serviceWith();
+      const { admin, sessionId } = await signedIn();
+
+      await service.changePassword(
+        { admin, sessionId, lastSeenAt: new Date(), expiresAt: new Date() },
+        {
+          currentPassword: 'the-old-one-is-long',
+          newPassword: 'a-longer-new-secret',
+        },
+      );
+
+      expect(revokedOthers).toEqual([{ adminId: admin.id, keep: 'session-1' }]);
+    });
+
+    it('refuses a wrong current password and changes nothing', async () => {
+      const service = serviceWith();
+      const { admin, sessionId } = await signedIn();
+
+      await expect(
+        service.changePassword(
+          { admin, sessionId, lastSeenAt: new Date(), expiresAt: new Date() },
+          { currentPassword: 'not-it', newPassword: 'a-longer-new-secret' },
+        ),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(admins.rows[0].passwordHash).toBe('hashed:the-old-one-is-long');
+      expect(revokedOthers).toEqual([]);
+    });
+
+    it('refuses a new password the policy does not allow, and keeps the sessions', async () => {
+      const service = serviceWith();
+      const { admin, sessionId } = await signedIn();
+
+      await expect(
+        service.changePassword(
+          { admin, sessionId, lastSeenAt: new Date(), expiresAt: new Date() },
+          { currentPassword: 'the-old-one-is-long', newPassword: 'short' },
+        ),
+      ).rejects.toThrow();
+      expect(admins.rows[0].passwordHash).toBe('hashed:the-old-one-is-long');
+      expect(revokedOthers).toEqual([]);
+    });
+
+    it('answers 404 when the account was deleted while its session lived on', async () => {
+      const service = serviceWith();
+      const { admin, sessionId } = await signedIn();
+      await admins.delete(admin.id);
+
+      await expect(
+        service.changePassword(
+          { admin, sessionId, lastSeenAt: new Date(), expiresAt: new Date() },
+          {
+            currentPassword: 'the-old-one-is-long',
+            newPassword: 'a-longer-new-secret',
+          },
+        ),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 });

@@ -33,6 +33,26 @@ export interface AdminSessionRepository {
   /** Slides the idle timeout forward for a session that is being used. */
   touch(sessionId: string, seenAt: Date, expiresAt: Date): Promise<void>;
   deleteByTokenHash(tokenHash: string): Promise<void>;
+  /**
+   * Ends every session of one administrator but the one asking (AP 9).
+   *
+   * The twin of `UserSessionRepository.deleteForUserExcept`, and it exists for
+   * the same reason: somebody who changes their password because a device is
+   * not theirs any more has said something about that device, not only about
+   * the password. The session they are looking at survives, so the screen does
+   * not log itself out while it reports success.
+   *
+   * There is no `deleteForAdmin` beside it, unlike on the participant side:
+   * an organizer's account has no reset link and no way to lose every session
+   * at once except being deleted, and that already ends them — `admin_session`
+   * hangs on `admin_user` with `ON DELETE CASCADE`.
+   *
+   * @returns how many were ended, for the log line — nobody is shown a count.
+   */
+  deleteForAdminExcept(
+    adminUserId: string,
+    keepSessionId: string,
+  ): Promise<number>;
   /** Housekeeping — expired rows are dead weight, not a security problem. */
   deleteExpired(now: Date): Promise<number>;
 }

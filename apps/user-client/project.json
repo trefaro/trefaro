@@ -5,6 +5,7 @@
   "prefix": "trefaro",
   "sourceRoot": "apps/user-client/src",
   "tags": ["scope:user-client", "type:app"],
+  "// build": "`optimization.styles.inlineCritical` is off on purpose (AP 9 of phase 5). With it on, Angular defers the stylesheet as `<link rel=\"stylesheet\" media=\"print\" onload=\"this.media='all'\">` \u2014 and the content security policy the proxy sets refuses an inline event handler, so the handler never runs, the sheet stays `media=print`, and the page renders with the inlined fragment alone. Found by `apps/stack-e2e/src/security-headers.spec.ts`, which opens both clients and reads the console. The policy is not the thing to loosen: `'unsafe-hashes'` plus the hash of `this.media='all'` would buy a few milliseconds of first paint on an application whose first paint waits for `/api/config` anyway.",
   "targets": {
     "build": {
       "executor": "@angular/build:application",
@@ -41,7 +42,15 @@
             }
           ],
           "outputHashing": "all",
-          "serviceWorker": "apps/user-client/ngsw-config.json"
+          "serviceWorker": "apps/user-client/ngsw-config.json",
+          "optimization": {
+            "scripts": true,
+            "styles": {
+              "minify": true,
+              "inlineCritical": false
+            },
+            "fonts": true
+          }
         },
         "development": {
           "optimization": false,
