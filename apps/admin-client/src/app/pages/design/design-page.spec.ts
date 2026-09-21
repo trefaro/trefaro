@@ -6,6 +6,7 @@ import type {
   AppConfig,
   AppConfigChange,
   AppConfigSettings,
+  BrandingState,
 } from '@trefaro/shared-models';
 import { signal } from '@angular/core';
 import { ConfigAdminService } from '../../features/config/config-admin.service';
@@ -55,15 +56,27 @@ interface PageInternals {
   discard: () => void;
   reread: () => Promise<void>;
   error: () => Problem | null;
+  iconNote: () => string | null;
+  iconUnusable: () => boolean;
 }
 
 class FakeConfigAdminService {
   settings: AppConfigSettings = { ...STORED };
   readonly patches: AppConfigChange[] = [];
   failWith: unknown = null;
+  /** What the server holds, including the size it read out of the icon. */
+  images: BrandingState = {
+    logoUrl: null,
+    appIconUrl: null,
+    appIconSize: null,
+  };
 
   getSettings(): Promise<AppConfigSettings> {
     return Promise.resolve({ ...this.settings });
+  }
+
+  readImages(): Promise<BrandingState> {
+    return Promise.resolve({ ...this.images });
   }
 
   updateSettings(change: AppConfigChange): Promise<AppConfigSettings> {
@@ -92,8 +105,9 @@ describe('DesignPage', () => {
   let admin: FakeConfigAdminService;
   let config: FakeAppConfigService;
 
-  async function render() {
+  async function render(images?: Partial<BrandingState>) {
     admin = new FakeConfigAdminService();
+    if (images) admin.images = { ...admin.images, ...images };
     config = new FakeAppConfigService();
     TestBed.configureTestingModule({
       providers: [
@@ -101,6 +115,16 @@ describe('DesignPage', () => {
           'admin.design.tooPale':
             'Below {{ratio}}:1 against the page — the menu, the buttons and ' +
             'every link drawn in this colour will be hard to make out.',
+          'admin.design.iconUsable':
+            '{{width}} × {{height}} pixels — this is the icon a home screen ' +
+            'shows.',
+          'admin.design.iconUnusable':
+            'This image is {{width}} × {{height}} pixels, so a home screen ' +
+            'will not show it: an app icon has to be square and at least ' +
+            '{{min}} pixels.',
+          'admin.design.iconSizeUnknown':
+            'This file does not state its size, so nothing here can tell ' +
+            'whether a home screen will use it.',
         }),
         { provide: ConfigAdminService, useValue: admin },
         { provide: AppConfigService, useValue: config },
@@ -108,8 +132,10 @@ describe('DesignPage', () => {
     });
     const fixture = TestBed.createComponent(DesignPage);
     fixture.detectChanges();
-    // The settings are fetched in the constructor.
-    await Promise.resolve();
+    // The settings and the two images are fetched in the constructor, and one
+    // `Promise.all` of two of them is several microtasks deep — so this waits
+    // for a macrotask, which is after all of them, rather than counting ticks.
+    await new Promise((resolve) => setTimeout(resolve));
     fixture.detectChanges();
     return {
       fixture,
@@ -291,5 +317,63 @@ describe('DesignPage', () => {
     await page.reread();
 
     expect(config.reloads).toBe(1);
+  });
+
+  describe('what the app icon will be used for (F224)', () => {
+    it('says nothing while no icon is uploaded', async () => {
+      const { page } = await render();
+
+      expect(page.iconNote()).toBeNull();
+      expect(page.iconUnusable()).toBe(false);
+    });
+
+    it('names the size of an icon a home screen will show', async () => {
+      const { page } = await render({
+        appIconUrl: '/api/media/branding/app-icon?v=1',
+        appIconSize: { width: 512, height: 512 },
+      });
+
+      expect(page.iconNote()).toBe(
+        '512 × 512 pixels — this is the icon a home screen shows.',
+      );
+      expect(page.iconUnusable()).toBe(false);
+    });
+
+    it('says why a letterhead logo will not be one', async () => {
+      // The case the todo list has been carrying since AP 12 of phase 2: an
+      // organizer uploads the logo they have, and the manifest quietly keeps
+      // the Trefaro icons beside it.
+      const { page, text } = await render({
+        appIconUrl: '/api/media/branding/app-icon?v=1',
+        appIconSize: { width: 500, height: 120 },
+      });
+
+      expect(page.iconUnusable()).toBe(true);
+      expect(page.iconNote()).toContain('500 × 120 pixels');
+      expect(page.iconNote()).toContain('at least 144 pixels');
+      // And it is on the page, not only in a signal.
+      expect(text()).toContain('500 × 120 pixels');
+    });
+
+    it('calls a square icon below the floor unusable too', async () => {
+      const { page } = await render({
+        appIconUrl: '/api/media/branding/app-icon?v=1',
+        appIconSize: { width: 64, height: 64 },
+      });
+
+      expect(page.iconUnusable()).toBe(true);
+    });
+
+    it('says what it does not know rather than guessing', async () => {
+      // A header that states no size is not a bad icon; it is an unanswered
+      // question, and the manifest treats it as one.
+      const { page } = await render({
+        appIconUrl: '/api/media/branding/app-icon?v=1',
+        appIconSize: null,
+      });
+
+      expect(page.iconUnusable()).toBe(false);
+      expect(page.iconNote()).toContain('does not state its size');
+    });
   });
 });

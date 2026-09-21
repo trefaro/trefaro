@@ -1409,6 +1409,19 @@ Kontrast reicht.
 (E49): Name in `shared-models`, Pfad in `shared-theming`, keiner ohne den
 anderen.
 
+**5. Und der Punkt, den `todo.md` diesem Paket zugewiesen hatte.** Zwei
+Eigenschaften nannte nur der Veranstalter-Client, jede mit einem festen
+Rückfall dahinter — was die Seite richtig hält und die Frage verdeckt (F222).
+Die Antwort war einmal so und einmal so: `--trefaro-color-surface-muted` wird
+jetzt ausgeliefert, und mit ihr eine dritte, die der Eintrag nicht nannte
+(`--trefaro-color-text-muted`, fünfmal in den Übersetzungseditoren); beide sind
+neutral, und ein Test hält fest, dass die leisere Schrift auf der Seite **und**
+auf der leiseren Fläche 4,5:1 erreicht. `--trefaro-color-surface-accent` ist
+dagegen **weg**: eine gewählte Zeile in der Einladungsliste ist akzentgetönt,
+und `--trefaro-color-accent-soft` ist genau das und wird seit jeher
+ausgeliefert. Eine erfundene Eigenschaft weniger, und die gewählte Zeile trägt
+jetzt die Farbe der Organisation.
+
 #### Und dann der Wächter
 
 `apps/user-client-e2e/src/design.spec.ts`, zwei Tests, ein eigenes
@@ -1514,3 +1527,228 @@ wurde — drei Läufe hintereinander rot, allein gefahren grün. Behoben wie in
 `start-up.spec.ts` seit AP 6 der Phase 4: der Test fängt die Antwort ab, die
 **diese** Seite bekommen hat (`page.waitForResponse` vor `goto`), und vergleicht
 nur noch das DOM dagegen. Danach: vier Läufe, der letzte grün mit 266.
+
+### AP 8 — Der Veranstalter-Client bis zur Tablet-Breite (E67) (erledigt, 21.09.2026)
+
+Dasselbe Vorgehen wie in AP 7 und ein anderer Maßstab: für diesen Client hat
+die Thesis **keine Bögen gezeichnet**, also ist der Maßstab die Benutzbarkeit
+bei 768 Pixeln und nicht ein Bild. Gezählt sind es **zweiundzwanzig Seiten**
+(der Plan sagte achtzehn; unter `pages/` liegen neunzehn Verzeichnisse, und
+vier davon enthalten mehr als eine Seite — `series` drei, `messages` zwei,
+`translations` zwei). Behoben sind die drei Dinge, die das Paket benannt hat,
+ein Boden für Bedienelemente, den die Messung gefunden hat, und der Satz, den
+`todo.md` der Design-Seite seit AP 12 der Phase 2 schuldet. Bewacht wird das
+Ergebnis von einem vierten Playwright-Projekt bei 768 × 1024.
+
+#### Erst die Bestandsaufnahme
+
+Wieder im Browser statt mit dem Auge: eine Wegwerf-Suite fuhr **jede** Seite bei
+**768 und 1280** Pixeln an und protokollierte je Seite vier Dinge — die Breite
+des Dokuments gegen die des Fensters, die innersten Elemente, die über den
+rechten Rand ragen, jede Tabelle mit ihrer Spaltenzahl und der Breite ihres
+Rahmens, und jedes Bedienelement unter 24 Pixeln. Dazu ein Bildschirmfoto je
+Seite bei 768. Die Suite ist wieder weg; ihr Ergebnis ist die Tabelle unten.
+
+Drei Befunde, und der erste ist der, der die Richtung des ganzen Pakets
+geändert hat:
+
+- **Keine Seite scrollt seitwärts — und das ist nicht die gute Nachricht, die
+  es in AP 7 war.** Eine Tabelle läuft nicht über, sie wird **gequetscht**: die
+  Teilnehmerübersicht presste sieben Spalten in 736 Pixel, jede Adresse stand
+  dreizeilig, „Newsletter" und „Profile" berührten sich ohne Lücke, und eine
+  Zeile mit einer Zeile Inhalt war 57 Pixel hoch. Gemessen ist das eine Null;
+  gelesen ist es unbrauchbar. Ein Rahmen zum Scrollen allein hätte daran nichts
+  geändert — eine Tabelle ohne Mindestbreite schrumpft, statt zu scrollen. Es
+  gehören beide Hälften dazu (F225).
+- **Die Seitenleiste wurde nicht weggeschoben, sondern gestapelt.** Bei 768
+  standen neun Einträge, der Sprachumschalter, der Name des Kontos und
+  „Abmelden" als grünes Band **über** dem Inhalt: 190 Pixel, an denen man auf
+  jeder Seite vorbeiscrollt, bevor die Überschrift kommt.
+- **Was das Paket vorhergesagt hat und die Messung nicht gefunden hat: die
+  Formularraster.** Im ganzen Client gibt es zwei `grid-template-columns` —
+  eines ist schon `auto-fit`, das andere ist die zweispaltige Detailliste der
+  Teilnehmerübersicht (`max-content 1fr`), und die passt. Es gab nichts
+  umzubrechen, und es wurde nichts umgebrochen.
+
+Dazu, was die Messung an Bedienelementen fand: Knöpfe mit 21 Pixeln Höhe auf
+sechs Seiten (ihr Innenabstand sagt `0.3rem`), Kästchen mit den 13 Pixeln des
+Browsers auf fünf, ein Dateifeld mit 21. Mit der Maus auf einem großen
+Bildschirm fällt das nicht auf; bei 768 auf einem Tablet ist jedes davon ein
+Verstoß gegen WCAG 2.2 SC 2.5.8, die 24 Pixel verlangt (F226).
+
+#### Die Tabelle
+
+Eine Zeile je Seite, alle zweiundzwanzig, dazu eine für die Hülle, die auf
+jeder von ihnen steht. Gemessen bei 768.
+
+| Seite (Datei unter `apps/admin-client/src/app/`)        | Bei 768 gemessen                                                                         | Entscheidung                                                                                             |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Hülle (`app.html`, `app.scss`)                          | Menü als 190 Pixel hohes Band über dem Inhalt; kein Weg, es wegzuklappen                 | **behoben**: Lade über dem Inhalt, Leiste mit einem Knopf, der sie öffnet und schließt (F223)            |
+| `pages/login/login-page.ts`                             | Nichts über dem Rand, kein zu kleines Element; Karte `min(24rem, 100%)`                  | **unverändert** — eine Karte, die nie breiter wird als ihr Platz                                         |
+| `pages/setup/setup-page.ts`                             | Nur erreichbar, solange die Instanz keinen Administrator hat; `min(34rem, 100%)`         | **unverändert**; gelesen statt gemessen, und die Breite kann nicht überlaufen                            |
+| `pages/series/series-list-page.ts`                      | Tabelle mit vier Spalten, auf 736 gequetscht                                             | **behoben**: Rahmen und Mindestbreite 40rem                                                              |
+| `pages/series/series-form-page.ts` (neu und bearbeiten) | Formular einspaltig, passt; ein Feld 21 Pixel hoch                                       | **behoben**: Boden für Bedienelemente                                                                    |
+| `pages/series/series-detail-page.ts`                    | Zwei Tabellen mit fünf Spalten; ein Link 22 Pixel                                        | **behoben**: Rahmen und 40rem. Der Link bleibt — er ist Text (F226)                                      |
+| `pages/translations/series-translations-page.ts`        | „Übersetzung speichern" 21 Pixel hoch                                                    | **behoben**: Boden                                                                                       |
+| `pages/invitations/invitations-page.ts`                 | Zwei Tabellen mit fünf Spalten; Suchknopf 21, zwei Kästchen 13, vier weitere Knöpfe 21   | **behoben**: Rahmen und 44rem, Boden                                                                     |
+| `pages/events/event-form-page.ts` (neu und bearbeiten)  | Formular einspaltig, passt; zwei Kästchen 13 Pixel, ein Feld 21                          | **behoben**: Boden — und die eigene Regel der Seite, die den Boden überschrieben hat, ist weg            |
+| `pages/event-dashboard/event-dashboard-page.ts`         | Kachelraster `auto-fit` bricht schon um; Tabelle mit vier Spalten                        | **behoben**: Rahmen und 36rem. Das Raster bleibt, wie es ist                                             |
+| `pages/participants/participants-page.ts`               | Sieben Spalten in 736 Pixeln, Adressen dreizeilig, zwei Kopfzellen ohne Lücke            | **behoben**: Rahmen und **56rem** — die Adressspalte bleibt, und die Tabelle bewegt sich statt der Seite |
+| `pages/translations/event-translations-page.ts`         | Zwei „Übersetzung speichern" mit 21 Pixeln                                               | **behoben**: Boden                                                                                       |
+| `pages/program/program-page.ts`                         | Zwei Kästchen 13 Pixel; die Anmeldeliste je Punkt ist eine Tabelle in einer Karte        | **behoben**: Boden; Rahmen und 22rem für die kleine Tabelle                                              |
+| `pages/media-links/media-links-page.ts`                 | Nichts über dem Rand, nur Textlinks unter 24 Pixeln                                      | **unverändert**                                                                                          |
+| `pages/registration-fields/registration-fields-page.ts` | Ein Kästchen 18 Pixel (die Seite setzt es selbst auf 1,1rem)                             | **behoben**: die eigene Regel ist weg, der Boden gilt                                                    |
+| `pages/messages/messages-page.ts`                       | Liste, nichts über dem Rand; „Neue Gruppe" 21 Pixel                                      | **behoben**: Boden                                                                                       |
+| `pages/messages/conversation-page.ts`                   | Nichts über dem Rand, kein zu kleines Element, bei 768 wie bei 1280                      | **unverändert**                                                                                          |
+| `pages/newsletter/newsletter-page.ts`                   | Tabelle mit drei Spalten                                                                 | **behoben**: Rahmen und 36rem                                                                            |
+| `pages/admins/admins-page.ts`                           | Tabelle mit vier Spalten                                                                 | **behoben**: Rahmen und 40rem                                                                            |
+| `pages/design/design-page.ts`                           | Zwei Farbfelder 21 Pixel hoch; zum App-Symbol sagt die Seite nichts                      | **behoben**: Boden — und der Satz, den die Seite schuldete (F224)                                        |
+| `pages/modules/modules-page.ts`                         | Tabelle mit fünf Spalten, eine davon ein Satz                                            | **behoben**: Rahmen und 44rem                                                                            |
+| `pages/profile-fields/profile-fields-page.ts`           | Ein Kästchen 18 Pixel (dieselbe eigene Regel wie im Registrierungsformular)              | **behoben**: die eigene Regel ist weg                                                                    |
+| `pages/languages/languages-page.ts`                     | Zwei Tabellen mit fünf Spalten, eine davon ein Textfeld je Zeile; vier Kästchen 13 Pixel | **behoben**: Rahmen und 44rem, Boden                                                                     |
+
+#### Dann die Behebung
+
+**1. Die Seitenleiste wird eine Lade** (`app.html`, `app.scss`, `app.ts`).
+Oberhalb der Schwelle ändert sich nichts: die Leiste ist die Spalte, die sie
+war. Unterhalb liegt sie **über** dem Inhalt statt über ihm zu stehen — der
+Inhalt behält die ganze Breite, ob sie offen ist oder nicht —, und eine
+schmale Leiste am oberen Rand trägt den einen Knopf, der sie öffnet und wieder
+schließt. Drei Entscheidungen dazu, alle in F223:
+
+- **Kein `role="dialog"`.** Oberhalb der Schwelle ist dasselbe Element eine
+  dauerhafte Spalte, und eine Rolle, die nur unterhalb wahr wäre, müsste aus
+  TypeScript gesetzt werden — womit die Schwelle an zwei Stellen stünde. Es ist
+  also eine Offenlegung: `aria-expanded` am Knopf, Escape schließt, der Schirm
+  schließt, und die Seite dahinter bleibt eine Seite.
+- **Geschlossen heißt `visibility: hidden`**, nicht „links außerhalb": ein
+  Menü, das man mit der Tabulatortaste erreicht, ohne es zu sehen, ist nicht
+  geschlossen.
+- **Keine Animation.** Eine Bewegung bräuchte eine Ausnahme für
+  `prefers-reduced-motion`, und die wäre die zweite `@media`-Abfrage in einem
+  Client, der eine haben soll. Es ist weiterhin **genau eine** im ganzen
+  Client; die zweite Fundstelle des Wortes `@media` in `app.scss` steht in
+  einem Kommentar.
+
+Geschlossen wird sie außerdem, wenn man **angekommen** ist, und das hängt am
+Router und nicht an einem Klick: ein Plug-in trägt Einträge bei, die diese
+Komponente nie sieht (`NavigationEnd` **und** `NavigationSkipped` — wer den
+Eintrag der Seite wählt, auf der er steht, bekommt kein `NavigationEnd`).
+
+**2. Jede Tabelle bekommt einen Rahmen** (`features/tables/table-scroll.ts`,
+dreizehn Tabellen in zehn Seiten). Zwei Hälften, und die erste ist die, die man
+vergisst: die Seite gibt ihrer Tabelle eine **Mindestbreite**, bei der die
+Spalten lesbar bleiben (36rem bis 56rem, je nachdem, was in ihnen steht), und
+der Rahmen gibt dem Überhang einen Ort. Der Rahmen nennt sich **nur dann**
+Region und ist nur dann ein Tabulatorhalt, wenn er wirklich scrollt: das hängt
+am Inhalt so sehr wie am Fenster, wird also gemessen (ein `ResizeObserver` auf
+dem Rahmen **und** auf der Tabelle) statt an der Breite abgelesen. Bei 1280
+wären es sonst zehn Halte, die nirgendwohin führen.
+
+**3. Ein Boden für Bedienelemente** (`styles.scss`): 24 Pixel, die Zahl aus
+WCAG 2.2 SC 2.5.8 — und nicht die 44 des Nutzer-Clients, denn der ist für einen
+Daumen entworfen und dieser für einen Zeiger, und zehn seiner Seiten sind eine
+Tabelle, in der jeder Pixel je Zeile eine Zeile weniger auf dem Schirm ist
+(F226). Eine Grundregel statt zwanzig Komponentenregeln — und drei Seiten
+mussten ihre eigene aufgeben, weil eine Komponentenregel den Boden schlägt
+(F226, zweiter Absatz).
+
+**4. Der Satz, den die Design-Seite schuldete** (F224). Seit AP 12 der Phase 2
+liest der Server die Maße eines Bildes aus dessen eigenem Kopf (F106), und das
+Manifest entscheidet danach, ob ein hochgeladenes Symbol die mitgelieferten
+ersetzt (F105) — nur gesagt hat das niemand. Jetzt:
+
+- `isInstallableAppIcon` steht in `shared-models`, und **beide** Seiten lesen
+  dieselbe Funktion: der Manifest-Bau und die Design-Seite. Zwei Kopien der
+  Arithmetik wären zwei Antworten auf eine Frage, sobald eine sich bewegt.
+- Die Antwort der beiden Schreibwege trägt die Maße mit (`BrandingState`), und
+  daneben steht ein Lesepfad (`GET /api/admin/config/images`), damit der Satz
+  auch beim Öffnen der Seite dasteht und nicht erst nach dem nächsten Upload.
+  **Nicht** in `/api/config`: dafür müsste jeder Start jedes Clients die Datei
+  öffnen.
+- Auf der Seite sind es drei Sätze — „500 × 120 Pixel, ein Startbildschirm
+  zeigt das nicht, die Symbole von Trefaro bleiben daneben stehen", „256 × 256
+  Pixel, dieses Symbol zeigt ein Startbildschirm", und „diese Datei nennt ihre
+  Größe nicht". Der dritte ist kein Tadel: ein Kopf, der nichts sagt, ist eine
+  offene Frage, und das Manifest behandelt sie auch so.
+
+#### Und dann der Wächter
+
+Ein viertes Playwright-Projekt, `tablet`, bei **768 × 1024**, mit
+`grep: /@layout/`; die drei Maschinenprojekte tragen `grepInvert: /@layout/`.
+Es kostet **kein Budget**: die Sitzung ist die, die der globale Aufbau ohnehin
+einmal anlegt, es registriert niemanden und verschickt keine Mail. Drei Tests —
+sechs Seiten ohne seitwärts scrollende Seite und ohne zu kleines Bedienelement;
+die Teilnehmerübersicht mit ihrer Adressspalte, deren Rahmen scrollt und die
+Seite nicht; und die Lade, die sich öffnet, den Inhalt **nicht verschiebt**, auf
+Escape schließt und den Fokus zurückgibt.
+
+Beide Beweise geführt, in beide Richtungen und wieder zurückgedreht:
+
+| Zurückgedreht                             | Was rot wird                                                                              |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Die `@media`-Abfrage auf `max-width: 1px` | „opens the menu over the page": den Knopf gibt es nicht mehr — 1 von 3 rot                |
+| Der Rahmen auf `overflow-x: visible`      | „participants: 912 wide in 768 — th „Newsletter" → 817; th „Profile" → 912" — 2 von 3 rot |
+
+#### Was anders lief
+
+- **„Kein horizontales Scrollen" war die falsche Frage.** Sie stand so im
+  Paket, und die Messung hat sie mit Null beantwortet, bevor irgendetwas
+  geändert war. Was tatsächlich unbenutzbar war, war die Quetschung — und die
+  sieht man erst auf dem Bildschirmfoto. Die Abhilfe ist deshalb auch nicht
+  „ein Rahmen, der scrollt", sondern „eine Mindestbreite **und** ein Rahmen".
+- **Zwei Handler mussten von Elementen herunter, die keine Bedienelemente
+  sind.** `(keydown.escape)` stand am Layout-`<div>` und `(click)` am `<nav>`
+  (als Delegation für alle Einträge); `@angular-eslint` verbietet beides mit
+  Recht. Das Ergebnis ist besser als das, was da stand: Escape hängt jetzt am
+  **Host** der Komponente (wirkt also, wo der Fokus auch ist), und geschlossen
+  wird bei der **Navigation** statt beim Klick — womit auch die Einträge
+  mitgehen, die ein Plug-in beiträgt.
+- **Ein Kästchen blieb 13 Pixel breit, obwohl die Grundregel 24 sagt.** Drei
+  Seiten setzten `.check input` selbst — zweimal auf `1.1rem`, einmal auf
+  `auto` —, und eine Komponentenregel wird **nach** dem globalen Stylesheet
+  eingehängt, gewinnt also bei gleicher Spezifität. Gefunden hat es der
+  Wächter, im ersten Lauf, mit `13×24 input[checkbox]`. Notiert in
+  `docs/rules/angular-clients.md`.
+- **Und wieder ein Backtick in einem CSS-Kommentar**, diesmal in drei Dateien
+  auf einmal: `` `styles.scss` `` in einem Kommentar innerhalb von `styles:`
+  beendet das Template-Literal. Dieselbe Falle wie in AP 7, dieselbe Abhilfe —
+  keine Backticks in einem Kommentar, der in einem Template-Literal steht.
+- **Was bewusst nicht behoben wurde:** Textlinks unter 24 Pixeln. Ein Name in
+  einer Tabellenzelle und ein „Zurück zur Reihe" sind Text, und Text ist kein
+  Ziel — SC 2.5.8 nimmt sie ausdrücklich aus. Der Wächter misst deshalb Knöpfe,
+  Felder, Auswahllisten und Textbereiche, und keine Links (F226).
+
+#### Der Stand nach diesem Paket
+
+`nx run-many -t lint test build --skip-nx-cache` grün über **19 Projekte**.
+Unit-Tests: **1380** im Server (fünf neu: was `state()` über das App-Symbol
+sagt und dass es die Datei nicht öffnet, solange es keine gibt), **239** im
+Veranstalter-Client (siebzehn neu: sechs für die Hülle, sechs für den Rahmen um
+eine Tabelle, fünf für die drei Sätze zum App-Symbol), **117** in
+`shared-models` (vier neu: die eine Regel, die Server und Seite teilen), **33**
+in `shared-theming` (einer neu: dass die leisere Schrift auf beiden Flächen
+lesbar bleibt), **282** im Nutzer-Client und **50** in `shared-i18n`
+unverändert, dazu die Plug-in-Bündel unverändert.
+
+Browsersuiten: **321** in der Veranstaltersuite (317 wie bisher, plus drei des
+Tablet-Projekts und der Satz zum App-Symbol), **266** in der Teilnehmersuite,
+beide EXIT=0. Vertragssuite **42** Suiten und **720** Tests (zwei neu: die
+Antwort mit den Maßen und die ohne), EXIT=0, genau **drei** 429 im ganzen
+Lauf — alle drei von der Drosselungssuite erbeten.
+`tools/shipped-stack/verify.sh` auf `STACK_PORT=8099`: „the shipped stack is
+good", sieben Browsertests, zweimal gefahren (158 s und, nach den letzten zwei
+Stiländerungen, 102 s), keine Container übrig. Der Katalog wächst um
+**fünf** Schlüssel auf **1277** (zwei für den Knopf der Lade, drei für die
+Sätze zum App-Symbol; der Hinweis über dem Symbol-Feld wurde umgeschrieben, er
+sagte „das kann hier nichts prüfen").
+
+**Keine fremde Zusicherung musste mitgeändert werden.** Die Suiten dieses
+Clients zeigen auf Rollen und Beschriftungen, und die Lade ist bei den Breiten,
+in denen sie laufen, gar nicht da — die Seitenleiste steht dort, wo sie stand.
+
+In `todo.md` sind zwei Haken dazugekommen (die zwei Eigenschaften mit Rückfall,
+der Satz zum App-Symbol) und ein Eintrag: die Lade des **Nutzer**-Clients
+animiert ohne Ausnahme für `prefers-reduced-motion` — aufgefallen beim
+Entscheiden gegen eine Animation hier, und dort kostet die Ausnahme nichts,
+weil jener Client ohnehin mehrere `@media`-Abfragen hat.

@@ -24,6 +24,7 @@ import {
 } from '@trefaro/shared-models';
 import { ConfigAdminService } from '../../features/config/config-admin.service';
 import { TranslationsAdminService } from '../../features/i18n/translations-admin.service';
+import { TableScroll } from '../../features/tables/table-scroll';
 
 /** One row of the editor, with the draft the organizer is typing. */
 interface EditorRow {
@@ -80,7 +81,7 @@ interface LocaleRow {
 @Component({
   selector: 'trefaro-languages-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslocoPipe],
+  imports: [TranslocoPipe, TableScroll],
   template: `
     <h1>{{ 'admin.languages.title' | transloco }}</h1>
     <p class="lead">{{ 'admin.languages.lead' | transloco }}</p>
@@ -102,102 +103,106 @@ interface LocaleRow {
     <section>
       <h2>{{ 'admin.languages.offered' | transloco }}</h2>
 
-      <table [attr.aria-label]="'admin.languages.title' | transloco">
-        <thead>
-          <tr>
-            <th>{{ 'admin.languages.colLanguage' | transloco }}</th>
-            <th>{{ 'admin.languages.colTranslated' | transloco }}</th>
-            <th>{{ 'admin.languages.colOffered' | transloco }}</th>
-            <th>{{ 'admin.languages.colDefault' | transloco }}</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (row of localeRows(); track row.summary.locale) {
-            <tr [class.is-editing]="row.summary.locale === selected()">
-              <td>
-                <strong>{{ row.name }}</strong>
-                <br /><code>{{ row.summary.locale }}</code>
-                @if (!row.summary.shipped) {
-                  <br /><small>
-                    {{ 'admin.languages.addedByOrg' | transloco }}
-                  </small>
-                }
-              </td>
-              <td>
-                <span class="percent">{{ row.percent }}%</span>
-                <br /><small>
-                  {{
-                    'admin.languages.keysOf'
-                      | transloco
-                        : {
-                            translated: row.summary.translated,
-                            total: row.summary.total,
-                          }
-                  }}
-                  @if (row.summary.overrides > 0) {
-                    {{
-                      'admin.languages.writtenHere'
-                        | transloco: { count: row.summary.overrides }
-                    }}
-                  }
-                </small>
-              </td>
-              <td>
-                <label class="tick">
-                  <input
-                    type="checkbox"
-                    [checked]="row.offered"
-                    [disabled]="row.locked || busy() !== null"
-                    (change)="setOffered(row.summary.locale, $event)"
-                  />
-                  <span class="visually-hidden">
-                    {{
-                      'admin.languages.offerVisitors'
-                        | transloco: { name: row.name }
-                    }}
-                  </span>
-                </label>
-              </td>
-              <td>
-                <label class="tick">
-                  <input
-                    type="radio"
-                    name="default-locale"
-                    [checked]="row.isDefault"
-                    [disabled]="!row.offered || busy() !== null"
-                    (change)="setDefault(row.summary.locale)"
-                  />
-                  <span class="visually-hidden">
-                    {{
-                      'admin.languages.makeDefault'
-                        | transloco: { name: row.name }
-                    }}
-                  </span>
-                </label>
-              </td>
-              <td>
-                <button
-                  type="button"
-                  [disabled]="busy() !== null"
-                  (click)="edit(row.summary.locale)"
-                >
-                  {{ 'admin.languages.translate' | transloco }}
-                </button>
-              </td>
-            </tr>
-          } @empty {
+      <trefaro-table-scroll [label]="'admin.languages.offered' | transloco">
+        <table [attr.aria-label]="'admin.languages.title' | transloco">
+          <thead>
             <tr>
-              <td colspan="5">
-                {{
-                  (loading() ? 'common.loading' : 'admin.languages.noLanguage')
-                    | transloco
-                }}
-              </td>
+              <th>{{ 'admin.languages.colLanguage' | transloco }}</th>
+              <th>{{ 'admin.languages.colTranslated' | transloco }}</th>
+              <th>{{ 'admin.languages.colOffered' | transloco }}</th>
+              <th>{{ 'admin.languages.colDefault' | transloco }}</th>
+              <th></th>
             </tr>
-          }
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            @for (row of localeRows(); track row.summary.locale) {
+              <tr [class.is-editing]="row.summary.locale === selected()">
+                <td>
+                  <strong>{{ row.name }}</strong>
+                  <br /><code>{{ row.summary.locale }}</code>
+                  @if (!row.summary.shipped) {
+                    <br /><small>
+                      {{ 'admin.languages.addedByOrg' | transloco }}
+                    </small>
+                  }
+                </td>
+                <td>
+                  <span class="percent">{{ row.percent }}%</span>
+                  <br /><small>
+                    {{
+                      'admin.languages.keysOf'
+                        | transloco
+                          : {
+                              translated: row.summary.translated,
+                              total: row.summary.total,
+                            }
+                    }}
+                    @if (row.summary.overrides > 0) {
+                      {{
+                        'admin.languages.writtenHere'
+                          | transloco: { count: row.summary.overrides }
+                      }}
+                    }
+                  </small>
+                </td>
+                <td>
+                  <label class="tick">
+                    <input
+                      type="checkbox"
+                      [checked]="row.offered"
+                      [disabled]="row.locked || busy() !== null"
+                      (change)="setOffered(row.summary.locale, $event)"
+                    />
+                    <span class="visually-hidden">
+                      {{
+                        'admin.languages.offerVisitors'
+                          | transloco: { name: row.name }
+                      }}
+                    </span>
+                  </label>
+                </td>
+                <td>
+                  <label class="tick">
+                    <input
+                      type="radio"
+                      name="default-locale"
+                      [checked]="row.isDefault"
+                      [disabled]="!row.offered || busy() !== null"
+                      (change)="setDefault(row.summary.locale)"
+                    />
+                    <span class="visually-hidden">
+                      {{
+                        'admin.languages.makeDefault'
+                          | transloco: { name: row.name }
+                      }}
+                    </span>
+                  </label>
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    [disabled]="busy() !== null"
+                    (click)="edit(row.summary.locale)"
+                  >
+                    {{ 'admin.languages.translate' | transloco }}
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5">
+                  {{
+                    (loading()
+                      ? 'common.loading'
+                      : 'admin.languages.noLanguage'
+                    ) | transloco
+                  }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </trefaro-table-scroll>
 
       <p class="actions">
         <button
@@ -307,64 +312,68 @@ interface LocaleRow {
           }
         </p>
 
-        <table
-          class="entries"
-          [attr.aria-label]="'admin.languages.tableEntries' | transloco"
+        <trefaro-table-scroll
+          [label]="'admin.languages.tableEntries' | transloco"
         >
-          <thead>
-            <tr>
-              <th>{{ 'admin.languages.colKey' | transloco }}</th>
-              <th>{{ 'admin.languages.colEnglish' | transloco }}</th>
-              <th>{{ languageName(locale) }}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (row of visibleRows(); track row.entry.key) {
-              <tr [class.is-dirty]="row.dirty">
-                <td>
-                  <code>{{ row.entry.key }}</code>
-                </td>
-                <td class="english">{{ row.entry.english }}</td>
-                <td>
-                  <textarea
-                    rows="2"
-                    [value]="row.draft"
-                    [attr.aria-label]="row.entry.key"
-                    [placeholder]="row.entry.english"
-                    [disabled]="busy() !== null"
-                    (input)="setDraft(row.entry.key, asValue($event))"
-                  ></textarea>
-                </td>
-                <td>
-                  <span [class]="'state state--' + row.entry.state">
-                    {{ stateKey(row.entry.state) | transloco }}
-                  </span>
-                  @if (row.entry.override !== null) {
-                    <br /><button
-                      type="button"
-                      [disabled]="busy() !== null"
-                      (click)="resetKey(row.entry.key)"
-                    >
-                      {{ 'admin.languages.reset' | transloco }}
-                    </button>
-                  }
-                </td>
-              </tr>
-            } @empty {
+          <table
+            class="entries"
+            [attr.aria-label]="'admin.languages.tableEntries' | transloco"
+          >
+            <thead>
               <tr>
-                <td colspan="4">
-                  {{
-                    (detail()
-                      ? 'admin.languages.noKeyMatches'
-                      : 'admin.languages.loadingLanguage'
-                    ) | transloco
-                  }}
-                </td>
+                <th>{{ 'admin.languages.colKey' | transloco }}</th>
+                <th>{{ 'admin.languages.colEnglish' | transloco }}</th>
+                <th>{{ languageName(locale) }}</th>
+                <th></th>
               </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (row of visibleRows(); track row.entry.key) {
+                <tr [class.is-dirty]="row.dirty">
+                  <td>
+                    <code>{{ row.entry.key }}</code>
+                  </td>
+                  <td class="english">{{ row.entry.english }}</td>
+                  <td>
+                    <textarea
+                      rows="2"
+                      [value]="row.draft"
+                      [attr.aria-label]="row.entry.key"
+                      [placeholder]="row.entry.english"
+                      [disabled]="busy() !== null"
+                      (input)="setDraft(row.entry.key, asValue($event))"
+                    ></textarea>
+                  </td>
+                  <td>
+                    <span [class]="'state state--' + row.entry.state">
+                      {{ stateKey(row.entry.state) | transloco }}
+                    </span>
+                    @if (row.entry.override !== null) {
+                      <br /><button
+                        type="button"
+                        [disabled]="busy() !== null"
+                        (click)="resetKey(row.entry.key)"
+                      >
+                        {{ 'admin.languages.reset' | transloco }}
+                      </button>
+                    }
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="4">
+                    {{
+                      (detail()
+                        ? 'admin.languages.noKeyMatches'
+                        : 'admin.languages.loadingLanguage'
+                      ) | transloco
+                    }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </trefaro-table-scroll>
       </section>
     }
   `,
@@ -389,6 +398,9 @@ interface LocaleRow {
       border-collapse: collapse;
       inline-size: 100%;
       font-size: 0.9rem;
+      /* The width the columns stay readable at; below it the frame around
+         this table scrolls rather than the page (AP 8). The widest is the one with a text field per row. */
+      min-inline-size: 44rem;
     }
 
     th,

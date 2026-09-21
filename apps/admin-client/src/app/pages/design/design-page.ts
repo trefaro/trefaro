@@ -10,14 +10,21 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AppConfigService } from '@trefaro/shared-config';
+import { TranslationService } from '@trefaro/shared-i18n';
 import { problemOf, type Problem } from '@trefaro/shared-http';
-import type { AppConfigSettings, Theme } from '@trefaro/shared-models';
+import type {
+  AppConfigSettings,
+  BrandingState,
+  Theme,
+} from '@trefaro/shared-models';
 import {
   DEFAULT_FONT_FAMILY_KEY,
   FONT_FAMILIES,
   HEX_COLOR_PATTERN,
   MAX_ORGANIZATION_NAME_LENGTH,
+  MIN_INSTALLABLE_ICON_PX,
   fontFamilyStack,
+  isInstallableAppIcon,
 } from '@trefaro/shared-models';
 import {
   MIN_DERIVED_TEXT_CONTRAST,
@@ -270,9 +277,11 @@ interface ContrastReading {
         [endpoint]="appIconEndpoint"
         [heading]="'admin.design.iconHeading' | transloco"
         [fileLabel]="'admin.design.iconFileLabel' | transloco"
-        [hint]="'admin.design.iconHint' | transloco"
+        [hint]="'admin.design.iconHint' | transloco: { min: minIconPx }"
         [currentUrl]="appIconUrl()"
         [square]="true"
+        [note]="iconNote()"
+        [noteIsWarning]="iconUnusable()"
         (changed)="reread()"
       />
     </section>
@@ -479,6 +488,10 @@ export class DesignPage {
   private readonly settings = inject(ConfigAdminService);
   private readonly config = inject(AppConfigService);
   private readonly theme = inject(ThemeService);
+  /** For the one sentence this page builds in TypeScript (F72). */
+  private readonly i18n = inject(TranslationService);
+  /** The floor a browser installs from, for the hint above the icon field. */
+  protected readonly minIconPx = MIN_INSTALLABLE_ICON_PX;
 
   /**
    * Where the two branding images go.
@@ -489,14 +502,16 @@ export class DesignPage {
    */
   protected readonly logoEndpoint: ImageEndpoint = {
     upload: async (file) =>
-      void (await this.settings.uploadImage('logo', file)),
-    remove: async () => void (await this.settings.removeImage('logo')),
+      this.images.set(await this.settings.uploadImage('logo', file)),
+    remove: async () =>
+      this.images.set(await this.settings.removeImage('logo')),
   };
 
   protected readonly appIconEndpoint: ImageEndpoint = {
     upload: async (file) =>
-      void (await this.settings.uploadImage('app-icon', file)),
-    remove: async () => void (await this.settings.removeImage('app-icon')),
+      this.images.set(await this.settings.uploadImage('app-icon', file)),
+    remove: async () =>
+      this.images.set(await this.settings.removeImage('app-icon')),
   };
 
   protected readonly loading = signal(true);
@@ -530,6 +545,55 @@ export class DesignPage {
   protected readonly appIconUrl = computed(
     () => this.config.config()?.appIconUrl ?? null,
   );
+
+  /**
+   * What the server holds, as last read or last written (F224).
+   *
+   * The URLs here are the same two the configuration carries; what is not in
+   * the configuration is the app icon's pixel size, which is read out of the
+   * file (F106) and therefore only answered to an administrator.
+   */
+  private readonly images = signal<BrandingState | null>(null);
+
+  /**
+   * Whether the stored icon will be left out of a home screen (F105).
+   *
+   * The rule is `isInstallableAppIcon`, which the server's manifest reads as
+   * well — this page says in words what that function decides in the
+   * document. An unmeasured icon is not called unusable: nothing is known
+   * about it, and the manifest keeps the shipped icons beside it for exactly
+   * that reason.
+   */
+  protected readonly iconUnusable = computed(() => {
+    const size = this.images()?.appIconSize ?? null;
+    return size !== null && !isInstallableAppIcon(size);
+  });
+
+  /**
+   * The sentence under the app icon, or nothing.
+   *
+   * Three cases and three sentences, built here rather than in the field: the
+   * field draws images and knows nothing about home screens. Nothing at all
+   * while no icon is uploaded — the hint above it already says what one is
+   * for, and a second line about an absent picture is noise.
+   */
+  protected readonly iconNote = computed(() => {
+    // Read in the same computation as the words, or a language change would
+    // leave this sentence in the previous one (F72).
+    this.i18n.locale();
+    const state = this.images();
+    if (!state?.appIconUrl) return null;
+
+    const size = state.appIconSize;
+    if (!size) return this.i18n.translate('admin.design.iconSizeUnknown');
+
+    return this.i18n.translate(
+      isInstallableAppIcon(size)
+        ? 'admin.design.iconUsable'
+        : 'admin.design.iconUnusable',
+      { width: size.width, height: size.height, min: MIN_INSTALLABLE_ICON_PX },
+    );
+  });
 
   /** Whether anything in the form differs from what is stored. */
   protected readonly changed = computed(() => {
@@ -651,7 +715,15 @@ export class DesignPage {
 
   private async load(): Promise<void> {
     try {
-      this.adopt(await this.settings.getSettings());
+      // Two reads, in one go: the values of the form, and what the two stored
+      // images are (F224). The second one is what lets the page say something
+      // about an icon that was uploaded before today.
+      const [settings, images] = await Promise.all([
+        this.settings.getSettings(),
+        this.settings.readImages(),
+      ]);
+      this.adopt(settings);
+      this.images.set(images);
     } catch (error: unknown) {
       this.report(error, 'admin.design.errorLoad');
     } finally {

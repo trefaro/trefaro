@@ -20,6 +20,7 @@ export {
   isBrandingImageKind,
   type BrandingImageKind,
   type BrandingImages,
+  type BrandingState,
 } from './branding';
 export { type LogoImage } from './logo';
 export {
@@ -43,6 +44,8 @@ export {
   SHIPPED_APP_ICONS,
   WEB_MANIFEST_MIME_TYPE,
   WEB_MANIFEST_PATH,
+  isInstallableAppIcon,
+  type ImageSize,
   type WebManifest,
   type WebManifestIcon,
 } from './pwa';

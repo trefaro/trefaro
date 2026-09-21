@@ -1302,7 +1302,7 @@ entry, the answer is noted below rather than repeated.
 
 ## Checkable after phase 5 — hardening and release
 
-- [ ] **Two theme properties still exist only in a fallback.** AP 7 published
+- [x] **Two theme properties still exist only in a fallback.** AP 7 published
       the four the participant client was using without anybody setting them
       (F222) — but `--trefaro-color-surface-muted` and
       `--trefaro-color-surface-accent` are still named only in the organizer
@@ -1311,6 +1311,26 @@ entry, the answer is noted below rather than repeated.
       `deriveThemeVariables()` like the others, or the two places that use them
       should say the colour outright. **For AP 8**, which is the organizer
       client's package.
+      **Done in AP 8, and the answer was one of each.**
+      `--trefaro-color-surface-muted` is published now, and so is a third one
+      the entry did not name (`--trefaro-color-text-muted`, used in five
+      places in the translation editors) — both neutral, both with a test that
+      the muted ink still reaches 4.5:1 on the page and on the muted surface.
+      `--trefaro-color-surface-accent` is **gone**: a chosen row in the
+      invitation list is accent-tinted, and `--trefaro-color-accent-soft` is
+      exactly that and has been published all along. One promise fewer that
+      nothing keeps.
+
+- [ ] **The participant client's drawer animates without asking.**
+      `nav-drawer.ts` slides in with `animation: drawer-in 160ms ease-out`, and
+      there is no `prefers-reduced-motion` exception anywhere in that client.
+      160 ms of translation is mild, and the setting exists for people for whom
+      it is not. Noticed in AP 8 while deciding _against_ an animation in the
+      organizer client — there the exception would have been a second
+      `@media` query, which that client is not supposed to have (F223); in the
+      participant client, which has several, it costs nothing. Verify: with
+      "reduce motion" on in the system settings, the drawer appears without
+      travelling.
 
 - [ ] **The contrast the design project guards is 3:1, not 4.5:1.** The check
       added in AP 7 catches text written in the colour it stands on — it was
@@ -1420,7 +1440,7 @@ entry, the answer is noted below rather than repeated.
       second key. Verify with the pilot partner first: a form with three
       questions in two languages may or may not be something anybody asks for.
 
-- [ ] **The design page could now say when an app icon is unusable.** Since
+- [x] **The design page could now say when an app icon is unusable.** Since
       AP 12 the server can read an image's dimensions out of its own header
       (F106) — which is exactly what the manifest uses to decide whether an
       uploaded icon may replace the shipped set (F105). The design page still
@@ -1436,6 +1456,14 @@ entry, the answer is noted below rather than repeated.
       whose first upload is also the best evidence for what the sentence should
       say. Nothing about it got harder to do in the meantime: `imageDimensions`
       is there, and the upload answer is the only thing that has to grow.
+      **Done in AP 8 of phase 5** (F224), and it grew by one more thing than
+      predicted: the upload answer carries the two numbers (`BrandingState`),
+      and so does a read of its own (`GET /api/admin/config/images`) — without
+      it the sentence would only ever appear to somebody who had just uploaded
+      something, not to somebody opening the page. The rule itself moved to
+      `shared-models` (`isInstallableAppIcon`), so the manifest and the page
+      cannot disagree. Three sentences: it will be used, it will not and why,
+      or the file does not state its size.
 
 - [x] **The server refuses in English, whatever language the page is in.** Since
       AP 8 and AP 9 of phase 2 both clients say their own half from the catalogue

@@ -44,6 +44,23 @@ const png = (padding = 64): Buffer =>
 const jpeg = (padding = 64): Buffer =>
   Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(padding, 0x7b)]);
 
+/**
+ * A PNG whose IHDR chunk really states a size — what F106's arithmetic reads.
+ *
+ * The plain `png()` above is a signature and padding, which is enough for every
+ * question about *serving* an image and answers nothing about its shape. This
+ * one is for the two answers that carry a size.
+ */
+const measurablePng = (width: number, height: number): Buffer => {
+  const bytes = Buffer.alloc(24);
+  png(16).copy(bytes);
+  bytes.writeUInt32BE(13, 8);
+  bytes.write('IHDR', 12, 'latin1');
+  bytes.writeUInt32BE(width, 16);
+  bytes.writeUInt32BE(height, 20);
+  return bytes;
+};
+
 /** A zip archive's local file header — a `.zip` and a `.docx` start with it. */
 const zip = (): Buffer =>
   Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.alloc(64)]);
@@ -51,6 +68,7 @@ const zip = (): Buffer =>
 interface BrandingImages {
   logoUrl: string | null;
   appIconUrl: string | null;
+  appIconSize: { width: number; height: number } | null;
 }
 
 interface PublicConfig {
@@ -281,6 +299,42 @@ describe('the branding images', () => {
     const logo = await fetchImage(config.theme.logoUrl ?? '');
     expect(logo.bytes.equals(jpeg())).toBe(true);
     await expectNoOrphans();
+  });
+
+  /**
+   * The half of F224 a request can decide: an answer that states the size.
+   *
+   * What the design page does with it — the sentence about a home screen — is
+   * the organizer client's suite. What has to hold here is that both paths to
+   * the same fact agree, and that the public configuration does *not* carry it:
+   * reading the size means opening the file, and `/api/config` is fetched on
+   * every start of either client.
+   */
+  it('states the app icon\u2019s size, on the upload and on the read', async () => {
+    const uploaded = await upload(
+      'app-icon',
+      measurablePng(500, 120),
+      'image/png',
+    );
+    expect(uploaded.body.appIconSize).toEqual({ width: 500, height: 120 });
+
+    const read = await api<BrandingImages>('/api/admin/config/images', {
+      headers: { cookie },
+    });
+    expect(read.status).toBe(200);
+    expect(read.body).toEqual(uploaded.body);
+
+    expect((await api('/api/admin/config/images')).status).toBe(401);
+    expect((await publicConfig()).body).not.toHaveProperty('appIconSize');
+  });
+
+  it('states no size for an icon whose header does not', async () => {
+    // Not an error: a progressive or exotic variant is still an icon, and the
+    // manifest has a rule that keeps the instance installable either way (F20).
+    const uploaded = await upload('app-icon', png(128), 'image/png');
+
+    expect(uploaded.body.appIconUrl).not.toBeNull();
+    expect(uploaded.body.appIconSize).toBeNull();
   });
 
   it('takes an image away again, and its file with it', async () => {

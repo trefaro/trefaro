@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { ADMIN_STORAGE_STATE } from './support/admin-session';
 import { t } from './support/catalogue';
+import { png } from './support/png';
 
 /**
  * The legibility warning, with the threshold the page states.
@@ -233,6 +234,83 @@ test.describe('the design settings in the browser', () => {
         .toMatch(/Lora/);
     } finally {
       await restore(page, stored);
+    }
+  });
+
+  test('says what an uploaded app icon will be used for (F224)', async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(
+      browserName !== 'chromium',
+      'writes the singleton app_config row — see the test above',
+    );
+
+    // The sentence the todo list has been asking for since AP 12 of phase 2:
+    // an organizer uploads the logo they have, and until now the manifest
+    // quietly kept the Trefaro icons beside it without saying why.
+    const before = await page.request.get('/api/config');
+    const previousIcon = (
+      (await before.json()) as { appIconUrl: string | null }
+    ).appIconUrl;
+    const previousBytes = previousIcon
+      ? await (await page.request.get(previousIcon)).body()
+      : null;
+
+    const upload = async (buffer: Buffer, name: string): Promise<void> => {
+      await page
+        .locator('#image-file-app-icon')
+        .setInputFiles({ name, mimeType: 'image/png', buffer });
+      await page
+        .getByRole('button', { name: t('admin.design.upload') })
+        .click();
+    };
+
+    try {
+      await openDesign(page);
+
+      await upload(png(500, 120), 'letterhead.png');
+      await expect(
+        page.getByText(
+          t('admin.design.iconUnusable', {
+            width: 500,
+            height: 120,
+            min: 144,
+          }),
+        ),
+      ).toBeVisible();
+
+      // And the other half of the same rule: a square icon above the floor is
+      // the one a home screen shows.
+      await upload(png(256, 256), 'square.png');
+      await expect(
+        page.getByText(
+          t('admin.design.iconUsable', { width: 256, height: 256 }),
+        ),
+      ).toBeVisible();
+
+      await page
+        .getByRole('button', { name: t('admin.design.remove') })
+        .last()
+        .click();
+      await expect(
+        page.getByText(
+          t('admin.design.iconUsable', { width: 256, height: 256 }),
+        ),
+      ).toHaveCount(0);
+    } finally {
+      if (previousBytes) {
+        const restored = await page.request.put('/api/admin/config/app-icon', {
+          multipart: {
+            file: {
+              name: 'restored-icon',
+              mimeType: 'image/png',
+              buffer: previousBytes,
+            },
+          },
+        });
+        expect(restored.ok()).toBe(true);
+      }
     }
   });
 

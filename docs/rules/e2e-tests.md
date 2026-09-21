@@ -657,4 +657,22 @@ Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
   Live-Region trägt diesen Satz. Wo ein Slot zeichnet, ist eine Rolle allein
   keine Adresse.
 
+- **Das vierte Projekt der Veranstaltersuite heißt `tablet` und läuft nur
+  `@layout`** (E67, AP 8 der Phase 5) — gebaut wie das `phone`-Projekt der
+  Teilnehmersuite: die drei Maschinenprojekte tragen `grepInvert: /@layout/`,
+  das Tablet-Projekt `grep: /@layout/` und `viewport: { width: 768, height:
+1024 }`, ausgeschrieben, weil die Zahl die Entscheidung ist. Es kostet kein
+  Budget: die Sitzung ist die eine, die der globale Aufbau ohnehin anlegt, es
+  registriert niemanden und verschickt keine Mail. Was hineingehört, ist, was
+  **nur** bei 768 Pixeln etwas aussagt — bei 1280 wäre „der Rahmen der Tabelle
+  scrollt" aus dem richtigen Grund rot, weil dort nichts scrollt. Alles andere
+  gehört in die Suiten, die es schon gibt.
+- **Ein Wächter, der nur nach „scrollt die Seite seitwärts" fragt, übersieht
+  eine Tabelle** (AP 8 der Phase 5). Eine Tabelle läuft nicht über, sie
+  quetscht sich: sieben Spalten in 736 Pixeln messen sich als sauberes
+  Ergebnis und lesen sich dreizeilig. Wer eine Breite bewacht, misst deshalb
+  auch **Bedienelemente unter dem Boden** und **den Rahmen, der scrollen
+  soll** — und macht einmal ein Bildschirmfoto, denn die Quetschung sieht man
+  nur dort.
+
 Siehe auch: [Fallen in den Angular-Clients](angular-clients.md), [Deployment und Prüfung](deployment.md).

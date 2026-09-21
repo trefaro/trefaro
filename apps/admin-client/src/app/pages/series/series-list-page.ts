@@ -11,6 +11,7 @@ import type { EventSeries } from '@trefaro/shared-models';
 import { eventSeriesStatusKey, publicSeriesPath } from '@trefaro/shared-models';
 import { EventSeriesAdminService } from '../../features/event-series/event-series-admin.service';
 import { PublicSite } from '../../features/public-site/public-site.service';
+import { TableScroll } from '../../features/tables/table-scroll';
 
 /**
  * Organizer start page — every event series (FR 2.2), as the mockups have it.
@@ -26,7 +27,7 @@ import { PublicSite } from '../../features/public-site/public-site.service';
 @Component({
   selector: 'trefaro-series-list-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslocoPipe],
+  imports: [RouterLink, TranslocoPipe, TableScroll],
   template: `
     <header class="head">
       <h1>{{ 'admin.series.title' | transloco }}</h1>
@@ -46,69 +47,71 @@ import { PublicSite } from '../../features/public-site/public-site.service';
       </p>
     }
 
-    <table>
-      <thead>
-        <tr>
-          <th>{{ 'admin.series.name' | transloco }}</th>
-          <th>{{ 'admin.series.publicAddress' | transloco }}</th>
-          <th>{{ 'admin.series.status' | transloco }}</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (item of admin.series(); track item.id) {
+    <trefaro-table-scroll [label]="'admin.series.title' | transloco">
+      <table>
+        <thead>
           <tr>
-            <td>
-              <a [routerLink]="['/series', item.id]">{{ item.name }}</a>
-            </td>
-            <td>
-              <code>{{ path(item.slug) }}</code>
-              @if (item.status === 'published' && publicSite.known()) {
-                <!--
+            <th>{{ 'admin.series.name' | transloco }}</th>
+            <th>{{ 'admin.series.publicAddress' | transloco }}</th>
+            <th>{{ 'admin.series.status' | transloco }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of admin.series(); track item.id) {
+            <tr>
+              <td>
+                <a [routerLink]="['/series', item.id]">{{ item.name }}</a>
+              </td>
+              <td>
+                <code>{{ path(item.slug) }}</code>
+                @if (item.status === 'published' && publicSite.known()) {
+                  <!--
                   Only for a published series, because a draft has no public page
                   to open — and a link that answers "not found" would say that
                   the address is wrong rather than that the series is unpublished.
                   A different origin, so the same rule as any external link (F51).
                 -->
-                <a
-                  class="public"
-                  [href]="publicSite.series(item.slug)"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {{ 'admin.series.openPublic' | transloco }}
-                </a>
-              }
-            </td>
-            <td>
-              <span class="status" [class]="'status--' + item.status">
-                {{ statusKey(item.status) | transloco }}
-              </span>
-            </td>
-            <td class="actions">
-              @if (item.status === 'published') {
-                <button type="button" (click)="setStatus(item, 'draft')">
-                  {{ 'admin.series.unpublish' | transloco }}
-                </button>
-              } @else {
-                <button type="button" (click)="setStatus(item, 'published')">
-                  {{ 'admin.series.publish' | transloco }}
-                </button>
-              }
-            </td>
-          </tr>
-        } @empty {
-          <tr>
-            <td colspan="4">
-              {{
-                (admin.isLoading() ? 'common.loading' : 'admin.series.empty')
-                  | transloco
-              }}
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
+                  <a
+                    class="public"
+                    [href]="publicSite.series(item.slug)"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {{ 'admin.series.openPublic' | transloco }}
+                  </a>
+                }
+              </td>
+              <td>
+                <span class="status" [class]="'status--' + item.status">
+                  {{ statusKey(item.status) | transloco }}
+                </span>
+              </td>
+              <td class="actions">
+                @if (item.status === 'published') {
+                  <button type="button" (click)="setStatus(item, 'draft')">
+                    {{ 'admin.series.unpublish' | transloco }}
+                  </button>
+                } @else {
+                  <button type="button" (click)="setStatus(item, 'published')">
+                    {{ 'admin.series.publish' | transloco }}
+                  </button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4">
+                {{
+                  (admin.isLoading() ? 'common.loading' : 'admin.series.empty')
+                    | transloco
+                }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </trefaro-table-scroll>
   `,
   styles: `
     .head {
@@ -130,6 +133,9 @@ import { PublicSite } from '../../features/public-site/public-site.service';
     table {
       border-collapse: collapse;
       inline-size: 100%;
+      /* The width the columns stay readable at; below it the frame around
+         this table scrolls rather than the page (AP 8). Four columns, one of them a link to the public page. */
+      min-inline-size: 40rem;
     }
 
     th,

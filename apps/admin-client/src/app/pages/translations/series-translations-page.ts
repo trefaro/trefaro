@@ -108,7 +108,7 @@ import { TranslationLanguagesComponent } from './translation-languages';
     }
 
     .meta {
-      color: var(--trefaro-color-text-muted, #555);
+      color: var(--trefaro-color-text-muted);
       display: flex;
       gap: 0.5rem;
       flex-wrap: wrap;
@@ -120,7 +120,7 @@ import { TranslationLanguagesComponent } from './translation-languages';
 
     .error__detail,
     .hint {
-      color: var(--trefaro-color-text-muted, #555);
+      color: var(--trefaro-color-text-muted);
     }
   `,
 })

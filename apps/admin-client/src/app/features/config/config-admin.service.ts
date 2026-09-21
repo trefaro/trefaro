@@ -4,7 +4,7 @@ import type {
   AppConfigChange,
   AppConfigSettings,
   BrandingImageKind,
-  BrandingImages,
+  BrandingState,
   LocaleSettings,
 } from '@trefaro/shared-models';
 import { BRANDING_IMAGE_PART } from '@trefaro/shared-models';
@@ -53,18 +53,32 @@ export class ConfigAdminService {
    * table: the server spells out `logo` and `app-icon` as two routes, and these
    * are those two names.
    */
-  uploadImage(kind: BrandingImageKind, file: File): Promise<BrandingImages> {
+  uploadImage(kind: BrandingImageKind, file: File): Promise<BrandingState> {
     const body = new FormData();
     body.append(BRANDING_IMAGE_PART, file, file.name);
     return firstValueFrom(
-      this.api.put<BrandingImages>(`admin/config/${kind}`, body),
+      this.api.put<BrandingState>(`admin/config/${kind}`, body),
     );
   }
 
-  removeImage(kind: BrandingImageKind): Promise<BrandingImages> {
+  removeImage(kind: BrandingImageKind): Promise<BrandingState> {
     return firstValueFrom(
-      this.api.delete<BrandingImages>(`admin/config/${kind}`),
+      this.api.delete<BrandingState>(`admin/config/${kind}`),
     );
+  }
+
+  /**
+   * The same answer the two writes give, without writing anything (F224).
+   *
+   * Why it is not read from `/api/config`, which already carries both URLs:
+   * the app icon's pixel size is read out of the file rather than a column, so
+   * it is answered behind an administrative session and nowhere else. The page
+   * needs it before the first upload of a session, or the sentence about a
+   * home screen would only ever appear for somebody who had just uploaded
+   * something.
+   */
+  readImages(): Promise<BrandingState> {
+    return firstValueFrom(this.api.get<BrandingState>('admin/config/images'));
   }
 
   /**

@@ -20,6 +20,7 @@ import {
   isBrandingImageKind,
 } from './branding';
 import { UPLOAD_MIME_TYPES, MAX_UPLOAD_BYTES } from '../registrations/upload';
+import { MIN_INSTALLABLE_ICON_PX, isInstallableAppIcon } from './pwa';
 import { isHexColor } from './theme';
 
 describe('isHexColor', () => {
@@ -155,6 +156,42 @@ describe('branding images', () => {
     // mobile-first client, and it is the one picture on the page that is not
     // content.
     expect(MAX_BRANDING_BYTES).toBeLessThan(MAX_UPLOAD_BYTES / 10);
+  });
+});
+
+describe('an app icon a browser can install from (F105, F224)', () => {
+  it('takes a square image at or above the floor', () => {
+    expect(isInstallableAppIcon({ width: 512, height: 512 })).toBe(true);
+    expect(
+      isInstallableAppIcon({
+        width: MIN_INSTALLABLE_ICON_PX,
+        height: MIN_INSTALLABLE_ICON_PX,
+      }),
+    ).toBe(true);
+  });
+
+  it('refuses the letterhead logo, whatever its size', () => {
+    // The case the design page has to explain: a wide logo is what an
+    // organization has, and a home screen crops it to a square.
+    expect(isInstallableAppIcon({ width: 500, height: 120 })).toBe(false);
+    expect(isInstallableAppIcon({ width: 2000, height: 1999 })).toBe(false);
+  });
+
+  it('refuses a square image below the floor', () => {
+    expect(
+      isInstallableAppIcon({
+        width: MIN_INSTALLABLE_ICON_PX - 1,
+        height: MIN_INSTALLABLE_ICON_PX - 1,
+      }),
+    ).toBe(false);
+    expect(isInstallableAppIcon({ width: 64, height: 64 })).toBe(false);
+  });
+
+  it('refuses an image nobody measured', () => {
+    // A header that says nothing (F106) is not a small icon and not a wide
+    // one — it is an unanswered question, and the manifest keeps the shipped
+    // icons for it exactly as it does for a refused one.
+    expect(isInstallableAppIcon(null)).toBe(false);
   });
 });
 

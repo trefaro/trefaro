@@ -1,6 +1,30 @@
 @if (auth.isLoggedIn()) {
-<div class="layout">
-  <aside class="sidebar">
+<div class="layout" [class.layout--menu-open]="menuOpen()">
+  <!-- The bar exists at every width and is shown at none but the narrow one:
+       above the breakpoint the menu is simply there, and a button that toggles
+       something already visible is a button with nothing to say. -->
+  <div class="bar">
+    <button
+      #menuToggle
+      type="button"
+      class="bar__toggle"
+      aria-controls="admin-menu"
+      [attr.aria-expanded]="menuOpen()"
+      (click)="toggleMenu()"
+    >
+      <span class="bar__glyph" aria-hidden="true"></span>
+      {{ (menuOpen() ? 'admin.nav.close' : 'admin.nav.open') | transloco }}
+    </button>
+    <span class="bar__title">{{ config.organizationName() }}</span>
+  </div>
+
+  @if (menuOpen()) {
+  <!-- Decorative: closing is on the button above and on Escape, and there is
+       nothing here for a screen reader to read. -->
+  <div class="scrim" aria-hidden="true" (click)="closeMenu()"></div>
+  }
+
+  <aside id="admin-menu" class="sidebar">
     <div class="sidebar__brand">
       @if (theme.hasLogo()) {
       <!-- Decorative: the name stands right beside it, so a screen reader that

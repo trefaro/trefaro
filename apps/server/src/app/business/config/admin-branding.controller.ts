@@ -1,6 +1,7 @@
 import {
   Controller,
   Delete,
+  Get,
   Put,
   UploadedFile,
   UseInterceptors,
@@ -24,7 +25,7 @@ import {
 } from '@trefaro/shared-models';
 import { refuse } from '../common/problem';
 import { BrandingService } from './branding.service';
-import { BrandingImageUploadDto, BrandingImagesDto } from './dto/branding.dto';
+import { BrandingImageUploadDto, BrandingStateDto } from './dto/branding.dto';
 
 /**
  * One multipart part, and nothing else.
@@ -73,11 +74,31 @@ interface MultipartFile {
  * The kinds are a closed set of two and will not grow often; spelling them out
  * means the routing table says what exists, which is the same reasoning that
  * keeps a caller-supplied path out of the public route.
+ *
+ * Beside them one read (`GET images`), added in AP 8 of phase 5 so the design
+ * page can say what an uploaded icon will be used for *before* anything is
+ * uploaded again (F224). It answers the shape the writes answer with, which is
+ * what keeps the sentence the same on both paths.
  */
 @ApiTags('configuration')
 @Controller('admin/config')
 export class AdminBrandingController {
   constructor(private readonly branding: BrandingService) {}
+
+  @Get('images')
+  @ApiOperation({
+    summary: 'Both branding images, and what the app icon will be used for',
+    description:
+      'The same answer the two uploads give, so the design settings show the ' +
+      'same sentence when they are opened as they do right after an upload. ' +
+      'Reads the icon file to state its size (F106) — which is why it is here ' +
+      'and not in the public configuration.',
+  })
+  @ApiOkResponse({ type: BrandingStateDto })
+  @ApiUnauthorizedResponse({ description: 'No administrative session.' })
+  images(): Promise<BrandingStateDto> {
+    return this.branding.state() as Promise<BrandingStateDto>;
+  }
 
   @Put('logo')
   @UseInterceptors(FileInterceptor(BRANDING_IMAGE_PART, UPLOAD_OPTIONS))
@@ -91,7 +112,7 @@ export class AdminBrandingController {
       "type is checked against the file's own first bytes. Takes effect on the " +
       'next load of either client (E20).',
   })
-  @ApiOkResponse({ type: BrandingImagesDto })
+  @ApiOkResponse({ type: BrandingStateDto })
   @ApiBadRequestResponse({
     description:
       'No file, an empty one, a type that is not accepted, or bytes ' +
@@ -103,7 +124,7 @@ export class AdminBrandingController {
   @ApiUnauthorizedResponse({ description: 'No administrative session.' })
   putLogo(
     @UploadedFile() file: MultipartFile | undefined,
-  ): Promise<BrandingImagesDto> {
+  ): Promise<BrandingStateDto> {
     return this.replace('logo', file);
   }
 
@@ -115,10 +136,10 @@ export class AdminBrandingController {
       'the upload volume — there is at most one of it, so a leftover would be ' +
       'invisible forever.',
   })
-  @ApiOkResponse({ type: BrandingImagesDto })
+  @ApiOkResponse({ type: BrandingStateDto })
   @ApiUnauthorizedResponse({ description: 'No administrative session.' })
-  deleteLogo(): Promise<BrandingImagesDto> {
-    return this.branding.remove('logo') as Promise<BrandingImagesDto>;
+  deleteLogo(): Promise<BrandingStateDto> {
+    return this.branding.remove('logo') as Promise<BrandingStateDto>;
   }
 
   @Put('app-icon')
@@ -134,7 +155,7 @@ export class AdminBrandingController {
       'processing library. Without an upload the shipped icons apply, which are ' +
       'drawn as maskable; an uploaded one is declared `any`.',
   })
-  @ApiOkResponse({ type: BrandingImagesDto })
+  @ApiOkResponse({ type: BrandingStateDto })
   @ApiBadRequestResponse({ description: 'As for the logo.' })
   @ApiPayloadTooLargeResponse({
     description: `An image above ${MAX_BRANDING_BYTES} bytes.`,
@@ -142,7 +163,7 @@ export class AdminBrandingController {
   @ApiUnauthorizedResponse({ description: 'No administrative session.' })
   putAppIcon(
     @UploadedFile() file: MultipartFile | undefined,
-  ): Promise<BrandingImagesDto> {
+  ): Promise<BrandingStateDto> {
     return this.replace('app-icon', file);
   }
 
@@ -151,10 +172,10 @@ export class AdminBrandingController {
     summary: 'Remove the app icon',
     description: 'The shipped maskable icons apply again.',
   })
-  @ApiOkResponse({ type: BrandingImagesDto })
+  @ApiOkResponse({ type: BrandingStateDto })
   @ApiUnauthorizedResponse({ description: 'No administrative session.' })
-  deleteAppIcon(): Promise<BrandingImagesDto> {
-    return this.branding.remove('app-icon') as Promise<BrandingImagesDto>;
+  deleteAppIcon(): Promise<BrandingStateDto> {
+    return this.branding.remove('app-icon') as Promise<BrandingStateDto>;
   }
 
   /**
@@ -168,7 +189,7 @@ export class AdminBrandingController {
   private replace(
     kind: BrandingImageKind,
     file: MultipartFile | undefined,
-  ): Promise<BrandingImagesDto> {
+  ): Promise<BrandingStateDto> {
     if (!file) {
       throw refuse('problem.branding.imagePartMissing', {
         part: BRANDING_IMAGE_PART,
@@ -178,6 +199,6 @@ export class AdminBrandingController {
     return this.branding.replace(kind, {
       mimeType: file.mimetype,
       bytes: file.buffer,
-    }) as Promise<BrandingImagesDto>;
+    }) as Promise<BrandingStateDto>;
   }
 }

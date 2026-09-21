@@ -17,6 +17,7 @@
  * safe zone we have not seen is how a logo ends up with its edges shaved off.
  */
 import type { UploadType } from '../registrations/upload';
+import type { ImageSize } from './pwa';
 
 /** The kinds, in the order the design settings offer them. */
 export const BRANDING_IMAGE_KINDS = ['logo', 'app-icon'] as const;
@@ -48,6 +49,26 @@ export function isBrandingImageKind(
 export interface BrandingImages {
   readonly logoUrl: string | null;
   readonly appIconUrl: string | null;
+}
+
+/**
+ * The two images *and* what the app icon will be used for (F224).
+ *
+ * A second type rather than two more fields on {@link BrandingImages}, because
+ * the two are read in different places and one of them must stay cheap:
+ * `/api/config` answers every start of either client and may not read a file
+ * off the volume to do it, while this shape is only ever built for an
+ * administrative session — the design page on load, and the answer to an upload
+ * or a removal.
+ *
+ * `appIconSize` is `null` in three cases the page tells apart in words: no icon
+ * is uploaded, the file's header does not state a size (F106), or it is not
+ * there to be read. What follows from the size is not decided here but by
+ * `isInstallableAppIcon`, which the manifest uses as well — the sentence on the
+ * design page and the icon list in the manifest are one rule read twice.
+ */
+export interface BrandingState extends BrandingImages {
+  readonly appIconSize: ImageSize | null;
 }
 
 /**

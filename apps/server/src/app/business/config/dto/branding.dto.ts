@@ -1,7 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type { BrandingImages } from '@trefaro/shared-models';
+import type {
+  BrandingImages,
+  BrandingState,
+  ImageSize,
+} from '@trefaro/shared-models';
 import {
   MAX_BRANDING_BYTES,
+  MIN_INSTALLABLE_ICON_PX,
   brandingTypeSummary,
 } from '@trefaro/shared-models';
 
@@ -34,6 +39,40 @@ export class BrandingImagesDto implements BrandingImages {
       'in which case the shipped maskable icons apply (E26).',
   })
   appIconUrl!: string | null;
+}
+
+/** The pixel size an image's own header states. */
+export class ImageSizeDto implements ImageSize {
+  @ApiProperty({ example: 500 })
+  width!: number;
+
+  @ApiProperty({ example: 120 })
+  height!: number;
+}
+
+/**
+ * The two images and what the app icon will be used for (F224).
+ *
+ * What the writes answer with and what `GET /api/admin/config/images` reads,
+ * and deliberately *not* part of `/api/config`: the size is read out of the
+ * file rather than out of a column, and the public configuration is fetched on
+ * every start of either client.
+ */
+export class BrandingStateDto
+  extends BrandingImagesDto
+  implements BrandingState
+{
+  @ApiProperty({
+    nullable: true,
+    type: ImageSizeDto,
+    description:
+      'The app icon\u2019s pixel size, read from its own header (F106), or ' +
+      '`null` when no icon is uploaded or the header does not say. An icon ' +
+      `that is not square or below ${MIN_INSTALLABLE_ICON_PX} pixels stays ` +
+      'beside the shipped ones in the manifest rather than replacing them ' +
+      '(F105) \u2014 which is what the design page puts into words.',
+  })
+  appIconSize!: ImageSize | null;
 }
 
 /**

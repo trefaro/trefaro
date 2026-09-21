@@ -44,19 +44,39 @@ export default defineConfig({
    * behind. */
   globalTeardown: './src/support/clean-up.ts',
   projects: [
+    /* The three engines run everything but the tablet selection: what
+     * `@layout` asserts is only true at 768 pixels, and at 1280 it would fail
+     * for the right reason (nothing scrolls, so no frame scrolls either). */
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      grepInvert: /@layout/,
     },
 
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
+      grepInvert: /@layout/,
     },
 
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
+      grepInvert: /@layout/,
+    },
+
+    /* The floor of E67, and the counterpart of the participant suite's
+     * `phone` project (E68): one engine, a marked selection, and no login of
+     * its own — the session comes from the global setup like every other
+     * test's. The width is written out rather than inherited from a device
+     * profile, because the number is the decision. */
+    {
+      name: 'tablet',
+      grep: /@layout/,
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 768, height: 1024 },
+      },
     },
 
     // Uncomment for mobile browsers support

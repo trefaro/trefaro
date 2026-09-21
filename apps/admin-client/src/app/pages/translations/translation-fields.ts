@@ -115,8 +115,8 @@ export type TranslationDraft = Readonly<Record<string, TranslatedText>>;
       margin: 0;
       padding: 0.35rem 0.6rem;
       border-inline-start: 3px solid var(--trefaro-color-primary-soft, #ddd);
-      background: var(--trefaro-color-surface-muted, #f6f6f6);
-      color: var(--trefaro-color-text-muted, #555);
+      background: var(--trefaro-color-surface-muted);
+      color: var(--trefaro-color-text-muted);
       white-space: pre-wrap;
     }
 

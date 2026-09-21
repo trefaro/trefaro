@@ -124,4 +124,16 @@ Kontrast auf ihrem Startbildschirm landet.
   aktiviertem Modul. Kein Eintrag für ein Modul, das es noch nicht gibt; ein
   Plug-in, dessen Bundle nicht geladen hat, bekommt keine.
 
+- **Ob ein hochgeladenes App-Symbol taugt, entscheidet genau eine Funktion**
+  (F224, F105): `isInstallableAppIcon` in `shared-models` — quadratisch und
+  mindestens `MIN_INSTALLABLE_ICON_PX`. Sie wird von **zwei** Seiten gelesen,
+  vom Manifest-Bau und von der Design-Seite, die dasselbe in Worten sagt. Wer
+  die Regel ändert, ändert sie dort; eine zweite Rechnung im Client wäre eine
+  zweite Antwort, sobald eine von beiden sich bewegt. Die Maße selbst kommen
+  aus dem Kopf der Datei (F106) und stehen in keiner Spalte, also werden sie
+  nur **hinter einer Verwaltungssitzung** beantwortet
+  (`GET /api/admin/config/images` und die Antworten der beiden Uploads) und
+  ausdrücklich nicht in `/api/config`, das jeder Start jedes Clients holt.
+  Abgelehnt wird weiterhin nichts (E26).
+
 Siehe auch: [Fallen in den Angular-Clients](angular-clients.md), [Mehrsprachigkeit und Katalog](i18n.md), [Deployment und Prüfung](deployment.md).

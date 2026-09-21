@@ -263,7 +263,9 @@ import { eventTypeKey } from '../../features/i18n/labels';
       margin-block-start: 0.75rem;
     }
 
-    input,
+    /* Not the tick boxes: their size is the baseline's — 24 pixels, in the
+       global stylesheet — and a padding here would be a second answer to it. */
+    input:not([type='checkbox']),
     textarea,
     select {
       padding: 0.5rem;
@@ -284,10 +286,6 @@ import { eventTypeKey } from '../../features/i18n/labels';
       gap: 0.3rem;
       margin-inline-end: 0.9rem;
       font-weight: 400;
-    }
-
-    .check input {
-      inline-size: auto;
     }
 
     small {

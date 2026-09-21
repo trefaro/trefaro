@@ -1,10 +1,61 @@
-/* Desktop-first: side menu next to the content, collapsing above the content on
-   narrow screens so the client stays usable on a phone (NFR 6). */
+/* Desktop-first (NFR 6): the menu is a column beside the content, and below one
+   breakpoint it becomes a drawer that slides over it.
+
+   Everything that differs between the two lives in the single `@media` at the
+   bottom of this file — the one media query in this client (AP 8 of phase 5).
+   Above it the bar and the scrim do not exist, and `.layout--menu-open` means
+   nothing; below it the menu is out of the flow, so the content gets the whole
+   width instead of the leftovers.
+
+   What AP 8 replaced was the same breakpoint stacking the whole menu *above*
+   the content: nine entries, a language switcher and the account, which at 768
+   pixels was 190 pixels of chrome to scroll past on every page. */
 
 .layout {
   display: grid;
   grid-template-columns: 16rem 1fr;
   min-block-size: 100vh;
+  /* The height of the narrow-width bar, in one place: the bar is fixed, so the
+     drawer below it and the page behind it both have to know how tall it is. */
+  --bar-block-size: 3rem;
+}
+
+/* Shown by the media query and by nothing else. */
+.bar,
+.scrim {
+  display: none;
+}
+
+.bar__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid
+    color-mix(in oklab, var(--trefaro-color-on-primary) 45%, transparent);
+  border-radius: 0.4rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Three lines, drawn rather than shipped: the organizer client loads no icon
+   set, and a hamburger is two gradients. */
+.bar__glyph {
+  inline-size: 1.1rem;
+  block-size: 0.7rem;
+  border-block: 2px solid currentcolor;
+  border-block-end-width: 2px;
+  background: linear-gradient(currentcolor, currentcolor) center / 100% 2px
+    no-repeat;
+}
+
+.bar__title {
+  overflow: hidden;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .sidebar {
@@ -97,18 +148,61 @@
   min-inline-size: 0;
 }
 
+/* The floor of E67: 768 pixels, with room above it for a small laptop window.
+   One query, and everything the narrow width changes is in it. */
 @media (max-width: 60rem) {
   .layout {
     grid-template-columns: 1fr;
+    padding-block-start: var(--bar-block-size);
   }
 
-  .sidebar__nav {
-    flex-direction: row;
-    flex-wrap: wrap;
+  .bar {
+    display: flex;
+    position: fixed;
+    z-index: 45;
+    inset-block-start: 0;
+    inset-inline: 0;
+    align-items: center;
+    gap: 0.75rem;
+    block-size: var(--bar-block-size);
+    padding-inline: 0.75rem;
+    background: var(--trefaro-color-primary);
+    color: var(--trefaro-color-on-primary);
   }
 
-  .sidebar__account {
-    margin-block-start: 0;
+  /* Over the page rather than above it, and out of the flow: the content keeps
+     the full width whether the menu is open or not, so opening it moves
+     nothing. It starts below the bar, which stays reachable — the button that
+     opened the drawer is the button that closes it. */
+  .sidebar {
+    position: fixed;
+    z-index: 40;
+    inset-block: var(--bar-block-size) 0;
+    inset-inline-start: 0;
+    inline-size: min(17rem, 80vw);
+    overflow-y: auto;
+    /* Not `display: none`: a hidden-by-visibility panel is out of the tab order
+       and out of the accessibility tree, which is what "closed" has to mean,
+       and it is one property to flip rather than a second layout. No
+       transition, deliberately — an animation would need a
+       `prefers-reduced-motion` exception, and that would be a second media
+       query in a client that is meant to have one. */
+    visibility: hidden;
+    transform: translateX(-100%);
+  }
+
+  .layout--menu-open .sidebar {
+    visibility: visible;
+    transform: none;
+  }
+
+  .scrim {
+    display: block;
+    position: fixed;
+    z-index: 35;
+    inset-block: var(--bar-block-size) 0;
+    inset-inline: 0;
+    background: rgb(0 0 0 / 45%);
   }
 
   .content {

@@ -50,10 +50,30 @@ describe('deriveThemeVariables', () => {
       '--trefaro-color-border',
       '--trefaro-color-surface',
       '--trefaro-color-on-surface',
+      '--trefaro-color-surface-muted',
+      '--trefaro-color-text-muted',
       '--trefaro-radius-sm',
       '--trefaro-radius-md',
     ]) {
       expect(variables[key]).toBeDefined();
+    }
+  });
+
+  it('keeps muted text readable on both surfaces it appears on', () => {
+    // The two the organizer client named with a literal fallback behind them
+    // until AP 8 — which kept the pages correct and hid the question. Muted
+    // is a tone, not a licence: SC 1.4.3 asks 4.5:1 of body text, and this
+    // text is body text with a quieter voice.
+    const variables = deriveThemeVariables(theme);
+    const ink = variables['--trefaro-color-text-muted'];
+
+    for (const background of [
+      PAGE_BACKGROUND_COLOR,
+      variables['--trefaro-color-surface-muted'],
+    ]) {
+      expect(contrastRatio(ink, background)).toBeGreaterThanOrEqual(
+        MIN_TEXT_CONTRAST,
+      );
     }
   });
 

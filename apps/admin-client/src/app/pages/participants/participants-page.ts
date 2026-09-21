@@ -41,6 +41,7 @@ import { EventsAdminService } from '../../features/events/events-admin.service';
 import { AttachmentsAdminService } from '../../features/registrations/attachments-admin.service';
 import { ParticipantsAdminService } from '../../features/registrations/participants-admin.service';
 import { RegistrationFieldsAdminService } from '../../features/registrations/registration-fields-admin.service';
+import { TableScroll } from '../../features/tables/table-scroll';
 
 /** Long enough to finish typing a name, short enough to feel immediate. */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -90,7 +91,7 @@ interface Bar extends RegistrationWeek {
 @Component({
   selector: 'trefaro-participants-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslocoPipe],
+  imports: [RouterLink, TranslocoPipe, TableScroll],
   template: `
     @if (error(); as problem) {
       <p class="error" role="alert">
@@ -219,82 +220,89 @@ interface Bar extends RegistrationWeek {
         </div>
       </div>
 
-      <table>
-        <thead>
-          <tr>
-            @for (column of columns; track column.key) {
-              <th [attr.aria-sort]="ariaSort(column.key)">
-                <button type="button" class="sort" (click)="sortBy(column.key)">
-                  {{ column.labelKey | transloco }}{{ sortMarker(column.key) }}
-                </button>
-              </th>
-            }
-            <th>{{ 'admin.participants.colNewsletter' | transloco }}</th>
-            <!-- Not sortable: the flag is not a column of the registration
+      <trefaro-table-scroll [label]="'admin.participants.title' | transloco">
+        <table>
+          <thead>
+            <tr>
+              @for (column of columns; track column.key) {
+                <th [attr.aria-sort]="ariaSort(column.key)">
+                  <button
+                    type="button"
+                    class="sort"
+                    (click)="sortBy(column.key)"
+                  >
+                    {{ column.labelKey | transloco
+                    }}{{ sortMarker(column.key) }}
+                  </button>
+                </th>
+              }
+              <th>{{ 'admin.participants.colNewsletter' | transloco }}</th>
+              <!-- Not sortable: the flag is not a column of the registration
                  table but an EXISTS over the address (E31), and a sort key the
                  server does not offer would be a header that lies when
                  clicked. -->
-            <th>{{ 'admin.participants.colProfile' | transloco }}</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (row of rows(); track row.id) {
-            <tr [class.row--selected]="row.id === selectedId()">
-              <td>
-                <a
-                  [routerLink]="[]"
-                  [queryParams]="{ selected: row.id }"
-                  queryParamsHandling="merge"
-                >
-                  {{ row.lastName }}, {{ row.firstName }}
-                </a>
-              </td>
-              <td>
-                <!-- Visible without a click, and one click away from writing. -->
-                <a [href]="'mailto:' + row.email">{{ row.email }}</a>
-              </td>
-              <td>
-                <span class="status" [class]="'status--' + row.status">
-                  {{ statusKey(row.status) | transloco }}
-                </span>
-              </td>
-              <td>{{ when(row.registeredAt) }}</td>
-              <td>
-                @if (row.newsletterOptIn) {
-                  {{ 'admin.participants.yes' | transloco }}
-                } @else {
-                  —
-                }
-              </td>
-              <td>
-                @if (row.hasProfile) {
-                  {{ 'admin.participants.yes' | transloco }}
-                } @else {
-                  —
-                }
-              </td>
-              <td class="actions">
-                @if (row.status === 'cancelled') {
-                  <button type="button" (click)="reinstate(row)">
-                    {{ 'admin.participants.reinstate' | transloco }}
-                  </button>
-                } @else {
-                  <button type="button" (click)="cancel(row)">
-                    {{ 'admin.participants.cancel' | transloco }}
-                  </button>
-                }
-              </td>
+              <th>{{ 'admin.participants.colProfile' | transloco }}</th>
+              <th></th>
             </tr>
-          } @empty {
-            <tr>
-              <td colspan="7" class="meta">
-                {{ emptyMessageKey() | transloco }}
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            @for (row of rows(); track row.id) {
+              <tr [class.row--selected]="row.id === selectedId()">
+                <td>
+                  <a
+                    [routerLink]="[]"
+                    [queryParams]="{ selected: row.id }"
+                    queryParamsHandling="merge"
+                  >
+                    {{ row.lastName }}, {{ row.firstName }}
+                  </a>
+                </td>
+                <td>
+                  <!-- Visible without a click, and one click away from writing. -->
+                  <a [href]="'mailto:' + row.email">{{ row.email }}</a>
+                </td>
+                <td>
+                  <span class="status" [class]="'status--' + row.status">
+                    {{ statusKey(row.status) | transloco }}
+                  </span>
+                </td>
+                <td>{{ when(row.registeredAt) }}</td>
+                <td>
+                  @if (row.newsletterOptIn) {
+                    {{ 'admin.participants.yes' | transloco }}
+                  } @else {
+                    —
+                  }
+                </td>
+                <td>
+                  @if (row.hasProfile) {
+                    {{ 'admin.participants.yes' | transloco }}
+                  } @else {
+                    —
+                  }
+                </td>
+                <td class="actions">
+                  @if (row.status === 'cancelled') {
+                    <button type="button" (click)="reinstate(row)">
+                      {{ 'admin.participants.reinstate' | transloco }}
+                    </button>
+                  } @else {
+                    <button type="button" (click)="cancel(row)">
+                      {{ 'admin.participants.cancel' | transloco }}
+                    </button>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7" class="meta">
+                  {{ emptyMessageKey() | transloco }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </trefaro-table-scroll>
 
       <nav
         class="pager"
@@ -560,6 +568,9 @@ interface Bar extends RegistrationWeek {
     table {
       border-collapse: collapse;
       inline-size: 100%;
+      /* The width the columns stay readable at; below it the frame around
+         this table scrolls rather than the page (AP 8). Seven columns, and the address is one of them — the one correction the thesis’ usability test asked for. */
+      min-inline-size: 56rem;
     }
 
     th,

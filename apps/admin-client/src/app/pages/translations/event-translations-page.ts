@@ -165,7 +165,7 @@ interface SessionSection {
     }
 
     .meta {
-      color: var(--trefaro-color-text-muted, #555);
+      color: var(--trefaro-color-text-muted);
       display: flex;
       gap: 0.5rem;
       flex-wrap: wrap;
@@ -177,7 +177,7 @@ interface SessionSection {
 
     .error__detail,
     .hint {
-      color: var(--trefaro-color-text-muted, #555);
+      color: var(--trefaro-color-text-muted);
     }
 
     .session {

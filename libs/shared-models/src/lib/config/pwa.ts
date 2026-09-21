@@ -64,6 +64,43 @@ export const WEB_MANIFEST_PATH = '/api/config/manifest.webmanifest';
 export const MIN_INSTALLABLE_ICON_PX = 144;
 
 /**
+ * The pixel size of an image, as the header of a PNG, a JPEG or a WebP states
+ * it.
+ *
+ * Here rather than beside the arithmetic that reads it (the server's
+ * `imageDimensions`), because two sides answer questions about it: the server
+ * writes the size into the manifest, and the design page tells an organizer
+ * what their upload will be used for. `null` is a third case in both places —
+ * a header that says nothing (F106) — and it is spelled as a `null` size
+ * rather than two nullable numbers, so that "we did not read it" cannot be
+ * confused with "it is zero wide".
+ */
+export interface ImageSize {
+  readonly width: number;
+  readonly height: number;
+}
+
+/**
+ * Whether a browser can install an application from this icon alone.
+ *
+ * Square, because a launcher crops to a square and refuses an oblong icon
+ * outright; at least {@link MIN_INSTALLABLE_ICON_PX} on a side, because that
+ * floor is a browser's and not ours. An unmeasured image (`null`) is not
+ * installable either — not as a judgement about the picture, but because a
+ * manifest that claims `sizes: "any"` for a raster image has not proved
+ * anything.
+ *
+ * One function for one rule: the server keeps the shipped icons beside an
+ * upload this refuses (F105), and the design page says so in words (F224).
+ * Two copies of the arithmetic would be two answers to one question the moment
+ * either of them moved.
+ */
+export function isInstallableAppIcon(size: ImageSize | null): boolean {
+  if (!size) return false;
+  return size.width === size.height && size.width >= MIN_INSTALLABLE_ICON_PX;
+}
+
+/**
  * The icons every instance has, in ascending size.
  *
  * `purpose: "maskable any"` because they carry the safe zone an Android

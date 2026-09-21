@@ -1,3 +1,5 @@
+import type { ImageSize } from '@trefaro/shared-models';
+
 /**
  * How many pixels wide and tall an image is, read from its own header.
  *
@@ -20,11 +22,14 @@
  * application installable either way.
  */
 
-/** Pixel dimensions of an image, as its header declares them. */
-export interface ImageDimensions {
-  readonly width: number;
-  readonly height: number;
-}
+/**
+ * Pixel dimensions of an image, as its header declares them.
+ *
+ * The shape itself is `ImageSize` in `shared-models`, because the design page
+ * of the organizer client reads it too (F224); the name stays because that is
+ * what this file's readers call it.
+ */
+export type ImageDimensions = ImageSize;
 
 /**
  * The dimensions of a PNG, JPEG or WebP, or `null`.

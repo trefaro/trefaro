@@ -16,6 +16,7 @@ import {
 } from '@trefaro/shared-plugins';
 import { TrefaroIcon } from '@trefaro/shared-theming';
 import { ModulesAdminService } from '../../features/modules/modules-admin.service';
+import { TableScroll } from '../../features/tables/table-scroll';
 
 /** A confirmation that outlives the click that produced it. */
 interface Notice {
@@ -66,7 +67,7 @@ interface Notice {
 @Component({
   selector: 'trefaro-modules-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslocoPipe, TrefaroIcon],
+  imports: [TranslocoPipe, TrefaroIcon, TableScroll],
   template: `
     <h1>{{ 'admin.modules.title' | transloco }}</h1>
     <p class="lead">{{ 'admin.modules.lead' | transloco }}</p>
@@ -87,115 +88,117 @@ interface Notice {
       </p>
     }
 
-    <table>
-      <thead>
-        <tr>
-          <th>{{ 'admin.modules.colModule' | transloco }}</th>
-          <th>{{ 'admin.modules.colKind' | transloco }}</th>
-          <th>{{ 'admin.modules.colState' | transloco }}</th>
-          <th>{{ 'admin.modules.colBundle' | transloco }}</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (module of rows(); track module.key) {
+    <trefaro-table-scroll [label]="'admin.modules.title' | transloco">
+      <table>
+        <thead>
           <tr>
-            <td>
-              <strong class="module">
-                @if (module.icon) {
-                  <trefaro-icon [name]="module.icon" />
-                }
-                {{ module.name }}
-              </strong>
-              <br /><code>{{ module.key }}</code>
-              @if (module.unknownIcon; as icon) {
-                <br /><small class="failed">
-                  {{ 'admin.modules.iconUnknown' | transloco: { icon } }}
-                </small>
-              }
-              @if (module.requiresNames) {
-                <!-- Before the click, not after it: an organizer who cannot
-                     switch the search on has to be able to see why (E42). -->
-                <br /><small>
-                  {{
-                    'admin.modules.requires'
-                      | transloco: { modules: module.requiresNames }
-                  }}
-                </small>
-              }
-            </td>
-            <td>
-              {{
-                (module.family === 'plugin'
-                  ? 'admin.modules.plugin'
-                  : 'admin.modules.core'
-                ) | transloco
-              }}
-              @if (module.version; as version) {
-                <br /><small>
-                  {{ 'admin.modules.version' | transloco: { version } }}
-                </small>
-              }
-            </td>
-            <td>
-              <span [class.is-on]="module.enabled">
-                {{ stateKey(module.enabled) | transloco }}
-              </span>
-              @if (module.enabled !== module.enabledByDefault) {
-                <br /><small>
-                  {{
-                    'admin.modules.default'
-                      | transloco
-                        : {
-                            state:
-                              stateKey(module.enabledByDefault) | transloco,
-                          }
-                  }}
-                </small>
-              }
-            </td>
-            <td>
-              @if (module.bundleUrl) {
-                <code>{{ module.bundleUrl }}</code>
-                @if (loadStatus(module.key); as status) {
-                  <br /><span [class.failed]="status.status === 'failed'">
-                    {{ 'admin.modules.bundle.' + status.status | transloco }}
-                  </span>
-                  @if (status.error) {
-                    <br /><small>{{ status.error }}</small>
+            <th>{{ 'admin.modules.colModule' | transloco }}</th>
+            <th>{{ 'admin.modules.colKind' | transloco }}</th>
+            <th>{{ 'admin.modules.colState' | transloco }}</th>
+            <th>{{ 'admin.modules.colBundle' | transloco }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (module of rows(); track module.key) {
+            <tr>
+              <td>
+                <strong class="module">
+                  @if (module.icon) {
+                    <trefaro-icon [name]="module.icon" />
                   }
+                  {{ module.name }}
+                </strong>
+                <br /><code>{{ module.key }}</code>
+                @if (module.unknownIcon; as icon) {
+                  <br /><small class="failed">
+                    {{ 'admin.modules.iconUnknown' | transloco: { icon } }}
+                  </small>
                 }
-              } @else {
-                <span class="none">—</span>
-              }
-            </td>
-            <td>
-              <button
-                type="button"
-                [disabled]="busy() !== null"
-                (click)="toggle(module)"
-              >
+                @if (module.requiresNames) {
+                  <!-- Before the click, not after it: an organizer who cannot
+                     switch the search on has to be able to see why (E42). -->
+                  <br /><small>
+                    {{
+                      'admin.modules.requires'
+                        | transloco: { modules: module.requiresNames }
+                    }}
+                  </small>
+                }
+              </td>
+              <td>
                 {{
-                  (module.enabled
-                    ? 'admin.modules.disable'
-                    : 'admin.modules.enable'
+                  (module.family === 'plugin'
+                    ? 'admin.modules.plugin'
+                    : 'admin.modules.core'
                   ) | transloco
                 }}
-              </button>
-            </td>
-          </tr>
-        } @empty {
-          <tr>
-            <td colspan="5">
-              {{
-                (loading() ? 'common.loading' : 'admin.modules.empty')
-                  | transloco
-              }}
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
+                @if (module.version; as version) {
+                  <br /><small>
+                    {{ 'admin.modules.version' | transloco: { version } }}
+                  </small>
+                }
+              </td>
+              <td>
+                <span [class.is-on]="module.enabled">
+                  {{ stateKey(module.enabled) | transloco }}
+                </span>
+                @if (module.enabled !== module.enabledByDefault) {
+                  <br /><small>
+                    {{
+                      'admin.modules.default'
+                        | transloco
+                          : {
+                              state:
+                                stateKey(module.enabledByDefault) | transloco,
+                            }
+                    }}
+                  </small>
+                }
+              </td>
+              <td>
+                @if (module.bundleUrl) {
+                  <code>{{ module.bundleUrl }}</code>
+                  @if (loadStatus(module.key); as status) {
+                    <br /><span [class.failed]="status.status === 'failed'">
+                      {{ 'admin.modules.bundle.' + status.status | transloco }}
+                    </span>
+                    @if (status.error) {
+                      <br /><small>{{ status.error }}</small>
+                    }
+                  }
+                } @else {
+                  <span class="none">—</span>
+                }
+              </td>
+              <td>
+                <button
+                  type="button"
+                  [disabled]="busy() !== null"
+                  (click)="toggle(module)"
+                >
+                  {{
+                    (module.enabled
+                      ? 'admin.modules.disable'
+                      : 'admin.modules.enable'
+                    ) | transloco
+                  }}
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5">
+                {{
+                  (loading() ? 'common.loading' : 'admin.modules.empty')
+                    | transloco
+                }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </trefaro-table-scroll>
   `,
   styles: `
     .lead {
@@ -206,6 +209,9 @@ interface Notice {
     table {
       border-collapse: collapse;
       inline-size: 100%;
+      /* The width the columns stay readable at; below it the frame around
+         this table scrolls rather than the page (AP 8). A name, a sentence about it and a switch. */
+      min-inline-size: 44rem;
       font-size: 0.9rem;
     }
 

@@ -21,6 +21,7 @@ import {
 import { EventSeriesAdminService } from '../../features/event-series/event-series-admin.service';
 import { EventsAdminService } from '../../features/events/events-admin.service';
 import { eventTypeKey } from '../../features/i18n/labels';
+import { TableScroll } from '../../features/tables/table-scroll';
 
 /**
  * One event series with its events, split into upcoming and past (FR 2.3).
@@ -36,7 +37,7 @@ import { eventTypeKey } from '../../features/i18n/labels';
 @Component({
   selector: 'trefaro-series-detail-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslocoPipe],
+  imports: [RouterLink, TranslocoPipe, TableScroll],
   template: `
     @if (error(); as problem) {
       <p class="error" role="alert">
@@ -92,113 +93,124 @@ import { eventTypeKey } from '../../features/i18n/labels';
             }}
           </p>
         } @else {
-          <table>
-            <thead>
-              <tr>
-                <th>{{ 'admin.series.name' | transloco }}</th>
-                <th>{{ 'admin.series.when' | transloco }}</th>
-                <th>{{ 'admin.series.type' | transloco }}</th>
-                <th>{{ 'admin.series.status' | transloco }}</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (event of upcoming(); track event.id) {
+          <trefaro-table-scroll [label]="'admin.series.upcoming' | transloco">
+            <table>
+              <thead>
                 <tr>
-                  <td>
-                    <a [routerLink]="['/series', item.id, 'events', event.id]">
-                      {{ event.name }}
-                    </a>
-                  </td>
-                  <td>{{ when(event) }}</td>
-                  <td>{{ typeKey(event.eventType) | transloco }}</td>
-                  <td>
-                    <span class="status" [class]="'status--' + event.status">
-                      {{ statusKey(event.status) | transloco }}
-                    </span>
-                  </td>
-                  <td class="actions">
-                    <a
-                      [routerLink]="[
-                        '/series',
-                        item.id,
-                        'events',
-                        event.id,
-                        'participants',
-                      ]"
-                    >
-                      {{ 'admin.participants.title' | transloco }}
-                    </a>
-                    @if (event.status === 'published') {
-                      <button type="button" (click)="setStatus(event, 'draft')">
-                        {{ 'admin.series.unpublish' | transloco }}
-                      </button>
-                    } @else {
-                      <button
-                        type="button"
-                        (click)="setStatus(event, 'published')"
-                      >
-                        {{ 'admin.series.publish' | transloco }}
-                      </button>
-                    }
-                    <button type="button" (click)="removeEvent(event)">
-                      {{ 'admin.common.delete' | transloco }}
-                    </button>
-                  </td>
+                  <th>{{ 'admin.series.name' | transloco }}</th>
+                  <th>{{ 'admin.series.when' | transloco }}</th>
+                  <th>{{ 'admin.series.type' | transloco }}</th>
+                  <th>{{ 'admin.series.status' | transloco }}</th>
+                  <th></th>
                 </tr>
-              }
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                @for (event of upcoming(); track event.id) {
+                  <tr>
+                    <td>
+                      <a
+                        [routerLink]="['/series', item.id, 'events', event.id]"
+                      >
+                        {{ event.name }}
+                      </a>
+                    </td>
+                    <td>{{ when(event) }}</td>
+                    <td>{{ typeKey(event.eventType) | transloco }}</td>
+                    <td>
+                      <span class="status" [class]="'status--' + event.status">
+                        {{ statusKey(event.status) | transloco }}
+                      </span>
+                    </td>
+                    <td class="actions">
+                      <a
+                        [routerLink]="[
+                          '/series',
+                          item.id,
+                          'events',
+                          event.id,
+                          'participants',
+                        ]"
+                      >
+                        {{ 'admin.participants.title' | transloco }}
+                      </a>
+                      @if (event.status === 'published') {
+                        <button
+                          type="button"
+                          (click)="setStatus(event, 'draft')"
+                        >
+                          {{ 'admin.series.unpublish' | transloco }}
+                        </button>
+                      } @else {
+                        <button
+                          type="button"
+                          (click)="setStatus(event, 'published')"
+                        >
+                          {{ 'admin.series.publish' | transloco }}
+                        </button>
+                      }
+                      <button type="button" (click)="removeEvent(event)">
+                        {{ 'admin.common.delete' | transloco }}
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </trefaro-table-scroll>
         }
       </section>
 
       @if (past().length > 0) {
         <section>
           <h2>{{ 'admin.series.past' | transloco }}</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>{{ 'admin.series.name' | transloco }}</th>
-                <th>{{ 'admin.series.when' | transloco }}</th>
-                <th>{{ 'admin.series.type' | transloco }}</th>
-                <th>{{ 'admin.series.status' | transloco }}</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (event of past(); track event.id) {
+          <trefaro-table-scroll [label]="'admin.series.past' | transloco">
+            <table>
+              <thead>
                 <tr>
-                  <td>
-                    <a [routerLink]="['/series', item.id, 'events', event.id]">
-                      {{ event.name }}
-                    </a>
-                  </td>
-                  <td>{{ when(event) }}</td>
-                  <td>{{ typeKey(event.eventType) | transloco }}</td>
-                  <td>
-                    <span class="status" [class]="'status--' + event.status">
-                      {{ statusKey(event.status) | transloco }}
-                    </span>
-                  </td>
-                  <td class="actions">
-                    <!-- Past events are where the participant list matters most:
-                         the follow-up mail of AP 11 is written from it. -->
-                    <a
-                      [routerLink]="[
-                        '/series',
-                        item.id,
-                        'events',
-                        event.id,
-                        'participants',
-                      ]"
-                    >
-                      {{ 'admin.participants.title' | transloco }}
-                    </a>
-                  </td>
+                  <th>{{ 'admin.series.name' | transloco }}</th>
+                  <th>{{ 'admin.series.when' | transloco }}</th>
+                  <th>{{ 'admin.series.type' | transloco }}</th>
+                  <th>{{ 'admin.series.status' | transloco }}</th>
+                  <th></th>
                 </tr>
-              }
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                @for (event of past(); track event.id) {
+                  <tr>
+                    <td>
+                      <a
+                        [routerLink]="['/series', item.id, 'events', event.id]"
+                      >
+                        {{ event.name }}
+                      </a>
+                    </td>
+                    <td>{{ when(event) }}</td>
+                    <td>{{ typeKey(event.eventType) | transloco }}</td>
+                    <td>
+                      <span class="status" [class]="'status--' + event.status">
+                        {{ statusKey(event.status) | transloco }}
+                      </span>
+                    </td>
+                    <td class="actions">
+                      <!-- Past events are where the participant list matters most:
+                         the follow-up mail of AP 11 is written from it. -->
+                      <a
+                        [routerLink]="[
+                          '/series',
+                          item.id,
+                          'events',
+                          event.id,
+                          'participants',
+                        ]"
+                      >
+                        {{ 'admin.participants.title' | transloco }}
+                      </a>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </trefaro-table-scroll>
         </section>
       }
 
@@ -241,6 +253,9 @@ import { eventTypeKey } from '../../features/i18n/labels';
     table {
       border-collapse: collapse;
       inline-size: 100%;
+      /* The width the columns stay readable at; below it the frame around
+         this table scrolls rather than the page (AP 8). Five columns, two of them a date. */
+      min-inline-size: 40rem;
     }
 
     th,

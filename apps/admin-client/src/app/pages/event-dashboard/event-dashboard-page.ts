@@ -30,6 +30,7 @@ import { PluginLoaderService, PluginSlot } from '@trefaro/shared-plugins';
 import { TrefaroIcon } from '@trefaro/shared-theming';
 import { EventsAdminService } from '../../features/events/events-admin.service';
 import { PublicSite } from '../../features/public-site/public-site.service';
+import { TableScroll } from '../../features/tables/table-scroll';
 
 /**
  * The dashboard of one event (FR 3.8, UC 05) — an event's home.
@@ -72,7 +73,7 @@ import { PublicSite } from '../../features/public-site/public-site.service';
 @Component({
   selector: 'trefaro-event-dashboard-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslocoPipe, PluginSlot, TrefaroIcon],
+  imports: [RouterLink, TranslocoPipe, PluginSlot, TrefaroIcon, TableScroll],
   template: `
     @if (error(); as problem) {
       <p class="error" role="alert">
@@ -302,31 +303,33 @@ import { PublicSite } from '../../features/public-site/public-site.service';
             }}
           </p>
         } @else {
-          <table>
-            <thead>
-              <tr>
-                <th>{{ 'admin.dashboard.name' | transloco }}</th>
-                <!-- In the table, not behind a click (E13). -->
-                <th>{{ 'admin.dashboard.email' | transloco }}</th>
-                <th>{{ 'admin.dashboard.status' | transloco }}</th>
-                <th>{{ 'admin.dashboard.registered' | transloco }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of latest(); track row.id) {
+          <trefaro-table-scroll [label]="'admin.dashboard.latest' | transloco">
+            <table>
+              <thead>
                 <tr>
-                  <td>{{ row.lastName }}, {{ row.firstName }}</td>
-                  <td>{{ row.email }}</td>
-                  <td>
-                    <span class="status" [class]="'status--' + row.status">
-                      {{ registrationStatusKey(row.status) | transloco }}
-                    </span>
-                  </td>
-                  <td>{{ registeredAt(row.registeredAt) }}</td>
+                  <th>{{ 'admin.dashboard.name' | transloco }}</th>
+                  <!-- In the table, not behind a click (E13). -->
+                  <th>{{ 'admin.dashboard.email' | transloco }}</th>
+                  <th>{{ 'admin.dashboard.status' | transloco }}</th>
+                  <th>{{ 'admin.dashboard.registered' | transloco }}</th>
                 </tr>
-              }
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                @for (row of latest(); track row.id) {
+                  <tr>
+                    <td>{{ row.lastName }}, {{ row.firstName }}</td>
+                    <td>{{ row.email }}</td>
+                    <td>
+                      <span class="status" [class]="'status--' + row.status">
+                        {{ registrationStatusKey(row.status) | transloco }}
+                      </span>
+                    </td>
+                    <td>{{ registeredAt(row.registeredAt) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </trefaro-table-scroll>
         }
       </section>
 
@@ -444,6 +447,9 @@ import { PublicSite } from '../../features/public-site/public-site.service';
     table {
       border-collapse: collapse;
       inline-size: 100%;
+      /* The width the columns stay readable at; below it the frame around
+         this table scrolls rather than the page (AP 8). Four columns of a short list. */
+      min-inline-size: 36rem;
     }
 
     th,

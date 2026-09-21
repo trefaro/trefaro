@@ -38,6 +38,7 @@ import {
 } from '@trefaro/shared-models';
 import { EventsAdminService } from '../../features/events/events-admin.service';
 import { ProgramAdminService } from '../../features/program/program-admin.service';
+import { TableScroll } from '../../features/tables/table-scroll';
 
 /** What a card's inputs hold until they are saved. */
 interface ItemDraft {
@@ -81,7 +82,7 @@ interface ItemDraft {
 @Component({
   selector: 'trefaro-program-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, TranslocoPipe],
+  imports: [ReactiveFormsModule, RouterLink, TranslocoPipe, TableScroll],
   template: `
     <header class="head">
       <div>
@@ -270,35 +271,39 @@ interface ItemDraft {
                           {{ 'admin.program.nobodySignedUp' | transloco }}
                         </p>
                       } @else {
-                        <table class="who">
-                          <thead>
-                            <tr>
-                              <th scope="col">
-                                {{ 'admin.program.colName' | transloco }}
-                              </th>
-                              <th scope="col">
-                                {{ 'admin.program.colEmail' | transloco }}
-                              </th>
-                              <th scope="col">
-                                {{ 'admin.program.colSignedUp' | transloco }}
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            @for (
-                              person of list.participants;
-                              track person.registrationId
-                            ) {
+                        <trefaro-table-scroll
+                          [label]="'admin.program.whoSignedUp' | transloco"
+                        >
+                          <table class="who">
+                            <thead>
                               <tr>
-                                <td>
-                                  {{ person.firstName }} {{ person.lastName }}
-                                </td>
-                                <td>{{ person.email }}</td>
-                                <td>{{ signedUp(person.signedUpAt) }}</td>
+                                <th scope="col">
+                                  {{ 'admin.program.colName' | transloco }}
+                                </th>
+                                <th scope="col">
+                                  {{ 'admin.program.colEmail' | transloco }}
+                                </th>
+                                <th scope="col">
+                                  {{ 'admin.program.colSignedUp' | transloco }}
+                                </th>
                               </tr>
-                            }
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody>
+                              @for (
+                                person of list.participants;
+                                track person.registrationId
+                              ) {
+                                <tr>
+                                  <td>
+                                    {{ person.firstName }} {{ person.lastName }}
+                                  </td>
+                                  <td>{{ person.email }}</td>
+                                  <td>{{ signedUp(person.signedUpAt) }}</td>
+                                </tr>
+                              }
+                            </tbody>
+                          </table>
+                        </trefaro-table-scroll>
                       }
                     } @else {
                       <p class="meta">{{ 'common.loading' | transloco }}</p>
@@ -595,6 +600,9 @@ interface ItemDraft {
     .who {
       border-collapse: collapse;
       inline-size: 100%;
+      /* The width the columns stay readable at; below it the frame around
+         this table scrolls rather than the page (AP 8). A name and an address, inside a card. */
+      min-inline-size: 22rem;
       font-size: 0.9rem;
     }
 

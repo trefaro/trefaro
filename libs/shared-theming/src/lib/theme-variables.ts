@@ -35,7 +35,7 @@ export function deriveThemeVariables(theme: Theme): Record<string, string> {
       'color-mix(in oklab, var(--trefaro-color-accent) 78%, black)',
     '--trefaro-color-on-accent': readableTextColor(theme.accentColor),
 
-    // The five below are not derived from the brand, and they are here for
+    // The seven below are not derived from the brand, and they are here for
     // the reason {@link PAGE_BACKGROUND_COLOR} is a constant: the whitelabel
     // names two colours (E17), and everything else a page needs still has to
     // be published *somewhere*, because an unresolvable `var()` does not fall
@@ -49,6 +49,15 @@ export function deriveThemeVariables(theme: Theme): Record<string, string> {
     // tells somebody that a field is a field. Brand-derived it would vanish
     // for a pale brand colour, exactly where the rule matters most.
     '--trefaro-color-border': '#949494',
+    // A quieter surface than the page, for something quoted rather than
+    // written — the source text of a translation. Neutral for the reason the
+    // border is: a brand-tinted panel behind text one is comparing against
+    // another text is a tint on the comparison.
+    '--trefaro-color-surface-muted': '#f3f3f3',
+    // And the ink for a line that explains rather than says: still 7:1
+    // against the page, because muted must not mean unreadable (SC 1.4.3
+    // asks 4.5).
+    '--trefaro-color-text-muted': '#555555',
     '--trefaro-radius-sm': '0.4rem',
     '--trefaro-radius-md': '0.6rem',
 

@@ -53,12 +53,16 @@ interface PendingImage {
  * Two decisions worth naming:
  *
  * 1. **Choosing a file does not upload it.** The preview is drawn from the local
- *    file first, and a second click sends it. That is not politeness: nothing on
- *    this side can check whether an icon is square (E26 rules out an image
- *    library on the server, and reading pixel dimensions here would be a second,
- *    weaker answer), so the only check that exists is an organizer looking at
- *    it. An upload is also *not* covered by the page's Discard — it is written
- *    the moment it is sent — and a two-step gesture is what makes that visible.
+ *    file first, and a second click sends it. That is not politeness: nothing
+ *    here refuses a picture for its shape (E26 rules out an image library), so
+ *    an organizer looking at the preview is a check no code performs. An upload
+ *    is also *not* covered by the page's Discard — it is written the moment it
+ *    is sent — and a two-step gesture is what makes that visible. Since AP 8 of
+ *    phase 5 the caller may add a {@link note} about what was stored, which is
+ *    how the design page says that a wide image will not reach a home screen
+ *    (F224); it is a sentence and not a refusal, and it describes the file on
+ *    the server rather than the one in the picker, because the size is read
+ *    from the bytes that were kept.
  * 2. **The type and size are checked here as well.** Not as a security measure:
  *    the server checks the first bytes and would refuse the same file (F38).
  *    It is so that a 4 MB export gets a sentence about what is allowed instead
@@ -127,6 +131,12 @@ interface PendingImage {
             </div>
           }
 
+          @if (note(); as sentence) {
+            <p class="note" [class.note--warn]="noteIsWarning()">
+              {{ sentence }}
+            </p>
+          }
+
           @if (error(); as problem) {
             <p class="error" role="alert">
               {{ problem.key | transloco: problem.params }}
@@ -151,6 +161,21 @@ interface PendingImage {
     h3 {
       margin: 0;
       font-size: 1rem;
+    }
+
+    .note {
+      max-inline-size: 30rem;
+      margin: 0.2rem 0 0;
+      font-size: 0.85rem;
+    }
+
+    /* Marked the way the design page marks its contrast warning — a rule down
+       the side rather than a colour behind it: this is something to know
+       before the next upload, not something that went wrong. */
+    .note--warn {
+      padding: 0.4rem 0.6rem;
+      border-inline-start: 3px solid #a3341f;
+      color: #a3341f;
     }
 
     .field__body {
@@ -275,6 +300,23 @@ export class ImageUploadField {
   readonly currentUrl = input.required<string | null>();
   /** Draws the preview frame square, for the image that lands on a home screen. */
   readonly square = input(false);
+  /**
+   * One sentence about the image that is *stored*, in the caller's words.
+   *
+   * Built by the page, because only the page knows what the picture is for:
+   * the design page reads the app icon's size back from the server and says
+   * whether a home screen will use it (F224). Empty for every other caller —
+   * a series logo is a picture beside a name, and there is nothing to warn
+   * about.
+   */
+  readonly note = input<string | null>(null);
+  /**
+   * Whether that sentence is a warning rather than a fact.
+   *
+   * Two words instead of a colour class from outside: the field decides how a
+   * warning looks, the caller decides whether this is one.
+   */
+  readonly noteIsWarning = input(false);
 
   /**
    * Something was written — the page should re-read whatever it shows.

@@ -16,6 +16,7 @@ import {
 } from '@trefaro/shared-models';
 import { AdminAccountsService } from '../../features/admins/admin-accounts.service';
 import { AuthService } from '../../features/auth/auth.service';
+import { TableScroll } from '../../features/tables/table-scroll';
 
 /**
  * Administrator accounts (FR 1.2).
@@ -30,7 +31,7 @@ import { AuthService } from '../../features/auth/auth.service';
 @Component({
   selector: 'trefaro-admins-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, TranslocoPipe],
+  imports: [ReactiveFormsModule, TranslocoPipe, TableScroll],
   template: `
     <h1>{{ 'admin.admins.title' | transloco }}</h1>
 
@@ -45,49 +46,53 @@ import { AuthService } from '../../features/auth/auth.service';
       </p>
     }
 
-    <table>
-      <thead>
-        <tr>
-          <th>{{ 'admin.admins.name' | transloco }}</th>
-          <th>{{ 'admin.admins.email' | transloco }}</th>
-          <th>{{ 'admin.admins.lastLogin' | transloco }}</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (account of accounts.accounts(); track account.id) {
+    <trefaro-table-scroll [label]="'admin.admins.title' | transloco">
+      <table>
+        <thead>
           <tr>
-            <td>{{ account.name }}</td>
-            <td>{{ account.email }}</td>
-            <td>
-              @if (account.lastLoginAt; as at) {
-                {{ when(at) }}
-              } @else {
-                {{ 'admin.admins.never' | transloco }}
-              }
-            </td>
-            <td>
-              @if (account.id === ownId()) {
-                <span class="self">{{ 'admin.admins.you' | transloco }}</span>
-              } @else {
-                <button type="button" (click)="remove(account)">
-                  {{ 'admin.common.delete' | transloco }}
-                </button>
-              }
-            </td>
+            <th>{{ 'admin.admins.name' | transloco }}</th>
+            <th>{{ 'admin.admins.email' | transloco }}</th>
+            <th>{{ 'admin.admins.lastLogin' | transloco }}</th>
+            <th></th>
           </tr>
-        } @empty {
-          <tr>
-            <td colspan="4">
-              {{
-                (accounts.isLoading() ? 'common.loading' : 'admin.admins.empty')
-                  | transloco
-              }}
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          @for (account of accounts.accounts(); track account.id) {
+            <tr>
+              <td>{{ account.name }}</td>
+              <td>{{ account.email }}</td>
+              <td>
+                @if (account.lastLoginAt; as at) {
+                  {{ when(at) }}
+                } @else {
+                  {{ 'admin.admins.never' | transloco }}
+                }
+              </td>
+              <td>
+                @if (account.id === ownId()) {
+                  <span class="self">{{ 'admin.admins.you' | transloco }}</span>
+                } @else {
+                  <button type="button" (click)="remove(account)">
+                    {{ 'admin.common.delete' | transloco }}
+                  </button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4">
+                {{
+                  (accounts.isLoading()
+                    ? 'common.loading'
+                    : 'admin.admins.empty'
+                  ) | transloco
+                }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </trefaro-table-scroll>
 
     <h2>{{ 'admin.admins.addHeading' | transloco }}</h2>
     <form [formGroup]="form" (ngSubmit)="submit()">
@@ -129,6 +134,9 @@ import { AuthService } from '../../features/auth/auth.service';
     table {
       border-collapse: collapse;
       inline-size: 100%;
+      /* The width the columns stay readable at; below it the frame around
+         this table scrolls rather than the page (AP 8). Four columns, one of them an address. */
+      min-inline-size: 40rem;
       margin-block-end: 2rem;
     }
 

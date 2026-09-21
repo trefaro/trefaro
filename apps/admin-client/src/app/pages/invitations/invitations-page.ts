@@ -31,6 +31,7 @@ import {
 import { EventSeriesAdminService } from '../../features/event-series/event-series-admin.service';
 import { EventsAdminService } from '../../features/events/events-admin.service';
 import { InvitationsAdminService } from '../../features/invitations/invitations-admin.service';
+import { TableScroll } from '../../features/tables/table-scroll';
 
 /** How often the page asks how far a send has got, while one is running. */
 const POLL_MS = 2000;
@@ -67,7 +68,7 @@ interface Notice {
 @Component({
   selector: 'trefaro-invitations-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, TranslocoPipe],
+  imports: [ReactiveFormsModule, RouterLink, TranslocoPipe, TableScroll],
   template: `
     @if (error(); as problem) {
       <p class="error" role="alert">
@@ -125,45 +126,47 @@ interface Notice {
             }}
           </p>
         } @else {
-          <table>
-            <thead>
-              <tr>
-                <th class="tick">
-                  <button type="button" (click)="selectPage(page.rows)">
-                    {{
-                      (allOnPage(page.rows)
-                        ? 'admin.invitations.none'
-                        : 'admin.invitations.all'
-                      ) | transloco
-                    }}
-                  </button>
-                </th>
-                <th>{{ 'admin.invitations.name' | transloco }}</th>
-                <th>{{ 'admin.invitations.email' | transloco }}</th>
-                <th>{{ 'admin.invitations.events' | transloco }}</th>
-                <th>{{ 'admin.invitations.registered' | transloco }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (contact of page.rows; track contact.registrationId) {
-                <tr [class.row--picked]="isSelected(contact)">
-                  <td class="tick">
-                    <input
-                      type="checkbox"
-                      [attr.aria-label]="contact.email"
-                      [checked]="isSelected(contact)"
-                      (change)="toggle(contact)"
-                    />
-                  </td>
-                  <td>{{ contact.lastName }}, {{ contact.firstName }}</td>
-                  <!-- The address in the table, as in the participant overview (E13). -->
-                  <td>{{ contact.email }}</td>
-                  <td>{{ contact.events }}</td>
-                  <td>{{ when(contact.lastRegisteredAt) }}</td>
+          <trefaro-table-scroll [label]="'admin.invitations.who' | transloco">
+            <table>
+              <thead>
+                <tr>
+                  <th class="tick">
+                    <button type="button" (click)="selectPage(page.rows)">
+                      {{
+                        (allOnPage(page.rows)
+                          ? 'admin.invitations.none'
+                          : 'admin.invitations.all'
+                        ) | transloco
+                      }}
+                    </button>
+                  </th>
+                  <th>{{ 'admin.invitations.name' | transloco }}</th>
+                  <th>{{ 'admin.invitations.email' | transloco }}</th>
+                  <th>{{ 'admin.invitations.events' | transloco }}</th>
+                  <th>{{ 'admin.invitations.registered' | transloco }}</th>
                 </tr>
-              }
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                @for (contact of page.rows; track contact.registrationId) {
+                  <tr [class.row--picked]="isSelected(contact)">
+                    <td class="tick">
+                      <input
+                        type="checkbox"
+                        [attr.aria-label]="contact.email"
+                        [checked]="isSelected(contact)"
+                        (change)="toggle(contact)"
+                      />
+                    </td>
+                    <td>{{ contact.lastName }}, {{ contact.firstName }}</td>
+                    <!-- The address in the table, as in the participant overview (E13). -->
+                    <td>{{ contact.email }}</td>
+                    <td>{{ contact.events }}</td>
+                    <td>{{ when(contact.lastRegisteredAt) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </trefaro-table-scroll>
 
           <div class="pager">
             <button type="button" [disabled]="page.page <= 1" (click)="go(-1)">
@@ -252,26 +255,30 @@ interface Notice {
             {{ 'admin.invitations.nothingSent' | transloco }}
           </p>
         } @else {
-          <table>
-            <thead>
-              <tr>
-                <th>{{ 'admin.invitations.colSubject' | transloco }}</th>
-                <th>{{ 'admin.invitations.colSent' | transloco }}</th>
-                <th>{{ 'admin.invitations.colRecipients' | transloco }}</th>
-                <th>{{ 'admin.invitations.colProgress' | transloco }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (invitation of page.rows; track invitation.id) {
+          <trefaro-table-scroll
+            [label]="'admin.invitations.sentBefore' | transloco"
+          >
+            <table>
+              <thead>
                 <tr>
-                  <td>{{ invitation.subject }}</td>
-                  <td>{{ when(invitation.createdAt) }}</td>
-                  <td>{{ invitation.recipients }}</td>
-                  <td>{{ progress(invitation) }}</td>
+                  <th>{{ 'admin.invitations.colSubject' | transloco }}</th>
+                  <th>{{ 'admin.invitations.colSent' | transloco }}</th>
+                  <th>{{ 'admin.invitations.colRecipients' | transloco }}</th>
+                  <th>{{ 'admin.invitations.colProgress' | transloco }}</th>
                 </tr>
-              }
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                @for (invitation of page.rows; track invitation.id) {
+                  <tr>
+                    <td>{{ invitation.subject }}</td>
+                    <td>{{ when(invitation.createdAt) }}</td>
+                    <td>{{ invitation.recipients }}</td>
+                    <td>{{ progress(invitation) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </trefaro-table-scroll>
         }
       } @else {
         <p class="meta">{{ 'common.loading' | transloco }}</p>
@@ -336,6 +343,9 @@ interface Notice {
     table {
       inline-size: 100%;
       border-collapse: collapse;
+      /* The width the columns stay readable at; below it the frame around
+         this table scrolls rather than the page (AP 8). Five columns, one of them a tick box. */
+      min-inline-size: 44rem;
     }
 
     th,
@@ -350,7 +360,11 @@ interface Notice {
     }
 
     .row--picked {
-      background: var(--trefaro-color-surface-accent, #f4f0e6);
+      /* The published accent tint rather than an invented name with a cream
+         fallback (F222): a chosen row in the organization's own colour is
+         what the whitelabel is for, and one property fewer is one promise
+         fewer that nothing keeps. */
+      background: var(--trefaro-color-accent-soft);
     }
 
     .pager {

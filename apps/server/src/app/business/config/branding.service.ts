@@ -1,5 +1,10 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import type { BrandingImageKind, BrandingImages } from '@trefaro/shared-models';
+import type {
+  BrandingImageKind,
+  BrandingImages,
+  BrandingState,
+  ImageSize,
+} from '@trefaro/shared-models';
 import {
   BRANDING_MIME_TYPES,
   MAX_BRANDING_BYTES,
@@ -95,9 +100,28 @@ export class BrandingService {
     @Inject(FILE_STORE) private readonly files: FileStore,
   ) {}
 
-  /** Both URLs as they stand — what the upload endpoints answer with. */
+  /** Both URLs as they stand — what `/api/config` carries. */
   async urls(): Promise<BrandingImages> {
     return brandingImageUrls(await this.appConfig.load());
+  }
+
+  /**
+   * Both URLs and the app icon's pixel size — what an administrator reads
+   * (F224).
+   *
+   * Separate from {@link urls} because it costs a file read: the size is not
+   * stored in a column (the bytes are the truth, as {@link describe} argues),
+   * so answering it means opening the icon. That is affordable here — the
+   * design page, an upload, a removal — and would not be on `/api/config`,
+   * which every start of either client fetches.
+   *
+   * The size stays `null` when there is no icon, when the header does not
+   * state one and when the file has gone missing. The page says something
+   * different in each of the first two cases, and the third reads as the
+   * second, which is the honest reading: nothing was measured.
+   */
+  async state(): Promise<BrandingState> {
+    return this.stateOf(await this.appConfig.load());
   }
 
   /**
@@ -113,7 +137,7 @@ export class BrandingService {
   async replace(
     kind: BrandingImageKind,
     image: BrandingImageUpload,
-  ): Promise<BrandingImages> {
+  ): Promise<BrandingState> {
     this.assertAcceptable(image);
 
     const previous = pathOf(await this.appConfig.load(), kind);
@@ -128,7 +152,7 @@ export class BrandingService {
     }
 
     if (previous) await this.files.remove([previous]);
-    return brandingImageUrls(record);
+    return this.stateOf(record);
   }
 
   /**
@@ -138,12 +162,12 @@ export class BrandingService {
    * was asked for, whereas a column pointing at a file that is already gone
    * would render a broken image on every page.
    */
-  async remove(kind: BrandingImageKind): Promise<BrandingImages> {
+  async remove(kind: BrandingImageKind): Promise<BrandingState> {
     const previous = pathOf(await this.appConfig.load(), kind);
     const record = await this.appConfig.setBrandingImage(kind, null);
 
     if (previous) await this.files.remove([previous]);
-    return brandingImageUrls(record);
+    return this.stateOf(record);
   }
 
   /**
@@ -217,6 +241,24 @@ export class BrandingService {
       mimeType: image.mimeType,
       dimensions: imageDimensions(image.bytes),
     };
+  }
+
+  /** {@link state}, for a record that has just been written. */
+  private async stateOf(record: AppConfigRecord): Promise<BrandingState> {
+    const urls = brandingImageUrls(record);
+    return { ...urls, appIconSize: await this.appIconSize(urls) };
+  }
+
+  /**
+   * The icon's size, or `null` — and no read at all when there is no icon.
+   *
+   * The URL is the cheap way to ask whether one exists: it is `null` exactly
+   * when the column is, and it has already been computed by the caller.
+   */
+  private async appIconSize(urls: BrandingImages): Promise<ImageSize | null> {
+    if (!urls.appIconUrl) return null;
+    const described = await this.describe('app-icon');
+    return described?.dimensions ?? null;
   }
 
   /**

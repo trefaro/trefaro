@@ -17,6 +17,7 @@ import {
   pageCount,
 } from '@trefaro/shared-models';
 import { NewsletterAudienceService } from '../../features/newsletter/newsletter.service';
+import { TableScroll } from '../../features/tables/table-scroll';
 
 /**
  * The newsletter opt-in administration (FR 4.8, E45).
@@ -47,7 +48,7 @@ import { NewsletterAudienceService } from '../../features/newsletter/newsletter.
 @Component({
   selector: 'trefaro-newsletter-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslocoPipe],
+  imports: [TranslocoPipe, TableScroll],
   template: `
     <h1>{{ 'admin.newsletter.title' | transloco }}</h1>
 
@@ -89,65 +90,67 @@ import { NewsletterAudienceService } from '../../features/newsletter/newsletter.
           </div>
         </dl>
 
-        <table>
-          <thead>
-            <tr>
-              <th>{{ 'admin.newsletter.colEmail' | transloco }}</th>
-              <th>{{ 'admin.newsletter.colSource' | transloco }}</th>
-              <th>{{ 'admin.newsletter.colScope' | transloco }}</th>
-              <th>{{ 'admin.newsletter.colConfirmed' | transloco }}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (
-              row of page.rows;
-              track row.email + row.source + row.seriesId
-            ) {
+        <trefaro-table-scroll [label]="'admin.newsletter.title' | transloco">
+          <table>
+            <thead>
               <tr>
-                <td>{{ row.email }}</td>
-                <td>
-                  {{
-                    (row.source === 'app'
-                      ? 'admin.newsletter.sourceApp'
-                      : 'admin.newsletter.sourceForm'
-                    ) | transloco
-                  }}
-                </td>
-                <td>
-                  @if (row.seriesName; as name) {
-                    {{ name }}
-                  } @else {
-                    <span class="meta">
-                      {{ 'admin.newsletter.instanceWide' | transloco }}
-                    </span>
-                  }
-                </td>
-                <td>{{ when(row.confirmedAt) }}</td>
-                <td>
-                  @if (row.subscriptionId; as id) {
-                    <button type="button" (click)="remove(id, row.email)">
-                      {{ 'admin.common.delete' | transloco }}
-                    </button>
-                  } @else {
-                    <span class="meta">
-                      {{ 'admin.newsletter.inRegistration' | transloco }}
-                    </span>
-                  }
-                </td>
+                <th>{{ 'admin.newsletter.colEmail' | transloco }}</th>
+                <th>{{ 'admin.newsletter.colSource' | transloco }}</th>
+                <th>{{ 'admin.newsletter.colScope' | transloco }}</th>
+                <th>{{ 'admin.newsletter.colConfirmed' | transloco }}</th>
+                <th></th>
               </tr>
-            } @empty {
-              <tr>
-                <td colspan="5">
-                  {{
-                    (busy() ? 'common.loading' : 'admin.newsletter.empty')
-                      | transloco
-                  }}
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (
+                row of page.rows;
+                track row.email + row.source + row.seriesId
+              ) {
+                <tr>
+                  <td>{{ row.email }}</td>
+                  <td>
+                    {{
+                      (row.source === 'app'
+                        ? 'admin.newsletter.sourceApp'
+                        : 'admin.newsletter.sourceForm'
+                      ) | transloco
+                    }}
+                  </td>
+                  <td>
+                    @if (row.seriesName; as name) {
+                      {{ name }}
+                    } @else {
+                      <span class="meta">
+                        {{ 'admin.newsletter.instanceWide' | transloco }}
+                      </span>
+                    }
+                  </td>
+                  <td>{{ when(row.confirmedAt) }}</td>
+                  <td>
+                    @if (row.subscriptionId; as id) {
+                      <button type="button" (click)="remove(id, row.email)">
+                        {{ 'admin.common.delete' | transloco }}
+                      </button>
+                    } @else {
+                      <span class="meta">
+                        {{ 'admin.newsletter.inRegistration' | transloco }}
+                      </span>
+                    }
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5">
+                    {{
+                      (busy() ? 'common.loading' : 'admin.newsletter.empty')
+                        | transloco
+                    }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </trefaro-table-scroll>
 
         <nav
           class="pager"
@@ -209,6 +212,9 @@ import { NewsletterAudienceService } from '../../features/newsletter/newsletter.
     table {
       border-collapse: collapse;
       inline-size: 100%;
+      /* The width the columns stay readable at; below it the frame around
+         this table scrolls rather than the page (AP 8). An address, where it came from and when. */
+      min-inline-size: 36rem;
     }
 
     th,

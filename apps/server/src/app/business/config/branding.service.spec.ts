@@ -73,6 +73,8 @@ class FakeAppConfigRepository implements AppConfigRepository {
 class FakeFileStore implements FileStore {
   readonly files = new Map<string, Buffer>();
   readonly removed: string[] = [];
+  /** How often the volume was opened — the cost `state` has to stay clear of. */
+  reads = 0;
   private next = 1;
 
   async save(area: FileArea, bytes: Buffer): Promise<string> {
@@ -85,6 +87,7 @@ class FakeFileStore implements FileStore {
   }
 
   async read(path: string): Promise<Buffer | null> {
+    this.reads += 1;
     return this.files.get(path) ?? null;
   }
 
@@ -352,6 +355,57 @@ describe('BrandingService', () => {
       files.files.delete(appConfig.record.appIconPath ?? '');
 
       expect(await service.describe('app-icon')).toBeNull();
+    });
+  });
+
+  describe('state', () => {
+    it('carries the size of the icon an organizer uploaded (F224)', async () => {
+      const written = await service.replace('app-icon', {
+        mimeType: 'image/png',
+        bytes: measurablePng(500, 120),
+      });
+
+      // The upload answers it, so the design page can say what will happen
+      // without asking a second time.
+      expect(written.appIconSize).toEqual({ width: 500, height: 120 });
+      expect(await service.state()).toEqual(written);
+    });
+
+    it('says nothing about a size while no icon is uploaded', async () => {
+      await service.replace('logo', { mimeType: 'image/png', bytes: png() });
+
+      const state = await service.state();
+      expect(state.appIconUrl).toBeNull();
+      expect(state.appIconSize).toBeNull();
+    });
+
+    it('says nothing about a size the header does not state', async () => {
+      await service.replace('app-icon', {
+        mimeType: 'image/png',
+        bytes: png(),
+      });
+
+      expect((await service.state()).appIconSize).toBeNull();
+    });
+
+    it('forgets the size when the icon is removed', async () => {
+      await service.replace('app-icon', {
+        mimeType: 'image/png',
+        bytes: measurablePng(512, 512),
+      });
+
+      const removed = await service.remove('app-icon');
+      expect(removed.appIconUrl).toBeNull();
+      expect(removed.appIconSize).toBeNull();
+    });
+
+    it('does not open the icon while none is uploaded', async () => {
+      // The read is affordable behind an administrative session and would not
+      // be on `/api/config` — so it has to stay off the path that has nothing
+      // to read.
+      const before = files.reads;
+      await service.state();
+      expect(files.reads).toBe(before);
     });
   });
 });

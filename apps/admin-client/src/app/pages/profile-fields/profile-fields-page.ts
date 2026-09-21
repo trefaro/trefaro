@@ -373,7 +373,9 @@ interface FieldDraft {
       font-weight: 600;
     }
 
-    input,
+    /* Not the tick boxes: their size is the baseline's — 24 pixels, in the
+       global stylesheet — and a padding here would be a second answer to it. */
+    input:not([type='checkbox']),
     select,
     textarea {
       padding: 0.5rem;
@@ -390,11 +392,6 @@ interface FieldDraft {
 
     .check > span {
       font-weight: 400;
-    }
-
-    .check input {
-      inline-size: 1.1rem;
-      block-size: 1.1rem;
     }
 
     .field__actions {

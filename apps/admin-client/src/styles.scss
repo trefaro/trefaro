@@ -29,6 +29,32 @@ table {
   border-collapse: collapse;
 }
 
+/* Pointer targets, at the floor WCAG 2.2 SC 2.5.8 sets: 24 CSS pixels.
+
+   AP 8 measured what this client had come to: buttons 21 pixels high because
+   their padding said `0.3rem`, tick boxes at the browser's own 13, a file
+   picker at 21. None of that is a miss with a mouse on a large screen, and all
+   of it is one at 768 pixels on a tablet — which is the width E67 makes a
+   floor.
+
+   Not the participant client's 2.75rem, and the difference is the decision:
+   that client is designed for a thumb (SC 2.5.5, 44 pixels), this one for a
+   pointer, and ten of its pages are a table where every extra pixel per row is
+   a row less on the screen. One baseline rule rather than a line in each of
+   twenty components; a component that needs more still says so itself. */
+button,
+select,
+textarea,
+input:not([type='checkbox'], [type='radio'], [type='hidden']) {
+  min-block-size: 2rem;
+}
+
+input[type='checkbox'],
+input[type='radio'] {
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+}
+
 :focus-visible {
   /* The darkened shade, for the reason the participant client's stylesheet
      gives: a thin focus ring is the strictest contrast case. */

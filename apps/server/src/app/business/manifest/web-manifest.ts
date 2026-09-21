@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import {
-  MIN_INSTALLABLE_ICON_PX,
   SHIPPED_APP_ICONS,
+  isInstallableAppIcon,
   type WebManifest,
   type WebManifestIcon,
 } from '@trefaro/shared-models';
@@ -49,8 +49,9 @@ const BACKGROUND_COLOR = '#ffffff';
  *   the same for an image we have not seen is how a logo gets its edges shaved
  *   off by an Android launcher.
  * - **A usable upload replaces the shipped set; anything else joins it.** Usable
- *   means square and at least {@link MIN_INSTALLABLE_ICON_PX} on a side, read
- *   from the file's own header. Listing the shipped icons beside a good upload
+ *   means square and at least `MIN_INSTALLABLE_ICON_PX` on a side, read from
+ *   the file's own header — `isInstallableAppIcon` in `shared-models` is the
+ *   rule, and the design page reads the same one. Listing the shipped icons beside a good upload
  *   would let a browser pick Trefaro's icon over the organization's; dropping
  *   them for an upload that is too small, oblong or unreadable would leave the
  *   instance *uninstallable* — a failure nobody sees until they try. So the rule
@@ -110,16 +111,15 @@ function iconsFor(appIcon: AppIconInput | null): readonly WebManifestIcon[] {
 /**
  * Whether a browser can install an application from this icon alone.
  *
- * Square, because a launcher crops to a square and an oblong icon is refused
- * outright; big enough, because the floor is a browser's and not ours.
+ * The rule itself is `isInstallableAppIcon` in `shared-models`, because the
+ * design page has to say the same thing in words (F224) — what this function
+ * adds is only the translation from two nullable numbers to the size the rule
+ * takes.
  */
 function installable(appIcon: AppIconInput): boolean {
   const { width, height } = appIcon;
-  return (
-    width !== null &&
-    height !== null &&
-    width === height &&
-    width >= MIN_INSTALLABLE_ICON_PX
+  return isInstallableAppIcon(
+    width !== null && height !== null ? { width, height } : null,
   );
 }
 

@@ -14,7 +14,10 @@ besteht. Jede Zeile hier hat einmal einen halben Tag gekostet.
   meldet die Folgefehler an ganz anderen Stellen. Im `styles`-Block ist die
   Meldung besonders irreführend: „Failed to resolve @Component.styles to a
   string or an array of strings" klingt nach einem kaputten Dekorator und ist
-  ein Satzzeichen in einem CSS-Kommentar (AP 7 der Phase 5).
+  ein Satzzeichen in einem CSS-Kommentar (AP 7 der Phase 5). **Zweimal
+  passiert** — in AP 8 in drei Dateien auf einen Schlag, weil derselbe
+  erklärende Kommentar an drei Stellen eingefügt wurde: wer einen Kommentar
+  kopiert, kopiert auch sein Satzzeichen.
 - **Ein `<select>`, dessen Optionen aus einem `@for` kommen, nimmt kein
   `[value]`** — Angular schreibt die Eigenschaft, bevor die Optionen existieren,
   und die Zuweisung fällt wortlos weg. `[selected]` an den Optionen; mit
@@ -314,5 +317,36 @@ besteht. Jede Zeile hier hat einmal einen halben Tag gekostet.
   bestellte ist; noch einmal zu lesen verschiebt die Seite unter einem Daumen,
   der gerade die nächste Zeile drücken will. Währenddessen liegt die Id in
   einem `busy`-Set, damit zwei Antippen nicht zwei Anfragen werden.
+
+- **Eine Komponentenregel schlägt die Grundregel, auch bei gleicher
+  Spezifität** (AP 8 der Phase 5). Angular hängt die Stile einer Komponente
+  **nach** dem globalen Stylesheet ein, also gewinnt `.check input` gegen
+  `input[type='checkbox']` in `styles.scss` — beide 0,1,1, die spätere Regel
+  zählt. Drei Seiten des Veranstalter-Clients hielten ihre Kästchen so auf
+  13 beziehungsweise 18 Pixeln fest, obwohl der Boden 24 sagt (F226). Wer
+  einen Boden einzieht, sucht deshalb die Regeln, die ihn überschreiben —
+  `grep` nach dem Bauteil, nicht nach der Eigenschaft —, und nimmt sie weg,
+  statt die Zahl ein zweites Mal hinzuschreiben. Gefunden hat es keine
+  Unit-Suite, sondern der Wächter im Browser.
+- **Eine Tabelle, die nicht passt, braucht zwei Hälften** (F225, AP 8 der
+  Phase 5): eine **Mindestbreite** an der Tabelle und einen Rahmen mit
+  `overflow-x: auto` darum (`features/tables/table-scroll.ts` im
+  Veranstalter-Client). Nur der Rahmen genügt nicht — eine Tabelle ohne
+  Mindestbreite schrumpft, statt zu scrollen, und das Ergebnis misst sich
+  sauber und liest sich nicht. Der Rahmen wird nur dann `role="region"` und
+  tabulierbar, wenn er wirklich scrollt; das hängt am Inhalt so sehr wie am
+  Fenster und wird deshalb gemessen (`ResizeObserver` auf Rahmen **und**
+  Tabelle), nicht aus der Breite geschlossen.
+- **Ein Handler gehört an ein Bedienelement, nicht an das `<div>` darüber**
+  (AP 8 der Phase 5). `@angular-eslint` verbietet `(click)` und
+  `(keydown…)` an Elementen, die man nicht fokussieren kann
+  (`interactive-supports-focus`, `click-events-have-key-events`), und die
+  Abhilfe ist in beiden Fällen die bessere Lösung: Escape für die ganze
+  Komponente gehört an ihren **Host** (`host: { '(keydown.escape)': '…' }`)
+  und wirkt dann, wo der Fokus auch ist; „das Menü schließt sich, wenn man
+  gewählt hat" hängt an den **Router-Ereignissen** und nicht an einem Klick
+  auf `<nav>` — womit auch die Einträge mitgehen, die ein Plug-in beiträgt.
+  `NavigationEnd` **und** `NavigationSkipped`: wer den Eintrag der Seite
+  wählt, auf der er schon steht, löst kein `NavigationEnd` aus.
 
 Siehe auch: [Browsersuiten und E2E-Tests](e2e-tests.md), [Mehrsprachigkeit und Katalog](i18n.md), [Whitelabel und PWA](whitelabel-pwa.md).
