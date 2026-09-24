@@ -230,6 +230,10 @@ export function loadEnv(
           : null,
     },
     rateLimits: {
+      globalRequestsPerMinute: read.integer(
+        'GLOBAL_REQUESTS_PER_MINUTE',
+        RATE_LIMIT_DEFAULTS.globalRequestsPerMinute,
+      ),
       loginAttemptsPerWindow: read.integer(
         'LOGIN_ATTEMPTS_PER_WINDOW',
         RATE_LIMIT_DEFAULTS.loginAttemptsPerWindow,

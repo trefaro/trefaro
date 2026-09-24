@@ -8,9 +8,11 @@ import { AppModule } from './app/app.module';
 import { servesApiConsole } from './app/core/config/api-docs';
 import type { TrefaroEnv } from './app/core/config/env';
 import { ENV } from './app/core/config/env.module';
+import { logLevelWarnings, logLevelsFor } from './app/core/config/log-levels';
 import { rateLimitWarnings } from './app/core/config/rate-limits';
 import { smtpWarnings } from './app/core/config/smtp';
 import { AllExceptionsFilter } from './app/core/filters/all-exceptions.filter';
+import { RuntimeMetricsService } from './app/core/operations/runtime-metrics.service';
 import { VALIDATION_PIPE_OPTIONS } from './app/core/validation';
 import { ConfiguredIoAdapter } from './app/core/websocket/configured-io.adapter';
 
@@ -20,7 +22,15 @@ const GLOBAL_PREFIX = 'api';
 async function bootstrap(): Promise<void> {
   // The ENV provider validates the environment while the modules initialise, so
   // a misconfigured instance fails before this ever reaches `listen`.
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  //
+  // The log level is the one setting that cannot wait for that: a logger has to
+  // exist before the module that validates the environment does, so it is read
+  // from the raw environment here. `log-levels.ts` is the only reader of
+  // `LOG_LEVEL`, and it reports a value it could not use in the same breath as
+  // the other two settings below.
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: logLevelsFor(process.env),
+  });
   const env = app.get<TrefaroEnv>(ENV);
 
   app.setGlobalPrefix(GLOBAL_PREFIX);
@@ -53,7 +63,14 @@ async function bootstrap(): Promise<void> {
   // `core/validation.ts`.
   app.useGlobalPipes(new ValidationPipe(VALIDATION_PIPE_OPTIONS));
 
-  app.useGlobalFilters(new AllExceptionsFilter(app.get(HttpAdapterHost)));
+  // The filter is the only writer of the failure half of the tally, so it is
+  // handed the same instance the interceptor and the mailer write to.
+  app.useGlobalFilters(
+    new AllExceptionsFilter(
+      app.get(HttpAdapterHost),
+      app.get(RuntimeMetricsService),
+    ),
+  );
 
   // Plug-in web component bundles. Serving them from the server, rather than
   // from each client container, means one URL works in development (through the
@@ -95,8 +112,15 @@ async function bootstrap(): Promise<void> {
 
   // Loud, and on the way up rather than in a file nobody opens (E60, E61). An
   // instance running the defaults says nothing here — which is what makes the
-  // silence worth reading.
+  // silence worth reading. Three sources, one shape.
   //
+  // This one first, because it decides whether the other two are printed at
+  // all: below `warn` they would not be, which is why `log-levels.ts` does not
+  // offer that (AP 10).
+  for (const warning of logLevelWarnings(process.env)) {
+    Logger.warn(warning, 'Logging');
+  }
+
   // Deliberately not part of `startupWarnings` (business/setup), although the
   // shape is the same: that list answers "what is missing from this deployment"
   // and is also served to the first-run setup screen, where a raised limit

@@ -154,7 +154,8 @@ export class SetupService implements OnApplicationBootstrap {
     // Spent, and the route is closed by the account that now exists.
     this.tokens.discard();
     this.logger.log(
-      `First-run setup completed for "${settings.organizationName}" by ${admin.email}`,
+      `First-run setup completed for "${settings.organizationName}" by ` +
+        `administrator ${admin.id}`,
     );
 
     return {

@@ -17,6 +17,23 @@
 /** Every configurable limit, as one typed block of the environment. */
 export interface RateLimitEnv {
   /**
+   * The generous bound **every** request counts against, per client address
+   * per minute — the socket.io handshake included (AP 2 of phase 5).
+   *
+   * Three hundred, which is what it has always been, and it is not a defence
+   * against anything in particular: a client fetches the configuration and a
+   * handful of endpoints on startup, and an organizer clicking through the
+   * participant list must never meet it.
+   *
+   * Configurable only since AP 10, and the reason is worth keeping: a load test
+   * (NFR 12) against an instance running this number measures the limiter and
+   * not the server — five requests a second is the ceiling. Raising it in a
+   * line of code to take a measurement would have been exactly what E60
+   * forbids, so it moved into the `.env` like the other five, with the same
+   * loud line when it is above the default.
+   */
+  readonly globalRequestsPerMinute: number;
+  /**
    * Login attempts allowed per client address per five minutes, for every
    * login there is — the organizer login (UC 01) and the participant login
    * (FR 4.2), because the two are the same kind of door.
@@ -101,6 +118,7 @@ export interface RateLimitEnv {
 
 /** What the instance ships with. Every default here is a number that was already in force. */
 export const RATE_LIMIT_DEFAULTS = {
+  globalRequestsPerMinute: 300,
   loginAttemptsPerWindow: 20,
   registrationsPerWindow: 60,
   newsletterSignupsPerWindow: 20,
@@ -111,6 +129,7 @@ export const RATE_LIMIT_DEFAULTS = {
 
 /** The environment variable each limit is read from, for the startup log. */
 const VARIABLE_NAMES = {
+  globalRequestsPerMinute: 'GLOBAL_REQUESTS_PER_MINUTE',
   loginAttemptsPerWindow: 'LOGIN_ATTEMPTS_PER_WINDOW',
   registrationsPerWindow: 'REGISTRATIONS_PER_WINDOW',
   newsletterSignupsPerWindow: 'NEWSLETTER_SIGNUPS_PER_WINDOW',

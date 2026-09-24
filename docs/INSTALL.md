@@ -111,11 +111,27 @@ LOGIN_ATTEMPTS_PER_WINDOW=20
 NEWSLETTER_SIGNUPS_PER_WINDOW=20
 MAILS_PER_RECIPIENT_PER_WINDOW=5
 PASSWORD_RESETS_PER_WINDOW=20
+# The budget every request counts against, per address per minute. Raise this
+# one only to take a measurement, and put it back afterwards.
+GLOBAL_REQUESTS_PER_MINUTE=300
 ```
 
 The counters are kept in memory, so `docker compose -p trefaro restart server`
 clears them — which is the quickest way to let somebody back in who locked
 themselves out of the login while you decide whether to change a number.
+
+### How much it writes to its log
+
+```bash
+# warn, log (the default), debug or verbose.
+LOG_LEVEL=log
+```
+
+`debug` adds a line for every request that was refused as a matter of course —
+every visitor who is not signed in, every address that does not exist — which
+is what you want while chasing something and not what you want on a Tuesday.
+There is nothing quieter than `warn`, and [section 12.1](#121-reading-the-log)
+says why.
 
 ### Ports
 
@@ -536,6 +552,67 @@ The verification scripts under [`tools/spike-verification/`](../tools/spike-veri
 check a running instance from the outside: the proxy routing, the API, the module
 switches, TLS, the administrative boundary. They are the fastest way to find out
 which half of a problem is which.
+
+### 12.1 Reading the log
+
+```bash
+docker compose --env-file .env -f infra/docker-compose.yml logs -f server
+```
+
+Everything the instance writes goes there, in one format: the server's own
+lines, and the database's. Two things it deliberately does **not** contain:
+
+- **Nobody's address, name or password, and no token.** A line names a row by
+  its id. That is not politeness — a log ends up in a mail to somebody helping
+  you, and it should be sendable. A search term never appears either: the
+  values in a web address are removed before anything is written, the keys
+  stay, so `?search=…` says that a search failed without saying what was
+  searched for.
+- **The normal traffic of a day.** A visitor who is not signed in, a page that
+  does not exist, a plug-in that is switched off — those answer 401 and 404 all
+  day long, and they are written only at `LOG_LEVEL=debug`.
+
+`LOG_LEVEL` takes `warn`, `log` (the default), `debug` or `verbose`. Quieter
+than `warn` is not offered: the lines that say a rate limit was raised, or that
+mail leaves this instance unencrypted, are warnings, and an instance that
+cannot print them is one you cannot check from its own log.
+
+### 12.2 "It said something went wrong" — the fault mark
+
+When the server answers with a fault, the answer carries an eight-character
+mark, and exactly one line in the log carries the same one:
+
+```
+[Nest] ERROR [AllExceptionsFilter] 500 a1b2c3d4 /api/admin/events/…/registrations?search=…
+```
+
+So the useful question to somebody reporting a problem is not _what did you
+type_ but **what did it say** — the mark is in the answer the browser received
+(developer tools, the Network tab, the failing request). With it,
+`logs server | grep a1b2c3d4` finds the one entry that has the stack trace in
+it. That is the whole design: a fault stays diagnosable without anything about
+the person who hit it being written down.
+
+### 12.3 How this instance has been
+
+```
+GET /api/admin/operations
+```
+
+Behind an organizer login, and it answers with numbers rather than rows: how
+long the server has been up, how much memory it holds, whether the database
+answers and how quickly, how many requests were answered and how many were
+refused (rate limits counted apart), the mark and time of the last fault, and
+how much mail went out and how much did not.
+
+The mail counters are the ones worth a glance after every event: mail is the
+part of an installation that stops working without anybody noticing, because an
+organizer sees the registration arrive and never learns that its receipt did
+not. Everything here is counted since the **process** started, so a restart
+sets it back to zero — which is usually the very thing you wanted to know.
+
+`/api/health` stays public and unchanged: two words for the proxy and the
+container health check, which cannot sign in.
 
 ## 13. What runs where
 

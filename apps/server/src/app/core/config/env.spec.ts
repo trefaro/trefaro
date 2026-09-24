@@ -142,6 +142,7 @@ describe('loadEnv', () => {
 describe('loadEnv — rate limits (E60)', () => {
   it('defaults to the numbers the instance has always shipped with', () => {
     expect(loadEnv({}).rateLimits).toEqual({
+      globalRequestsPerMinute: 300,
       loginAttemptsPerWindow: 20,
       registrationsPerWindow: 60,
       newsletterSignupsPerWindow: 20,
@@ -155,6 +156,7 @@ describe('loadEnv — rate limits (E60)', () => {
   it('takes every limit from the environment', () => {
     expect(
       loadEnv({
+        GLOBAL_REQUESTS_PER_MINUTE: '3000',
         LOGIN_ATTEMPTS_PER_WINDOW: '5',
         REGISTRATIONS_PER_WINDOW: '7',
         NEWSLETTER_SIGNUPS_PER_WINDOW: '9',
@@ -163,6 +165,7 @@ describe('loadEnv — rate limits (E60)', () => {
         PASSWORD_RESETS_PER_WINDOW: '15',
       }).rateLimits,
     ).toMatchObject({
+      globalRequestsPerMinute: 3000,
       loginAttemptsPerWindow: 5,
       registrationsPerWindow: 7,
       newsletterSignupsPerWindow: 9,

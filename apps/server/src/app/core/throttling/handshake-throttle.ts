@@ -1,7 +1,7 @@
 import { ThrottlerStorage } from '@nestjs/throttler';
 import { createHash } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
-import { GLOBAL_LIMIT, GLOBAL_WINDOW } from './throttlers';
+import { GLOBAL_WINDOW } from './throttlers';
 
 /**
  * The counter for the one request `@nestjs/throttler` has never seen.
@@ -32,13 +32,17 @@ export type AllowRequest = (
   respond: (error: string | null, allowed: boolean) => void,
 ) => void;
 
-export function handshakeThrottle(storage: ThrottlerStorage): AllowRequest {
+export function handshakeThrottle(
+  storage: ThrottlerStorage,
+  /** The same budget the router uses — `RateLimitEnv.globalRequestsPerMinute`. */
+  limit: number,
+): AllowRequest {
   return (request, respond) => {
     storage
       .increment(
         keyFor(clientAddressOf(request)),
         GLOBAL_WINDOW,
-        GLOBAL_LIMIT,
+        limit,
         GLOBAL_WINDOW,
         THROTTLER_NAME,
       )

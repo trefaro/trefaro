@@ -2006,3 +2006,321 @@ hier niemand treffen kann); das Zahlenpaar von Proxy und Anwendung, das ein
 Kommentar zusammenhält; und der Health-Endpunkt, der selbst mit der Datenbank
 spricht — der letzte **vor AP 12**, das die Architektur beschreibt und nichts
 beschreiben darf, was nicht stimmt.
+
+### AP 10 — Fehlerprotokollierung, Monitoring und Lasttests (erledigt, 24.09.2026)
+
+Drei Dinge, die zusammengehören, weil ein Lasttest ohne Instrumentierung eine
+Zahl ohne Erklärung ist. Die Abnahmebedingung hat aber einen Satz, der wie zwei
+klingt und wie ein Widerspruch aussieht: **ein Betreiber soll aus den
+Protokollen erkennen können, was schiefging, ohne eine Adresse darin zu
+finden.** Das Paket besteht im Wesentlichen darin, diesen Satz aufzulösen, und
+die Auflösung ist eine Kennung statt eines Namens.
+
+#### Was im Protokoll stand — und was daran nicht aufgeschrieben worden war
+
+Der Anfang war eine Bestandsaufnahme derselben Art wie das Adressinventar aus
+AP 9: **zweiundsechzig Aufrufstellen** von `logger.*` im Servercode, einzeln
+gelesen. Der Befund war zunächst beruhigend — die Zeilen nennen Ids, zählen
+Dinge und beschreiben Fehler — mit **drei** Ausnahmen, die eine Adresse
+interpolierten: die angelegte Administratorin, die erste aus der Umgebung, und
+die abgeschlossene Ersteinrichtung. Drei Zeilen, drei Einzeiler.
+
+Die zwei ernsteren Befunde standen nicht an einer Aufrufstelle, sondern in den
+Vorgaben zweier Bibliotheken — beides Dinge, die **niemand entschieden hat**:
+
+1. **Nests Vorgabelogger hat jeden Pegel an**, `debug` eingeschlossen.
+   `AllExceptionsFilter` schreibt einen erwarteten 401 oder 404 ausdrücklich auf
+   `debug`, mit einem Kommentar, der begründet, warum das keine Warnung sein
+   darf — und mit der Vorgabe stand die Zeile trotzdem in jedem
+   Produktionsprotokoll. Ein Protokoll, das mit den Besuchern wächst statt mit
+   den Problemen, ist eines, das niemand mehr liest.
+2. **TypeORM hängt an eine gescheiterte Abfrage ihre Parameter** —
+   `query failed: … -- PARAMETERS: ["jemand@example.org"]` —, und zwar auf dem
+   Pegel `error`, den jede Umgebung dieses Servers anhat. Ein Schluckauf der
+   Datenbank während einer Anmeldung schrieb damit eine Adresse ins Protokoll,
+   ein Passwort-Reset das Token, mit dem man das Konto übernimmt.
+
+Und ein dritter, der aus der eigenen Feder kam: der Filter protokollierte die
+**ganze** Anfrageadresse. Die Teilnehmerübersicht sucht nach Nachname und
+Adresse (F32), ein Bestätigungslink trägt ein signiertes Token — ein 500 auf
+einer dieser Seiten schrieb beides mit.
+
+Behoben ist das als vier Dinge: `LOG_LEVEL` mit Vorgabe `log` (und **leiser als
+`warn` gibt es nicht** — die Zeilen zu E60 und E62 sind Warnungen, und eine
+Instanz, die sie nicht drucken kann, ist aus ihrem eigenen Protokoll nicht mehr
+prüfbar); ein eigener TypeORM-Logger, der dieselbe Anweisung und dieselbe
+Fehlermeldung schreibt und statt der Werte ihre **Anzahl**; `redactPath`, das
+die Schlüssel der Query-Zeichenkette behält und die Werte wegnimmt, im
+Protokoll **und** im Rumpf der Fehlerantwort; und die drei Einzeiler.
+
+Dazu die Wache, damit es so bleibt: `log-hygiene.spec.ts` liest jede
+Aufrufstelle im Quelltext und lässt keine Interpolation durch, die eine
+Adresse, einen Namen, ein Passwort, ein Token, eine Geräteadresse oder einen
+Suchbegriff benennt. Rot gegen genau die drei Zeilen, bevor sie geändert
+wurden. Die Ausnahmeliste hat **einen** Eintrag: das Ersteinrichtungs-Token,
+das genau deshalb gedruckt wird — und ein dritter Test sorgt dafür, dass ein
+Eintrag, der nichts mehr trifft, auffällt statt zu verstauben.
+
+#### Die Fehlerkennung — der Satz, der wie ein Widerspruch klang
+
+Acht Hexadezimalstellen, erzeugt für jedes 5xx und für nichts sonst, stehen im
+Rumpf der Antwort (`incident`) und in der Logzeile neben dem Stack. Wer vor dem
+Bildschirm sitzt, liest sie vor; `grep` findet genau einen Eintrag. Damit ist
+ein Fehler untersuchbar, **ohne** dass irgendwo steht, wer ihn ausgelöst hat —
+und das ist die ganze Auflösung des Widerspruchs. Ein 404 bekommt keine, denn
+eine Kennung darauf erzöge Menschen dazu, eine Nummer zu nennen, die
+nirgendwohin führt.
+
+Einen Bildschirm hat sie nicht. Der Veranstalter-Client zeichnet einen
+gescheiterten Aufruf an rund dreißig Stellen mit je eigenem Markup, also
+bräuchte eine Kennung vor einem Menschen zuerst ein gemeinsames Bauteil — das
+ist eine Änderung eigener Form und steht mit ihrem Preis in `todo.md`. Bis
+dahin sagt `docs/INSTALL.md` §12.2, wo man sie findet.
+
+#### Was ein Betreiber lesen kann
+
+`/api/health` bleibt, was es war: zwei Wörter für einen Proxy und eine
+Container-Prüfung, die sich beide nicht anmelden können. Alles darüber steht
+unter `GET /api/admin/operations` — Laufzeit, Speicher, Umlaufzeit der
+Datenbank, Antworten nach Klasse, die Kennung und Zeit des letzten Fehlers, und
+was aus der ausgehenden Mail wurde. Zahlen und keine Zeilen; das einzige Feld
+mit einer Zeichenkette ist die Kennung, und der Pfad daneben hat seine Werte
+schon verloren.
+
+Drei Schreiber, weil keiner allein reicht: ein Interceptor zählt, was geklappt
+hat, der Ausnahmefilter zählt, was nicht — ein Wächter wirft **vor** jedem
+Interceptor, ein 401 oder 429 käme dort also nie an —, und der Mailversand
+zählt sich selbst, weil Mail der Teil ist, der aufhört zu funktionieren, ohne
+dass jemand es merkt. Die Zähler stehen im Speicher und werden bei einem
+Neustart null: ehrlich statt vollständig, denn der Neustart ist meistens genau
+das Ereignis, nach dem gefragt wird.
+
+Und dabei ist der Befund E2 des Sicherheitsreviews aus AP 9 abgearbeitet — der
+Health-Endpunkt sprach selbst mit PostgreSQL. Er tut es jetzt über einen Port
+(`DATABASE_HEALTH`, zwanzig Zeilen, wie der Eintrag es vorhergesagt hatte), der
+eine **Dauer** zurückgibt statt eines Ja/Nein, weil `/api/admin/operations` der
+zweite Leser ist; `null`, wenn die Runde nicht zustande kam. Behoben **vor**
+AP 12, das die Architektur beschreibt und nichts beschreiben darf, was nicht
+stimmt.
+
+#### Die sechste Grenze
+
+AP 2 hat fünf Grenzen aus dem Code in die Umgebung geholt und die sechste
+stehen lassen: `GLOBAL_LIMIT = 300` pro Minute, die Grenze, gegen die **jede**
+Anfrage zählt — fünf pro Sekunde. Das Erste, was sie je gebraucht hat, war
+dieser Lasttest, und die Versuchung war, sie für die Messung im Code
+hochzusetzen. Genau das verbietet E60. Also ist sie jetzt
+`GLOBAL_REQUESTS_PER_MINUTE`: dieselbe Vorgabe, dieselbe laute Zeile beim Start,
+durchgereicht von `infra/docker-compose.yml`, und der socket.io-Handshake zählt
+weiter gegen dasselbe Budget. Der Messlauf hebt sie in der `.env` seines
+Wegwerf-Stacks an — und die Instanz hat es beim Start gesagt:
+
+```
+WARN [RateLimits] GLOBAL_REQUESTS_PER_MINUTE is 1000000, above the default of
+300 — a raised limit is a limit nobody is testing (E4).
+```
+
+`load.mjs` bricht mit Rückgabewert **3** ab, sobald auch nur eine 429 kommt,
+statt eine Zahl der Drosselung als Messwert auszugeben.
+
+#### Die Lastzahlen, mit Aufbau und Datum
+
+Gemessen am **24.09.2026**, mit `tools/load-test/measure.sh`: fünf Container aus
+leerem Volume, eine Reihe, ein Event, **20 000** Anmeldungen darauf, zwanzig
+gleichzeitige Leser, zehn Sekunden je Szenario nach zwei Sekunden Aufwärmen.
+Aufbau: PostgreSQL 17.11, Docker 29.7.2 (linux/amd64), Node 24.17 im Treiber,
+Host 16 Kerne / 47 GB unter WSL2 (Linux 6.18) — also eine
+Entwicklungsmaschine und kein Server, was für die Einordnung der Zahlen unten
+zählt.
+
+| Szenario       | Antworten/s | p50     | p90     | p95      | p99      |
+| -------------- | ----------- | ------- | ------- | -------- | -------- |
+| `config`       | **1 542**   | 12,0 ms | 17,1 ms | 19,2 ms  | 25,8 ms  |
+| `series`       | **1 525**   | 12,3 ms | 17,1 ms | 18,6 ms  | 23,0 ms  |
+| `event`        | **894**     | 20,6 ms | 29,6 ms | 33,2 ms  | 42,1 ms  |
+| `catalogue`    | **293**     | 64,5 ms | 81,7 ms | 94,0 ms  | 121,0 ms |
+| `search`       | **258**     | 75,3 ms | 88,1 ms | 95,6 ms  | 131,1 ms |
+| `participants` | s. u.       | 73,5 ms | 96,0 ms | 105,6 ms | s. u.    |
+
+Keine einzige Antwort außer 200, keine 429, und der Bericht der Instanz selbst
+zählte am Ende **58 476** beantwortete Anfragen, 0 Client-Fehler, 0 gedrosselt,
+0 Serverfehler — was zugleich die Probe darauf ist, dass die Zählung aus
+`/api/admin/operations` und der Treiber dasselbe gesehen haben.
+
+Drei Dinge sind daran bemerkenswert:
+
+- **Die öffentlichen Seiten tragen die Last, um die es geht.** Der Fall, den
+  eine kleine NGO wirklich hat, ist ein Newsletter, nach dem ein paar hundert
+  Menschen innerhalb einer Minute auf dieselbe Landingpage klicken. Bei
+  neunhundert bis fünfzehnhundert Antworten je Sekunde ist das kein Fall.
+- **Der Katalog ist die langsamste öffentliche Antwort**, um den Faktor fünf:
+  1 288 Schlüssel werden je Anfrage aus der englischen Datei, der Sprachdatei
+  und den Überschreibungen zusammengesetzt und dann gehasht. Das ist die
+  zweite Anfrage, die **jeder** Client beim Start macht. Ein ETag ist da
+  (`no-cache, must-revalidate`, E22), aber er spart die **Leitung** und nicht
+  die **Arbeit**: die Kennung entsteht erst, nachdem der Katalog gebaut ist, ein
+  304 kostet den Server also so viel wie ein 200. Bei 293 Antworten je Sekunde
+  ist das für eine Instanz einer Organisation weit jenseits dessen, was
+  gebraucht wird — aufgeschrieben in `todo.md`, mit der Zahl daneben, statt
+  hier optimiert zu werden.
+- **`ILIKE` über 20 000 Zeilen kostet, was es kostet, und das ist wenig.** Die
+  gesuchte Seite kommt bei 75 ms Median zurück, mit einem Suchbegriff, der
+  jede Zeile trifft.
+
+##### Und die eine Zahl, die dieses Protokoll nicht erklärt
+
+Das Szenario `participants` hat in drei von vier vollständigen Läufen einen
+Ausreißer, den die anderen fünf nicht haben: die Hälfte der Antworten liegt bei
+73 ms, p95 bei 106 ms — und dann standen **23 von 1 146** Anfragen etwa
+**vierundvierzig Sekunden** still, alle zur selben Zeit, danach lief es weiter,
+und das Szenario **danach** war wieder tadellos.
+
+Ausgeschlossen ist, was sich ausschließen ließ: keine langlaufende Abfrage in
+`pg_stat_activity`, keine erschöpfte oder verlorene Verbindung (der Pool war
+vorher wie nachher gesund), kein Fehler und kein 5xx im Bericht der Instanz,
+kein Speicherwachstum, kein Schuld des Seeds (ein `VACUUM (ANALYZE)` nach dem
+Einfügen ändert nichts), und kein geplanter Auftrag zu dieser Zeit — die
+einzigen zwei laufen alle zwölf Stunden. Und: **dasselbe Szenario allein
+gefahren ist sauber** — 4 046 Anfragen, schlechtester Fall 115 ms.
+
+Damit steht es hier als das, was es ist: ein reproduzierbares Einfrieren des
+ganzen Anfragewegs für eine Dreiviertelminute, auf einer WSL2-Maschine, das
+sich von selbst löst und das ich dieser Anwendung mit den vorliegenden
+Belegen **nicht** zuschreiben kann — und der Umgebung ohne Beleg auch nicht.
+Die Zahl, die es entscheidet, ist ein Lauf auf einem echten Linux-Server; das
+steht in `todo.md`. `load.mjs` zählt seit diesem Befund, **wie viele** Anfragen
+über einer Sekunde lagen, denn genau diese Zahl unterscheidet einen Server, der
+unter Last langsam wird, von einer Maschine, die einmal stehen bleibt — und ein
+Maximum allein kann das nicht.
+
+#### pg_trgm: gemessen statt behauptet (F32)
+
+Die Frage, die `todo.md` seit AP 5 der Phase 1 offen hält: die
+Teilnehmerübersicht ist bei **2 000** Anmeldungen je Event gemessen (13 ms im
+schlechtesten Fall), und eine Organisation eine Größenordnung darüber ist nie
+gemessen worden. Also **20 000** Anmeldungen auf ein Event, und dieselbe
+Abfrage, die die Repository baut — ein `ILIKE '%wort%'` je Wort, oder-verknüpft
+über drei Spalten, und-verknüpft über die Wörter, auf ein Event begrenzt,
+sortiert und paginiert —, dreimal gemessen: wie ausgeliefert, mit `pg_trgm` und
+einem GIN-Index auf jeder der drei Spalten, und wieder wie ausgeliefert. Der
+dritte Durchgang ist keine Zeremonie: er beweist, dass die Datenbank so
+zurückbleibt, wie sie war, und fängt den Fall ab, dass der zweite nur schneller
+war, weil inzwischen alles im Cache lag. Median aus fünf Läufen je Anweisung,
+`EXPLAIN ANALYZE`, PostgreSQL 17.11.
+
+| Suchbegriff       | Anweisung        | ohne `pg_trgm` | mit `pg_trgm` | wieder ohne |
+| ----------------- | ---------------- | -------------- | ------------- | ----------- |
+| `a` (trifft alle) | Seite (25 Zeil.) | 0,24 ms        | 0,31 ms       | 0,17 ms     |
+| `a` (trifft alle) | Zählung          | 7,18 ms        | 6,88 ms       | 7,12 ms     |
+| `okonkwo`         | Seite            | 0,76 ms        | 0,50 ms       | 0,50 ms     |
+| `okonkwo`         | Zählung          | 16,33 ms       | **2,46 ms**   | 17,40 ms    |
+| `okonkwo amina`   | Seite            | 1,54 ms        | 1,50 ms       | 1,56 ms     |
+| `okonkwo amina`   | Zählung          | 16,80 ms       | **2,18 ms**   | 17,11 ms    |
+
+**Die Entscheidung: nein, und F32 bleibt, wie es ist** — jetzt mit einer Zahl
+dahinter statt eines Arguments. Drei Dinge stehen in dieser Tabelle:
+
+- Die **Seite** — das, was ein Veranstalter ansieht — kostet unter zwei
+  Millisekunden, mit Index wie ohne. Sie hört nach 25 Zeilen auf, und der
+  Sortierindex bedient sie; ein Trigramm-Index hat dort nichts zu tun.
+- Die **Zählung** ist die Hälfte, die ein Index beschleunigt, und zwar um das
+  **Siebenfache** — von 17 auf 2 ms. Siebzehn Millisekunden sind das, was der
+  Index einspart, und siebzehn Millisekunden sieht niemand.
+- Beim Suchbegriff, der **jede** Zeile trifft, ändert er **nichts** (7,2 gegen
+  6,9 ms). Das ist der schlechteste Fall, und es ist genau der, in dem ein
+  Trigramm-Index nichts wegnehmen kann.
+
+Dagegen steht, was die Erweiterung kostet: `CREATE EXTENSION` braucht Rechte,
+die eine kleine Organisation auf einer gemanagten PostgreSQL nicht unbedingt
+hat — das Argument, auf dem F32 von Anfang an steht (NFR 15, Installierbarkeit).
+Vierzehn Millisekunden sind dafür zu wenig. Die Entscheidung steht damit **eine
+Größenordnung** über dem, was AP 5 gemessen hat, und das Werkzeug, das sie
+wieder aufmacht, liegt daneben: wenn je eine Instanz zehnmal so groß wird, ist
+es ein Aufruf und keine Diskussion.
+
+#### Was anders lief
+
+**Zwei Fehler fand der Container, kein Test — und beide in der Verdrahtung.**
+Der erste: `RuntimeMetricsService` nimmt seine Uhr als Konstruktorparameter mit
+Vorgabewert, damit ein Test sie stellen kann. Nest interessiert der Vorgabewert
+nicht — es liest den ausgegebenen Parametertyp, findet `Function` und baut den
+Container nicht. Der zweite: der neue Port `DATABASE_HEALTH` war in `providers`
+gebunden und in `exports` vergessen. Beide Male startete der Server nicht, beide
+Male nannte die Meldung den **Verbraucher** (`HealthController`) statt die
+Datei, an der es lag, und beide Male war jeder Unit-Test grün — weil jeder
+Dienst in seinem eigenen Test mit `new` gebaut wird und **nichts in diesem
+Repository den Modulgraphen zusammensetzt**. Das ist die Lücke, und sie hat jetzt
+zwei Wachen statt einer Erkenntnis: `operations.module.spec.ts` setzt das eine
+Modul zusammen (ohne Datenbank, in einer Sekunde), und
+`data-access.module.spec.ts` vergleicht `providers` mit `exports` und wird rot
+für **jeden** Port, der gebunden und nicht herausgegeben wird. Die Klasse des
+Fehlers bleibt offen und steht in `todo.md`.
+
+**Und eine Messung, die zweimal etwas anderes maß als die Anwendung.** Erst
+schien der Ausreißer des Teilnehmer-Szenarios die Schuld des Seeds zu sein —
+ein Masseneinfügen lässt Sichtbarkeitsbits und Statistiken liegen, und zwanzig
+Leser zahlen das gleichzeitig; das ist plausibel, `seed-registrations.mjs`
+räumt es seitdem mit einem `VACUUM (ANALYZE)` weg, und es war **nicht** die
+Ursache. Dann schien es der Treiber zu sein — `fetch` benutzt einen
+prozessweiten Verbindungspool, dessen Regeln hier niemand gewählt hat, und
+trägt Verbindungen von einem Szenario ins nächste; `load.mjs` spricht seitdem
+`node:http` mit einem eigenen Pool je Szenario, was die Verbindungsregel zu
+einem Teil der Messung macht statt zu einer Eigenschaft dessen, was vorher
+lief. Auch das war nicht die Ursache. Was übrig blieb, steht oben als das, was
+es ist. Die Lehre daraus ist keine über Datenbanken oder über `fetch`, sondern
+die: **eine Messung, deren Aufbau man nicht kennt, misst den Aufbau** — und
+deshalb druckt `measure.sh` ihn, bevor es misst, und fährt den Stack selbst
+hoch, statt sich auf einen zu verlassen, den jemand anders gestartet hat.
+
+**Und eine grüne Zeile, die kein Lauf war.** `nx run-many -t e2e` hat beide
+Browsersuiten aus dem `[local cache]` beantwortet — „330 passed", „266 passed"
+—, obwohl in diesem Paket zwanzig Serverdateien geändert worden waren. Der
+Grund ist keine Fehlkonfiguration: die Eingaben einer inferierten
+Playwright-Task sind ihr eigenes Projektverzeichnis, und `server:serve-e2e`
+hängt als **fortlaufende** Task daran, die keine Ausgabe hat und deshalb nicht
+in den Schlüssel eingeht. Wie weit das trägt, zeigte derselbe Lauf eine Minute
+später: mit `--skip-nx-cache` brach er sofort ab, weil die
+Entwicklungsdatenbank seit einem Neustart der Maschine gar nicht lief. Der
+Cache hatte also nicht nur eine Serveränderung übersehen — er hätte „grün"
+gemeldet, wo ein Lauf überhaupt nicht möglich war. Die Zahlen unten sind
+deshalb aus einem Lauf mit `--skip-nx-cache`, und die Regel steht in
+`docs/rules/e2e-tests.md`. Die CI ist davon nicht betroffen: sie hält keinen
+Nx-Cache zwischen zwei Läufen.
+
+**Was der Bestandsaufnahme gut tat:** die zweiundsechzig Logzeilen waren zu
+neunundvierzig Fünfzigsteln in Ordnung. Der Ertrag des Nachlesens waren drei
+Einzeiler — und zwei Vorgaben von Bibliotheken, die keiner der zweiundsechzig
+Kommentare erwähnt, weil sie in keiner der zweiundsechzig Zeilen stehen. Das
+ist dieselbe Form von Befund wie die Kopfzeilen in AP 9: nicht das, was jemand
+falsch geschrieben hat, sondern das, was niemand geschrieben hat.
+
+#### Der Stand nach diesem Paket
+
+`nx run-many -t lint test build` grün über **19 Projekte**. Unit-Tests:
+**1447** im Server (**zweiundfünfzig** neu: neun für den Protokollpegel, sieben
+für den stillen Datenbanklogger, sieben für den Ausnahmefilter — Kennung,
+Schwärzung und Zählung —, sechs für die Pfadschwärzung, fünf für die Zählung
+selbst, vier für den Betriebsbericht, drei für die Loghygiene, drei für den
+Interceptor, je zwei für den Modulzusammenbau, die Ports dieser Schicht und
+den Gesundheitsendpunkt, und je einer für die sechste Grenze und die gezählte
+Mail), Veranstalter-Client, Nutzer-Client und die geteilten Bibliotheken
+unverändert — dieses Paket fasst keinen Client an und
+legt **keinen** Katalogschlüssel an, weil es keinen Bildschirm hat.
+
+Browsersuiten, mit `--skip-nx-cache` und damit wirklich gefahren: **330** in
+der Veranstaltersuite und **266** in der Teilnehmersuite, beide unverändert,
+weil dieses Paket keinen Bildschirm anfasst. Vertragssuite **44** Suiten und
+**730** Tests — eine Suite und fünf Tests neu, der Betriebsbericht —, `EXIT=0`,
+genau **drei** 429 im ganzen Lauf, alle drei von der Drosselungssuite erbeten.
+`tools/shipped-stack/verify.sh`: „the shipped stack is good", **13**
+Browsertests, keine Container übrig.
+
+Der Lasttest ist viermal vollständig gefahren, jedes Mal aus leerem Volume und
+jedes Mal mit `down -v` am Ende; die Zahlen oben sind aus dem letzten Lauf, und
+die drei davor stimmen in Median und Durchsatz mit ihm überein.
+
+Und es bringt **keine Migration**: die einzigen Indizes, die es je angelegt
+hat, sind die drei Trigramm-Indizes des Vergleichs, und die hat derselbe Lauf
+wieder entfernt. Eine Migration pro Paket ist die Regel für Pakete, die das
+Datenmodell anfassen; dieses tut es nicht, und eine leere Migration wäre eine
+Zeile Geschichte über nichts.

@@ -117,6 +117,35 @@ check(
   (await call('/api/admin/auth/me', { headers: cookie })).status === 200,
 );
 
+// --- what an operator reads about this instance (AP 10 of phase 5) ---------
+
+check(
+  'the operations report is behind the session',
+  (await call('/api/admin/operations')).status === 401,
+);
+
+const operations = (await call('/api/admin/operations', { headers: cookie }))
+  .body;
+check(
+  'the operations report says the database answers',
+  operations?.database?.reachable === true,
+  `${operations?.database?.latencyMs}ms`,
+);
+check(
+  'and it has been counting since this instance came up',
+  Number.isInteger(operations?.uptimeSeconds) &&
+    operations.requests?.succeeded > 0,
+  `up ${operations?.uptimeSeconds}s, ${operations?.requests?.succeeded} answered`,
+);
+check(
+  // The shape, not the value: a path with a query value in it would mean an
+  // organizer's search term reached a report, which is what AP 10 is about.
+  'and whatever fault it remembers, it remembers it without the values',
+  operations?.lastIncident === null ||
+    !/=(?!…)/.test(operations?.lastIncident?.path ?? ''),
+  operations?.lastIncident?.path ?? 'no fault since start',
+);
+
 // --- the setup route, which must be gone (E28) -----------------------------
 
 check(

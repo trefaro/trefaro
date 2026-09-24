@@ -1497,7 +1497,7 @@ entry, the answer is noted below rather than repeated.
       be shareable, the client route needs its own parameter — the API already
       has one (`?locale=`, F94) — and the two must agree about which wins.
 
-- [ ] **Re-measure the participant overview at a size no pilot event reaches.**
+- [x] **Re-measure the participant overview at a size no pilot event reaches.**
       AP 5 proved the acceptance criterion at 2 000 registrations per event, in
       the API contract suite, with the numbers in the build log — worst case
       13 ms for a substring search that matches every row. What that measurement
@@ -1506,6 +1506,18 @@ entry, the answer is noted below rather than repeated.
       in F32 because the extension needs rights a managed PostgreSQL may not
       grant), and the decision has to be made with a real database in front of
       it, not from the plan.
+      **Measured in AP 10 (24.09.2026) at 20 000 registrations on one event,
+      and the answer is no** — `tools/load-test/trigram-measure.mjs`, PostgreSQL
+      17.11, five runs per statement, the numbers in `docs/PHASE5.md` and in
+      F32. The page an organizer looks at costs under two milliseconds with the
+      index and without it: it stops after 25 rows and the sort index serves it.
+      The **count** is the half an index helps, and it helps sevenfold — 17 ms
+      to 2 ms — except for a term that matches every row, where it changes
+      nothing at all (7.2 against 6.9 ms), and that is the worst case. So the
+      whole prize is about fourteen milliseconds, against an extension that
+      needs `CREATE EXTENSION` rights a managed PostgreSQL may not grant
+      (NFR 15). What is different now is that the next person does not have to
+      re-derive it: the measurement is a command, not an argument.
 - [ ] **There are no contribution guidelines, and phase 0 said there would be.**
       Chapter 6 of the reference document names "Contribution-Guidelines" among
       the phase 0 deliverables, next to the licence and the README; the licence and
@@ -1653,7 +1665,7 @@ entry, the answer is noted below rather than repeated.
       25 MB upload against the real proxy in `apps/stack-e2e`. The second is
       the honest one and costs a fixture with a file field; worth doing if the
       pair ever has to move.
-- [ ] **The health endpoint talks to the database itself.** Found by the
+- [x] **The health endpoint talks to the database itself.** Found by the
       security review of AP 9 (point E2): `core/health/health.controller.ts`
       injects the `DataSource` and runs `SELECT 1`. Not a rule violation — the
       strict-layering lint rules cover `src/app/business/**` and
@@ -1664,7 +1676,92 @@ entry, the answer is noted below rather than repeated.
       implemented beside the repositories, injected here). **Before AP 12**,
       which describes the architecture and must not describe something that is
       not true.
-- [ ] **Load tests** (NFR 12).
+      **Done in AP 10 (24.09.2026)**, and it was exactly the twenty lines this
+      entry predicted. The port has a second reader it did not predict —
+      `/api/admin/operations` reports the round trip in milliseconds — which is
+      why the port answers a duration rather than a boolean, and `null` when
+      the round trip could not be made: a database that is gone is a state this
+      server reports, not an error it raises. Two other things came out of
+      writing it, both now guarded: the controller became testable without a
+      database (`health.controller.spec.ts`), and binding a port turned out to
+      be two lines thirty lines apart — the `provide:` and the `exports:` —
+      with nothing at all complaining when only the first is written
+      (`data-access.module.spec.ts` now fails for every port that is bound and
+      not handed out).
+- [x] **Load tests** (NFR 12). **Done in AP 10 (24.09.2026)**, as
+      `tools/load-test/`: a throwaway stack, one series, one event, as many
+      registrations as the question needs, six read scenarios and the numbers
+      with their setup in `docs/PHASE5.md`. The part worth remembering is what
+      had to change first — the one budget every request counts against was a
+      line of code (`GLOBAL_LIMIT = 300` per minute, five a second), so any
+      load test would have measured the limiter. It is `GLOBAL_REQUESTS_PER_MINUTE`
+      now, with the same default and the same loud line when raised (E60), and
+      the run refuses to call itself a measurement if a single 429 came back.
+- [ ] **The load test froze for forty-four seconds and nobody knows why.**
+      AP 10 measured the participant overview at 20 000 registrations with
+      twenty concurrent readers: half the answers in 73 ms, p95 at 106 ms — and
+      then, in three of four full runs, **23 of 1 146** requests stood still for
+      about forty-four seconds, all at the same moment, after which the run
+      carried on and the next scenario was flawless. Ruled out, each by looking:
+      no long-running statement in `pg_stat_activity`, no exhausted or leaked
+      connection (the pool was healthy before and after), no error and no 5xx in
+      the instance's own report, no memory growth, not the seed's debt (a
+      `VACUUM (ANALYZE)` after the bulk insert changes nothing), not the
+      driver's connection pool (it has its own per scenario now), and no
+      scheduled job at that time — the only two run every twelve hours. And the
+      same scenario run **on its own** is clean: 4 046 requests, worst case
+      115 ms. What is left is a freeze of the whole request path that resolves
+      itself, on a WSL2 development machine that was also building images. It
+      cannot be pinned on this application with what is in hand, and it cannot
+      be pinned on the host without evidence either. **The number that settles
+      it is a run on a real Linux server** — `tools/load-test/measure.sh` needs
+      nothing but Docker — and the first thing to look at there is the count
+      `load.mjs` now prints beside the answers: how many requests took longer
+      than a second. A server that is slow under load makes many of them slow;
+      a machine that hiccups makes one round of them slow.
+
+- [ ] **The catalogue is the slowest public answer, and a 304 costs as much as
+      a 200.** Measured in AP 10: `GET /api/i18n/:locale` answers 293 times a
+      second where `/api/config` answers 1 542 times — a factor of five, and it
+      is the second request **every** client makes on startup. The reason is
+      visible in `CatalogueService.resolve`: 1 288 keys are assembled per
+      request out of the English file, the language's file and the overrides,
+      and then hashed. The ETag is there and works (E22 needs the revalidation,
+      so a long `max-age` is not the answer), but it saves the **wire** and not
+      the **work**: the tag only exists once the catalogue has been built, so a
+      304 costs the server what a 200 costs. For one organization's instance
+      293 a second is far past enough, which is why this is a note and not a
+      task. If it ever matters, the shape of the fix is an identity that can be
+      computed without building the payload — the shipped file's own identity
+      plus the newest `updated_at` among that language's overrides — and the
+      risk in it is that a wrong identity serves yesterday's words, which is
+      exactly the feature E22 exists for.
+
+- [ ] **A fault mark reaches nobody's screen.** AP 10 gives every 5xx an
+      eight-character mark, in the answer and in the log line, so a person can
+      read it out and an operator can find the one entry with the stack in it
+      (F232). What is missing is the first half in practice: the organizer
+      client renders a failed request at some thirty places, each with its own
+      markup around `problem()`, so there is no one piece to add a line to.
+      Somebody who hits a fault today has to open the developer tools to find
+      the mark. The prerequisite is a shared problem banner — a component the
+      thirty pages use instead of their own three lines — and that is a change
+      of its own shape, worth doing when a screen is being worked on anyway
+      rather than as a package of one-line edits to thirty files. Until then
+      `docs/INSTALL.md` §12.2 tells an operator where to look.
+- [ ] **Nothing in this repository assembles the module graph.** AP 10 found
+      two dependency-injection defects in one package, and neither was found by
+      a test: a default parameter value that Nest does not care about (it reads
+      the emitted type, finds `Function`, and refuses to build the container),
+      and a port that was bound but not exported. Both showed up as a container
+      that would not start, and both error messages named the _consumer_ rather
+      than the file at fault. Two guards now cover those two shapes
+      (`operations.module.spec.ts`, `data-access.module.spec.ts`) — the class
+      of defect is not covered. What would cover it is compiling `AppModule`
+      itself, and that needs either a database or an override for every
+      repository; the deep-import trap of `docs/rules/tooling-traps.md` is the
+      other half of why nobody has. Worth deciding once, with the cost of the
+      overrides in front of it.
 - [ ] **socket.io shared adapter** — only if more than one server container is
       ever run. Not needed for one instance per organization.
 - [x] **Mail against the pilot partner's real SMTP server.** AP 4 proves the

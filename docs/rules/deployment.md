@@ -14,7 +14,7 @@ Beispiele haben je eine frische Produktionsinstanz unbenutzbar gemacht.
   `ADMIN_BOOTSTRAP_*`: eine frische Produktionsinstanz hatte **keinen
   Administrator**. Bei `I18N_CATALOGUE_DIR` sind es vier Stellen (zusätzlich
   webpack-`assets` und der `COPY` im Dockerfile).
-- **Sechs Zahlen sind seit AP 2 der Phase 5 Konfiguration, nicht Code**:
+- **Sieben Zahlen sind Konfiguration, nicht Code** (sechs seit AP 2 der Phase 5, die siebte seit AP 10):
   `LOGIN_ATTEMPTS_PER_WINDOW`, `REGISTRATIONS_PER_WINDOW`,
   `NEWSLETTER_SIGNUPS_PER_WINDOW`, `CONFIRMATIONS_PER_WINDOW`,
   `MAILS_PER_RECIPIENT_PER_WINDOW` und — seit AP 4 —
@@ -25,7 +25,19 @@ Beispiele haben je eine frische Produktionsinstanz unbenutzbar gemacht.
   eine Vorgabe, die auseinanderläuft. Wer eine Instanz übernimmt und wissen
   will, ob jemand eine Grenze gelockert hat, liest die ersten Zeilen des
   Serverlogs: jeder Wert über seiner Vorgabe steht dort als `WARN`, und
-  Schweigen heißt die ausgelieferten Zahlen.
+  Schweigen heißt die ausgelieferten Zahlen. Die siebte ist
+  `GLOBAL_REQUESTS_PER_MINUTE` — die Grenze, gegen die **jede** Anfrage zählt,
+  Vorgabe 300, und bis AP 10 eine Zeile Code. Gebraucht hat sie als Erstes der
+  Lasttest, denn bei fünf Anfragen je Sekunde misst er die Drosselung und nicht
+  den Server; sie im Code hochzusetzen wäre genau das, was E60 verbietet.
+- **Zwei Werte kamen in AP 10 der Phase 5 dazu**: `GLOBAL_REQUESTS_PER_MINUTE`
+  (siehe oben) und `LOG_LEVEL` — `warn`, `log` (Vorgabe), `debug` oder
+  `verbose`, beide leer durchgereicht. **Leiser als `warn` gibt es nicht**, und
+  das ist kein Geschmack: die Zeilen, die eine gelockerte Grenze (E60) oder
+  unverschlüsselte Mail (E62) melden, sind Warnungen — eine Instanz, die sie
+  nicht drucken kann, ist eine, deren Konfiguration aus ihrem eigenen Protokoll
+  nicht mehr prüfbar ist. Was ins Protokoll darf, steht in
+  [`observability.md`](observability.md).
 - **Zwei weitere Werte und ein Verzeichnis kamen in AP 3 der Phase 5 dazu**:
   `SMTP_REQUIRE_TLS` und `SMTP_PAUSE_BETWEEN_MAILS_MS` — beide leer
   durchgereicht, beide mit ihrer Vorgabe im Server — sowie

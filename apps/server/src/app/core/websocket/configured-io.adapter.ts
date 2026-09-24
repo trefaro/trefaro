@@ -45,7 +45,10 @@ export class ConfiguredIoAdapter extends IoAdapter {
         origin: [this.env.publicUserClientUrl, this.env.publicAdminClientUrl],
         credentials: true,
       },
-      allowRequest: handshakeThrottle(this.storage),
+      allowRequest: handshakeThrottle(
+        this.storage,
+        this.env.rateLimits.globalRequestsPerMinute,
+      ),
     });
   }
 }

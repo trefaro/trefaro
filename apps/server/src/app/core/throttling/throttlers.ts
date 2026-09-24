@@ -29,13 +29,13 @@ import { RATE_LIMIT_KIND, type RateLimitKind } from './rate-limit.decorator';
 const WINDOW = minutes(5);
 
 /**
- * The generous bound every request counts against, handshakes included.
+ * How long the global budget's window is.
  *
- * Lives here rather than inline because it is not only the router's any more:
- * `handshake-throttle.ts` counts socket.io's own handshake against the same
- * budget, and two copies of one number are two numbers waiting to disagree.
+ * The count beside it is `RateLimitEnv.globalRequestsPerMinute` and comes from
+ * the environment since AP 10 of phase 5 — `handshake-throttle.ts` counts
+ * socket.io's own handshake against the same budget, so both read the one
+ * value rather than keeping two copies of it.
  */
-export const GLOBAL_LIMIT = 300;
 export const GLOBAL_WINDOW = minutes(1);
 
 /**
@@ -66,7 +66,11 @@ function everywhereBut(kind: RateLimitKind): ThrottlerOptions['skipIf'] {
 
 export function buildThrottlers(limits: RateLimitEnv): ThrottlerOptions[] {
   return [
-    { name: 'default', ttl: GLOBAL_WINDOW, limit: GLOBAL_LIMIT },
+    {
+      name: 'default',
+      ttl: GLOBAL_WINDOW,
+      limit: limits.globalRequestsPerMinute,
+    },
     {
       name: 'login',
       ttl: WINDOW,

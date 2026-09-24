@@ -132,7 +132,10 @@ export class AdminUserService implements OnApplicationBootstrap {
         name: input.name,
         passwordHash: await this.hasher.hash(input.password),
       });
-      this.logger.log(`Created administrator ${created.email}`);
+      // The id, not the address: a log line says which row was written and
+      // leaves the person to a lookup somebody has a right to make
+      // (`log-hygiene.spec.ts`).
+      this.logger.log(`Created administrator ${created.id}`);
       return toAdminSummary(created);
     } catch (error: unknown) {
       if (error instanceof AdminEmailTakenError) {
@@ -233,8 +236,9 @@ export class AdminUserService implements OnApplicationBootstrap {
     });
 
     this.logger.warn(
-      `Created the first administrator "${configured.email}" from the environment. ` +
-        'Log in, create a personal account, and remove ADMIN_BOOTSTRAP_* from the environment.',
+      'Created the first administrator from ADMIN_BOOTSTRAP_EMAIL. Log in, ' +
+        'create a personal account, and remove ADMIN_BOOTSTRAP_* from the ' +
+        'environment.',
     );
   }
 }

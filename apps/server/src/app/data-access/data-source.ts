@@ -1,6 +1,7 @@
 import * as pg from 'pg';
 import type { DataSourceOptions } from 'typeorm';
 import type { TrefaroEnv } from '../core/config/env';
+import { QuietDatabaseLogger } from './database-logger';
 import { CORE_ENTITIES } from './entities';
 import { CORE_MIGRATIONS } from './migrations';
 import type { CollectedPluginPersistence } from './plugin-data-access/plugin-persistence.registry';
@@ -46,9 +47,15 @@ export function buildDataSourceOptions(
     migrationsRun: true,
     migrationsTransactionMode: 'each',
 
-    logging:
+    // A logger of our own rather than a level list, because the level list is
+    // not the decision that matters: TypeORM's own logger appends the
+    // parameters of a failing statement to it, and at the `error` level, which
+    // every environment here has on. `QuietDatabaseLogger` writes the same
+    // statements without the values in them (NFR 11, NFR 7).
+    logger: new QuietDatabaseLogger(
       env.nodeEnv === 'development'
-        ? ['error', 'warn', 'migration']
-        : ['error', 'warn'],
+        ? ['error', 'warn', 'migration', 'schema']
+        : ['error', 'warn', 'migration'],
+    ),
   };
 }

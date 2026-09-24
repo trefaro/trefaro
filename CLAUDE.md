@@ -33,10 +33,10 @@ werden müssen:
 | Diagramme der Thesis                                      | `docs/thesis/`                                                                            |
 | **Regeln, die man beim Bauen braucht**                    | **`docs/rules/`** (Index in `docs/rules/README.md`)                                       |
 
-`docs/rules/` ist das Destillat: zwölf Dateien, je eine pro Bereich — Schichten
-und Ports, Verträge der Endpunkte, Datenmodell, Mail, i18n, Angular-Fallen,
-E2E-Tests, Whitelabel/PWA, Deployment, Infrastruktur, Werkzeug-Fallen,
-bestätigte Entscheidungen. Kurz gesagt: **was dort steht, ist schon einmal
+`docs/rules/` ist das Destillat: dreizehn Dateien, je eine pro Bereich —
+Schichten und Ports, Verträge der Endpunkte, Datenmodell, Mail, i18n,
+Angular-Fallen, E2E-Tests, Whitelabel/PWA, Deployment, Infrastruktur,
+was ins Protokoll darf, Werkzeug-Fallen, bestätigte Entscheidungen. Kurz gesagt: **was dort steht, ist schon einmal
 schiefgegangen.** Vor der Arbeit an einem dieser Bereiche die zugehörige Datei
 lesen.
 
@@ -192,16 +192,16 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    International (Pilotpartner), Doku, Release v1.0 → `docs/PHASE5.md` —
    vierzehn Pakete, **M13–M16**, E60–E71, F203 ff., und jeder der
    zweiunddreißig Einträge aus `todo.md` unter _Checkable after phase 5_ ist
-   einem Paket zugeordnet. **Freigegeben wird Paket für Paket** (AP 1 bis AP 9
+   einem Paket zugeordnet. **Freigegeben wird Paket für Paket** (AP 1 bis AP 10
    sind erledigt, **M13 und M14 sind erreicht**; der Stand je Paket steht unter
    _Fortschritt_). **v1.0 taggt Marius, nicht ein Paket** (E71).
 
 **Der Stand in Zahlen:** Entscheidungen **E1–E59** vergeben (E46–E59 in Phase 4,
-in AP 10 gegen die Umsetzung geprüft); Nachträge **F1–F231** stehen vollständig
+in AP 10 gegen die Umsetzung geprüft); Nachträge **F1–F234** stehen vollständig
 im Referenzdokument (F62 und F129–F131 bleiben unvergeben; F203–F205 kamen in
 AP 2 der Phase 5 dazu, F206–F208 in AP 3, F209–F211 in AP 4, F212–F214 in
 AP 5, F215–F218 in AP 6, F219–F222 in AP 7, F223–F226 in AP 8, F227–F231 in
-AP 9); Katalog **1288** Schlüssel. Was in einem Paket tatsächlich passierte, steht im Phasenprotokoll,
+AP 9, F232–F234 in AP 10); Katalog **1288** Schlüssel. Was in einem Paket tatsächlich passierte, steht im Phasenprotokoll,
 und was man beim Bauen daraus braucht, in `docs/rules/` — **hier nicht noch
 einmal.**
 

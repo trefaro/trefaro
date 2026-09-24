@@ -1,7 +1,7 @@
 import { ThrottlerStorageService } from '@nestjs/throttler';
 import type { IncomingMessage } from 'node:http';
 import { handshakeThrottle } from './handshake-throttle';
-import { GLOBAL_LIMIT } from './throttlers';
+import { RATE_LIMIT_DEFAULTS } from '../config/rate-limits';
 
 function handshakeFrom(
   remoteAddress: string,
@@ -25,7 +25,10 @@ describe('handshakeThrottle', () => {
 
   beforeEach(() => {
     storage = new ThrottlerStorageService();
-    allowRequest = handshakeThrottle(storage);
+    allowRequest = handshakeThrottle(
+      storage,
+      RATE_LIMIT_DEFAULTS.globalRequestsPerMinute,
+    );
   });
 
   afterEach(() => storage.onApplicationShutdown());
@@ -42,7 +45,11 @@ describe('handshakeThrottle', () => {
    */
   it('stops a handshake storm once the global budget is gone', async () => {
     const client = handshakeFrom('10.0.0.7');
-    for (let attempt = 0; attempt < GLOBAL_LIMIT; attempt++) {
+    for (
+      let attempt = 0;
+      attempt < RATE_LIMIT_DEFAULTS.globalRequestsPerMinute;
+      attempt++
+    ) {
       expect(await knock(client)).toBe(true);
     }
 
@@ -51,7 +58,11 @@ describe('handshakeThrottle', () => {
 
   it('gives every client address its own budget', async () => {
     const noisy = handshakeFrom('10.0.0.7');
-    for (let attempt = 0; attempt <= GLOBAL_LIMIT; attempt++)
+    for (
+      let attempt = 0;
+      attempt <= RATE_LIMIT_DEFAULTS.globalRequestsPerMinute;
+      attempt++
+    )
       await knock(noisy);
 
     expect(await knock(noisy)).toBe(false);
@@ -69,7 +80,11 @@ describe('handshakeThrottle', () => {
     const throughProxy = (client: string) =>
       handshakeFrom('172.18.0.2', `203.0.113.9, ${client}`);
 
-    for (let attempt = 0; attempt <= GLOBAL_LIMIT; attempt++) {
+    for (
+      let attempt = 0;
+      attempt <= RATE_LIMIT_DEFAULTS.globalRequestsPerMinute;
+      attempt++
+    ) {
       await knock(throughProxy('198.51.100.4'));
     }
 

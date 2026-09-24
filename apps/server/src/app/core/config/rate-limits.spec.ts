@@ -25,6 +25,22 @@ describe('rateLimitWarnings', () => {
     expect(rest).toEqual([]);
   });
 
+  // The sixth limit, configurable only since AP 10: a load test is the first
+  // thing that ever needed it, and until then the one number every request
+  // counts against was a line of code rather than a line of a `.env` (E60).
+  it('names the global budget like any other raised limit', () => {
+    const [warning] = rateLimitWarnings({
+      ...defaults,
+      globalRequestsPerMinute: 5000,
+    });
+
+    expect(warning).toContain('GLOBAL_REQUESTS_PER_MINUTE');
+    expect(warning).toContain('5000');
+    expect(warning).toContain(
+      String(RATE_LIMIT_DEFAULTS.globalRequestsPerMinute),
+    );
+  });
+
   it('stays quiet about a lowered limit — tightening is the safe direction', () => {
     expect(
       rateLimitWarnings({ ...defaults, loginAttemptsPerWindow: 3 }),

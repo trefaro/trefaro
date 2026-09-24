@@ -71,12 +71,27 @@ services:
       ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_BOOTSTRAP_PASSWORD:-}
       ADMIN_SESSION_TTL_HOURS: ${ADMIN_SESSION_TTL_HOURS:-12}
 
+      # How much this instance writes: warn, log (the default here),
+      # debug or verbose. `debug` adds a line for every 401 and every 404,
+      # which is what you want while chasing something and not what you
+      # want on a Tuesday. Quieter than `warn` is not offered — the lines
+      # that say a limit was raised or that mail leaves unencrypted are
+      # warnings, and an instance that cannot print them cannot be checked
+      # from its own log. Docker keeps what the container writes; `docker
+      # compose logs -f server` reads it.
+      LOG_LEVEL: ${LOG_LEVEL:-}
+
       # What this instance refuses to do too often (E60). Left empty on purpose:
       # the defaults live in the server, so writing them here too would be two
       # numbers waiting to disagree. Set one in the .env only with a reason —
       # an office behind a single public address is the usual one. The server
       # logs every raised value while starting, because a raised limit is a
       # limit nobody is testing any more (E4).
+      # The budget every request counts against, per client address per
+      # minute — the socket.io handshake included. Raising it is what a load
+      # test needs (NFR 12) and not what an instance needs; put it back
+      # afterwards.
+      GLOBAL_REQUESTS_PER_MINUTE: ${GLOBAL_REQUESTS_PER_MINUTE:-}
       LOGIN_ATTEMPTS_PER_WINDOW: ${LOGIN_ATTEMPTS_PER_WINDOW:-}
       REGISTRATIONS_PER_WINDOW: ${REGISTRATIONS_PER_WINDOW:-}
       NEWSLETTER_SIGNUPS_PER_WINDOW: ${NEWSLETTER_SIGNUPS_PER_WINDOW:-}

@@ -7,7 +7,10 @@ import {
   Logger,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
+import { randomBytes } from 'node:crypto';
 import { readRefusal, type ProblemParams } from '@trefaro/shared-models';
+import type { RuntimeMetricsService } from '../operations/runtime-metrics.service';
+import { redactPath } from './redact-path';
 
 /**
  * Client errors that occur in normal operation and say nothing about a fault.
@@ -36,6 +39,21 @@ interface ErrorBody {
   code?: string;
   /** The values the reason's sentence has gaps for. */
   params?: ProblemParams;
+  /**
+   * A mark for this one fault, on a 5xx and never on anything else (AP 10).
+   *
+   * Eight hex characters, made here and written into the log line beside the
+   * stack trace. It is the whole answer to "an operator can tell from the logs
+   * what went wrong without finding an address in them": whoever was looking at
+   * the screen can read this string out, and it is enough to find the one entry
+   * that has the stack in it — so nothing about *who* was asking has to be
+   * logged for a fault to be diagnosable.
+   *
+   * Absent below 500 on purpose. A 404 or a refused field needs no
+   * investigation, and a mark on one would train people to quote a number that
+   * leads nowhere.
+   */
+  incident?: string;
 }
 
 /**
@@ -50,7 +68,14 @@ interface ErrorBody {
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
 
-  constructor(private readonly httpAdapterHost: HttpAdapterHost) {}
+  constructor(
+    private readonly httpAdapterHost: HttpAdapterHost,
+    /**
+     * Optional because a filter that cannot answer without its bookkeeping is
+     * a filter that turns a broken counter into a broken instance (NFR 10).
+     */
+    private readonly metrics?: RuntimeMetricsService,
+  ) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const { httpAdapter } = this.httpAdapterHost;
@@ -67,6 +92,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
         ? readRefusal(exception.getResponse())
         : null;
 
+    // The values a caller put in the query string never reach the log, and
+    // never travel back in the answer either — an error body is the thing
+    // somebody pastes into a bug report (`redact-path.ts`).
+    const path = redactPath(httpAdapter.getRequestUrl(request) ?? '');
+    const incident =
+      status >= HttpStatus.INTERNAL_SERVER_ERROR
+        ? randomBytes(4).toString('hex')
+        : undefined;
+
     const body: ErrorBody = {
       statusCode: status,
       // Expected errors carry a client-safe message; anything else does not.
@@ -74,8 +108,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
         exception instanceof HttpException
           ? exception.message
           : 'Internal server error',
-      path: httpAdapter.getRequestUrl(request) ?? '',
+      path,
       timestamp: new Date().toISOString(),
+      ...(incident === undefined ? {} : { incident }),
       ...(refusal === null
         ? {}
         : {
@@ -86,17 +121,19 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.error(
-        `${status} ${body.path}`,
+        `${status} ${incident} ${path}`,
         exception instanceof Error ? exception.stack : String(exception),
       );
     } else if (EXPECTED_STATUSES.has(status)) {
       // Not warnings: every client that is not logged in asks who it is, and
       // every disabled plug-in answers 404. Logging those at warning level
       // fills an operator's log with normal traffic and buries the real ones.
-      this.logger.debug(`${status} ${body.path} — ${body.message}`);
+      this.logger.debug(`${status} ${path} — ${body.message}`);
     } else {
-      this.logger.warn(`${status} ${body.path} — ${body.message}`);
+      this.logger.warn(`${status} ${path} — ${body.message}`);
     }
+
+    this.metrics?.recordFailure(status, path, incident);
 
     httpAdapter.reply(ctx.getResponse(), body, status);
   }

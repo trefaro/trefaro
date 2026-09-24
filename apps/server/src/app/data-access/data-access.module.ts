@@ -39,6 +39,7 @@ import {
   PLUGIN_PERSISTENCE_REGISTRY,
   type PluginPersistenceContribution,
 } from '../business/plugin-api';
+import { DATABASE_HEALTH } from '../core/health/database-health.port';
 import { ENV } from '../core/config/env.module';
 import type { TrefaroEnv } from '../core/config/env';
 import { buildDataSourceOptions } from './data-source';
@@ -47,6 +48,7 @@ import { collectPluginPersistence } from './plugin-data-access/plugin-persistenc
 import { BundledCatalogueReader } from './storage/bundled-catalogue.reader';
 import { LocalDiskFileStore } from './storage/local-disk.file-store';
 import { TypeormAdminSessionRepository } from './repositories/typeorm-admin-session.repository';
+import { TypeormDatabaseHealth } from './repositories/typeorm-database-health';
 import { TypeormAdminUserRepository } from './repositories/typeorm-admin-user.repository';
 import { TypeormAppConfigRepository } from './repositories/typeorm-app-config.repository';
 import { TypeormAttachmentRepository } from './repositories/typeorm-attachment.repository';
@@ -142,6 +144,11 @@ export class DataAccessModule {
         TypeormUserProfileRepository,
         TypeormUserSessionRepository,
         BundledCatalogueReader,
+        TypeormDatabaseHealth,
+        {
+          provide: DATABASE_HEALTH,
+          useExisting: TypeormDatabaseHealth,
+        },
         {
           provide: ADMIN_USER_REPOSITORY,
           useExisting: TypeormAdminUserRepository,
@@ -336,6 +343,7 @@ export class DataAccessModule {
       ],
       exports: [
         ADMIN_USER_REPOSITORY,
+        DATABASE_HEALTH,
         ADMIN_SESSION_REPOSITORY,
         APP_CONFIG_REPOSITORY,
         ATTACHMENT_REPOSITORY,

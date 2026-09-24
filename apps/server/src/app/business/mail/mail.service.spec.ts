@@ -1,4 +1,5 @@
 import type { MailCatalogue } from './mail-catalogue.service';
+import { RuntimeMetricsService } from '../../core/operations/runtime-metrics.service';
 import { MailDeliveryError, MailService } from './mail.service';
 import type { Mailer, OutgoingMail } from './ports/mailer';
 import { MAIL_TEMPLATES, mailStrings, type MailStrings } from './templates';
@@ -65,12 +66,31 @@ class StubCatalogue {
 describe('MailService', () => {
   let mailer: RecordingMailer;
   let catalogue: StubCatalogue;
+  let metrics: RuntimeMetricsService;
   let service: MailService;
 
   beforeEach(() => {
     mailer = new RecordingMailer();
     catalogue = new StubCatalogue();
-    service = new MailService(mailer, catalogue as unknown as MailCatalogue);
+    metrics = new RuntimeMetricsService();
+    service = new MailService(
+      mailer,
+      catalogue as unknown as MailCatalogue,
+      metrics,
+    );
+  });
+
+  it('counts what it handed over, and what it could not', async () => {
+    // Mail is the part of this application that stops working without anybody
+    // noticing, so the number is the one an operator looks at first (NFR 11).
+    await service.sendRegistrationConfirmation('a@example.org', CONTEXT);
+    mailer.failure = new Error('connection refused');
+    await expect(
+      service.sendRegistrationConfirmation('b@example.org', CONTEXT),
+    ).rejects.toThrow();
+
+    expect(metrics.snapshot().mail).toMatchObject({ sent: 1, failed: 1 });
+    expect(metrics.snapshot().mail.lastFailureAt).not.toBeNull();
   });
 
   it('sends to the address it was given, with both parts filled', async () => {

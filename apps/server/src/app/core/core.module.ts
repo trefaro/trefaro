@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { EnvModule, RATE_LIMITS } from './config/env.module';
 import type { RateLimitEnv } from './config/rate-limits';
+import { OperationsModule } from './operations/operations.module';
 import { buildThrottlers } from './throttling/throttlers';
 
 /**
@@ -24,6 +25,7 @@ import { buildThrottlers } from './throttling/throttlers';
 @Module({
   imports: [
     EnvModule,
+    OperationsModule,
     ThrottlerModule.forRootAsync({
       imports: [EnvModule],
       inject: [RATE_LIMITS],
@@ -31,6 +33,6 @@ import { buildThrottlers } from './throttling/throttlers';
     }),
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
-  exports: [EnvModule],
+  exports: [EnvModule, OperationsModule],
 })
 export class CoreModule {}

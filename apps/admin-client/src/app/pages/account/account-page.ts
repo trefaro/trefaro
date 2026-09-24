@@ -91,7 +91,10 @@ import { AuthService } from '../../features/auth/auth.service';
       </small>
 
       <button type="submit" [disabled]="busy()">
-        {{ (busy() ? 'admin.account.working' : 'admin.account.submit') | transloco }}
+        {{
+          (busy() ? 'admin.account.working' : 'admin.account.submit')
+            | transloco
+        }}
       </button>
 
       @if (changed()) {

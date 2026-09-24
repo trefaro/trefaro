@@ -7,6 +7,23 @@ Drei Browser × zwei Suiten laufen parallel gegen **eine** Instanz mit
 **einer** `app_config`-Zeile und einer globalen Drosselung. Fast jeder
 Flake dieses Repositories kam daher, nicht aus dem Anwendungscode.
 
+- **Eine Serveränderung macht den Cache der Browsersuiten nicht ungültig.**
+  `nx run-many -t e2e` hat in AP 10 der Phase 5 beide Browsersuiten aus dem
+  `[local cache]` beantwortet — „330 passed", „266 passed" —, obwohl in
+  demselben Paket zwanzig Serverdateien geändert worden waren. Der Grund ist
+  keine Fehlkonfiguration: die Eingaben einer inferierten Playwright-Task sind
+  ihr eigenes Projektverzeichnis, und `server:serve-e2e` hängt als
+  **fortlaufende** Task daran, die keine Ausgabe hat und deshalb nicht in den
+  Schlüssel eingeht. Eine grüne Zeile aus dem Cache ist aber kein Lauf, und
+  genau davor warnt die Regel dieses Repositories. Wie weit das trägt, zeigte
+  derselbe Lauf eine Minute später: mit `--skip-nx-cache` brach er sofort ab,
+  weil die Entwicklungsdatenbank seit einem Neustart der Maschine gar nicht
+  lief. Der Cache hatte also nicht nur eine Serveränderung übersehen — er hatte
+  „grün" gemeldet, wo ein Lauf überhaupt nicht möglich war. Also: **wer den
+  Server angefasst hat, fährt die Suiten mit `--skip-nx-cache`** — oder liest im
+  Protokoll nach, ob dort `[local cache]` steht, bevor er „grün" sagt. Die CI
+  ist davon nicht betroffen und braucht keine Änderung: sie hält keinen
+  Nx-Cache zwischen zwei Läufen, `actions/setup-node` speichert nur npm.
 - **Die E2E-Läufe fahren gegen `server:serve-e2e`, nicht gegen `server:serve`.**
   Der Zielname ist die ganze Mechanik: Nx lädt für eine Task namens `serve-e2e`
   die Datei `apps/server/.env.serve-e2e` und für keine andere — nicht für

@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { RuntimeMetricsService } from '../../core/operations/runtime-metrics.service';
 import { MailCatalogue } from './mail-catalogue.service';
 import { MAILER, TemporaryMailFailure, type Mailer } from './ports/mailer';
 import { MAIL_TEMPLATES } from './templates';
@@ -70,6 +71,7 @@ export class MailService {
   constructor(
     @Inject(MAILER) private readonly mailer: Mailer,
     private readonly catalogue: MailCatalogue,
+    private readonly metrics: RuntimeMetricsService,
   ) {}
 
   /** The double opt-in request. @throws MailDeliveryError */
@@ -273,7 +275,13 @@ export class MailService {
     );
     try {
       await this.mailer.send({ to, ...mail });
+      this.metrics.recordMailSent();
     } catch (error: unknown) {
+      // Counted as well as logged: mail is the part of this application that
+      // stops working without anybody noticing — an organizer sees a
+      // registration arrive and never learns that its receipt did not
+      // (`core/operations`).
+      this.metrics.recordMailFailure();
       // Described, not addressed: what failed belongs in the log, who it was for
       // does not.
       this.logger.error(
