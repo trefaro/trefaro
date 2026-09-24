@@ -382,6 +382,11 @@ check(
   schedule.body?.bookings?.[0]?.signupCount === 0 &&
     schedule.body.bookings[0].itemCapacity === 10,
 );
+check(
+  "and the event's zone, so the plan draws the venue's clock (E69)",
+  schedule.body?.bookings?.[0]?.timezone === 'Europe/Berlin',
+  `timezone was ${JSON.stringify(schedule.body?.bookings?.[0]?.timezone)}`,
+);
 
 console.log('--- what the cascades take ---');
 await call(`/api/admin/program-items/${SESSION}`, { method: 'DELETE' });
@@ -696,8 +701,11 @@ const heldBack = await send('PATCH', `/api/admin/modules/${PREREQUISITE}`, {
 check(
   'it cannot be withdrawn under the modules that are running on it',
   heldBack.status === 409 &&
-    wereEnabled.every((key) => String(heldBack.body?.message).includes(key)),
-  `got ${heldBack.status} ${JSON.stringify(heldBack.body?.message)}`,
+    String(heldBack.body?.code).startsWith('problem.config.moduleDependants') &&
+    wereEnabled.every((key) =>
+      String(heldBack.body?.params?.others).includes(key),
+    ),
+  `got ${heldBack.status} ${JSON.stringify(heldBack.body)}`,
 );
 check(
   'and it is still on, because the refusal came before the write',
@@ -724,8 +732,9 @@ for (const key of pluginsThatNeedIt) {
   check(
     `${key}: switching it on without ${PREREQUISITE} is a 409 naming the missing key`,
     refused.status === 409 &&
-      String(refused.body?.message).includes(PREREQUISITE),
-    `got ${refused.status} ${JSON.stringify(refused.body?.message)}`,
+      refused.body?.code === 'problem.config.moduleRequires.one' &&
+      String(refused.body?.params?.others).includes(PREREQUISITE),
+    `got ${refused.status} ${JSON.stringify(refused.body)}`,
   );
   check(
     `${key}: and the refusal wrote nothing`,

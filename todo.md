@@ -1342,7 +1342,7 @@ entry, the answer is noted below rather than repeated.
       screens. Worth deciding once, with the pilot partner's eyes on a real
       phone.
 
-- [ ] **A data export carries nothing a plug-in stores.** The archive of AP 6
+- [x] **A data export carries nothing a plug-in stores.** The archive of AP 6
       holds the core's tables in full, and the `README.txt` says so plainly —
       but a forum post, a programme proposal and a personal programme are rows
       about a person all the same. The core cannot read them: a plug-in owns
@@ -1355,8 +1355,21 @@ entry, the answer is noted below rather than repeated.
       organization" and that sentence is the deliberate one. **Erasure is not
       affected** and needs no port: every plug-in's own foreign key already
       says what a deleted account means for its rows, and AP 6 checked all six.
+      **Decided in AP 11 of phase 5: no port, and the sentence gets specific**
+      (F237). A read in that direction would be the first capability the host
+      has over a plug-in (E59), and it would put a plug-in's failure inside the
+      one screen where somebody exercises a right (NFR 10) — the core cannot
+      read those tables itself either, which is F21's mirror. What changed
+      instead is the letter: `README.txt` now names the modules **this**
+      instance has switched on, out of the descriptor — the only thing the core
+      learns about a plug-in — and leaves the paragraph out entirely when none
+      is on. "Two things are deliberately not in here" is now true of the
+      credentials and the account-less contact requests; the modules are the
+      third and they are named. **If a pilot partner asks for the real thing**,
+      it is a package of its own after v1.0, with its own risk argument — not
+      a corner of the package that closes the contract.
 
-- [ ] **A personal plan does not say where I hold a seat.** E55 has two halves:
+- [x] **A personal plan does not say where I hold a seat.** E55 has two halves:
       putting a session in a plan books nothing (built, F201) — and "the plan
       shows where I have a seat", which AP 9 did **not** build. The reason is
       structural rather than an oversight: a seat belongs to a **registration**
@@ -1372,8 +1385,19 @@ entry, the answer is noted below rather than repeated.
       for a booking. Decide in phase 5 whether the missing half is worth two
       port capabilities, or whether the programme's own timeline — where the
       seat is taken — is the right and only place to see it.
+      **Decided in AP 11 of phase 5: not worth it** (F236), and the reason is
+      not the cost. The second capability — which sessions one registration
+      holds a seat in — is a participant list read one row at a time, which is
+      what `countSignups` gives a number for instead; narrowed to the current
+      claim it would be safe but redundant, because **the mark already
+      exists** where the seat is taken: "my registration" marks every session
+      with `signedUp`, writes "booked" in place of the seat count and
+      highlights the row. A second place that says the same thing is a place
+      that will one day say something else. The plan keeps
+      `registrationEnabled` and says where a seat is booked, not that it
+      booked one.
 
-- [ ] **A plug-in draws its times in the reader's clock, not the event's**
+- [x] **A plug-in draws its times in the reader's clock, not the event's**
       (moved out of phase 4 by AP 10, 10.09.2026). `PluginSlotContext` carries
       `locale`, `strings` and `mountPoint` and nothing about the event, and
       `PluginProgramReads` has no field for the event's zone, so the room plan
@@ -1399,6 +1423,20 @@ entry, the answer is noted below rather than repeated.
       `PluginProgramItem`, or one small read of the event. Cost: a minor step
       of `PLUGIN_API_VERSION` with its compatibility case, and one line in each
       of the two bundles that render a time.
+      **Done in AP 11 of phase 5, exactly as decided** (F235). The contract is
+      at **1.3.0**, `PluginProgramItem` carries `timezone`, and the host stamps
+      it once per list from a narrow core port (`EventZones.zoneOf` — one
+      field, not the event repository at the plug-in seam). It travels on to
+      `PlannedSession` and `PersonalProgramItem`, and the three formatters in
+      `shared-plugin-kit` take the zone as a third argument, so the room plan
+      and the personal programme draw the venue's clock and cut their day
+      headings where the venue's day ends. Proven where only a browser can
+      prove it: a Playwright context in `America/Toronto` reads the event page
+      and the plan's slot carries the same hour as the programme above it. A
+      plug-in declaring 1.2.0 is still mounted — a case of its own in the
+      compatibility test. What deliberately did **not** come with it is a
+      second read "the zone of this event": whoever draws a time has read a
+      session, and whoever has not read one has no time to draw (F47).
 
 - [x] **A deleted account takes the threads it opened — replies of others
       included.** `plugin_forum_thread.created_by` cascades, as the plan’s

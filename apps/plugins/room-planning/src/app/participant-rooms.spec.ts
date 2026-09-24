@@ -72,11 +72,30 @@ describe('ParticipantRooms', () => {
     expect(
       all(fixture, '.booking__title').map((node) => node.textContent),
     ).toEqual(['Opening plenary', 'Podium']);
-    // A slot is a time, from and to — in the reader's clock, since the slot
-    // hands a plug-in no zone.
+    // A slot is a time, from and to.
     expect(all(fixture, '.booking__time')[0].textContent).toMatch(
       /\d{1,2}:\d{2}.*–.*\d{1,2}:\d{2}/,
     );
+  });
+
+  it("draws the slot in the event's zone, not in the reader's (E69)", async () => {
+    // The acceptance criterion of the contract step, read from Canada: the
+    // fixture's session runs 07:00–08:00 UTC at a Berlin venue, so it is
+    // 09:00–10:00 on every screen in the world — and 03:00 on this one until
+    // plug-in API 1.3.0 put the zone on the session.
+    vi.stubEnv('TZ', 'America/Toronto');
+    try {
+      api.rooms = [publicRoom({ bookings: [session()] })];
+
+      const fixture = await render({ eventId: 'event-1' });
+      const slot = all(fixture, '.booking__time')[0].textContent ?? '';
+
+      expect(slot).toContain('09:00');
+      expect(slot).toContain('10:00');
+      expect(slot).not.toContain('03:00');
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it('says so when a room has nothing in it yet', async () => {

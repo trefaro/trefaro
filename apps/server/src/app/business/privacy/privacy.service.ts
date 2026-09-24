@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { FILE_STORE, type FileStore } from '../attachments/ports/file-store';
 import { zipArchive } from '../common/zip-archive';
 import { CatalogueService } from '../i18n';
+import { PluginRegistryService } from '../plugin-manager';
 import { participantArchive } from './participant-archive';
 import { participantReadme } from './participant-readme';
 import {
@@ -39,6 +40,10 @@ export class PrivacyService {
     private readonly data: ParticipantDataRepository,
     @Inject(FILE_STORE) private readonly files: FileStore,
     private readonly catalogue: CatalogueService,
+    // Read for their **descriptors** only (E59): which optional modules this
+    // instance has switched on, so the letter can name the one gap it has
+    // instead of describing it in general terms.
+    private readonly plugins: PluginRegistryService,
   ) {}
 
   /**
@@ -129,6 +134,27 @@ export class PrivacyService {
     return participantReadme(resolved.catalogue, {
       at: at.toISOString(),
       name: `${record.profile.firstName} ${record.profile.lastName}`.trim(),
+      modules: this.enabledModules(resolved.catalogue),
     });
+  }
+
+  /**
+   * The names of the switched-on modules, in the reader's language.
+   *
+   * The whole of what the core learns about a plug-in here: a key and a
+   * catalogue key, both out of the descriptor (E59). It asks no plug-in what
+   * it stores — the contract has no read in that direction and closed without
+   * one (E69) — so the letter names the modules and points at the
+   * organization, which is the honest answer rather than a general sentence
+   * about "optional modules" that no reader can check.
+   *
+   * Empty when none is on, and then the paragraph is left out entirely.
+   */
+  private enabledModules(catalogue: Record<string, string>): string {
+    return this.plugins
+      .all()
+      .filter((plugin) => this.plugins.isEnabled(plugin.key))
+      .map((plugin) => catalogue[plugin.titleKey] ?? plugin.key)
+      .join(', ');
   }
 }

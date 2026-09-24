@@ -172,6 +172,7 @@ const session = (
   title: `Session ${id}`,
   startsAt: at(from),
   endsAt: at(to),
+  timezone: 'Europe/Berlin',
   registrationEnabled: false,
   capacity: null,
   ...overrides,
@@ -484,6 +485,7 @@ describe('RoomPlanningService', () => {
         title: 'Closing',
         startsAt: at(14),
         endsAt: at(15),
+        timezone: 'Europe/Berlin',
       });
     });
 
@@ -586,6 +588,7 @@ describe('RoomPlanningService', () => {
             title: 'Session elsewhere',
             startsAt: at(9),
             endsAt: at(10),
+            timezone: 'Europe/Berlin',
           },
         ],
       });
@@ -644,12 +647,14 @@ describe('RoomPlanningService', () => {
             title: 'Opening plenary',
             startsAt: at(9),
             endsAt: at(10),
+            timezone: 'Europe/Berlin',
           },
           {
             programItemId: 'panel',
             title: 'Panel',
             startsAt: at(11),
             endsAt: at(12),
+            timezone: 'Europe/Berlin',
           },
         ],
       });
@@ -657,6 +662,27 @@ describe('RoomPlanningService', () => {
       // visitor's information: neither the count nor the word appears here.
       expect(JSON.stringify(rooms)).not.toMatch(/signupCount|warnings|45/);
       expect(rooms[1].bookings).toEqual([]);
+    });
+
+    it("draws every slot in the event's zone, wherever it is read (E69)", async () => {
+      // The acceptance criterion of this contract step, at the layer that
+      // decides it: whatever clock the reader's browser is on, the plan
+      // carries the one the programme above it on the same page uses (E8).
+      program.items.push(
+        session('abroad', 16, 17, { timezone: 'Pacific/Auckland' }),
+      );
+
+      const rooms = await service.publicPlan(EVENT);
+      const plan = await service.plan(EVENT);
+
+      expect(
+        rooms.flatMap((room) => room.bookings).map((b) => b.timezone),
+      ).toEqual(['Europe/Berlin', 'Europe/Berlin']);
+      expect(plan.sessions.map((one) => one.timezone)).toEqual([
+        'Europe/Berlin',
+        'Europe/Berlin',
+        'Pacific/Auckland',
+      ]);
     });
   });
 

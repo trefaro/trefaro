@@ -612,7 +612,12 @@ export class OrganizerRooms {
   }
 
   protected slot(session: PlannedSession): string {
-    return `${when(this.locale(), session.startsAt)}–${clock(this.locale(), session.endsAt)}`;
+    // The venue's clock, from the session itself (E8, E69) — an organizer
+    // planning from another country sees the hours the event runs at.
+    return (
+      `${when(this.locale(), session.startsAt, session.timezone)}` +
+      `–${clock(this.locale(), session.endsAt, session.timezone)}`
+    );
   }
 
   /** The event's sessions that are not in this room yet — what it can take. */

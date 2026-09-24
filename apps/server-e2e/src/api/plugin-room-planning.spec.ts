@@ -41,6 +41,7 @@ interface PlannedSession {
   title: string;
   startsAt: string;
   endsAt: string;
+  timezone: string;
 }
 
 interface RoomBooking extends PlannedSession {
@@ -441,6 +442,9 @@ describe('the room planning plug-in', () => {
             title: 'Opening plenary',
             startsAt: `${DAY}T09:00:00.000Z`,
             endsAt: `${DAY}T10:00:00.000Z`,
+            // The clock these two instants are read on (E8, E69): the
+            // event's, which is the whole of plug-in API 1.3.0.
+            timezone: 'Europe/Berlin',
           },
         ],
       });

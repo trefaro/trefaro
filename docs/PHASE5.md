@@ -2324,3 +2324,197 @@ hat, sind die drei Trigramm-Indizes des Vergleichs, und die hat derselbe Lauf
 wieder entfernt. Eine Migration pro Paket ist die Regel für Pakete, die das
 Datenmodell anfassen; dieses tut es nicht, und eine leere Migration wäre eine
 Zeile Geschichte über nichts.
+
+### AP 11 — Der Plug-in-Vertrag schließt (erledigt, 24.09.2026)
+
+Ein Paket mit **einem Feld** und **zwei Entscheidungen, die nichts gebaut
+haben**. Das ist keine Untertreibung, sondern die Form, die E69 diesem Schritt
+gegeben hat: 1.3.0 ist der letzte, und was danach fehlt, fehlt bis v1.0. Also
+war die Arbeit zur Hälfte, zu entscheiden, was **nicht** hineingehört.
+
+#### Der Fehler, den niemand sehen konnte, der am Veranstaltungsort stand
+
+`PluginSlotContext` trägt Sprache, Worte und Einhängepunkt und nichts über das
+Event; `PluginProgramReads` lieferte zwei Zeitpunkte ohne ihre Zone. Also
+zeichneten Raumplan und individueller Programmplan ihre Uhrzeiten mit
+`Intl.DateTimeFormat` ohne `timeZone` — in der Uhr des **Browsers**. Auf
+derselben Seite, ein paar Zentimeter darüber, steht das Programm des Events in
+der Zone des Events (E8), gezeichnet vom Host.
+
+Für jemanden im Bürgerhaus stimmen beide Zahlen überein, und genau deshalb hat
+es keine Suite gefunden: der Testrechner steht in derselben Zone wie das
+Fixture-Event. Aus Toronto gelesen sagte der Raumplan **03:00**, wo das
+Programm darüber **09:00** sagte. Beide Zahlen waren „richtig" — sie
+beantworteten nur zwei verschiedene Fragen, und eine Seite darf sich das nicht
+aussuchen.
+
+Der Test, der das zeigt, musste deshalb die Zone der Maschine erst wegnehmen:
+in den Bündeln `vi.stubEnv('TZ', 'America/Toronto')`, in der Browsersuite ein
+Playwright-Kontext mit `timezoneId`. Auf diesem Entwicklungsrechner (CEST) wäre
+die Zusicherung „der Raumplan zeigt 09:00" sonst **grün gewesen, bevor irgendetwas
+gebaut war** — eine Zusicherung, die die Maschine bestätigt statt den Code.
+
+#### Warum die Zone am Port hängt und nicht am Slot
+
+`todo.md` hatte die Antwort nach AP 10 der Phase 4 schon vorbereitet, und das
+Paket hat sie geprüft statt sie zu wiederholen. Der Slot sieht billiger aus —
+eine vierte zugesagte Eigenschaft neben `locale`, `strings` und `mountPoint`.
+Er scheitert an derselben Prüfung wie der `signedIn`-Hinweis, den AP 9 der
+Phase 4 abgelehnt hat: **nur eine Seite kennt ein Event.** `navigation` und
+`my-registration` hätten nichts zu übergeben, also wäre die Eigenschaft
+manchmal berechtigt leer, also müsste jedes Plug-in den leeren Fall behandeln —
+und der einzige Rückfall, den ein Bündel dann hat, ist die Zone des Browsers.
+Das ist der Fehler, nur mit einer zugesagten Eigenschaft davor.
+
+Am Port reist sie **neben den Zeiten, zu denen sie gehört**:
+`PluginProgramItem.timezone`. Ein Plug-in, das eine Uhrzeit hat, hat damit auch
+die Zone dazu, und es kann sie nicht vergessen — es müsste sie ausdrücklich
+weglassen.
+
+Dieselbe Regel gilt eine Schicht weiter nach außen, und deshalb steht das Feld
+auch an `PlannedSession` und `PersonalProgramItem` und nicht einmal am Rand der
+Antwort: eine Zone am Rand ist eine, die der nächste Aufrufer nicht mitnimmt.
+
+#### Woher der Host die Zone nimmt — ein Feld, kein Repository
+
+`ProgramPluginReads` brauchte dafür etwas, das es nicht hatte: das Event. Der
+naheliegende Weg wäre `EVENT_REPOSITORY` gewesen — vorhanden, global, eine
+Zeile Konstruktor. Der Port kann aber Events anlegen, umbenennen und löschen,
+und die Naht zu den Plug-ins ist die letzte Stelle, an der man so etwas
+herumliegen lässt. Also derselbe Schnitt, den `ProfileDirectory` gegen das
+Profil-Repository macht und `ProgramTally` gegen das des Programms: ein neuer
+schmaler Port **`EventZones`** mit einer Methode, `zoneOf(eventId)`, gebunden
+an dieselbe TypeORM-Klasse wie `EVENT_REPOSITORY` (zweiter Token, `useExisting`)
+und mit einem `select` auf genau eine Spalte.
+
+Gelesen wird er **einmal je Liste**, nicht je Sitzung — parallel zu den
+Programmpunkten, also ohne zusätzliche Wartezeit —, und das Ergebnis wird auf
+jede Zeile gestempelt.
+
+Und eine Kleinigkeit, die eine Entscheidung ist: **es gibt keinen
+Programmpunkt ohne Zone.** Wo das Event nicht gelesen werden kann — was nur im
+Moment zwischen zwei Lesevorgängen passieren kann, weil eine Löschung das
+Programm mitnimmt —, antwortet der Port `null` beziehungsweise eine leere
+Liste. Ein erfundenes UTC wäre eine Uhr, die niemand gewählt hat, gezeichnet
+neben einem Titel, der gleich verschwindet.
+
+#### Was der Vertrag ausdrücklich **nicht** dazubekommen hat
+
+Ein zweiter Lesevorgang „die Zone dieses Events" lag nahe und ist nicht
+gebaut: wer eine Uhrzeit zeichnet, hat einen Programmpunkt gelesen, und wer
+keinen gelesen hat, hat keine Uhrzeit. Eine Fähigkeit ohne Füller ist die
+Attrappe aus F47. Drei Bündel zeichnen weiterhin in der Uhr des Lesers —
+Forum, Programmvorschläge und QR-Check-In —, und das ist kein Versehen: sie
+zeichnen, **wann etwas passiert ist**, und das hat keinen Ort. Der Kommentar in
+`shared-plugin-kit/when.ts` sagt seit AP 6 der Phase 4 genau das; er ist jetzt
+die Begründung für einen optionalen dritten Parameter statt für dessen Fehlen.
+
+#### Die zweite Hälfte von E55: nein, und der Grund ist nicht der Preis (F236)
+
+„Der Plan zeigt an, wo ich einen Platz habe" bräuchte zwei Fähigkeiten: die
+Anmeldungen eines Kontos zu einem Event auflösen, und fragen, für welche
+Programmpunkte eine Anmeldung einen Platz hält. Die zweite ist eine
+Teilnehmerliste, Zeile für Zeile — genau das, wofür `countSignups` bewusst nur
+eine Zahl herausgibt. Auf den aktuellen Anspruch verengt wäre sie sicher, und
+trotzdem falsch: **die Marke gibt es schon**, dort wo der Platz gebucht wird.
+Die Seite „meine Anmeldung" markiert jede Sitzung mit `signedUp`, schreibt
+„gebucht" statt der freien Plätze und hebt die Zeile hervor. Eine zweite
+Stelle, die dasselbe behauptet, ist eine, die irgendwann etwas anderes
+behauptet — und die Wahrscheinlichkeit dafür ist hier hoch, weil die eine Seite
+eine Anmeldung kennt und die andere ein Konto.
+
+#### Der Datenexport: kein Port, aber ein Satz, der aufhört, allgemein zu sein (F237)
+
+Das Archiv aus AP 6 trägt die Kerntabellen vollständig und sagt selbst, dass
+Forumsbeiträge und Programmvorschläge fehlen. Ein Lese-Port dafür wäre die
+**erste Fähigkeit in umgekehrter Richtung** (E59) — bisher erfährt der Kern von
+einem Plug-in nur, was im Deskriptor steht. Drei Gründe dagegen, und der dritte
+ist der schwerste:
+
+1. Der Kern kann die Tabellen auch nicht selbst lesen; das wäre das Spiegelbild
+   von F21.
+2. Ein Lese-Port legt den Ausfall eines Plug-ins in einen Bildschirm, auf dem
+   jemand ein **Recht** ausübt (NFR 10) — der Export ist die eine Stelle, an der
+   „ein Modul hat gerade einen Fehler" nicht als Antwort taugt.
+3. Er wäre in der Ecke des Pakets entstanden, das den Vertrag schließt. Eine
+   Umkehrung der Richtung, die Phase 4 ausdrücklich entschieden hat, gehört in
+   ein Paket mit eigener Risikobegründung, nicht in den letzten Absatz eines
+   anderen.
+
+Was stattdessen passiert ist, kostet zwei Katalogschlüssel: das `README.txt`
+nennt jetzt die Module, die **diese** Instanz eingeschaltet hat — mit ihren
+Titeln aus dem Katalog, gelesen aus dem Deskriptor —, und lässt den Absatz ganz
+weg, wenn keines eingeschaltet ist. Aus „drei Dinge fehlen absichtlich, unter
+anderem was die optionalen Module speichern" wird „zwei Dinge fehlen
+absichtlich" plus ein Absatz, der die Module beim Namen nennt und sagt, wen man
+fragt. Die **Löschung** braucht davon nichts: dort sagt jeder Fremdschlüssel
+eines Plug-ins schon, was mit seinen Zeilen geschieht.
+
+#### Was anders lief
+
+**Der Compiler hat zwei Dateien gefunden, bevor ein Test es tat.** Ein
+Pflichtfeld an `PluginProgramItem` machte die Fixtures der beiden Plug-in-Tests
+rot — nicht mit einer fehlgeschlagenen Zusicherung, sondern mit `TS2322`. Das
+ist die Eigenschaft, die `PersonalProgramItemDto implements PersonalProgramItem`
+und `PlannedSessionDto implements PlannedSession` seit Phase 4 haben sollen:
+eine Nutzlast, die von ihrem Modell abweicht, ist ein Build-Fehler und keine
+fehlgeschlagene Anfrage. Sie hat hier zum ersten Mal wirklich gegriffen.
+
+**Ein Test, der auf dieser Maschine grün gewesen wäre.** Siehe oben: ohne
+`vi.stubEnv` hätte die Zusicherung „der Raumplan zeigt 09:00" die Zeitzone des
+Entwicklungsrechners bestätigt. Dieselbe Falle wie ein `[local cache]` in
+AP 10 — eine grüne Zeile, die nichts gefahren hat.
+
+**Und ein Prüfskript, das rot meldete, ohne dass etwas kaputt war.**
+`tools/spike-verification/verify-plugin-toggle.mjs` — gegen eine laufende
+Instanz gefahren, weil dieses Paket seinen neuen Wert bis auf die Leitung
+belegen wollte — meldete **vier** rote Prüfungen. Keine davon betraf diesen
+Schritt: alle vier suchten den Namen eines Modulschlüssels im **Satz** des
+Servers (`body.message`), und seit AP 5 dieser Phase reist eine Ablehnung als
+**Code mit Werten** (E64). Das Skript prüfte also eine Antwortgestalt, die es
+seit sechs Paketen nicht mehr gibt, an einem Server, der sich völlig richtig
+verhielt. Es ist dieselbe Klasse von Befund, die AP 6 der Phase 4 in derselben
+Datei gefunden hat, und sie hat denselben Grund: **keine Suite fährt dieses
+Skript.** Die vier Prüfungen lesen jetzt `body.code` und `body.params.others`;
+drei vollständige Läufe hintereinander sind grün. Die Regel steht in
+`docs/rules/tooling-traps.md`.
+
+#### Der Stand nach diesem Paket
+
+`nx run-many -t lint test build` grün über **19 Projekte**. Unit-Tests:
+**1461** im Server (**vierzehn** neu: drei für den gestempelten Zonen-Wert am
+Host-Port, vier für das `README.txt` mit seinem bedingten Absatz, zwei für die
+zwei Richtungen des Vertragsschritts, zwei für die Module im Archivbrief und je
+einer für den weiter montierten 1.2.0-Deskriptor, den Plan und den Raumplan);
+**17** in `shared-plugin-kit` (fünf neu: die Zone am Formatierer, der Tag, der
+mit ihr umzieht, und der Rückfall, der lieber den nackten Zeitpunkt zeichnet als
+eine falsche Uhr); **25** im Raumplan-Bündel und **20** im Plan-Bündel (je
+eine Lesung aus Toronto). Veranstalter-Client **244** und Nutzer-Client **282**
+unverändert — dieses Paket fasst keinen ihrer Bildschirme an. Katalog **1289**
+Schlüssel: einer neu (`privacy.export.readme.modules`), einer umgeschrieben
+(`…notIncluded` zählt jetzt zwei statt drei Dinge auf).
+
+Browsersuiten, mit `--skip-nx-cache`: Veranstaltersuite **330** unverändert,
+Teilnehmersuite **267** bei 65 übersprungenen — ein Test mehr als bisher, und
+er läuft nur in Chromium, weil er `module_config` umlegt. Vertragssuite **44**
+Suiten und **730** Tests, unverändert in der Zahl: dieses Paket hat dort keine
+Tests hinzugefügt, sondern zwei bestehende um die Zone erweitert.
+`tools/shipped-stack/verify.sh`: „the shipped stack is good", **13**
+Browsertests, 138 s, keine Container übrig.
+`verify-plugin-toggle.mjs` gegen die laufende Instanz: alle Prüfungen grün,
+darunter die neue — `timezone` steht auf der Leitung, nicht nur im Typ.
+
+**Eine Sache lief dabei schief, und sie gehört nicht zu diesem Paket:** der
+erste vollständige E2E-Lauf hat die Teilnehmersuite gar nicht gefahren, weil
+**Port 4200 belegt war** — von einem Entwicklungsserver eines anderen
+Repositories auf derselben Maschine. Nx meldet das als
+`Task "user-client:serve:development" is continuous but exited with code 1`,
+und die davon abhängige Suite wird übersprungen; der Lauf endet mit einem
+Fehler, der nach diesem Repository aussieht und keiner ist. Die Suite ist
+deshalb einzeln gegen **4201** gefahren worden (`BASE_URL` reicht dafür, die
+Konfiguration liest sie). Nichts davon ist eine Änderung wert: die Portnummer
+in `project.json` ist richtig, und ein fremder Prozess ist kein Grund, sie zu
+verstellen.
+
+Und es bringt **keine Migration**: der Vertragsschritt liest eine Spalte, die
+`event.timezone` seit AP 3 der Phase 1 hat.

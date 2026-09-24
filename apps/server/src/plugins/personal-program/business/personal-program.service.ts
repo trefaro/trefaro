@@ -120,6 +120,10 @@ function toPayload(
     title: item.title,
     startsAt: item.startsAt,
     endsAt: item.endsAt,
+    // The event's clock, straight from the port (E69): a plan is a selection
+    // from the programme, and a selection that disagreed with the programme
+    // about the hour would be a second timetable.
+    timezone: item.timezone,
     registrationEnabled: item.registrationEnabled,
     capacity: item.capacity,
     inPlan,

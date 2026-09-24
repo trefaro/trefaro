@@ -48,6 +48,22 @@ describe('isCompatiblePluginApiVersion', () => {
     expect(isCompatiblePluginApiVersion('1.2.0', '1.1.0')).toBe(false);
   });
 
+  it('keeps mounting a 1.2 plug-in now that the host offers 1.3', () => {
+    // The last step before v1.0 (E69). It adds one field to the programme
+    // port — the zone an event's times are read in — so every plug-in of
+    // phase 4 stays mounted and simply never reads it.
+    expect(isCompatiblePluginApiVersion('1.2.0', '1.3.0')).toBe(true);
+    expect(isCompatiblePluginApiVersion('1.1.0', '1.3.0')).toBe(true);
+    expect(isCompatiblePluginApiVersion('1.0.0', '1.3.0')).toBe(true);
+  });
+
+  it('refuses a plug-in that needs 1.3 from a 1.2 host', () => {
+    // A plug-in that renders in the event's zone would draw the reader's
+    // clock instead on a host that does not stamp one — wrong by an hour and
+    // silent about it, which is worse than a named refusal at boot (NFR 10).
+    expect(isCompatiblePluginApiVersion('1.3.0', '1.2.0')).toBe(false);
+  });
+
   it('rejects a plug-in needing a newer minor version than the host offers', () => {
     expect(isCompatiblePluginApiVersion('1.5.0', '1.4.0')).toBe(false);
   });

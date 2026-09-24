@@ -159,8 +159,32 @@ diese Eigenschaft.
   bestätigten Anmeldungen eines Events und eine Id, die das Plug-in selbst
   gespeichert hat (E53, F197) — fünf Felder, **keine Adresse**, **keine
   Formularantworten**, keine Suche; alle drei vom globalen `PluginHostModule`.
-  Neue Fähigkeit = Minor am `PLUGIN_API_VERSION` **plus** ein Fall im
-  Kompatibilitätstest.
+  Seit AP 11 der Phase 5 trägt `PluginProgramItem` außerdem die **Zone des
+  Events** (E69) — ohne sie zeichnete ein Plug-in seine Uhrzeiten in der Uhr
+  des Lesers, während das Programm darüber auf derselben Seite in der Zone des
+  Events steht (E8). Neue Fähigkeit = Minor am `PLUGIN_API_VERSION` **plus**
+  ein Fall im Kompatibilitätstest.
+- **Der Vertrag ist bei 1.3.0 geschlossen** (E69, AP 11 der Phase 5). Bis v1.0
+  kommt keine Fähigkeit mehr dazu; was für diesen letzten Schritt abgewogen und
+  **nicht** gebaut wurde, steht mit Begründung in `docs/PHASE5.md` unter AP 11 —
+  die zweite Hälfte von E55 und ein Lese-Port für den Datenexport. Wer nach
+  v1.0 etwas braucht, plant 1.4.0 als eigenes Paket mit seinem Füller (E46).
+- **Eine Eigenschaft, die nur eine Seite liefern kann, gehört an den Port und
+  nicht an den Slot** (E69). Die Zone des Events war der Fall, an dem das
+  entschieden wurde: `PluginSlotContext` sieht billiger aus, aber nur eine
+  **Seite** kennt ein Event — `navigation` und `my-registration` hätten nichts
+  zu übergeben, und eine Eigenschaft, die manchmal berechtigt fehlt, ist eine,
+  die jedes Plug-in fehlend behandeln muss. Der Rückfall wäre die Zone des
+  Browsers, also genau der Fehler. Am Port reist sie **neben den Zeiten**, zu
+  denen sie gehört, und kann deshalb nicht vergessen werden.
+- **Der Host fragt kein Plug-in** (E59), und AP 11 hat das gegen den Datenexport
+  geprüft und stehen lassen: Was ein Plug-in über einen Menschen speichert,
+  liegt in **seinen** Tabellen, der Kern liest sie nicht (F21), und ein
+  Lese-Port in umgekehrter Richtung hätte den Ausfall eines Plug-ins in einen
+  Bildschirm gelegt, auf dem jemand ein Recht ausübt (NFR 10). Was der Kern von
+  einem Plug-in erfährt, steht im **Deskriptor** — das reicht, um im
+  `README.txt` des Archivs die eingeschalteten Module beim Namen zu nennen,
+  statt allgemein von „optionalen Modulen" zu sprechen.
 - **Ein Host-Port beantwortet drei Gestalten von Frage und keine vierte**
   (F197, wie F152): einen **Anspruch** auflösen, **eine Liste** zu einem
   Elternteil lesen, oder **eine Id auflösen, die das Plug-in selbst

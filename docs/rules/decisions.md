@@ -1,6 +1,6 @@
 # Bestätigte Zuschnitt-Entscheidungen
 
-Fünf Entscheidungen sind getroffen und **bestätigt**; der jetzige Zustand _ist_
+Acht Entscheidungen sind getroffen und **bestätigt**; der jetzige Zustand _ist_
 die Entscheidung, also nichts davon „auf Verdacht" umsetzen.
 
 Jede davon wurde schon einmal diskutiert; ein erneutes Aufrollen kostet
@@ -44,5 +44,22 @@ Zeit und endet beim gleichen Ergebnis.
   keine Sprache je Adresse (nur eine der beiden Quellen könnte sie füllen,
   F181). Das Einladen ehemaliger Teilnehmender ist ausdrücklich **nicht**
   dasselbe (F55): dort sind die Empfänger Anmeldungen, nie Adressen.
+
+- **Der Plug-in-Vertrag ist bei `PLUGIN_API_VERSION` 1.3.0 geschlossen**
+  (E69, 24.09.2026). Bis v1.0 kommt keine Fähigkeit mehr dazu. Zwei sind für
+  diesen letzten Schritt abgewogen und **nicht** gebaut worden, beide mit
+  Begründung im Referenzdokument: die zweite Hälfte von E55 — „der Plan zeigt
+  an, wo ich einen Platz habe" — braucht zwei Port-Fähigkeiten für eine Marke,
+  die dort, wo der Platz gebucht wird, **schon steht** (F236); und ein
+  Lese-Port, mit dem der Datenexport erführe, was ein Plug-in über einen
+  Menschen speichert, wäre die erste Fähigkeit in umgekehrter Richtung (E59)
+  und legte den Ausfall eines Plug-ins in einen Bildschirm, auf dem jemand ein
+  Recht ausübt (F237). Wer eines von beiden nach v1.0 will, plant 1.4.0 als
+  eigenes Paket mit seinem Füller (E46) — nicht als Zeile in einem anderen.
+- **Ein Plug-in zeichnet geplante Zeiten in der Zone des Events** (E8, E69,
+  24.09.2026) und „wann etwas passiert ist" in der Uhr des Lesers. Die Zone
+  reist am Port neben den Zeiten, zu denen sie gehört, nie am Einhängepunkt:
+  nur eine Seite kennt ein Event, und eine zugesagte Eigenschaft, die manchmal
+  fehlt, hat als Rückfall die Browser-Zone — also den Fehler (F235).
 
 Siehe auch: die Regel zur Arbeitspaket-Freigabe (`CLAUDE.md`), [Ausgehende Mail](mail.md).

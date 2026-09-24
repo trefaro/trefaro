@@ -186,6 +186,16 @@ describe('selectCompatiblePlugins', () => {
     );
   });
 
+  it('still mounts a plug-in written against 1.2.0 (E69)', () => {
+    // The acceptance criterion of the last contract step: 1.3.0 adds the
+    // event's zone to the programme port, and an addition is what a minor
+    // step means — a plug-in from phase 4 keeps running and never asks.
+    const older = plugin({ key: 'phase-four', apiVersion: '1.2.0' });
+
+    expect(selectCompatiblePlugins([older], silentLogger)).toEqual([older]);
+    expect(silentLogger.error).not.toHaveBeenCalled();
+  });
+
   it('keeps only the first plug-in when a key is registered twice', () => {
     const first = plugin({ key: 'dup', version: '1.0.0' });
     const second = plugin({ key: 'dup', version: '2.0.0' });

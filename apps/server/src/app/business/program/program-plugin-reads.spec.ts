@@ -1,4 +1,5 @@
 import type { ProgramItemTranslation } from '@trefaro/shared-models';
+import type { EventZones } from '../common/ports/event-zone.port';
 import type { ProgramItemSignupRepository } from './ports/program-item-signup.repository';
 import type { ProgramItemTranslationReader } from './ports/program-item-translation.repository';
 import type {
@@ -45,6 +46,17 @@ class FakeSignups implements Pick<ProgramItemSignupRepository, 'countByItems'> {
   }
 }
 
+/** One event, one zone — and a record of how often it was asked (F49). */
+class FakeZones implements EventZones {
+  zones = new Map<string, string>([[EVENT, 'Europe/Berlin']]);
+  asked: string[] = [];
+
+  async zoneOf(eventId: string): Promise<string | null> {
+    this.asked.push(eventId);
+    return this.zones.get(eventId) ?? null;
+  }
+}
+
 /**
  * The translation reader as the adapter uses it: one method, and the test
  * records what it was asked so the locale can be seen travelling.
@@ -84,15 +96,18 @@ class FakeTranslations implements Pick<
 describe('ProgramPluginReads', () => {
   let items: FakeItems;
   let translations: FakeTranslations;
+  let zones: FakeZones;
   let reads: ProgramPluginReads;
 
   beforeEach(() => {
     items = new FakeItems();
     translations = new FakeTranslations();
+    zones = new FakeZones();
     reads = new ProgramPluginReads(
       items as unknown as ProgramItemRepository,
       new FakeSignups() as unknown as ProgramItemSignupRepository,
       translations as unknown as ProgramItemTranslationReader,
+      zones,
     );
   });
 
@@ -123,6 +138,7 @@ describe('ProgramPluginReads', () => {
         title: 'Opening plenary',
         startsAt: '2027-06-14T09:00:00.000Z',
         endsAt: '2027-06-14T10:00:00.000Z',
+        timezone: 'Europe/Berlin',
         registrationEnabled: true,
         capacity: 40,
       },
@@ -132,6 +148,7 @@ describe('ProgramPluginReads', () => {
         title: 'Workshop: door-to-door',
         startsAt: '2027-06-14T11:00:00.000Z',
         endsAt: '2027-06-14T12:30:00.000Z',
+        timezone: 'Europe/Berlin',
         registrationEnabled: false,
         capacity: null,
       },
@@ -179,6 +196,7 @@ describe('ProgramPluginReads', () => {
       title: 'Opening plenary',
       startsAt: '2027-06-14T09:00:00.000Z',
       endsAt: '2027-06-14T10:00:00.000Z',
+      timezone: 'Europe/Berlin',
       registrationEnabled: true,
       capacity: 40,
     });
@@ -186,5 +204,44 @@ describe('ProgramPluginReads', () => {
 
   it('keeps answering null for a session nobody has', async () => {
     expect(await reads.findItem('item-nope')).toBeNull();
+  });
+
+  it("stamps the event's zone on every session, asking once for the list (E69)", async () => {
+    items.rows.push(
+      record(),
+      record({ id: 'item-2' }),
+      record({ id: 'item-3' }),
+    );
+
+    const sessions = await reads.listForEvent(EVENT);
+
+    expect(sessions.map((session) => session.timezone)).toEqual([
+      'Europe/Berlin',
+      'Europe/Berlin',
+      'Europe/Berlin',
+    ]);
+    // One question for the whole list, like the translations above (F49).
+    expect(zones.asked).toEqual([EVENT]);
+  });
+
+  it('answers with the zone each event is read in, not with one for all of them', async () => {
+    const other = '22222222-2222-4222-8222-222222222222';
+    zones.zones.set(other, 'America/Toronto');
+    items.rows.push(record(), record({ id: 'item-abroad', eventId: other }));
+
+    expect((await reads.listForEvent(EVENT))[0].timezone).toBe('Europe/Berlin');
+    expect((await reads.listForEvent(other))[0].timezone).toBe(
+      'America/Toronto',
+    );
+  });
+
+  it('hands over nothing rather than a session without its zone', async () => {
+    // Only reachable in the moment between two reads — an event's deletion
+    // takes its programme with it. Inventing UTC here would be a clock nobody
+    // chose, drawn beside a title that is about to disappear.
+    items.rows.push(record({ id: 'item-ghost', eventId: 'gone' }));
+
+    expect(await reads.listForEvent('gone')).toEqual([]);
+    expect(await reads.findItem('item-ghost')).toBeNull();
   });
 });

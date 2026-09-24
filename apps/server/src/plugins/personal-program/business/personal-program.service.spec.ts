@@ -96,6 +96,7 @@ const session = (
   title: `Session ${id}`,
   startsAt: '2026-05-12T09:00:00.000Z',
   endsAt: '2026-05-12T10:30:00.000Z',
+  timezone: 'Europe/Berlin',
   registrationEnabled: false,
   capacity: null,
   ...overrides,
@@ -183,9 +184,27 @@ describe('PersonalProgramService', () => {
         'title',
         'startsAt',
         'endsAt',
+        'timezone',
         'registrationEnabled',
         'capacity',
         'inPlan',
+      ]);
+    });
+
+    it("carries the event's zone on every session, so a plan is not read in the browser's clock (E69)", async () => {
+      program.items = [
+        session('a'),
+        session('b', { timezone: 'America/Toronto' }),
+      ];
+
+      const plan = await service.forEvent(EVENT, ME);
+
+      // The port stamps it per session and this passes it on unchanged: a plan
+      // is a selection from the programme, and a selection that disagreed with
+      // the programme about the hour would be a second timetable.
+      expect(plan.map((entry) => entry.timezone)).toEqual([
+        'Europe/Berlin',
+        'America/Toronto',
       ]);
     });
 

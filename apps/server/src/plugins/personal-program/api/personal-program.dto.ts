@@ -31,6 +31,14 @@ export class PersonalProgramItemDto implements PersonalProgramItem {
 
   @ApiProperty({
     description:
+      'IANA zone the two instants are read in — the event’s, never the ' +
+      'reader’s (E8, E69).',
+    example: 'Europe/Berlin',
+  })
+  timezone!: string;
+
+  @ApiProperty({
+    description:
       'Whether this session asks who is coming (FR 3.10). Where it is true, ' +
       'a seat is booked in the event’s programme — never here (E55).',
   })

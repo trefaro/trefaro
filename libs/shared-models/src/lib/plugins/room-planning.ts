@@ -69,10 +69,10 @@ export type RoomWarning = (typeof ROOM_WARNINGS)[number];
 /**
  * A session as the room plan names it.
  *
- * Four fields, read through the host's port (E12, E56): enough to put a name
- * on a time slot, and nothing about who is coming. The title is the original
- * for an organizer and translated for a participant who asked in their
- * language.
+ * Five fields, read through the host's port (E12, E56, E69): enough to put a
+ * name on a time slot **at the right hour**, and nothing about who is coming.
+ * The title is the original for an organizer and translated for a participant
+ * who asked in their language.
  */
 export interface PlannedSession {
   readonly programItemId: string;
@@ -80,6 +80,16 @@ export interface PlannedSession {
   /** ISO 8601 instants, rendered in the event's zone (E8). */
   readonly startsAt: string;
   readonly endsAt: string;
+  /**
+   * That zone, IANA-named — the event's, never the reader's (E69).
+   *
+   * Beside every session rather than once beside the plan: it is the field
+   * without which the two instants above cannot be drawn, and the sentence
+   * over them promised the event's zone long before anything delivered it. A
+   * room plan read from Toronto used to disagree with the programme above it
+   * on the same page, by exactly the offset between the two clocks.
+   */
+  readonly timezone: string;
 }
 
 /** A session in a room, with the numbers behind its warnings. */

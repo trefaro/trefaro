@@ -28,4 +28,38 @@ describe('formatting an instant', () => {
     expect(day('not a tag', ISO)).toBe('2027-06-14');
     expect(clock('not a tag', ISO)).toBe('07:05');
   });
+
+  describe("in an event's own zone (E69)", () => {
+    // 07:05 UTC is 09:05 in Berlin and 03:05 in Toronto. Whoever reads it,
+    // a session of a Berlin event runs at 09:05 (E8).
+    it('renders the clock of the zone it is handed, not the machine’s', () => {
+      expect(clock('en-GB', ISO, 'Europe/Berlin')).toBe('09:05');
+      expect(clock('en-GB', ISO, 'America/Toronto')).toBe('03:05');
+    });
+
+    it('moves the day with the zone, which is what a day heading needs', () => {
+      const lateEvening = '2027-06-14T22:30:00.000Z';
+      expect(day('en-GB', lateEvening, 'Europe/Berlin')).toBe('15 Jun 2027');
+      expect(day('en-GB', lateEvening, 'America/Toronto')).toBe('14 Jun 2027');
+    });
+
+    it('carries the zone through date and time together', () => {
+      expect(when('en-GB', ISO, 'Europe/Berlin')).toMatch(/09:05/);
+    });
+
+    it('keeps the reader’s own clock when no zone is handed over', () => {
+      // The three bundles that draw *when something happened* pass none, and
+      // that stays right: a post in a conversation has no venue.
+      expect(clock('en-GB', ISO)).toMatch(/^\d{2}:\d{2}$/);
+    });
+
+    it('falls back to the plain instant rather than to a wrong clock', () => {
+      // An unknown zone is a broken instance, and the honest answer is the
+      // instant as written. Silently dropping the zone would draw the
+      // reader's clock — the very bug this parameter exists against.
+      expect(clock('en-GB', ISO, 'Mars/Olympus')).toBe('07:05');
+      expect(day('en-GB', ISO, 'Mars/Olympus')).toBe('2027-06-14');
+      expect(when('en-GB', ISO, 'Mars/Olympus')).toBe('2027-06-14 07:05');
+    });
+  });
 });

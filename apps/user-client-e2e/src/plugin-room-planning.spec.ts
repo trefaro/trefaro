@@ -219,6 +219,46 @@ test.describe('the room planning plug-in on an event page', () => {
     await expectNoRawKeys(page);
   });
 
+  test.describe('read from another continent (E69)', () => {
+    // A browser that is not at the venue, which is the only way to see this
+    // bug at all: with the reader in the event's own zone the wrong clock and
+    // the right one are the same number.
+    test.use({ timezoneId: 'America/Toronto' });
+
+    test('shows a session at the same hour as the programme above it', async ({
+      page,
+      browserName,
+    }) => {
+      test.skip(
+        browserName !== 'chromium',
+        'switches the shared module_config',
+      );
+
+      await page.goto(eventPath());
+
+      // The host's timeline, rendered in the event's zone since AP 5 of phase 1
+      // (E8) — this is the number the page as a whole stands behind.
+      const above = page
+        .locator('.program .session')
+        .filter({ hasText: seeded.plenaryTitle })
+        .first();
+      const programmeClock = (
+        (await above.locator('.session__time').textContent()) ?? ''
+      ).trim();
+      expect(programmeClock).toMatch(/^\d{1,2}:\d{2}/);
+
+      // The plug-in's section, further down the same page. Until plug-in API
+      // 1.3.0 it drew this in the browser's zone and the two disagreed by six
+      // hours.
+      const booking = section(page)
+        .locator('.booking')
+        .filter({ hasText: seeded.plenaryTitle });
+      await expect(booking.locator('.booking__time')).toContainText(
+        programmeClock.split('–')[0].trim(),
+      );
+    });
+  });
+
   test('takes tile and section away when it is switched off, and keeps the rooms (E14)', async ({
     page,
     browserName,

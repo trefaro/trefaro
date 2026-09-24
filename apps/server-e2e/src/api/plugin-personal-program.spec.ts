@@ -48,6 +48,7 @@ interface PlanRow {
   title: string;
   startsAt: string;
   endsAt: string;
+  timezone: string;
   registrationEnabled: boolean;
   capacity: number | null;
   inPlan: boolean;
@@ -347,7 +348,15 @@ describe('the personal programme plug-in', () => {
         'programItemId',
         'registrationEnabled',
         'startsAt',
+        'timezone',
         'title',
+      ]);
+      // The clock the two instants are read on (E8, E69) — the event's, so a
+      // plan read from abroad says what the programme says.
+      expect(answer.body.map((row) => row.timezone)).toEqual([
+        'Europe/Berlin',
+        'Europe/Berlin',
+        'Europe/Berlin',
       ]);
     });
 

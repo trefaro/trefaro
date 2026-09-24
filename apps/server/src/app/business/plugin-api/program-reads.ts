@@ -28,6 +28,12 @@
  * session may ask who is coming without limiting how many (F42), and such a
  * session would then look like one that asks nothing.
  *
+ * **1.3.0 adds {@link PluginProgramItem.timezone}** (E69), the last step this
+ * contract takes before v1.0. What is not added beside it is a read of the
+ * event: a plug-in that draws a time has read a session, and one that has not
+ * read a session has no time to draw — a capability nothing fills is one that
+ * only looks like a capability (F47).
+ *
  * What is **not** here is any read about one named person: how many signed up
  * is a number ({@link PluginProgramReads.countSignups}), and *who* did is the
  * core's business. A plug-in that could ask "does this account hold a seat"
@@ -50,6 +56,18 @@ export interface PluginProgramItem {
   /** Absolute instants. Two sessions in one room may not overlap in time. */
   readonly startsAt: string;
   readonly endsAt: string;
+  /**
+   * The IANA zone the two instants above are meant to be read in (E8, E69).
+   *
+   * The event's, never the reader's: a session runs at the venue's clock, and
+   * a plug-in that formatted the instants without this would draw 14:00 for
+   * somebody in Toronto while the programme above it on the same page says
+   * 20:00. Added in plug-in API **1.3.0**, and it sits on the session rather
+   * than at the slot or behind a second read for one reason — a property that
+   * travels beside the times it belongs to cannot be forgotten, and a
+   * forgotten zone is exactly the bug.
+   */
+  readonly timezone: string;
   /**
    * Whether this session asks who is coming (FR 3.10, F42).
    *

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
+import type { EventZones } from '../../business/common/ports/event-zone.port';
 import {
   EventSlugTakenError,
   type EventChanges,
@@ -11,9 +12,14 @@ import {
 import { EventEntity } from '../entities';
 import { isUniqueViolation } from './unique-violation';
 
-/** PostgreSQL implementation of {@link EventRepository}. */
+/**
+ * PostgreSQL implementation of {@link EventRepository} — and of
+ * {@link EventZones}, the one-field read the plug-in seam gets instead of this
+ * whole repository (E69). Two ports, one class, the way the programme's rows
+ * and the dashboard's counts share `TypeormProgramItemRepository`.
+ */
 @Injectable()
-export class TypeormEventRepository implements EventRepository {
+export class TypeormEventRepository implements EventRepository, EventZones {
   constructor(
     @InjectRepository(EventEntity)
     private readonly repository: Repository<EventEntity>,
@@ -42,6 +48,16 @@ export class TypeormEventRepository implements EventRepository {
   async findById(id: string): Promise<EventRecord | null> {
     const row = await this.repository.findOneBy({ id });
     return row ? toRecord(row) : null;
+  }
+
+  async zoneOf(eventId: string): Promise<string | null> {
+    // One column, not a row: the plug-in port asks this for every list of
+    // sessions it hands over, and an event carries a description.
+    const row = await this.repository.findOne({
+      where: { id: eventId },
+      select: { timezone: true },
+    });
+    return row?.timezone ?? null;
   }
 
   async findByIds(ids: readonly string[]): Promise<readonly EventRecord[]> {

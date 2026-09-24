@@ -26,9 +26,11 @@ import { RoomPlanningApi } from './room-planning-api';
  * flight the moment somebody switches before the first has landed, and the
  * network does not answer in order (AP 5's lesson on the landing page).
  *
- * The times are the reader's clock: the slot hands a plug-in no zone, and a
- * participant standing in the venue is in the venue's zone. The event's own
- * times above this section are the host's and follow E8.
+ * **The times are the venue's clock** (E8, E69). Every session carries the
+ * event's zone since plug-in API 1.3.0, and this section draws it — so a plan
+ * read from Toronto says the same hour as the programme above it on the same
+ * page. Until then a plug-in was handed no zone at all, and the two disagreed
+ * by the offset between the reader and the venue.
  */
 @Component({
   selector: 'trefaro-participant-rooms',
@@ -215,7 +217,10 @@ export class ParticipantRooms {
   }
 
   protected slot(booking: PlannedSession): string {
-    return `${when(this.locale(), booking.startsAt)}–${clock(this.locale(), booking.endsAt)}`;
+    return (
+      `${when(this.locale(), booking.startsAt, booking.timezone)}` +
+      `–${clock(this.locale(), booking.endsAt, booking.timezone)}`
+    );
   }
 
   private async load(eventId: string, locale: string): Promise<void> {

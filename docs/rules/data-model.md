@@ -36,7 +36,14 @@ Entscheidungsprotokoll (`docs/Anforderungsanalyse_und_Umsetzungsplan.md`).
 - **Zeiten sind absolute Zeitpunkte, die Zone hängt am Event** (E8). Formatiert
   wird ausschließlich über die Helfer in `shared-models`, auch beim Aggregieren
   (F33). Ein Programmpunkt hat keine eigene Zone; Timeline-Tage über
-  `groupProgramByDay`, Uhrzeiten über `formatProgramTime`.
+  `groupProgramByDay`, Uhrzeiten über `formatProgramTime`. **Wo eine Zeit eines
+  Events über HTTP reist, reist ihre Zone daneben** (E69, AP 11 der Phase 5):
+  `PluginProgramItem`, `PlannedSession` und `PersonalProgramItem` tragen sie je
+  Zeile. Die Alternative — die Zone einmal am Rand der Antwort — ist die, bei
+  der ein Aufrufer sie vergisst, und der Rückfall heißt dann Browser-Zone.
+  Davon ausgenommen bleibt, **wann etwas passiert ist** (ein Beitrag, ein
+  Vorschlag, ein Einlass): das hat keinen Ort und wird in der Uhr des Lesers
+  gezeichnet (`shared-plugin-kit/when.ts`).
 - **Der Feldschlüssel ist nicht die Beschriftung** (F35): aus ihr abgeleitet, je
   Event eindeutig, danach **unveränderlich** — genau deshalb lässt sich eine Frage
   umformulieren, ohne die Antworten von ihr zu lösen. Typ ebenfalls fest. Sechs

@@ -129,6 +129,24 @@ describe('OrganizerRooms', () => {
     expect(textOf(fixture)).toContain(STRINGS['intro']);
   });
 
+  it("draws the slots in the event's zone, not in the organizer's (E69)", async () => {
+    // The same rule as on the participant's side, and it matters more here:
+    // an organizer filling rooms from another country would otherwise place
+    // sessions against hours the event does not run at.
+    vi.stubEnv('TZ', 'America/Toronto');
+    try {
+      api.answer = plan([planned({ bookings: [booking()] })]);
+
+      const fixture = await render({ eventId: 'event-1' });
+      const slot = all(fixture, '.booking__time')[0].textContent ?? '';
+
+      expect(slot).toContain('09:00');
+      expect(slot).not.toContain('03:00');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it('says so when there are no rooms yet, and offers to add the first', async () => {
     const fixture = await render({ eventId: 'event-1' });
 

@@ -63,6 +63,36 @@ describe('PersonalProgramPlugin', () => {
     expect(buttons(fixture, STRINGS.add)).toHaveLength(1);
   });
 
+  it("draws the times and cuts the days in the event's zone (E69)", async () => {
+    // Read from Canada: a session that runs 07:00–08:00 UTC at a Berlin venue
+    // is 09:00–10:00, and the evening session belongs to the venue's 15 June
+    // even though it is still the 14th where somebody is reading. Both were
+    // the reader's clock until plug-in API 1.3.0 put the zone on the session.
+    vi.stubEnv('TZ', 'America/Toronto');
+    try {
+      api.rows = [
+        item({ programItemId: 'a' }),
+        item({
+          programItemId: 'b',
+          startsAt: '2027-06-14T22:30:00.000Z',
+          endsAt: '2027-06-14T23:30:00.000Z',
+        }),
+      ];
+
+      const fixture = await render();
+
+      const slots = all(fixture, '.session__when').map(
+        (node) => node.textContent ?? '',
+      );
+      expect(slots[0]).toContain('09:00');
+      expect(slots[0]).not.toContain('03:00');
+      // Two days at the venue, one in Toronto — the heading follows the venue.
+      expect(all(fixture, '.day')).toHaveLength(2);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it('groups the sessions by the day the reader is in', async () => {
     api.rows = [
       item({ programItemId: 'a', startsAt: '2027-06-14T07:00:00.000Z' }),

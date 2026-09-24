@@ -399,5 +399,9 @@ function toPlannedSession(item: PluginProgramItem): PlannedSession {
     title: item.title,
     startsAt: item.startsAt,
     endsAt: item.endsAt,
+    // The event's clock, handed on from the port (E69). Without it the plan
+    // drew its slots in the browser's zone, disagreeing with the programme
+    // above it on the same page by the offset between the two.
+    timezone: item.timezone,
   };
 }

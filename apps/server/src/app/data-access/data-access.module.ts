@@ -6,6 +6,7 @@ import { FILE_STORE } from '../business/attachments/ports/file-store';
 import { CONVERSATION_REPOSITORY } from '../business/chat/ports/conversation.repository';
 import { ORGANIZER_CONVERSATION_REPOSITORY } from '../business/chat/ports/organizer-conversation.repository';
 import { MESSAGE_REPOSITORY } from '../business/chat/ports/message.repository';
+import { EVENT_ZONES } from '../business/common/ports/event-zone.port';
 import { PROFILE_DIRECTORY } from '../business/common/ports/profile-directory.port';
 import { APP_CONFIG_REPOSITORY } from '../business/config/ports/app-config.repository';
 import { EVENT_SERIES_TRANSLATION_REPOSITORY } from '../business/event-series/ports/event-series-translation.repository';
@@ -215,6 +216,12 @@ export class DataAccessModule {
           provide: EVENT_REPOSITORY,
           useExisting: TypeormEventRepository,
         },
+        // Same class, second port: one column for the plug-in seam, which has
+        // no business creating or deleting an event (E69).
+        {
+          provide: EVENT_ZONES,
+          useExisting: TypeormEventRepository,
+        },
         {
           provide: EVENT_TRANSLATION_REPOSITORY,
           useExisting: TypeormEventTranslationRepository,
@@ -355,6 +362,7 @@ export class DataAccessModule {
         EVENT_SERIES_REPOSITORY,
         EVENT_SERIES_TRANSLATION_REPOSITORY,
         EVENT_REPOSITORY,
+        EVENT_ZONES,
         EVENT_TRANSLATION_REPOSITORY,
         INVITATION_REPOSITORY,
         LOGO_PATHS_REPOSITORY,

@@ -34,9 +34,19 @@ export interface PersonalProgramItem {
    * it and the original where nobody has (E56, F95).
    */
   readonly title: string;
-  /** ISO 8601 instants — rendered in the reader's own clock. */
+  /** ISO 8601 instants, rendered in the event's zone (E8, E69). */
   readonly startsAt: string;
   readonly endsAt: string;
+  /**
+   * That zone, IANA-named (E69).
+   *
+   * Until plug-in API 1.3.0 this plug-in drew its plan in the reader's own
+   * clock, and the sentence above said so. For somebody at the venue the two
+   * agree and the bug is invisible; read from abroad, a plan disagreed with
+   * the programme it is a selection of — and a plan is a list of sessions
+   * somebody intends to walk into at the time the programme names.
+   */
+  readonly timezone: string;
   /** Whether this session asks who is coming (FR 3.10, F42). */
   readonly registrationEnabled: boolean;
   /** Seats, or `null` for "as many as come". Only ever set with sign-up on. */

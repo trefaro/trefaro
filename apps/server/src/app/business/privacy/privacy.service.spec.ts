@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FILE_STORE, type FileStore } from '../attachments/ports/file-store';
 import { CatalogueService } from '../i18n';
+import { PluginRegistryService } from '../plugin-manager';
 import { README_KEYS } from './participant-readme';
 import {
   PARTICIPANT_DATA_REPOSITORY,
@@ -51,6 +52,7 @@ describe('PrivacyService', () => {
   let data: jest.Mocked<ParticipantDataRepository>;
   let files: jest.Mocked<FileStore>;
   let catalogue: { resolve: jest.Mock };
+  let plugins: { all: jest.Mock; isEnabled: jest.Mock };
 
   beforeEach(async () => {
     data = {
@@ -72,12 +74,18 @@ describe('PrivacyService', () => {
       })),
     };
 
+    plugins = {
+      all: jest.fn().mockReturnValue([]),
+      isEnabled: jest.fn().mockReturnValue(false),
+    };
+
     const module = await Test.createTestingModule({
       providers: [
         PrivacyService,
         { provide: PARTICIPANT_DATA_REPOSITORY, useValue: data },
         { provide: FILE_STORE, useValue: files },
         { provide: CatalogueService, useValue: catalogue },
+        { provide: PluginRegistryService, useValue: plugins },
       ],
     }).compile();
 
@@ -103,6 +111,47 @@ describe('PrivacyService', () => {
       expect(unpack(archive.bytes)['README.txt'].toString('utf8')).toContain(
         'de:privacy.export.readme.heading',
       );
+    });
+
+    it('names the modules this instance has switched on, and asks nobody else (E59)', async () => {
+      // The one gap the archive has, and the honest way to describe it: a
+      // plug-in owns its tables and the core reads none of them (F21), so the
+      // letter names what is on and says where to ask. Read from the
+      // **descriptor** — the core learns nothing else about a plug-in.
+      plugins.all.mockReturnValue([
+        { key: 'forum', titleKey: 'plugins.forum.title' },
+        { key: 'room-planning', titleKey: 'plugins.roomPlanning.title' },
+      ]);
+      plugins.isEnabled.mockImplementation((key: string) => key === 'forum');
+      catalogue.resolve.mockResolvedValue({
+        locale: 'de',
+        etag: 'x',
+        catalogue: {
+          ...Object.fromEntries(README_KEYS.map((key) => [key, `[${key}]`])),
+          'privacy.export.readme.modules': 'Eingeschaltet: {{modules}}.',
+          'plugins.forum.title': 'Diskussionsforum',
+          'plugins.roomPlanning.title': 'Raumplanung',
+        },
+      });
+
+      const archive = await service.exportFor('p1');
+      if (!archive) throw new Error('no archive');
+      const readme = unpack(archive.bytes)['README.txt'].toString('utf8');
+
+      expect(readme).toContain('Eingeschaltet: Diskussionsforum.');
+      // Switched off is not "stores nothing about you tomorrow" — it is a
+      // module whose rows this person has none of, and naming it would
+      // describe an instance that does not exist.
+      expect(readme).not.toContain('Raumplanung');
+    });
+
+    it('writes no paragraph about modules when none is switched on', async () => {
+      const archive = await service.exportFor('p1');
+      if (!archive) throw new Error('no archive');
+
+      expect(
+        unpack(archive.bytes)['README.txt'].toString('utf8'),
+      ).not.toContain('privacy.export.readme.modules');
     });
 
     it('reads every stored file once, even when two rows point at one path', async () => {

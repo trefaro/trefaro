@@ -16,8 +16,23 @@ export const README_KEYS = [
   'privacy.export.readme.data',
   'privacy.export.readme.files',
   'privacy.export.readme.notIncluded',
+  'privacy.export.readme.modules',
   'privacy.export.readme.deletion',
 ] as const;
+
+/**
+ * The paragraph an instance without modules must not write (AP 11 of phase 5).
+ *
+ * What the optional modules store about somebody is the one gap this archive
+ * has, and the gap is a consequence of the architecture rather than an
+ * oversight: a plug-in owns its tables and the core reads none of them (F21),
+ * and the contract closed at 1.3.0 without a read in the other direction
+ * (E59, E69). So the letter names the modules that are switched on **on this
+ * instance** and says where to ask — and on an instance with none switched on
+ * it says nothing at all, because a sentence naming no module would send a
+ * reader looking for a list that does not exist.
+ */
+const ONLY_WITH_MODULES = 'privacy.export.readme.modules';
 
 /**
  * Renders the readme in one language.
@@ -34,7 +49,10 @@ export function participantReadme(
   catalogue: TranslationCatalogue,
   params: Readonly<Record<string, string | number>>,
 ): string {
-  return `${README_KEYS.map((key) =>
-    interpolate(catalogue[key] ?? key, params),
-  ).join('\n\n')}\n`;
+  const keys = params['modules']
+    ? README_KEYS
+    : README_KEYS.filter((key) => key !== ONLY_WITH_MODULES);
+  return `${keys
+    .map((key) => interpolate(catalogue[key] ?? key, params))
+    .join('\n\n')}\n`;
 }

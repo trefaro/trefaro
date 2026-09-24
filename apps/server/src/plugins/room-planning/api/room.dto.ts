@@ -112,7 +112,7 @@ export class RoomDto implements Room {
   description!: string | null;
 }
 
-/** A session as the plan names it: four fields through the host's port (E56). */
+/** A session as the plan names it: five fields through the host's port (E56, E69). */
 export class PlannedSessionDto implements PlannedSession {
   @ApiProperty({ format: 'uuid' })
   programItemId!: string;
@@ -129,6 +129,14 @@ export class PlannedSessionDto implements PlannedSession {
 
   @ApiProperty({ format: 'date-time' })
   endsAt!: string;
+
+  @ApiProperty({
+    description:
+      'IANA zone the two instants are read in — the event’s, never the ' +
+      'reader’s (E8, E69).',
+    example: 'Europe/Berlin',
+  })
+  timezone!: string;
 }
 
 /** One session in a room, with the numbers behind its warnings (E50). */

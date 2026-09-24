@@ -195,5 +195,20 @@ Record<string, string>` festgenagelt: der Punktzugriff funktioniert, und ein
   gezeigt. Der Ausweg ist, den Typ aus dem Ausdruck abzuleiten, der ihn braucht
   (`Parameters<typeof insert.values>[0]`), statt ihn aus dem Inneren eines
   Pakets zu importieren.
+- **`pkill -f <muster>` trifft seine eigene Kommandozeile.** Die Shell, die den
+  Befehl ausführt, trägt das Muster im Argument — also erlegt sie sich selbst
+  und liefert 144, während das eigentliche Ziel durchaus getroffen wurde. Zwei
+  Mal passiert (AP 10 und AP 11 der Phase 5), beide Male sah es aus, als wäre
+  der Befehl gescheitert. Wer einen Hintergrundprozess beenden will, nimmt die
+  **PID**, die beim Start ausgegeben wurde, und prüft danach mit `ss -ltn`, ob
+  der Port frei ist.
+- **Ein Prüfskript unter `tools/` veraltet lautlos**, weil keine Suite es
+  fährt. In AP 11 der Phase 5 hat `verify-plugin-toggle.mjs` vier Ablehnungen
+  im **Satz** des Servers gesucht (`body.message` enthält den Schlüssel) — seit
+  AP 5 derselben Phase reist eine Ablehnung als **Code mit Werten** (E64), also
+  meldeten vier Prüfungen rot an einem Server, der sich völlig richtig verhielt.
+  Dieselbe Klasse von Befund wie in AP 6 der Phase 4. Wer ein Skript dort
+  anfasst, fährt es einmal ganz gegen eine laufende Instanz — und wer eine
+  Antwortgestalt ändert, sucht in `tools/` danach.
 
 Siehe auch: [Browsersuiten und E2E-Tests](e2e-tests.md), [Schichten und Ports im Server](server-layers.md).

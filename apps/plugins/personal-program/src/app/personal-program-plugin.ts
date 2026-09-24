@@ -37,9 +37,12 @@ interface ProgrammeDay {
  * moment somebody switches before the first has landed, and the network does
  * not answer in order.
  *
- * The times are the reader's clock, and so is the grouping: the slot hands a
- * plug-in no zone, and the day headings are cut where the reader's own day
- * ends, so a heading and the rows under it can never disagree.
+ * **The times are the venue's clock, and so is the grouping** (E8, E69). Every
+ * session carries the event's zone since plug-in API 1.3.0, so a plan says the
+ * hours the programme says — and the day headings are cut where the *event's*
+ * day ends, which is where an evening session belongs. Both were the reader's
+ * own clock before, which agreed with the programme only for somebody standing
+ * at the venue.
  *
  * Its styling uses only the `--trefaro-*` custom properties the host document
  * defines, never a colour or font of its own.
@@ -315,18 +318,19 @@ export class PersonalProgramPlugin {
   });
 
   /**
-   * The rows, grouped by the reader's own day.
+   * The rows, grouped by the day they fall on **at the venue**.
    *
    * Grouped on the rendered day rather than on the ISO date: a session late in
-   * the evening falls on a different date in UTC than on the reader's clock,
+   * the evening falls on a different date in UTC than on the event's clock,
    * and a heading that disagreed with the rows under it would be worse than no
-   * heading at all.
+   * heading at all. The zone comes from the session (E69); before it did, an
+   * evening session read from the west landed under the day before.
    */
   protected readonly days = computed<readonly ProgrammeDay[]>(() => {
     const locale = this.locale();
     const groups: { label: string; items: PersonalProgramItem[] }[] = [];
     for (const item of this.visible()) {
-      const label = day(locale, item.startsAt);
+      const label = day(locale, item.startsAt, item.timezone);
       const last = groups.at(-1);
       if (last?.label === label) last.items.push(item);
       else groups.push({ label, items: [item] });
@@ -351,7 +355,10 @@ export class PersonalProgramPlugin {
 
   protected slot(item: PersonalProgramItem): string {
     const locale = this.locale();
-    return `${clock(locale, item.startsAt)}–${clock(locale, item.endsAt)}`;
+    return (
+      `${clock(locale, item.startsAt, item.timezone)}` +
+      `–${clock(locale, item.endsAt, item.timezone)}`
+    );
   }
 
   protected toggleFilter(): void {

@@ -33,6 +33,8 @@ export function item(
     title: 'Opening plenary',
     startsAt: '2027-06-14T07:00:00.000Z',
     endsAt: '2027-06-14T08:00:00.000Z',
+    // 07:00 UTC is 09:00 at the venue — the hour the plan has to draw (E69).
+    timezone: 'Europe/Berlin',
     registrationEnabled: false,
     capacity: null,
     inPlan: false,
