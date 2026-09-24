@@ -21,17 +21,18 @@ Dieses Dokument ist die **Kurzfassung** — nur, was in jeder Sitzung gilt. Die
 Detailregeln stehen bewusst woanders, damit sie nicht bei jedem Start mitgelesen
 werden müssen:
 
-| Frage                                                     | Nachschlagen in                                                                           |
-| --------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Anforderungen, Use Cases, Prioritäten, DB-Schema, F1–F208 | **`docs/Anforderungsanalyse_und_Umsetzungsplan.md`** (maßgeblich)                         |
-| Was in einer Phase passierte, E1–E45, _Was anders lief_   | `docs/PHASE1.md`, `docs/PHASE2.md`, `docs/PHASE3.md`, `docs/BOOTSTRAP.md`, `docs/spikes/` |
-| Phase 4: Pakete, E46–E59, F186–F202, Stand je Paket       | **`docs/PHASE4.md`** (Plan oben, _Fortschritt_ unten)                                     |
-| Phase 5: Pakete, E60–E71, F203 ff., Stand je Paket        | **`docs/PHASE5.md`** (Plan oben, _Fortschritt_ unten)                                     |
-| Installation, TLS, Betrieb                                | `docs/INSTALL.md`                                                                         |
-| Was das Sicherheitsreview ansah und entschied             | **`docs/SECURITY-REVIEW.md`** (Befund und Entscheidung je Punkt, AP 9 der Phase 5)        |
-| Offene Punkte, bekannte Lücken, Pilotpartner-Fragen       | `todo.md` (nach Phase gruppiert, nach jeder Phase durchgehen)                             |
-| Diagramme der Thesis                                      | `docs/thesis/`                                                                            |
-| **Regeln, die man beim Bauen braucht**                    | **`docs/rules/`** (Index in `docs/rules/README.md`)                                       |
+| Frage                                                     | Nachschlagen in                                                                                        |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **Architektur — wie das Ganze geschnitten ist und warum** | **`docs/arc42/`** (zwölf Abschnitte, Index in `docs/arc42/README.md`; darin der Plug-in-SDK-Leitfaden) |
+| Anforderungen, Use Cases, Prioritäten, DB-Schema, F1–F208 | **`docs/Anforderungsanalyse_und_Umsetzungsplan.md`** (maßgeblich)                                      |
+| Was in einer Phase passierte, E1–E45, _Was anders lief_   | `docs/PHASE1.md`, `docs/PHASE2.md`, `docs/PHASE3.md`, `docs/BOOTSTRAP.md`, `docs/spikes/`              |
+| Phase 4: Pakete, E46–E59, F186–F202, Stand je Paket       | **`docs/PHASE4.md`** (Plan oben, _Fortschritt_ unten)                                                  |
+| Phase 5: Pakete, E60–E71, F203 ff., Stand je Paket        | **`docs/PHASE5.md`** (Plan oben, _Fortschritt_ unten)                                                  |
+| Installation, TLS, Betrieb                                | `docs/INSTALL.md`                                                                                      |
+| Was das Sicherheitsreview ansah und entschied             | **`docs/SECURITY-REVIEW.md`** (Befund und Entscheidung je Punkt, AP 9 der Phase 5)                     |
+| Offene Punkte, bekannte Lücken, Pilotpartner-Fragen       | `todo.md` (nach Phase gruppiert, nach jeder Phase durchgehen)                                          |
+| Diagramme der Thesis                                      | `docs/thesis/`                                                                                         |
+| **Regeln, die man beim Bauen braucht**                    | **`docs/rules/`** (Index in `docs/rules/README.md`)                                                    |
 
 `docs/rules/` ist das Destillat: dreizehn Dateien, je eine pro Bereich —
 Schichten und Ports, Verträge der Endpunkte, Datenmodell, Mail, i18n,
@@ -43,6 +44,12 @@ lesen.
 Fünf Teilbäume tragen dafür eine eigene kurze `CLAUDE.md`, die nur auf die
 passenden Regeldateien zeigt: `apps/server/`, `apps/admin-client/`,
 `apps/user-client/`, `infra/`, `tools/`.
+
+`docs/arc42/` ist der **Einstieg** daneben: zwölf Abschnitte nach arc42, die die
+Architektur beschreiben und dafür **verweisen** statt zu wiederholen (E70) — und
+in Abschnitt 8 den einzigen Text, den es vorher nirgends gab, den
+**Plug-in-SDK-Leitfaden**. Wer ein Plug-in baut, liest den; wer im Kern arbeitet,
+`docs/rules/`.
 
 **Neu gelernte Regeln kommen nach `docs/rules/`, nicht in dieses Dokument**, und
 **der Stand eines Arbeitspakets in sein Phasenprotokoll.** Hier landet nur, was
@@ -194,16 +201,18 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    International (Pilotpartner), Doku, Release v1.0 → `docs/PHASE5.md` —
    vierzehn Pakete, **M13–M16**, E60–E71, F203 ff., und jeder der
    zweiunddreißig Einträge aus `todo.md` unter _Checkable after phase 5_ ist
-   einem Paket zugeordnet. **Freigegeben wird Paket für Paket** (AP 1 bis AP 11
+   einem Paket zugeordnet. **Freigegeben wird Paket für Paket** (AP 1 bis AP 12
    sind erledigt, **M13 und M14 sind erreicht**; der Stand je Paket steht unter
    _Fortschritt_). **v1.0 taggt Marius, nicht ein Paket** (E71).
 
-**Der Stand in Zahlen:** Entscheidungen **E1–E59** vergeben (E46–E59 in Phase 4,
-in AP 10 gegen die Umsetzung geprüft); Nachträge **F1–F237** stehen vollständig
+**Der Stand in Zahlen:** Entscheidungen **E1–E71** vergeben (E46–E59 in Phase 4,
+in AP 10 gegen die Umsetzung geprüft; E60–E71 im Plan der Phase 5, ihre Prüfung
+gegen die Umsetzung steht in AP 14 aus); Nachträge **F1–F240** stehen vollständig
 im Referenzdokument (F62 und F129–F131 bleiben unvergeben; F203–F205 kamen in
 AP 2 der Phase 5 dazu, F206–F208 in AP 3, F209–F211 in AP 4, F212–F214 in
 AP 5, F215–F218 in AP 6, F219–F222 in AP 7, F223–F226 in AP 8, F227–F231 in
-AP 9, F232–F234 in AP 10, F235–F237 in AP 11); Katalog **1289** Schlüssel. Was in einem Paket tatsächlich passierte, steht im Phasenprotokoll,
+AP 9, F232–F234 in AP 10, F235–F237 in AP 11, F238–F240 in AP 12); Katalog **1289**
+Schlüssel. Was in einem Paket tatsächlich passierte, steht im Phasenprotokoll,
 und was man beim Bauen daraus braucht, in `docs/rules/` — **hier nicht noch
 einmal.**
 

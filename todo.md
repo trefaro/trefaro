@@ -1572,7 +1572,7 @@ entry, the answer is noted below rather than repeated.
       project nobody can contribute to yet would be the wrong kind of promise
       anyway. This entry is the reminder; it is the last documentation item of
       phase 5 and must not leave this list until the file exists.
-- [ ] **Plug-in SDK documentation.** Three things phase 0 learned that a
+- [x] **Plug-in SDK documentation.** Three things phase 0 learned that a
       third-party plug-in author has to be told:
   - bundles are loaded same-origin and run with full page access, so plug-in
     review stays a human step
@@ -1580,6 +1580,27 @@ entry, the answer is noted below rather than repeated.
   - a plug-in migration must be timestamped after any core migration it depends
     on
     → [`01-client-plugin.md`](docs/spikes/01-client-plugin.md#open-items)
+
+    **Written in AP 12 of phase 5**, as the one section of `docs/arc42/` that
+    is new text rather than a reference:
+    [`docs/arc42/08-querschnittliche-konzepte.md`](docs/arc42/08-querschnittliche-konzepte.md).
+    All three are in it, and the first one leads — it is the reason v1 installs
+    nothing at runtime. The guide goes past those three because the acceptance
+    criterion did: a plug-in has to be buildable from it **without reading one
+    of the five curated implementations**. That was not taken on trust. A sixth
+    plug-in was built from the guide alone, mounted against a running instance,
+    ran its migration, showed its descriptor in `/api/config`, served its
+    bundle and drew in the browser with the catalogue's words and the
+    organization's colours — and was deleted afterwards (F239; a curated
+    plug-in nobody asked for would be a decoy, F47). Six things were missing
+    from the guide and are in it now: that the dashes of a key become
+    underscores in its table names, that the bundle is its own build target and
+    404s until it is built, that the `--trefaro-*` properties are a closed
+    named list with no `--trefaro-color-text` in it, that `ICON_NAMES` is
+    closed and an unknown name simply gets no icon, that an anonymous caller is
+    refused by the path guard (401) before the enabled guard (404) ever runs,
+    and that the plug-in's module file may see both layers while `business/`
+    may not.
 - [ ] **Decide the fate of `/spikes`.** The participant client's diagnostics page
       is reachable without a login. It exposes nothing `/api/config` does not
       already expose publicly, so it is not a leak — but decide whether it stays

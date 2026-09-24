@@ -7,7 +7,7 @@ einmal schiefgegangen.**
 Das ist keine zweite Anforderungsanalyse. Die Begründung jeder Entscheidung steht
 ausführlich woanders und wird hier nur mit ihrer Nummer zitiert:
 
-- **F1–F237** — Entscheidungsprotokoll in
+- **F1–F240** — Entscheidungsprotokoll in
   [`docs/Anforderungsanalyse_und_Umsetzungsplan.md`](../Anforderungsanalyse_und_Umsetzungsplan.md)
   (F62 wurde nie vergeben; F70 beantwortet, was für sie geplant war. **F129–F131
   sind unvergeben** — AP 6 hat sie als schon getroffene Entscheidungen
@@ -19,7 +19,7 @@ ausführlich woanders und wird hier nur mit ihrer Nummer zitiert:
   **F203–F205** mit AP 2, **F206–F208** mit AP 3 und **F209–F211** mit AP 4
   dazu, **F212–F214** mit AP 5, **F215–F218** mit AP 6, **F219–F222** mit
   AP 7, **F223–F226** mit AP 8, **F227–F231** mit AP 9, **F232–F234** mit
-  AP 10 und **F235–F237** mit AP 11.)
+  AP 10, **F235–F237** mit AP 11 und **F238–F240** mit AP 12.)
 - **E1–E16** — Phase 1, [`docs/PHASE1.md`](../PHASE1.md).
 - **E17–E30** — Phase 2, [`docs/PHASE2.md`](../PHASE2.md) (die Zählung läuft über
   die Phasen weiter).
@@ -31,6 +31,7 @@ ausführlich woanders und wird hier nur mit ihrer Nummer zitiert:
   Entscheidung umgesetzt und die Zeile nicht geschrieben. Das ist die Lehre,
   die den Block überlebt: eine reservierte Nummer ist keine geschriebene, und
   wer ein Paket abschließt, zählt nach.
+- **E60–E71** — Phase 5, [`docs/PHASE5.md`](../PHASE5.md).
 - **NFR / FR** — nummeriert wie im Anforderungsdokument.
 
 ## Vor der Arbeit an … zuerst lesen
@@ -62,7 +63,10 @@ Bedingungen erfüllt:
 2. Sie hat schon einmal Zeit gekostet oder würde es beim nächsten Mal tun.
 
 Was nur ein Detail der Umsetzung war, gehört ins Phasenprotokoll. Was jede
-Sitzung braucht, gehört in `CLAUDE.md`.
+Sitzung braucht, gehört in `CLAUDE.md`. Und was die **Architektur** beschreibt —
+warum es so geschnitten ist, nicht wie man darin arbeitet — steht seit AP 12 der
+Phase 5 in [`docs/arc42/`](../arc42/README.md), das auf diese Sammlung verweist,
+statt sie zu wiederholen (E70).
 
 Und die Regel, die `CLAUDE.md` zweimal gebraucht hat: **der Stand einer Phase
 gehört in ihr Protokoll, nicht in die Kurzfassung.** Phase 3 hat `CLAUDE.md` je

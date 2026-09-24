@@ -2518,3 +2518,131 @@ verstellen.
 
 Und es bringt **keine Migration**: der Vertragsschritt liest eine Spalte, die
 `event.timezone` seit AP 3 der Phase 1 hat.
+
+### AP 12 — arc42: die Architektur wird beschreibbar (erledigt, 24.09.2026)
+
+**`docs/arc42/`, zwölf Abschnitte und ein Index, 1527 Zeilen.** Kein Code, keine
+Migration, kein neuer Katalogschlüssel — das einzige Paket dieser Phase, das
+nichts baut. Was es liefert, ist der Einstieg, den es bis heute nicht gab: wer
+dieses Repository zum ersten Mal öffnet, findet die Anforderungen im
+Referenzdokument, die Regeln in `docs/rules/`, den Betrieb in `INSTALL.md` und
+fünf Phasenprotokolle — und nirgends einen Text, der sagt, **wie das Ganze
+geschnitten ist und warum**.
+
+**Die Auflage, unter der das steht, ist E70: arc42 erzählt nichts nach.** Jeder
+Abschnitt sagt entweder etwas Neues oder er verweist. Das ist keine Stilfrage,
+sondern eine Haltbarkeitsfrage — eine zweite Kopie einer Regel ist eine Regel,
+die auseinanderläuft, und dieses Repository hat schon drei Orte, an denen etwas
+Wahres stehen kann. Abschnitt 8 besteht deshalb fast nur aus einer Tabelle nach
+`docs/rules/`, Abschnitt 9 nennt nicht die Entscheidungen, sondern **wo sie
+stehen und wie man darin sucht**, und Abschnitt 11 verweist auf `todo.md`,
+statt dessen Haken zu kopieren.
+
+**Nachgemessen statt behauptet.** Zwei Dinge lassen sich an dieser Auflage
+mechanisch prüfen, und beide sind geprüft worden:
+
+- **101 relative Verweise** in den zwölf Dateien und dem Index, alle
+  auflösend.
+- **Null gemeinsame Wortfolgen von neun Wörtern** zwischen `docs/arc42/` und
+  `docs/rules/`. Beim ersten Durchgang waren es **25**, verteilt auf drei
+  Stellen: Abschnitt 5 hatte die Voraussetzungsregel eines Modulschalters
+  ausgeschrieben, Abschnitt 8 zwei Regelsätze aus `i18n.md` und `data-model.md`
+  wörtlich zitiert, und Abschnitt 9 trug die E-Nummern-zu-Phase-Tabelle, die
+  `docs/rules/README.md` schon führt. Alle drei sind durch Verweise ersetzt — die
+  dritte war die wichtigste, denn sie wäre die erste Tabelle gewesen, die
+  veraltet.
+
+Was ein Abschnitt **neu** sagt, ist jeweils benannt: Abschnitt 4 nennt zu jeder
+der fünf Grundentscheidungen ihren **Preis** (die Schichtung kostet einen Port
+je Lesart — zuletzt einen mit einer Methode für ein Feld), Abschnitt 3 listet,
+was ausdrücklich **nicht** über die Systemgrenze geht, Abschnitt 10 macht aus
+den fünfzehn NFR einen Qualitätsbaum mit **21 Szenarien** samt Nachweis und
+benennt am Ende die drei Qualitäten, über die keine Suite dieses Repositories
+etwas sagt, und Abschnitt 12 ist vor allem eine **Übersetzungstabelle**:
+deutsche Dokumentation, englischer Code, und ohne diese Tabelle findet man den
+Bezeichner zum Begriff nicht.
+
+#### Der Plug-in-SDK-Leitfaden — und wie belegt wurde, dass er reicht
+
+Der eine Text, der nirgends stand. Er sitzt in Abschnitt 8 und nicht in einer
+dreizehnten Datei, weil der Plan zwölf Abschnitte vorsah und Abschnitt 8 sonst
+nur aus Verweisen bestünde.
+
+Das Abnahmekriterium war ungewöhnlich, weil man es einem Text nicht ansieht:
+_ein Plug-in kann nach dem Leitfaden gebaut werden, **ohne eine der fünf
+kuratierten Umsetzungen zu lesen**._ Behaupten lässt sich das immer. Also ist
+es **gemacht** worden: ein **sechstes** Plug-in, `session-notes`, gebaut allein
+aus Abschnitt 8 — Deskriptor, Modul, Controller mit Pfad-Guard, eigener Port,
+Service, Entity, Migration, TypeORM-Repository, Bündelprojekt, Webkomponente,
+Katalogschlüssel in beiden Sprachen, Eintrag in `CURATED_PLUGINS`.
+
+Es hat funktioniert: `nx lint server` grün (also halten die Schichtregeln auch
+für ein fremdes Plug-in), die Migration lief beim Start gegen die
+Entwicklungsdatenbank, die drei Routen wurden gemappt, der Deskriptor stand in
+`/api/config`, das gebaute Bündel kam unter seiner URL, und im Browser hat sich
+`<trefaro-plugin-session-notes>` am Einhängepunkt `event-detail` montiert — mit
+`eventId`, `locale`, `strings` und `mountPoint` als **Eigenschaften**, den
+Worten aus dem Katalog und der Primärfarbe der Instanz (`rgb(31, 111, 92)`), die
+es nirgends geschrieben hat. Neun von neun Prüfungen eines kleinen Skripts
+grün, darunter die 409, mit der `profiles` sich nicht unter einem laufenden
+Abhängigen wegschalten lässt.
+
+**Sechs Dinge fehlten dem Leitfaden**, und jedes davon hätte einen fremden Autor
+Zeit gekostet. Sie stehen jetzt darin:
+
+1. **Der Tabellenname.** `plugin_<key>_<name>` — mit **Unterstrichen statt
+   Bindestrichen**: aus `session-notes` wird `plugin_session_notes_note`.
+2. **Das Bündel ist ein eigenes Bauziel.** Die URL im Deskriptor zeigt auf
+   `dist/apps/plugins/<key>/main.js`. Wer `nx build plugin-<key>` vergisst,
+   bekommt 404, der Lader vermerkt `failed` — und nichts am Serverbau sagt es
+   ihm.
+3. **Die Custom Properties sind eine geschlossene, benannte Liste.** Der eigene
+   erste Versuch hat `--trefaro-color-text` benutzt; das gibt es nicht, es heißt
+   `--trefaro-color-on-surface`. Genau der Fehler, den F222 beschreibt: die
+   Deklaration fällt **still** aus, der Browser lässt die geerbte Farbe stehen,
+   und auf dem Rechner des Autors sieht es richtig aus. Der Leitfaden führt die
+   Liste jetzt.
+4. **`ICON_NAMES` ist geschlossen.** Der erste Entwurf nannte `edit_note` — ein
+   Name, den es nicht gibt. Ein unbekannter Name bekommt **kein** Icon und wird
+   in der Modulverwaltung gemeldet; für ein kuratiertes Plug-in schlägt
+   zusätzlich `curated-plugins.spec.ts` fehl, was hier auch passiert ist.
+5. **401 kommt vor 404.** Der Leitfaden sagte „ein ausgeschaltetes Plug-in
+   antwortet 404, nicht 403" und verschwieg, dass der **Pfad-Guard zuerst** läuft:
+   ohne Sitzung ist die Antwort 401, ob an oder aus. Die eigene Prüfung ist genau
+   daran rot geworden — der Server hatte recht, die Prüfung hatte unrecht.
+6. **Die Moduldatei darf beide Schichten sehen.** Sie liegt über `business/` und
+   `data-access/`, also gehören `TypeOrmModule.forFeature` und die Bindung des
+   eigenen Ports dorthin. Der Leitfaden hatte nur die Verbote genannt und kein
+   Modul gezeigt.
+
+**Das sechste Plug-in ist danach gelöscht worden** (F239) — Quelltext, Bündel,
+Registrierung, Katalogschlüssel, Tabelle, Migrationszeile und
+`module_config`-Zeile. Ein kuratiertes Plug-in, das niemand angefordert hat,
+wäre eine Attrappe (F47); der Beweis gehört in dieses Protokoll, nicht ins
+Image. Der Arbeitsbaum ist nachgeprüft sauber, und der Katalog steht unverändert
+bei **1289** Schlüsseln.
+
+#### Was nicht gebaut wurde, und warum
+
+**Kein Test für `docs/arc42/`** (F240). Mechanisch prüfbar wären die beiden
+Zahlen oben, und beide sind in diesem Paket gemessen worden; die inhaltliche
+Prüfung der zwölf Abschnitte weist der Plan der Phase ohnehin **AP 14** zu, so
+wie er die Entscheidungen prüft. Ein eigenes Testprojekt wäre eine dritte
+Stelle, die etwas über diese Sammlung behauptet — und die Lehre aus AP 11 ist
+frisch genug: was unter `tools/` liegt und in keiner Suite läuft, veraltet
+still.
+
+#### Was sonst noch auffiel
+
+`CLAUDE.md` behauptete unter _Der Stand in Zahlen_ weiterhin **E1–E59**, obwohl
+der Plan dieser Phase E60–E71 vergeben hat. Beim Schreiben von Abschnitt 9, der
+genau diese Zuordnung erklärt, ist es aufgefallen und korrigiert worden — mit
+dem Zusatz, dass die Prüfung von E60–E71 gegen die Umsetzung in AP 14 noch
+aussteht. `docs/rules/README.md` fehlte aus demselben Grund die Zeile für
+Phase 5; sie steht jetzt dort, wo die vier anderen stehen.
+
+#### Nachträge
+
+**F238–F240**, dazu **Anhangspunkt 33** im Referenzdokument (Version **1.59**).
+In `todo.md` ist _Plug-in SDK documentation_ abgehakt — der letzte offene
+Dokumentationspunkt vor `CONTRIBUTING.md`, das AP 13 gehört.
