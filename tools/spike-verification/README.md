@@ -1,5 +1,12 @@
 # Spike verification scripts
 
+**These stay, and they are operator tools now** (decided in AP 13 of phase 5).
+The name is from phase 0, when they verified the architecture spikes; what they
+verify today is a _deployment_. They keep the name because five phase protocols
+name them, and a protocol is a record rather than a document to be kept in step —
+what was missing was never a name but a place in the operations documentation,
+and that place is now [§12.4 of `docs/INSTALL.md`](../../docs/INSTALL.md).
+
 Executable versions of the claims in `docs/spikes/`. Unit tests cover the logic;
 these check the things only a running instance can answer — that migrations
 applied, that a disabled plug-in really answers 404, that a WebSocket upgrade

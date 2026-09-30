@@ -86,31 +86,118 @@ export class Api {
   }
 
   async #request(method, path, body, authenticated) {
-    const isForm = body instanceof FormData;
-    const response = await fetch(`${this.#base}${path}`, {
+    return send(
+      this.#base,
       method,
-      headers: {
-        ...(body && !isForm ? { 'content-type': 'application/json' } : {}),
-        ...(authenticated && this.#cookie ? { cookie: this.#cookie } : {}),
-      },
-      ...(body ? { body: isForm ? body : JSON.stringify(body) } : {}),
-    });
+      path,
+      body,
+      authenticated ? this.#cookie : '',
+    );
+  }
+}
 
-    const text = await response.text();
+/**
+ * One request, for both kinds of session this seed keeps.
+ *
+ * Shared rather than written twice: the throttle message is the one a run
+ * actually hits, and a second copy of it would be a second place to keep the
+ * numbers right.
+ */
+async function send(base, method, path, body, cookie) {
+  const isForm = body instanceof FormData;
+  const response = await fetch(`${base}${path}`, {
+    method,
+    headers: {
+      ...(body && !isForm ? { 'content-type': 'application/json' } : {}),
+      ...(cookie ? { cookie } : {}),
+    },
+    ...(body ? { body: isForm ? body : JSON.stringify(body) } : {}),
+  });
+
+  const text = await response.text();
+  if (response.status === 429) {
+    throw new Error(
+      `${method} ${path} was throttled (429). The public form and the ` +
+        'confirmation endpoint allow sixty calls per five minutes each, per ' +
+        'client address — one seed run fits, two in a row do not. Wait five ' +
+        'minutes, or restart the server to clear the counter.',
+    );
+  }
+  if (!response.ok) {
+    throw new Error(
+      `${method} ${path} → ${response.status} ${text.slice(0, 400)}`,
+    );
+  }
+  return text ? JSON.parse(text) : null;
+}
+
+/**
+ * One participant's own session — the second kind of caller this seed has.
+ *
+ * A separate class rather than a second cookie on `Api`, because the seed holds
+ * ten of these at once: every account it creates keeps its session while the
+ * community half is written, and a forum post, a proposal and a message are
+ * only worth anything if they carry a name. The login route is the
+ * administrator's limit (twenty attempts per five minutes per client address),
+ * which is why ten accounts is a number and not an accident.
+ */
+export class Participant {
+  #base;
+  #cookie = '';
+
+  /**
+   * The account itself, out of `GET /api/participant/me` — id, name, avatar.
+   *
+   * The endpoint answers `{ participant, expiresAt }`, because what the client
+   * asks it is "who is logged in, and until when". This keeps the first half:
+   * the seed never needs to know when a session lapses, and it needs the id in
+   * every second line.
+   */
+  me = null;
+
+  constructor(base) {
+    this.#base = base.replace(/\/+$/, '');
+  }
+
+  async login(email, password) {
+    const response = await fetch(`${this.#base}/api/participant/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    if (response.status === 403) {
+      throw new Error(
+        `${email} exists but is not confirmed. The confirmation link is in the ` +
+          'mailbox — without it there is no session.',
+      );
+    }
     if (response.status === 429) {
       throw new Error(
-        `${method} ${path} was throttled (429). The public form and the ` +
-          'confirmation endpoint allow sixty calls per five minutes each, per ' +
-          'client address — one seed run fits, two in a row do not. Wait five ' +
-          'minutes, or restart the server to clear the counter.',
+        'The participant login is rate-limited (twenty attempts per five ' +
+          'minutes, LOGIN_ATTEMPTS_PER_WINDOW). Wait, or restart the server.',
       );
     }
     if (!response.ok) {
       throw new Error(
-        `${method} ${path} → ${response.status} ${text.slice(0, 400)}`,
+        `login as ${email} failed: ${response.status} ${await response.text()}`,
       );
     }
-    return text ? JSON.parse(text) : null;
+    this.#cookie = (response.headers.getSetCookie() ?? [])
+      .map((value) => value.split(';')[0])
+      .join('; ');
+    const session = await this.request('GET', '/api/participant/me');
+    this.me = session.participant;
+    return this;
+  }
+
+  /** A request with this participant's session. */
+  request(method, path, body) {
+    return send(this.#base, method, path, body, this.#cookie);
+  }
+
+  /** An upload with this participant's session — the avatar is a `PUT` (E19). */
+  form(method, path, formData) {
+    return send(this.#base, method, path, formData, this.#cookie);
   }
 }
 
@@ -187,6 +274,14 @@ export class Mailbox {
     return this.waitForLink(
       address,
       /registrations\/me\?token=([A-Za-z0-9_.%-]+)/,
+    );
+  }
+
+  /** The token of the double opt-in link of a participant account (E32). */
+  profileConfirmationToken(address) {
+    return this.waitForLink(
+      address,
+      /profile\/confirm\?token=([A-Za-z0-9_.%-]+)/,
     );
   }
 

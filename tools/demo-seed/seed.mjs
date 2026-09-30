@@ -16,10 +16,12 @@
  * application would never write.
  */
 import { Api, Mailbox, demoPdf, demoPng } from './api.mjs';
+import { seedCommunity } from './community.mjs';
 import {
   addressFor,
   APP_ICON,
   BRANDING,
+  DEMO_PASSWORD,
   events,
   EVENT_LOGO,
   FORM_FIELDS,
@@ -64,6 +66,17 @@ const EMAIL =
 const PASSWORD =
   process.env.SEED_ADMIN_PASSWORD ?? process.env.ADMIN_BOOTSTRAP_PASSWORD ?? '';
 const RESET = args.includes('--reset');
+
+/**
+ * The password every demo participant account gets.
+ *
+ * A facilitator has to sign in as somebody during a demonstration, and looking
+ * up ten passwords is not the question a usability test is asking. One shared
+ * password is also the plainest possible statement that a seeded instance is a
+ * demonstration and never a production one.
+ */
+const PARTICIPANT_PASSWORD =
+  process.env.SEED_PARTICIPANT_PASSWORD ?? DEMO_PASSWORD;
 
 const api = new Api(BASE);
 const mailbox = new Mailbox(MAILPIT);
@@ -326,8 +339,12 @@ async function main() {
   );
 
   if (!withMail) {
-    say('Done, without the parts that need mail.');
-    return summary(created, series, null);
+    say(
+      'Done, without the parts that need mail — which includes the whole\n' +
+        '  community half: an account is confirmed from its link, and a ticket is\n' +
+        '  read from a personal one.',
+    );
+    return summary(created, series, null, null);
   }
 
   const confirmed = [];
@@ -403,7 +420,27 @@ async function main() {
   });
   say(`✓ ${objector} objected — from the link in their invitation`);
 
-  return summary(created, series, sent);
+  // --- the community half, and the five plug-ins ---------------------------
+  //
+  // Split into its own file rather than continued here: everything above is
+  // what an organizer builds, everything there is what a community does with
+  // it, and the two halves are read by different people (AP 13 of phase 5).
+  const community = await seedCommunity({
+    api,
+    mailbox,
+    base: BASE,
+    say,
+    mainEvent: created.main,
+    seriesSlug,
+    eventSlug,
+    programme: mainProgramme,
+    // The ones who are actually coming: a cancelled registration has no ticket
+    // to scan, and checking one in would be a state the door cannot produce.
+    confirmed: takers,
+    password: PARTICIPANT_PASSWORD,
+  });
+
+  return summary(created, series, sent, community);
 }
 
 /**
@@ -501,7 +538,7 @@ async function removeDemoSeries(series) {
   say(`✓ removed ${series.length} series from an earlier run`);
 }
 
-function summary(events, series, invitation) {
+function summary(events, series, invitation, community) {
   say('');
   say('Where to look:');
   say(`  participant client   ${BASE}/`);
@@ -518,6 +555,16 @@ function summary(events, series, invitation) {
     say('');
     say(
       '  The invitation went out for real: the objection links in those mails work.',
+    );
+  }
+  if (community) {
+    say('');
+    say(
+      `  ${community.accounts} participant accounts, all with the password ` +
+        `"${community.password}".`,
+    );
+    say(
+      '  Sign in at /profile/login — any of the addresses the overview shows.',
     );
   }
 }

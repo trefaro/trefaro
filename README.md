@@ -130,6 +130,17 @@ Elements for plug-ins · Nx monorepo · Docker Compose + NGINX
 
 A strictly layered NestJS server (business layer over data-access layer — only the data-access layer touches the database) combined with a plug-in pattern on both server (dynamic modules with their own entities and migrations) and clients (framework-agnostic web components, themed via CSS custom properties). Two separate web clients: a mobile-first participant app (PWA) and a desktop-first organizer app. Core modules cover event management; community features like forums, program proposals, room planning and QR check-in ship as curated plug-ins that each organization can enable at runtime.
 
+## Contributing
+
+**Pull requests are not merged before v1.0 is tagged** — issues, bug reports,
+installation trouble and translations are very welcome.
+[`CONTRIBUTING.md`](CONTRIBUTING.md) says why, what a contribution will have to
+bring afterwards, and how to build a plug-in without needing this repository at
+all.
+
+Found something that could expose the data of an instance? Not in an issue —
+use GitHub's private vulnerability reporting on this repository.
+
 ## License
 
 [AGPL-3.0-or-later](LICENSE)

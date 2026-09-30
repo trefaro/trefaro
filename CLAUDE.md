@@ -33,6 +33,7 @@ werden müssen:
 | Offene Punkte, bekannte Lücken, Pilotpartner-Fragen       | `todo.md` (nach Phase gruppiert, nach jeder Phase durchgehen)                                          |
 | Diagramme der Thesis                                      | `docs/thesis/`                                                                                         |
 | **Regeln, die man beim Bauen braucht**                    | **`docs/rules/`** (Index in `docs/rules/README.md`)                                                    |
+| Wie jemand mitmacht — und was vor v1.0 gilt               | **`CONTRIBUTING.md`** (englisch, weil nach außen adressiert)                                           |
 
 `docs/rules/` ist das Destillat: dreizehn Dateien, je eine pro Bereich —
 Schichten und Ports, Verträge der Endpunkte, Datenmodell, Mail, i18n,
@@ -70,6 +71,11 @@ Regel steht in `docs/rules/README.md`.
 - npm-Scope: `@trefaro`. GitHub: `github.com/trefaro/trefaro` (über die `gh`-CLI).
 - **Marius gibt jedes Arbeitspaket einzeln frei** — nach einem Paket berichten und
   warten, nicht unaufgefordert weitermachen.
+- **Vor v1.0 werden keine Pull Requests gemerged** (AP 13 der Phase 5, F241):
+  Issues, Fehlerberichte, Installationsprobleme und Übersetzungen ja, Code nein —
+  der Plug-in-Vertrag ist bei 1.3.0 geschlossen und der kuratierte Satz auch.
+  Beiträge tragen später **DCO** (`Signed-off-by`), nie ein CLA. Alles dazu in
+  `CONTRIBUTING.md`.
 
 ## Festgelegter Tech-Stack (nicht ohne Rücksprache ändern)
 
@@ -201,17 +207,17 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    International (Pilotpartner), Doku, Release v1.0 → `docs/PHASE5.md` —
    vierzehn Pakete, **M13–M16**, E60–E71, F203 ff., und jeder der
    zweiunddreißig Einträge aus `todo.md` unter _Checkable after phase 5_ ist
-   einem Paket zugeordnet. **Freigegeben wird Paket für Paket** (AP 1 bis AP 12
+   einem Paket zugeordnet. **Freigegeben wird Paket für Paket** (AP 1 bis AP 13
    sind erledigt, **M13 und M14 sind erreicht**; der Stand je Paket steht unter
    _Fortschritt_). **v1.0 taggt Marius, nicht ein Paket** (E71).
 
 **Der Stand in Zahlen:** Entscheidungen **E1–E71** vergeben (E46–E59 in Phase 4,
 in AP 10 gegen die Umsetzung geprüft; E60–E71 im Plan der Phase 5, ihre Prüfung
-gegen die Umsetzung steht in AP 14 aus); Nachträge **F1–F240** stehen vollständig
+gegen die Umsetzung steht in AP 14 aus); Nachträge **F1–F245** stehen vollständig
 im Referenzdokument (F62 und F129–F131 bleiben unvergeben; F203–F205 kamen in
 AP 2 der Phase 5 dazu, F206–F208 in AP 3, F209–F211 in AP 4, F212–F214 in
 AP 5, F215–F218 in AP 6, F219–F222 in AP 7, F223–F226 in AP 8, F227–F231 in
-AP 9, F232–F234 in AP 10, F235–F237 in AP 11, F238–F240 in AP 12); Katalog **1289**
+AP 9, F232–F234 in AP 10, F235–F237 in AP 11, F238–F240 in AP 12, F241–F245 in AP 13); Katalog **1289**
 Schlüssel. Was in einem Paket tatsächlich passierte, steht im Phasenprotokoll,
 und was man beim Bauen daraus braucht, in `docs/rules/` — **hier nicht noch
 einmal.**

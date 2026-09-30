@@ -2646,3 +2646,237 @@ Phase 5; sie steht jetzt dort, wo die vier anderen stehen.
 **F238–F240**, dazu **Anhangspunkt 33** im Referenzdokument (Version **1.59**).
 In `todo.md` ist _Plug-in SDK documentation_ abgehakt — der letzte offene
 Dokumentationspunkt vor `CONTRIBUTING.md`, das AP 13 gehört.
+
+### AP 13 — Der Usability-Test wird vorbereitet, und die Doku wird vollständig (erledigt, 30.09.2026)
+
+Drei Dinge, die nur zusammen ein Paket sind: ein **übergabefähiges Bündel für
+den Usability-Test**, die **Beitragsregeln**, die seit Kapitel 6 der Phase 0
+offen standen, und die **zwei Werkzeugfragen** aus `todo.md`. Gemeinsam haben
+sie, dass keines davon Software ist, die jemand benutzt — und dass alle drei
+dieselbe Sorte Schuld abtragen: etwas ist entschieden worden und steht nirgends.
+
+#### Der Test ist vorbereitet, nicht gehalten
+
+`docs/usability-test/` — fünf Dateien, 839 Zeilen, auf Deutsch: ein Index mit
+der Frage, die der Test beantworten soll, das Skript, der Beobachtungsbogen, die
+Instanz und die Auswertung. **Gefahren wird er von Menschen** (Vorabentscheidung
+2), und der Eintrag in `todo.md` ist deshalb nicht erledigt, sondern nach _On a
+device — waiting for Marius_ gezogen, wo das andere steht, was auf eine Person
+statt auf ein Paket wartet.
+
+**Die Frage ist dreiteilig**, und der Teil, der am meisten wert ist, steht
+zuletzt: hält, was die Bögen versprochen haben, als laufende Anwendung (die
+sieben Aufgaben, dieselbe Skala von 1 bis 4, damit es mit 2024 vergleichbar
+bleibt) — trägt dieselbe Bedienlogik das, was seitdem dazugekommen ist (Konten,
+Profile, Suche, Chat, fünf Plug-ins, nie von jemandem getestet, der sie nicht
+gebaut hat) — und **würde diese Organisation ihre nächste Reihe darauf fahren,
+und was fehlt bis dahin?** Die letzte ist die einzige, deren Antwort „nein, weil
+…" lauten darf, ohne dass etwas schiefgelaufen ist.
+
+**Die sieben Aufgaben sind rekonstruiert, und das steht im Skript** (F245). Die
+Thesis liegt seit dem 26.08.2026 bewusst nicht in diesem Repository; wörtlich
+festgehalten ist von den sieben nur die vierte („Interessent ohne
+Teilnehmerstatus kontaktiert Veranstalter"), die übrigen sechs sind aus dem
+Use-Case-Diagramm, den vier Mockup-Bögen und der einen dokumentierten Korrektur
+abgeleitet. Sie treffen die Anwendungsfälle. Ob sie den **Wortlaut** treffen,
+kann nur Kapitel 6 sagen — und genau daran hängt, ob die Zahlen vergleichbar
+sind, was der ganze Grund für die Wiederholung ist. Das Skript sagt das an der
+Stelle, an der es zählt, nennt die zwei erwogenen und nicht genommenen Kandidaten
+(„Anwendung konfigurieren" und „Profil erstellen", beide stehen jetzt in Teil B)
+und bittet um fünf Minuten mit der Thesis vor der ersten Sitzung. Eine Lücke, die
+man sieht, ist billiger als eine Zahl, die man für vergleichbar hält.
+
+Dazu zehn Aufgaben in Teil B für das, was die Thesis nie getestet hat, mit einer
+Rotation, damit über vier Sitzungen jede zweimal drankommt; ein
+Beobachtungsbogen, der die Skala der Thesis behält und daneben festhält, was eine
+Tabelle nicht fasst (erster Klick, Irrwege, wörtliche Zitate, der Hinweis — falls
+einer nötig war — und die Stelle, an der er fiel); und eine Auswertung, die sagt,
+wohin ein Befund geht und dass **eine Beobachtung keine Aufgabe ist**: was zwei
+von vier Personen passiert, ist ein Befund, was einer passiert, wird notiert und
+nicht behoben. Genau so kam 2024 aus sieben Aufgaben **eine** Korrektur.
+
+#### Die Demo-Instanz hat eine zweite Hälfte bekommen
+
+Der Plan nennt `tools/demo-seed/` als die Instanz für den Test. Der Seed konnte
+alles, was ein Veranstalter baut — und **nichts** von dem, was der Test prüfen
+soll: keine Konten, keine Profile, keine Gespräche, keine Zeile in einem der fünf
+Plug-ins. Eine moderierende Person, die erst fünf Profile von Hand erfindet,
+bevor die Teilnehmersuche ausprobiert werden kann, stellt eine Rückfrage an
+dieses Repository, und das Abnahmekriterium verbietet genau die. Also
+`tools/demo-seed/community.mjs`, 320 Zeilen (F243).
+
+Es füllt, was **gefunden** werden muss, und nicht, was die Aufgabe selbst ist:
+zehn Konten mit Profilen, **sieben auffindbar und drei bewusst nicht** — der
+Schalter aus E37 entscheidet zugleich über Gefundenwerden und Angeschriebenwerden,
+und eine Instanz, auf der alle auffindbar sind, führt ihn nicht vor; drei
+Gespräche, eines ungelesen; zwei Anfragen von Menschen ohne Konto, damit der
+Posteingang des Veranstalters nicht leer ist; drei Forumsthemen mit zehn
+Beiträgen, von denen **zwei in der Warteschlange bleiben**; vier Vorschläge in
+allen vier Zuständen; drei Räume, von denen einer zu klein ist für die
+Arbeitsgruppe darin (fünf Stühle, sieben Anmeldungen) — die Überbuchung ist der
+Grund, warum es das Plug-in gibt, und auf einem Plan, auf dem alles passt, ist
+sie nicht zu sehen; acht Programmpunkte in drei persönlichen Plänen; und sechs
+Menschen, die schon durch die Tür sind. Den ersten eigenen Forumsbeitrag, die
+eigene Anmeldung und das eigene Konto macht die getestete Person — das ist die
+Aufgabe.
+
+Alles geht wie bisher **durch die API und nie in die Datenbank.** Ein Konto ist
+bestätigt, weil jemand den Link in seiner Mail geöffnet hat; ein Beitrag ist
+freigegeben, weil der Veranstalter ihn freigegeben hat; ein Ticket ist gescannt,
+weil der Code eingelesen wurde, den das Plug-in ausgegeben hat (E53) und nicht
+das Selbstbedienungs-Token. Die Überbuchung wird **zurückgelesen** statt
+behauptet: sie wird beim Lesen des Plans gerechnet und nirgends gespeichert
+(E50), und die einzige Art, sicher zu sein, dass die Demo-Instanz wirklich eine
+zeigt, ist, sie zu fragen.
+
+Drei Dinge hängen **nicht** unter einer Reihe und überleben deshalb ein
+`--reset`: die eingeschalteten Module, die Profilfragen und die zehn Konten mit
+ihren Gesprächen. Ein Konto gehört einem Menschen und nicht einer Veranstaltung,
+und **kein Administrator kann ein fremdes Konto löschen** — das ist Absicht
+(E65). Ein zweiter Lauf meldet sich deshalb an, statt neu zu registrieren, und
+fragt das **einmal** ab statt zehnmal: die Anmelderoute erlaubt zwanzig Versuche
+je fünf Minuten je Absenderadresse, und zehn einzeln geprüfte Konten wären im
+schlechtesten Fall einundzwanzig Versuche — einer zu viel, um etwas
+herauszufinden. Dieselbe Rechnung ist der Grund für **zehn** Konten und nicht
+zwanzig: eine Kontoregistrierung zählt gegen dasselbe Kontingent wie die vierzig
+Anmeldungen, die schon da sind.
+
+#### `CONTRIBUTING.md` — und vier Dinge, die vorher niemand entschieden hatte
+
+Englisch, wie `README.md` und `docs/INSTALL.md`, und aus demselben Grund: die
+Dokumentation dieses Repositories ist Deutsch, weil sie zur Thesis gehört, aber
+ein Dokument, das **nach außen** adressiert ist, steht in der Sprache seiner
+Leser (F241). Das meiste war Einsammeln, wie `todo.md` es seit Phase 1
+vorhergesagt hatte. Vier Punkte waren es nicht, und Marius hat sie entschieden:
+
+- **Vor v1.0 werden keine Pull Requests gemerged.** Mit den Gründen — der
+  Vertrag schließt gerade, der kuratierte Satz ist zu, und ein Projekt, das Pull
+  Requests sammelt, die es nicht prüfen kann, hat sich nicht geöffnet, sondern
+  eine Warteschlange gebaut — und vor allem mit dem, was **stattdessen** hilft:
+  Fehlerberichte von einer laufenden Instanz, Installationsprobleme (ein
+  Steckenbleiben in `INSTALL.md` ist ein Mangel des Dokuments), Übersetzungen
+  (die keine Freigabe brauchen, weil eine Sprachdatei Daten sind, die eine
+  Instanz ausliefert), und die Nachricht, dass jemand es betreibt.
+- **DCO statt CLA.** Eine Zeile `Signed-off-by`, kein Konto, kein Papier, keine
+  Rechteabtretung — und ausdrücklich nichts, womit dieses Projekt später aus den
+  Beitragenden heraus umlizenziert werden könnte.
+- **Ein Maintainer, namentlich**, mit der Feststellung, dass ein zweiter gesucht
+  wird. Das ist eine Tatsache und keine Vorliebe.
+- **Kein Plug-in kommt vor v1.0 in den kuratierten Satz** (F242). Die fünf sind
+  der Satz, der Vertrag ist bei 1.3.0 geschlossen (E69), und ein Aufnahmeverfahren
+  für eine leere Warteschlange wäre ein erfundenes Verfahren statt einer Antwort
+  — dieselbe Regel wie F47. Was stattdessen dasteht, ist die nützlichere Hälfte:
+  **ein fremdes Plug-in braucht weder Erlaubnis noch dieses Repository.** Es lebt
+  im eigenen, baut gegen den Leitfaden aus AP 12, und ein Betreiber nimmt es in
+  sein Image.
+
+Dazu, was vorher nirgends stand und für diese Anwendung mehr zählt als für die
+meisten: **eine Sicherheitsmeldung geht nicht in ein Issue**, sondern über die
+private Meldung von GitHub — was ohne eine Adresse in einer öffentlichen Datei
+auskommt.
+
+#### Die zwei Werkzeugfragen: beide bleiben, keines wird umbenannt
+
+`/spikes` und `tools/spike-verification/` beantworten dieselbe Art Frage aus zwei
+Richtungen, und es ist die Art Frage, die **keine Testsuite dieses Repositories
+sehen kann**: ob der Proxy dieser Installation das Upgrade durchlässt, ob dieser
+Mailserver annimmt, was dieser Server sendet, ob der Plug-in-Schalter in
+**diesem** Browser ankommt. Die zehn Skripte sind für jemanden am Terminal, die
+Seite für den, der vor dem störrischen Browser sitzt — sie ist die schnellste
+Antwort auf „bei mir geht es" und liest nichts, was `/api/config` nicht ohnehin
+öffentlich ausliefert. Beide stehen jetzt in **§12.4 von `docs/INSTALL.md`**, mit
+einer Zeile je Skript und der Anweisung, sie nach einer Installation und nach
+einem Update zu fahren (F244).
+
+**Umbenannt wird keines.** „Spike" ist Phase-0-Vokabular für etwas, das heute ein
+Deployment prüft — aber fünf Phasenprotokolle nennen die Werkzeuge so, und ein
+Protokoll ist ein Nachweis und kein Dokument, das man nachführt. Gefehlt hat nie
+ein Name, sondern ein Platz. Die Entscheidung steht deshalb auch dort, wo der
+Code ist: im Kommentar der Route und im Kopf der Werkzeug-README.
+
+#### Wie geprüft wurde
+
+Wie bei jedem Paket, das eine Instanz betrifft: **hochgefahren.** Der
+Fünf-Container-Stack aus leerem Volume, der Seed dagegen, dann ein Browser.
+
+- Ein vollständiger Lauf **aus leerem Volume**, ohne Fehler und in einem Zug:
+  40 Anmeldungen, 35 bestätigt, 4 storniert, eine Einladung an 12 wirklich
+  verschickt, ein Widerspruch aus der Mail — und dann die zweite Hälfte: 6
+  Module an, 3 Profilfragen, 10 Konten (7 auffindbar), 3 Gespräche mit 8
+  Nachrichten, 2 Anfragen, 3 Forumsthemen mit 8 freigegebenen und 2 offenen
+  Beiträgen, 4 Vorschläge mit 2 Entscheidungen, 3 Räume mit 10 Sessions und
+  **1 Überbuchung**, 8 Punkte in 3 Plänen, 6 Menschen eingecheckt.
+- **Ein zweiter Lauf mit `--reset`** gegen dieselbe Instanz: die Konten werden
+  wiedererkannt statt verdoppelt, die Profilfragen auch, und die Nachrichten
+  eines Gesprächs werden nicht ein zweites Mal geschrieben.
+- **Im Browser**, bei 390 Pixeln: die Event-Seite trägt vier Einhängepunkte
+  (Vorschläge, Forum, Raumplan, persönlicher Plan), die Programmzeile sagt „4 von
+  4 Plätzen belegt", und die Teilnehmersuche zeigt **sechs** Menschen — die
+  sieben auffindbaren minus die lesende Person, wie es sein soll; die drei ohne
+  Häkchen sind nirgends.
+- **Im Browser**, bei 1280 Pixeln: das Event-Dashboard zeigt die vier
+  Plug-in-Kacheln, die **E-Mail-Spalte** in den letzten Anmeldungen (die eine
+  Korrektur von 2024), zwei Warteschlangen mit je zwei offenen Entscheidungen,
+  den Raumplan mit **Seminarraum 1 als überbucht markiert** und die
+  Einlassliste, in der vier Namen „Checked in" tragen.
+- `nx run-many -t lint test build --skip-nx-cache` über alle 19 Projekte.
+
+#### Was anders lief
+
+**Der Stack konnte keine Mail verschicken, und das war richtig so.** Der erste
+Lauf brach mit 503 ab; im Log stand `Error upgrading connection with STARTTLS:
+502 5.5.1 Command not implemented`. Mailpit spricht kein STARTTLS, und ein
+Produktionsbau verlangt es, solange nichts anderes dasteht — `SMTP_REQUIRE_TLS`
+ist in `NODE_ENV=production` standardmäßig an. Genau so soll E62 wirken: die
+Lockerung steht in einer `.env` und in keiner Zeile Code, und sie muss jemandem
+auffallen. Eine Zeile in der Wegwerf-`.env`, und der Lauf ging durch. Die Zeile
+steht jetzt mitsamt Begründung in `03-instanz.md`, weil sie sonst jeden trifft,
+der das Bündel benutzt.
+
+**Die Anmelderoute ist für einen Testraum zu streng.** Zwanzig Versuche je fünf
+Minuten je Absenderadresse sind für eine Organisation richtig; in einem Raum, in
+dem vier Menschen hinter derselben Adresse sitzen und zehn Demokonten dazukommen,
+ist das Kontingent nach zwei Runden verbraucht. Die Instanz-Anleitung setzt
+`LOGIN_ATTEMPTS_PER_WINDOW` deshalb hoch — dass das überhaupt geht, ohne eine
+Zeile Code anzufassen, ist E60 aus AP 2 dieser Phase, und es hat hier zum ersten
+Mal jemand außerhalb eines Lasttests gebraucht.
+
+**Drei Anläufe, drei Formfehler, und alle drei waren meine.** Die
+Gesprächseröffnung bekam `me.id`, aber `GET /api/participant/me` antwortet
+`{ participant, expiresAt }` — der Endpunkt beantwortet „wer ist angemeldet, und
+bis wann", und die Hälfte, die der Seed braucht, ist die erste. Ein Raum hat
+`description` und nicht `note`. Und der Nachrichtenverlauf paginiert über einen
+Cursor und hat deshalb kein `total`, sondern `rows` und `hasMore` — was der
+Wiederholungslauf sofort zeigte, weil er die Nachrichten ein zweites Mal
+schrieb. Alle drei sind Fälle derselben Sorte: das DTO gelesen, statt die Antwort
+zu raten, hätte jedes verhindert.
+
+**Nebenbei aufgefallen und nicht behoben:** die öffentliche Event-Seite schreibt
+für jeden nicht angemeldeten Besucher **drei 401 in die Konsole.** Die drei
+Plug-ins am Einhängepunkt `event-detail` holen ihre Liste, sobald sie montiert
+sind; wer keine Sitzung hat, bekommt dreimal 401 und danach dreimal die richtige
+Meldung „anmelden, um mitzumachen". Kaputt ist nichts — aber es ist die
+meistbesuchte öffentliche Seite der Anwendung, und drei Fehlermeldungen, hinter
+denen kein Fehler steht, sind genau das Rauschen, das einen echten Fehler
+unsichtbar macht. Der Slot sagt einem montierten Element alles, was es zum
+Entscheiden braucht (E48) — nur nicht, ob jemand angemeldet ist. Eine
+Vertragsfrage an einem geschlossenen Vertrag (E69), und deshalb ein Eintrag unter
+_Known gaps_ statt einer eiligen Zeile.
+
+Und zwei Kleinigkeiten, die beim Aufräumen auffielen und mitgenommen sind: der
+Playwright-MCP-Server legt beim Fahren eines Browsers `.playwright-mcp/` im
+Wurzelverzeichnis an, was niemand einchecken will — jetzt in `.gitignore`. Und
+`tools/secure-mail/probe.mjs` lag seit AP 3 in einer Form ein, die Prettier
+ablehnt (eine Zeile über achtzig Zeichen); `nx format:check` sieht nur
+Geändertes und hat es deshalb nie gemeldet, ein `prettier --check` über das
+ganze Repository schon.
+
+#### Nachträge
+
+**F241–F245**, dazu **Anhangspunkt 34** im Referenzdokument (Version **1.60**);
+der alte Punkt 34 ist 35 geworden. In `todo.md` sind drei Einträge abgehakt — die
+Beitragsrichtlinien und die zwei Werkzeugfragen —, der Usability-Test ist nach
+_On a device — waiting for Marius_ gezogen, und ein neuer steht unter _Known
+gaps_. `CONTRIBUTING.md` hat eine Zeile in der Wissenstabelle von `CLAUDE.md`
+bekommen und eine in den Konventionen, weil „vor v1.0 keine Pull Requests" eine
+Regel ist, die in jeder Sitzung gilt.

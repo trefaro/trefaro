@@ -13,6 +13,21 @@ reason the rest of the data exists — a whitelabel application demonstrated und
 the product's own name and in one language demonstrates the opposite of what it
 is for.
 
+Since AP 13 of phase 5 it also seeds the **community half and the five
+plug-ins**: ten participant accounts with profiles, seven of them findable and
+three deliberately not, three conversations, two enquiries from people without an
+account, a forum with a moderation queue left in it, programme proposals in all
+four states, three rooms of which one is too small for the session in it, personal
+programme plans, and six people already through the door. Reason: the usability
+test of phase 5 asks about exactly the use cases the thesis never tested, and a
+facilitator who first has to invent five profiles before the participant search
+can be tried is asking this repository a question that the test is meant to run
+without — see [`docs/usability-test/`](../../docs/usability-test/README.md).
+
+It is deliberately not everything. A tester creates their own account, writes
+their own first forum post and books their own seat — that is the task. What is
+seeded is what a task needs to be _findable_.
+
 For demonstrating and for looking at a feature by hand. **Not** test data — the
 suites in `apps/*-e2e` seed their own fixtures and tear them down; this is for a
 human.
@@ -42,6 +57,16 @@ put the configuration back: there is nothing to put it back to — the values it
 replaced were the defaults of a fresh instance, and an instance being
 demonstrated is one that has a brand. Change it on `/admin/design`, or start
 from an empty database volume.
+
+Three more things are not below a series and therefore survive a reset: the
+**switched-on modules**, the instance's **profile questions**, and the **ten
+participant accounts** with their conversations. An account belongs to a person,
+not to an event — and no administrator can delete somebody else's account, which
+is deliberate (E65). A second run therefore signs in as the accounts that are
+already there rather than registering them again, and it asks that question
+**once** rather than ten times: the login route allows twenty attempts per five
+minutes per client address, and probing each account individually would spend
+the whole budget finding something out.
 
 The two images are drawn in `demo-data.mjs` pixel by pixel rather than committed
 as files. A binary in the repository is a thing that has to be explained, the
@@ -108,10 +133,12 @@ whole stack was done.
 - **An invitation in the `partial` state.** That needs a delivery to fail, and
   faking a failure would mean writing a row the application would never write.
   To see it, point `SMTP_HOST` at a server that rejects one address.
-- **Two thousand registrations.** Forty, because the public form allows sixty
-  submissions per five minutes per client address (deliberately — it sends mail to
-  an address the caller picks), and a seed that spends the whole budget leaves the
-  instance unusable for the next few minutes. Forty is still two pages of the
+- **Two thousand registrations, or fifty accounts.** Forty registrations and ten
+  accounts, because the public form allows sixty submissions per five minutes per
+  client address (deliberately — it sends mail to an address the caller picks) and
+  a participant account is one of them, and because the login allows twenty. A
+  seed that spends the whole budget leaves the instance unusable for the next few
+  minutes — and, worse, leaves a failed run un-repeatable. Forty is still two pages of the
   participant overview. The measurement at two thousand rows lives in the API
   contract suite, where a load figure belongs.
 - **Anything that looks real.** Every name and organization is invented and every
@@ -119,11 +146,12 @@ whole stack was done.
 
 ## Files
 
-| File            | Contains                                                                                  |
-| --------------- | ----------------------------------------------------------------------------------------- |
-| `seed.mjs`      | the run: order, reset, summary                                                            |
-| `demo-data.mjs` | the content — brand, images, series, events, form, programme, people, dates, translations |
-| `api.mjs`       | the API client, the mailbox reader, a PNG encoder and a PDF                               |
+| File            | Contains                                                                                                     |
+| --------------- | ------------------------------------------------------------------------------------------------------------ |
+| `seed.mjs`      | the run: order, reset, summary                                                                               |
+| `community.mjs` | the second half: accounts, profiles, conversations, forum, proposals, rooms, plans, check-ins                |
+| `demo-data.mjs` | the content — brand, images, series, events, form, programme, people, dates, translations, and the community |
+| `api.mjs`       | the API client, a participant's own session, the mailbox reader, a PNG encoder and a PDF                     |
 
 Two runs a day apart produce the same shape with shifted dates: `demo-data.mjs`
 derives every date from the day it runs, so the past event stays past and the

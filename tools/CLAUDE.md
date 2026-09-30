@@ -5,7 +5,16 @@ Sechs Werkzeuge, und sie unterscheiden sich darin, **wer die Instanz hochfährt*
 - `spike-verification/` und `demo-seed/` laufen gegen eine **laufende** Instanz,
   die jemand anders gestartet hat, nicht im CI — jenes prüft ein Deployment,
   dieses füllt es, ausschließlich über die API, damit kein Zustand entsteht, den
-  die Anwendung selbst ablehnen würde.
+  die Anwendung selbst ablehnen würde. Der Seed hat seit AP 13 der Phase 5 zwei
+  Hälften: `seed.mjs` ist, was ein Veranstalter baut, `community.mjs` ist, was
+  eine Community daraus macht (Konten, Gespräche, die fünf Plug-ins). Drei Dinge
+  überleben ein `--reset`, weil sie nicht unter einer Reihe hängen — die
+  eingeschalteten Module, die Profilfragen und die zehn Konten; ein zweiter Lauf
+  meldet sich an, statt sie noch einmal zu registrieren, und fragt das **einmal**
+  ab und nicht zehnmal, weil jede Anmeldung gegen dasselbe Kontingent zählt.
+  `spike-verification/` ist seit demselben Paket ein Betreiberwerkzeug mit einem
+  Platz in der Betriebsdokumentation (§12.4 von `docs/INSTALL.md`) und behält
+  seinen Phase-0-Namen, weil die Protokolle ihn nennen.
 - `shipped-stack/` **erzeugt seine eigene Wegwerf-Instanz**: fünf Container aus
   leerem Volume, geführte Ersteinrichtung, ein Browser darauf, danach `down -v`.
   Es läuft lokal und im CI-Job `stack` mit demselben Kommando, damit „bei mir

@@ -48,7 +48,10 @@ const results = [
     secure: false,
     ignoreTLS: true,
   }),
-  await attempt('encrypted, unauthenticated', { secure: false, requireTLS: true }),
+  await attempt('encrypted, unauthenticated', {
+    secure: false,
+    requireTLS: true,
+  }),
   await attempt('encrypted and authenticated', {
     secure: false,
     requireTLS: true,

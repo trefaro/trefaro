@@ -659,3 +659,375 @@ function insideRoundedSquare(x, y, size, radius) {
   const nearY = Math.min(Math.max(y, radius), size - radius);
   return distance(x, y, nearX, nearY) <= radius;
 }
+
+// ---------------------------------------------------------------------------
+// The community half, and the five plug-ins (AP 13 of phase 5)
+// ---------------------------------------------------------------------------
+//
+// Everything above is what an organizer builds. Everything below is what a
+// community does with it, and it exists for one reason: the usability test of
+// phase 5 asks about exactly the use cases the thesis never tested — accounts,
+// the participant search, chat, and the five plug-ins. A facilitator who has to
+// invent five profiles by hand before the search can be tried is asking this
+// repository a question, and the test is supposed to be runnable without one.
+//
+// It is deliberately *not* everything. The tester creates their own account,
+// writes their own first forum post and books their own seat — that is the
+// task. What is seeded is what a task needs to be *findable*: other people to
+// search for, a thread to answer, a queue to moderate, a room that is too small.
+
+/**
+ * The instance's profile questions (E35).
+ *
+ * Three, not ten: they are asked of everybody in the community rather than of
+ * somebody applying to attend, and the search is meant to find people, not to
+ * audit them. One of each type the profile form has — `file` does not exist
+ * here on purpose.
+ */
+export const PROFILE_QUESTIONS = [
+  {
+    label: 'Ortsgruppe',
+    type: 'select',
+    options: ['Berlin', 'Hamburg', 'München', 'Köln', 'Leipzig', 'keine'],
+    helpText: 'Wo du am ehesten anzutreffen bist.',
+  },
+  {
+    label: 'Sprachen',
+    type: 'text',
+    helpText: 'Womit du dich verständigen kannst, durch Komma getrennt.',
+  },
+  { label: 'Ich moderiere gern', type: 'checkbox' },
+];
+
+/**
+ * The password every demo account shares.
+ *
+ * One password because a facilitator has to sign in as somebody during the
+ * session and looking up ten of them is not a usability question. It is also
+ * the clearest possible statement that a seeded instance is a demonstration and
+ * never a production one — `SEED_PARTICIPANT_PASSWORD` overrides it.
+ */
+export const DEMO_PASSWORD = 'demo-passwort-2026';
+
+/**
+ * Ten accounts, by their index in `PEOPLE`.
+ *
+ * Ten rather than twenty: an account is a registration on the public form
+ * (sixty per five minutes per client address) and a login (twenty per five
+ * minutes), and the forty registrations above already spend most of the first
+ * budget. Ten leaves a failed run repeatable.
+ *
+ * Index 5 and everything past 11 is skipped: those registrations stay pending
+ * or were cancelled by the organizer, and an account whose owner never came is
+ * a person the search would find who was never there.
+ *
+ * `searchable` is off for three of them, because the opt-in is the point (E37,
+ * F13): an instance where everybody is findable demonstrates nothing about the
+ * switch, and the three who did not tick it are also the proof that a search
+ * result is not a member list.
+ */
+export const ACCOUNTS = [
+  {
+    person: 0,
+    activityAreas: 'Klimapolitik, Beteiligungsformate',
+    searchable: true,
+    answers: { Ortsgruppe: 'Berlin', Sprachen: 'Deutsch, Englisch, Dänisch' },
+    moderates: true,
+  },
+  {
+    person: 1,
+    activityAreas: 'Kommunalpolitik',
+    searchable: true,
+    answers: { Ortsgruppe: 'Leipzig', Sprachen: 'Polnisch, Deutsch' },
+  },
+  {
+    person: 2,
+    activityAreas: 'Öffentlichkeitsarbeit, Fotografie',
+    searchable: true,
+    answers: { Ortsgruppe: 'Köln', Sprachen: 'Französisch, Deutsch, Englisch' },
+    moderates: true,
+  },
+  {
+    person: 3,
+    activityAreas: 'Verkehrswende',
+    searchable: true,
+    answers: { Ortsgruppe: 'Hamburg', Sprachen: 'Griechisch, Englisch' },
+  },
+  {
+    person: 4,
+    activityAreas: 'Bildungsarbeit',
+    searchable: true,
+    answers: { Ortsgruppe: 'Berlin', Sprachen: 'Türkisch, Deutsch, Englisch' },
+  },
+  {
+    person: 6,
+    activityAreas: 'Energie und Wärme',
+    searchable: true,
+    answers: { Ortsgruppe: 'München', Sprachen: 'Schwedisch, Englisch' },
+  },
+  {
+    person: 7,
+    activityAreas: 'Vereinsrecht',
+    searchable: true,
+    answers: { Ortsgruppe: 'keine', Sprachen: 'Deutsch' },
+  },
+  // The three who did not tick the box. They have profiles, they write in the
+  // forum and they can be written to by nobody.
+  {
+    person: 8,
+    activityAreas: 'Wissenschaftskommunikation',
+    searchable: false,
+    answers: { Ortsgruppe: 'Berlin', Sprachen: 'Italienisch, Englisch' },
+  },
+  {
+    person: 9,
+    activityAreas: null,
+    searchable: false,
+    answers: { Ortsgruppe: 'keine', Sprachen: 'Tschechisch, Deutsch' },
+  },
+  {
+    person: 10,
+    activityAreas: 'Moderation',
+    searchable: false,
+    answers: { Ortsgruppe: 'München', Sprachen: 'Deutsch, Englisch' },
+    moderates: true,
+  },
+];
+
+/**
+ * Conversations between participants (FR 4.5).
+ *
+ * Both sides have to be `searchable`, because one switch decides being found
+ * and being written to (E37, F13) — so these are accounts 0 to 6 and never one
+ * of the three who opted out. The last message of the third stays unread, since
+ * an inbox with nothing new in it shows half of what an inbox does.
+ */
+export const CONVERSATIONS = [
+  {
+    from: 0,
+    to: 3,
+    messages: [
+      'Hallo Dimitris, du warst doch beim Verkehrs-Workshop in der letzten Sitzung — hast du die Folien noch?',
+      'Klar, ich lade sie heute Abend hoch. Kommst du zur Arbeitsgruppe A?',
+      'Ja, ich habe mich schon angemeldet. Bis nächste Woche!',
+    ],
+  },
+  {
+    from: 2,
+    to: 6,
+    messages: [
+      'Kurze Frage zur Formulierungswerkstatt: bringt ihr Laptops mit oder wird auf Papier gearbeitet?',
+      'Papier für den ersten Durchgang, danach tippt das Team mit. Bring trotzdem einen mit, falls du Quellen suchen willst.',
+    ],
+  },
+  {
+    from: 4,
+    to: 1,
+    messages: [
+      'Bartosz, wir suchen noch jemanden für die Moderation am Samstagvormittag. Hättest du Lust?',
+      'Ich schaue in meinen Kalender und melde mich morgen.',
+      'Super, danke dir.',
+    ],
+    unread: true,
+  },
+];
+
+/**
+ * Two questions from people without an account (FR 1.3, E39).
+ *
+ * The one use case the thesis *did* test that nothing else here produces: an
+ * interested person contacts the organizer without registering, and the answer
+ * goes back by mail. The organizer's inbox is empty without them.
+ */
+export const CONTACT_ENQUIRIES = [
+  {
+    name: 'Mira Hoffmann',
+    email: 'mira.hoffmann@example.org',
+    body:
+      'Guten Tag, ich komme mit dem Rollstuhl. Sind der Plenarsaal und die ' +
+      'Arbeitsgruppenräume stufenlos erreichbar, und gibt es ein barrierefreies WC?',
+  },
+  {
+    name: 'Tarek Younis',
+    email: 'tarek.younis@example.org',
+    body:
+      'Hallo, ich brauche für das Visum ein Einladungsschreiben. An wen wende ' +
+      'ich mich, und wie lange dauert das erfahrungsgemäß?',
+  },
+];
+
+/**
+ * The forum of the main event (FR 4.6).
+ *
+ * Three threads, and the replies are deliberately not all approved: two posts
+ * stay in the queue so the organizer has something to decide, which is the half
+ * of the release workflow a screenshot never shows.
+ */
+export const FORUM_THREADS = [
+  {
+    author: 0,
+    title: 'Fahrgemeinschaften nach Berlin?',
+    body:
+      'Ich fahre am Donnerstagmittag von Hamburg los und habe drei Plätze frei. ' +
+      'Wer möchte mit? Rückfahrt Sonntagnachmittag.',
+    replies: [
+      { author: 3, body: 'Ich wäre dabei — steige gern in Wittenberge zu.' },
+      {
+        author: 8,
+        body: 'Aus München fährt jemand? Ich würde mich anschließen.',
+      },
+      {
+        author: 1,
+        body: 'Ich nehme den Zug, aber danke fürs Anbieten!',
+        pending: true,
+      },
+    ],
+  },
+  {
+    author: 2,
+    title: 'Übernachtung in der Nähe des Tagungsorts',
+    body:
+      'Gibt es eine Empfehlung? Das Kontingent im Tagungshotel ist laut Website ' +
+      'schon voll.',
+    replies: [
+      {
+        author: 6,
+        body: 'Die Jugendherberge zwei Straßen weiter hatte letztes Mal noch Betten.',
+      },
+      {
+        author: 4,
+        body: 'Wir haben eine Wohnung gemietet und suchen noch zwei Leute zum Teilen.',
+      },
+    ],
+  },
+  {
+    author: 7,
+    title: 'Wie verbindlich sind die Empfehlungen am Ende?',
+    body:
+      'Mir ist nach der zweiten Sitzung nicht klar geworden, was mit dem Text ' +
+      'passiert, nachdem wir abgestimmt haben. Weiß das jemand genauer?',
+    replies: [
+      {
+        author: 9,
+        body: 'Sie gehen an den zuständigen Ausschuss, der innerhalb von sechs Monaten antworten muss. Verbindlich ist die Antwortpflicht, nicht das Ergebnis.',
+      },
+      {
+        author: 5,
+        body: 'Beim letzten Durchgang kam die Antwort nach fünf Monaten und war ausführlich.',
+        pending: true,
+      },
+    ],
+  },
+];
+
+/**
+ * Programme proposals for the main event (FR 3.13, FR 3.14).
+ *
+ * One approved, one rejected, two waiting — the four states of the workflow,
+ * and the rejected one keeps its row (E14) so a participant can see that their
+ * proposal was read rather than lost.
+ */
+export const PROPOSALS = [
+  {
+    author: 3,
+    title: 'Werkstatt: Wie man eine Bürgerinitiative gründet',
+    description:
+      'Zwei Stunden, praktisch: Satzung, Anmeldung, die ersten zehn Leute. Ich ' +
+      'habe das dreimal gemacht und einmal falsch.',
+    decide: 'approve',
+  },
+  {
+    author: 6,
+    title: 'Podium mit der Stadtverwaltung',
+    description:
+      'Ein Gespräch mit dem Umweltamt über das, was kommunal tatsächlich ' +
+      'entschieden wird.',
+    decide: 'reject',
+  },
+  {
+    author: 0,
+    title: 'Morgenspaziergang durch das Regierungsviertel',
+    description:
+      'Vor dem ersten Programmpunkt, eine Stunde, mit zwei Stationen und ohne ' +
+      'Anmeldung.',
+  },
+  {
+    author: 4,
+    title: 'Einführung für Neue: Wie ein Bürgerrat arbeitet',
+    description:
+      'Für alle, die zum ersten Mal dabei sind. Eine halbe Stunde am Vorabend.',
+  },
+];
+
+/**
+ * The rooms of the main event (FR 3.11, F21).
+ *
+ * Structure, not a map (F14). One of the three is deliberately too small for
+ * the session in it: working group A has more sign-ups than "Seminarraum 1" has
+ * chairs, so the schedule shows the overbooking warning — which is the reason
+ * the plug-in exists and cannot be seen on a plan where everything fits.
+ */
+export const ROOMS = [
+  {
+    name: 'Plenarsaal',
+    capacity: 120,
+    floor: 'Erdgeschoss',
+    description: 'Bühne, feste Bestuhlung, Übertragungstechnik.',
+    sessions: [
+      'Ankommen und Registrierung',
+      'Was bisher geschah',
+      'Fachvortrag: Kosten des Nichthandelns',
+      'Bericht aus den Arbeitsgruppen',
+      'Streitgespräch: Tempo oder Akzeptanz?',
+      'Abstimmung über die Empfehlungen',
+      'Übergabe und Ausblick',
+    ],
+  },
+  {
+    name: 'Seminarraum 1',
+    capacity: 5,
+    floor: '1. Obergeschoss',
+    description:
+      'Bewusst zu klein für die Arbeitsgruppe darin — so ist die Überbuchung zu sehen.',
+    sessions: ['Arbeitsgruppe A: Verkehr'],
+  },
+  {
+    name: 'Seminarraum 2',
+    capacity: 20,
+    floor: '1. Obergeschoss',
+    description: 'Stuhlkreis, Moderationswand.',
+    sessions: ['Arbeitsgruppe B: Gebäude und Wärme', 'Formulierungswerkstatt'],
+  },
+];
+
+/**
+ * What three accounts put into their own programme plan (FR 3.17).
+ *
+ * By title, like the rooms: the seed learns the ids from the instance it is
+ * seeding and never from a fixture.
+ */
+export const PERSONAL_PLANS = [
+  {
+    account: 0,
+    sessions: [
+      'Was bisher geschah',
+      'Arbeitsgruppe A: Verkehr',
+      'Formulierungswerkstatt',
+    ],
+  },
+  {
+    account: 2,
+    sessions: [
+      'Fachvortrag: Kosten des Nichthandelns',
+      'Streitgespräch: Tempo oder Akzeptanz?',
+    ],
+  },
+  {
+    account: 6,
+    sessions: [
+      'Arbeitsgruppe B: Gebäude und Wärme',
+      'Abstimmung über die Empfehlungen',
+      'Übergabe und Ausblick',
+    ],
+  },
+];

@@ -25,6 +25,21 @@ attached to the task.
 Not deferred verification — things that are genuinely missing and would matter if
 an instance were exposed today.
 
+- [ ] **The public event page logs three 401s for every visitor who is not
+      signed in.** Noticed in AP 13 of phase 5, while looking at a seeded demo
+      instance in a browser. Three plug-ins mounted at `event-detail` — forum,
+      programme proposals, personal programme — fetch their `participant/` list
+      as soon as they mount, and an anonymous visitor has no session, so each
+      one answers 401. Nothing is broken: all three then draw "sign in to take
+      part", which is the right screen. But it is the most visited public page
+      of the application, and the console of every visitor who opens it says
+      three things went wrong when nothing did — which is exactly the noise that
+      makes a real error invisible to whoever is debugging an installation. The
+      host already tells a mounted element everything it needs to decide (E48);
+      what it does not currently tell it is whether anybody is signed in. Small,
+      and a contract question rather than a fix, so it stays on this list rather
+      than turning into a hurried field on a frozen contract (E69).
+
 - [x] **The API contract suites leave rows behind, and the development database
       has 94 event series to prove it.** `invitations.spec.ts` creates two
       series per run and removes neither, so every run adds two. Nothing fails
@@ -131,12 +146,12 @@ an instance were exposed today.
 
 ## On a device — waiting for Marius
 
-Four checks cannot be run from this repository **at all**, and no future phase
-changes that: they need a production build, HTTPS and hardware in somebody's
-hand. Everything else in this file waits for a work package; these wait for a
-person. They are collected here because inside a phase list they read like
-deferred verification, and deferred verification is what eventually gets done
-by a suite.
+Five things cannot be run from this repository **at all**, and no future phase
+changes that: four need a production build, HTTPS and hardware in somebody's
+hand, and the fifth needs people in a room. Everything else in this file waits
+for a work package; these wait for a person. They are collected here because
+inside a phase list they read like deferred verification, and deferred
+verification is what eventually gets done by a suite.
 
 - [ ] **Web Push on real devices — the only part of AP 11 that is not done.**
       Needs a production build (Angular registers the service
@@ -191,6 +206,28 @@ by a suite.
       show. Same missing net as the CI job that starts the stack, under phase 5.
       See _Checkable after phase 2_, "Re-check the service worker
       configuration".
+
+- [ ] **The usability test with Democracy International — prepared, not held.**
+      **Ready to hand over since AP 13 of phase 5**, and moved here from
+      _Checkable after phase 5_ because what is left is not work: it is four to
+      six people, two from the test team, and an afternoon. A work package can
+      prepare a test; it cannot hold one, and a milestone that hangs on a date
+      with a third party stops a phase (advance decision 2 of phase 5).
+      The bundle is [`docs/usability-test/`](docs/usability-test/README.md) —
+      the script (the thesis' seven tasks plus ten the thesis never tested), the
+      observation sheet, how to set the instance up, and how to evaluate it. The
+      demo instance now carries the community half as well, so the participant
+      search, the chat and the five plug-ins have something to find.
+      **One thing to check before the first session:** the thesis is
+      deliberately not in this repository (26.08.2026), so only task 4 is
+      recorded verbatim and the other six are reconstructed from the use-case
+      diagram, the mockups and the one documented correction. Whether they match
+      the wording of 2024 decides whether the 1–4 scale is comparable with 2024,
+      which is the whole reason for repeating them — five minutes with chapter 6
+      settles it (F245).
+      The answer to the closing question — _would you run your next event series
+      on it, and what would have to be there first?_ — is the result. It goes
+      into this file, by hand and with a reason, like everything else.
 
 ---
 
@@ -1556,7 +1593,7 @@ entry, the answer is noted below rather than repeated.
       needs `CREATE EXTENSION` rights a managed PostgreSQL may not grant
       (NFR 15). What is different now is that the next person does not have to
       re-derive it: the measurement is a command, not an argument.
-- [ ] **There are no contribution guidelines, and phase 0 said there would be.**
+- [x] **There are no contribution guidelines, and phase 0 said there would be.**
       Chapter 6 of the reference document names "Contribution-Guidelines" among
       the phase 0 deliverables, next to the licence and the README; the licence and
       the README exist, `CONTRIBUTING.md` does not. Noticed in the documentation
@@ -1572,6 +1609,22 @@ entry, the answer is noted below rather than repeated.
       project nobody can contribute to yet would be the wrong kind of promise
       anyway. This entry is the reminder; it is the last documentation item of
       phase 5 and must not leave this list until the file exists.
+      **Written in AP 13 of phase 5:** [`CONTRIBUTING.md`](CONTRIBUTING.md), in
+      **English** like the README and `docs/INSTALL.md`, because it is addressed
+      outwards (F241). Most of it was collecting, as expected. The four things
+      that could not be decided here were decided by Marius and are in it:
+      **no pull requests are merged before v1.0 is tagged** — with the reasons,
+      and with what does help in the meantime (issues, installation trouble,
+      translations, and being told that somebody runs it); **DCO, not a CLA**,
+      one `Signed-off-by` line and no rights transfer; **one maintainer, named**,
+      with the statement that a second is wanted; and **no plug-in joins the
+      curated set before v1.0** (F242) — the five are the set, the contract is
+      frozen at 1.3.0 (E69), and criteria for an empty queue would be an invented
+      procedure rather than an answer. What the file says instead is the more
+      useful half: a third-party plug-in needs neither permission nor this
+      repository. It also names where a **security** problem goes, which is not
+      an issue: GitHub's private vulnerability reporting, which needs no address
+      in a public file.
 - [x] **Plug-in SDK documentation.** Three things phase 0 learned that a
       third-party plug-in author has to be told:
   - bundles are loaded same-origin and run with full page access, so plug-in
@@ -1601,13 +1654,30 @@ entry, the answer is noted below rather than repeated.
     refused by the path guard (401) before the enabled guard (404) ever runs,
     and that the plug-in's module file may see both layers while `business/`
     may not.
-- [ ] **Decide the fate of `/spikes`.** The participant client's diagnostics page
+- [x] **Decide the fate of `/spikes`.** The participant client's diagnostics page
       is reachable without a login. It exposes nothing `/api/config` does not
       already expose publicly, so it is not a leak — but decide whether it stays
       as an operator tool or goes.
-- [ ] **Decide the fate of `tools/spike-verification/`.** The scripts test a
+      **It stays, in AP 13 of phase 5** (F244), and it is now documented as what
+      it had already become: §12.4 of [`docs/INSTALL.md`](docs/INSTALL.md). It
+      answers, in one screen, what **this** browser sees — which modules and
+      languages the instance serves, the colours and font it applies, which
+      plug-in bundles actually loaded, whether push works here, whether the
+      socket survives this proxy. None of that is knowable from a test suite,
+      and it is the fastest answer to "it works for me but not for them",
+      because the person with the problem can open it. Still not linked from the
+      navigation, and **not renamed**: "spike" is phase 0 vocabulary, but five
+      phase protocols use it, and a protocol is a record rather than a document
+      to keep in step.
+- [x] **Decide the fate of `tools/spike-verification/`.** The scripts test a
       _deployment_ and are useful against a live instance; `*-e2e` covers CI. If
       they stay, they belong in the operations documentation.
+      **They stay, and they are in the operations documentation now** (AP 13 of
+      phase 5, F244): §12.4 of [`docs/INSTALL.md`](docs/INSTALL.md) lists all ten
+      with what each one asks an instance, says which need the database
+      container, and says to run them after an installation and after an update.
+      Same reasoning and same conclusion about the name as `/spikes` above: what
+      was missing was never a name, it was a place.
 - [ ] **Confirm the login rate limit.** Twenty attempts per five minutes per
       address, then a fifteen-minute block (`LOGIN_ATTEMPTS_PER_WINDOW` in
       `auth.controller.ts`). Chosen so the whole test suite, which logs in from
@@ -2045,8 +2115,16 @@ entry, the answer is noted below rather than repeated.
       maybe four minutes. It was **not** added in AP 3 for one reason: a CI job
       cannot be verified without pushing, and "green in CI" means somebody read
       the end of a run. Add it when the next push happens and read that run.
-- [ ] **Usability test with Democracy International**: the thesis' seven tasks
+- [x] **Usability test with Democracy International**: the thesis' seven tasks
       repeated, plus the use cases it never tested.
+      **Prepared in AP 13 of phase 5 and moved to _On a device — waiting for
+      Marius_**, where the rest of what waits for a person rather than for a
+      package lives. What exists is a handover bundle
+      ([`docs/usability-test/`](docs/usability-test/README.md)): the question the
+      test is supposed to answer, a script in two parts, an observation sheet
+      that keeps the thesis' 1-to-4 scale so the numbers stay comparable, the
+      instance, and the evaluation. What does not exist is the test — it is
+      driven by people, which was decided in advance and is not a shortfall.
 
 - [x] **The WebSocket handshake carries no rate limit.** `@nestjs/throttler`
       sees HTTP routes, and a socket.io handshake is served by engine.io before

@@ -614,6 +614,61 @@ sets it back to zero — which is usually the very thing you wanted to know.
 `/api/health` stays public and unchanged: two words for the proxy and the
 container health check, which cannot sign in.
 
+### 12.4 Two tools that ask the instance itself
+
+Both of these exist because of one fact about this application: **what only
+happens in a production build, or only inside a container, is invisible to every
+test suite in the repository.** A green CI run says the code is right. It says
+nothing about whether your proxy passes the WebSocket upgrade, whether your mail
+server accepts what this one sends, or whether the plug-in switch really reaches
+the browser on your machine.
+
+**`tools/spike-verification/`** — ten scripts, against a running instance:
+
+```bash
+BASE=https://events.example.org node tools/spike-verification/verify-proxy.mjs
+```
+
+| Script                     | What it asks the instance                                                                      |
+| -------------------------- | ---------------------------------------------------------------------------------------------- |
+| `verify-proxy.mjs`         | Headers, both clients, the WebSocket upgrade, the PWA manifest and its icons                   |
+| `verify-api.mjs`           | Health, the database behind it, the public endpoints, the plug-in bundle, the OpenAPI document |
+| `verify-plugin-toggle.mjs` | That a plug-in switches on and off **without a restart**, and that its own tables hold         |
+| `verify-admin-access.mjs`  | The login, the session cookie and the rate limit                                               |
+| `verify-mail.mjs`          | That a confirmation mail is composed, sent and arrives                                         |
+| `verify-i18n.mjs`          | That the catalogue is served and a second language really switches                             |
+| `verify-push.mjs`          | That only the public VAPID key is published and a subscription is stored once                  |
+| `verify-setup.mjs`         | The guided first-run setup, once, on a fresh instance                                          |
+| `verify-chat.mjs`          | That the socket authenticates, joins its room and carries a message                            |
+| `verify-contact.mjs`       | The contact form of an event, end to end                                                       |
+
+Their README says which needs what. Two of them additionally read the database
+directly and want `POSTGRES_CONTAINER`; everything else goes through the same
+HTTP interface a browser uses. **Run them after an installation and after an
+update** — the scripts are the reason several defects were found that no unit
+test could see, including a database driver missing from the server image and a
+service worker that served `/admin/` out of the participant client's cache.
+
+The name is from phase 0, when they verified the architecture spikes. What they
+verify now is a deployment — yours.
+
+**`/spikes` in the participant client** — the same questions, in a browser:
+
+```
+https://events.example.org/spikes
+```
+
+One page, reachable without a login, deliberately not linked from anywhere. It
+shows what **this** browser sees: which languages and modules the instance
+serves, the colours and font it applies, which plug-in bundles actually loaded,
+whether push works here, and whether the WebSocket survives your proxy. It reads
+nothing that `/api/config` does not already serve publicly, so it is not a leak —
+and it is the fastest answer to "it works for me but not for them", because the
+person having the problem can open it.
+
+The two overlap on purpose: the scripts are for you at a terminal, the page is
+for whoever is sitting in front of the browser that misbehaves.
+
 ## 13. What runs where
 
 ```

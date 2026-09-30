@@ -256,6 +256,11 @@ export const appRoutes: Route[] = [
   },
   {
     // Phase 0 diagnostics: makes the architecture spikes verifiable in a browser.
+    // AP 13 of phase 5 decided it stays, as the operator's diagnostics page —
+    // it is the fastest answer to "it works for me but not for them", because
+    // the person with the problem can open it. Documented in §12.4 of
+    // docs/INSTALL.md; deliberately not linked from the navigation, and the
+    // path keeps its phase 0 name because the protocols name it.
     // Kept out of the navigation; phase 5 decides whether it stays as an
     // operator tool or goes.
     path: 'spikes',
