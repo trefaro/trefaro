@@ -84,20 +84,20 @@ Regel steht in `docs/rules/README.md`.
 
 ## Festgelegter Tech-Stack (nicht ohne Rücksprache ändern)
 
-| Bereich    | Entscheidung                                                                                                                                                                   |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Monorepo   | **Nx** — `apps/user-client`, `apps/admin-client`, `apps/server`, `libs/shared-*`                                                                                               |
-| Frontend   | **Angular (neueste Major-Version, aktuell 22)**, Standalone Components, Signals, SCSS; **zwei getrennte Apps** (Nutzer-Client mobile-first, Veranstalter-Client desktop-first) |
-| PWA        | Nutzer-Client ab v1 installierbare PWA (`@angular/pwa`)                                                                                                                        |
-| Server     | **NestJS** (Node LTS, TypeScript)                                                                                                                                              |
-| ORM / DB   | **TypeORM** auf **PostgreSQL**; Migrationen versioniert; `JSONB` für konfigurierbare Felder                                                                                    |
-| Echtzeit   | **socket.io** über NestJS Gateways (Chat: 1:1 + Gruppen, inkl. Bildaustausch)                                                                                                  |
-| Push       | **Web Push API** (VAPID, Service Worker), selbst gehostet — kein Firebase                                                                                                      |
-| E-Mail     | SMTP-Server der Organisation (konfigurierbar), mehrsprachige Templates, signierte Double-Opt-In-Links                                                                          |
-| i18n       | UI: **Transloco** (Laufzeitwechsel, von Organisationen pflegbare Sprachdateien); Inhalte: Übersetzungstabellen (`*_translation`)                                               |
-| Karten     | **OpenStreetMap/Leaflet** — niemals Google-Dienste (Datenschutz-NFR!)                                                                                                          |
-| Deployment | **Docker Compose, 5 Container**: user-client, admin-client, server, postgres, **NGINX** (Reverse Proxy, muss WebSockets proxien)                                               |
-| CI         | GitHub Actions: Lint, Unit, E2E, Docker-Builds                                                                                                                                 |
+| Bereich    | Entscheidung                                                                                                                                                                                                                                                |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Monorepo   | **Nx** — `apps/user-client`, `apps/admin-client`, `apps/server`, `libs/shared-*`                                                                                                                                                                            |
+| Frontend   | **Angular (neueste Major-Version, aktuell 22)**, Standalone Components, Signals, SCSS; **zwei getrennte Apps** (Nutzer-Client mobile-first, Veranstalter-Client desktop-first)                                                                              |
+| PWA        | Nutzer-Client ab v1 installierbare PWA (`@angular/pwa`)                                                                                                                                                                                                     |
+| Server     | **NestJS** (Node LTS, TypeScript)                                                                                                                                                                                                                           |
+| ORM / DB   | **TypeORM** auf **PostgreSQL**; Migrationen versioniert; `JSONB` für konfigurierbare Felder                                                                                                                                                                 |
+| Echtzeit   | **socket.io** über NestJS Gateways (Chat: 1:1 + Gruppen, inkl. Bildaustausch)                                                                                                                                                                               |
+| Push       | **Web Push API** (VAPID, Service Worker), selbst gehostet — kein Firebase                                                                                                                                                                                   |
+| E-Mail     | SMTP-Server der Organisation (konfigurierbar), mehrsprachige Templates, signierte Double-Opt-In-Links                                                                                                                                                       |
+| i18n       | UI: **Transloco** (Laufzeitwechsel, von Organisationen pflegbare Sprachdateien); Inhalte: Übersetzungstabellen (`*_translation`)                                                                                                                            |
+| Karten     | **OpenStreetMap/Leaflet** — niemals Google-Dienste (Datenschutz-NFR!)                                                                                                                                                                                       |
+| Deployment | **Docker Compose, 5 Container**: user-client, admin-client, server, postgres, **NGINX** (Reverse Proxy, muss WebSockets proxien)                                                                                                                            |
+| CI         | GitHub Actions, **fünf Aufträge**: `quality` (Format, Lint, Unit, Build), `e2e` (beide Clients im Browser), `secure-mail` (E62 gegen einen strengen Mailserver), `images` (die drei Images) und `stack` (die fünf Container aus leerem Volume, mit Browser) |
 
 ## Architektur-Regeln (aus der Thesis, verbindlich)
 

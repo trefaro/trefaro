@@ -3122,6 +3122,45 @@ Container übrig, EXIT=0.
 und keiner mehr offen. Die Datei hat einen Abschnitt mehr und zwei korrigierte
 Einleitungen.
 
+#### Nachtrag, 01.10.2026 — die Phase wird veröffentlicht
+
+Zwei der drei Schritte aus der Release-Feststellung sind noch am selben Tag
+getan worden, und die Reihenfolge war der ganze Inhalt.
+
+**Zuerst der Meldekanal, dann der Push.** GitHubs private vulnerability
+reporting war aus; eingeschaltet und nachgefragt (`{"enabled": true}`), und erst
+danach ging `CONTRIBUTING.md` an die Öffentlichkeit. Die Zusage war damit in
+keiner Sekunde öffentlich und unerfüllt — was sie geworden wäre, hätte jemand
+die zwei Schritte in der bequemen Reihenfolge gemacht.
+
+**Und davor noch ein Auftrag.** `tools/secure-mail/verify.sh` war seit AP 3 der
+Wächter über die Bereitstellungshälfte von E62 und lief nirgends; der Eintrag
+dazu stand seit heute Morgen unter _Known gaps_. Er ist jetzt der fünfte
+CI-Auftrag, zwischen `e2e` und `images`, bewusst **nicht** in `e2e`: dessen
+Mailserver nimmt alles an, und zwei Antworten auf dieselbe Frage an einer Stelle
+sind der Weg, auf dem beide aufhören, gelesen zu werden. Vorher kalt auf diesem
+Rechner gefahren, weil man einen Auftrag nicht pusht, den man nie hat laufen
+sehen.
+
+**Der Lauf.** `c6512b9..dcf2284`, **achtzehn Commits** — die ganze Phase 5 auf
+einmal. Lauf `36868215383`, **sieben Aufträge, alle sieben `success`**, rund
+sechzehn Minuten. Gelesen wurden die Abschlüsse der Aufträge, nicht der
+Rückgabewert des Wartens (`docs/rules/tooling-traps.md`) — und bei den beiden,
+die **zum ersten Mal überhaupt** auf einem Runner liefen, zusätzlich ihre
+Ausgabe, weil ein grüner Auftrag, der seine Arbeit überspringt, auch grün ist:
+
+- **`stack`** (seit AP 1, nie gelaufen, weil der letzte Push vier Tage älter
+  war): fünf Container aus leerem Volume, Ersteinrichtung über den Assistenten,
+  Proxy- und Socket-Prüfungen, **13 Browsertests** bestanden, **269 s**.
+- **`secure-mail`**: `530` auf den unverschlüsselten Versuch, ein zweites `530`
+  auf den unangemeldeten, die Mail durch die dritte Verbindung — und **keine
+  `Smtp`-Warnung** beim Start. Die Stille ist das Ergebnis.
+
+Damit ist der Eintrag unter _Known gaps_ abgehakt, und offen bleibt dort an
+dieser Stelle nur noch die zwanzigzeilige `SECURITY.md`, die dem Kanal folgt und
+ihn nicht ankündigt. **Der Tag ist der einzige Schritt, der noch aussteht**
+(E71).
+
 ---
 
 ## Was anders lief — über die ganze Phase

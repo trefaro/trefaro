@@ -122,7 +122,7 @@ Sitzungen gleichzeitig belegbar bleiben, ob die Kontrastschwelle von 3:1 auf
 passen. **Keine davon ist eine Lücke** — jede ist eine getroffene Entscheidung,
 die billig zu ändern ist.
 
-### 2.3 Bekannte Lücken — vier
+### 2.3 Bekannte Lücken — drei
 
 1. **Drei 401 auf der öffentlichsten Seite.** Ein anonymer Besucher der
    Event-Seite erzeugt drei abgewiesene Plug-in-Anfragen in seiner Konsole.
@@ -132,14 +132,12 @@ die billig zu ändern ist.
    Fehler.
 2. **Die Lade des Nutzer-Clients fragt nicht nach `prefers-reduced-motion`.**
    160 ms, in einem Client, der die Medienabfragen dafür schon hat.
-3. **Kein Kanal für Sicherheitsmeldungen** — siehe _Vor dem Tag_.
-4. **`tools/secure-mail/verify.sh` hat seit dem 01.10.2026 einen Auftrag, und
-   der ist noch nicht auf einem Runner gelaufen.** Das Skript beweist, dass
-   diese Anwendung durch einen Mailserver kommt, der Anmeldung und
-   Verschlüsselung erzwingt (E62). Der Auftrag heißt `secure-mail` und steht
-   zwischen `e2e` und `images`; kalt auf einem Laptop ist er grün. **Grün heißt
-   er erst, wenn jemand den Abschluss eines CI-Laufs gelesen hat** — das ist
-   derselbe Satz, den diese Phase über die CI gelernt hat.
+3. **Es fehlt eine `SECURITY.md`.** Der Kanal ist seit dem 01.10.2026 offen
+   (siehe _Vor dem Tag_), und `CONTRIBUTING.md` nennt ihn — aber die Datei, die
+   GitHub auf der Sicherheitsseite eines Repositories anzeigt, gibt es nicht.
+   Zwanzig Zeilen, deren Inhalt entschieden ist: eine unterstützte Version (das
+   aktuelle `main`, bis v1.0 getaggt ist), was hier als Lücke zählt, und dass
+   der Betreiber einer selbst gehosteten Instanz ebenfalls erfahren muss.
 
 ### 2.4 Ein flackernder Test, mit Namen
 
@@ -162,34 +160,33 @@ Jeder ist angesehen, verstanden und mit Begründung nicht gebaut worden.
 
 ## 3. Vor dem Tag
 
-Drei Dinge, und zwei davon kann nur Marius tun. Die Reihenfolge ist nicht
-beliebig.
+Drei Dinge standen hier. **Zwei sind am 01.10.2026 erledigt**, und sie stehen
+weiter da, weil die Reihenfolge der Punkt war und eine erledigte Reihenfolge
+belegt werden muss.
 
-1. **Den Meldekanal für Sicherheitslücken einschalten, bevor gepusht wird.**
+1. **✅ Der Meldekanal für Sicherheitslücken ist eingeschaltet — vor dem Push.**
    `CONTRIBUTING.md` sagt einem Finder, er solle GitHubs private vulnerability
-   reporting benutzen. Am 01.10.2026 gegen das Repository geprüft: die
-   Einstellung ist **aus**. Das Repository ist öffentlich, die Datei ist es noch
-   nicht — es liest also noch niemand eine Zusage, die nicht gilt, und genau
-   das ändert sich mit dem Push. Ein Aufruf schaltet es ein
-   (`gh api --method PUT` auf den Pfad `private-vulnerability-reporting` des
-   Repositories). Danach ist eine zwanzigzeilige `SECURITY.md` fällig — aber
-   **danach**, nicht davor: eine Datei, die einen Kanal nennt, ist so viel wert
-   wie der Kanal.
-2. **Pushen und den Lauf lesen.** Siebzehn Commits der Phase 5 liegen lokal;
-   `origin/main` steht auf `c6512b9`, dem Abschluss der Phase 4. Die ganze
-   Phase 5 ist unveröffentlicht — Härtung, Gestaltung, arc42, der
-   Security-Review, `CONTRIBUTING.md`, das Testbündel. Der erste Push ist
-   zugleich der erste CI-Lauf über all das, und **wer „grün" über die CI sagt,
-   hat den Abschluss des Laufs gelesen**. Zwei der fünf Aufträge laufen dabei
-   zum ersten Mal auf einem Runner: `stack` (seit AP 1, vier Tage nach dem
-   letzten Push entstanden) und `secure-mail` (seit dem 01.10.2026). Wenn
-   etwas rot wird, dann am ehesten dort — und dann ist es ein Befund und kein
-   Rauschen, denn beide Aufträge gibt es genau für die Fehlerklasse, die keine
-   Suite dieses Repositories sieht.
+   reporting benutzen; am Morgen des 01.10.2026 war die Einstellung **aus**.
+   Eingeschaltet und nachgefragt (`{"enabled": true}`), danach erst gepusht.
+   Damit war die Zusage in keiner Sekunde öffentlich und unerfüllt. **Offen
+   bleibt die zwanzigzeilige `SECURITY.md`** — sie ist das, was GitHub auf der
+   Sicherheitsseite anzeigt, und sie folgt dem Kanal, nie umgekehrt.
+2. **✅ Gepusht und der Lauf gelesen.** `c6512b9..dcf2284`, **achtzehn
+   Commits** — die ganze Phase 5 auf einmal: Härtung, Gestaltung, arc42, der
+   Security-Review, `CONTRIBUTING.md`, das Testbündel und der neue
+   CI-Auftrag. Lauf **36868215383**, sieben Aufträge, **alle sieben success**,
+   rund sechzehn Minuten. Gelesen wurden die Abschlüsse der Aufträge, nicht der
+   Rückgabewert des Wartens — und bei den beiden, die zum **ersten Mal** auf
+   einem Runner liefen, zusätzlich ihre Ausgabe:
+   - `stack`: fünf Container aus leerem Volume, Ersteinrichtung,
+     Proxy- und Socket-Prüfungen, **13 Browsertests** bestanden, 269 s.
+   - `secure-mail`: beide Ablehnungen beobachtet (`530 Must issue a STARTTLS
+command first`, `530 Authentication required`), die Mail durch die dritte
+     Verbindung zugestellt, und **keine `Smtp`-Warnung** beim Start — die
+     Stille ist das Ergebnis (E62).
 3. **Dann erst taggen.** E71: v1.0 wird von einem Menschen getaggt. Dieses
-   Paket hat keinen gesetzt — `git tag` ist leer.
-
----
+   Paket hat keinen gesetzt — `git tag` ist leer. **Das ist der einzige Schritt,
+   der noch aussteht.**
 
 ## 4. Was ein Tag nicht behaupten würde
 

@@ -182,13 +182,16 @@ an instance were exposed today.
       public; the file is not, because the whole of phase 5 is unpushed. So
       nobody is reading a promise that is not kept **yet**, and the order is
       the point: the setting goes on before the push that publishes the file.
-      One call switches it on — `gh api --method PUT` on the repository's
-      `private-vulnerability-reporting` path — and it is Marius' to make: it
-      changes a public repository. The twenty-line `SECURITY.md` follows the
-      setting, never the other way round: a file that names a channel is
-      worth exactly what the channel is worth.
+      **Switched on by Marius on 01.10.2026, before the push** — the setting
+      answers `{"enabled": true}`, and only then did phase 5 become public, so
+      the promise was never live and unkept. **What is still missing is the
+      file.** `SECURITY.md` is what GitHub shows on a repository's security
+      page, and its content is decided: one supported version (the current
+      `main`, until v1.0 is tagged), what counts as a vulnerability here, and
+      that the operator of a self-hosted instance has to be told too. Twenty
+      lines, and they follow the channel rather than announcing it.
 
-- [ ] **`tools/secure-mail/verify.sh` runs nowhere but on a laptop.** AP 3 of
+- [x] **`tools/secure-mail/verify.sh` runs nowhere but on a laptop.** AP 3 of
       phase 5 built the mail server that refuses anonymous and unencrypted
       submission, and the script that proves this application gets through it
       (E62). It was run locally and it passes — but nothing runs it again, and
@@ -200,16 +203,19 @@ an instance were exposed today.
       maybe four minutes. It was **not** added in AP 3 for one reason: a CI job
       cannot be verified without pushing, and "green in CI" means somebody read
       the end of a run. Add it when the next push happens and read that run.
-      **The job exists since 01.10.2026** — `secure-mail`, between `e2e` and
-      `images`, run cold on a laptop before it was pushed. The box stays open
-      until somebody has read it green on a runner, because that is the whole
-      sentence this entry is about.
       **Moved to _Known gaps_ in AP 14.** A check nobody runs is a promise
       nobody keeps, and this one guards E62 — the rule that no line of code
-      switches certificate checking off. It stays unticked for the reason it
-      was written: the job can be added in a minute and cannot be called green
-      until somebody has pushed and read the run. That makes it part of the
-      release statement rather than of a phase.
+      switches certificate checking off. The job could be added in a minute and
+      could not be called green until somebody had pushed and read the run,
+      which made it part of the release statement rather than of a phase.
+      **Closed on 01.10.2026.** The job exists — `secure-mail`, between `e2e`
+      and `images` — it ran cold on a laptop before it was pushed, and then on
+      a runner in CI run `36868215383`: the strict server refused the
+      unencrypted attempt with a `530`, refused the unauthenticated one with a
+      second `530`, and the mail went through the third connection. No `Smtp`
+      warning at startup — the silence is the result. Read from the job's own
+      output, not from the exit code of a wait. E62's deployment half now has a
+      guard that runs without anybody remembering it.
 
 ---
 
