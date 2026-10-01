@@ -8,7 +8,7 @@ Every organization runs its **own instance** (Docker Compose, 5 containers). No 
 
 ## Status
 
-🚧 **Pre-alpha.** The concept is based on a master's thesis (empirical requirements analysis with NGOs, 2024). The paragraphs above describe the finished product; this section describes what exists.
+🚧 **Feature-complete for v1.0 — not tagged.** The concept is based on a master's thesis (empirical requirements analysis with NGOs, 2024). All five phases are built and verified; what is deliberately still open is at the end of this section, and the tag itself is a human step that has not been taken.
 
 **Phase 0** built the foundation: the monorepo, the strictly layered server, the
 plug-in mechanism on both sides, the container stack, the CI, and the four
@@ -67,14 +67,47 @@ into a **programme plan of their own**, in their own language, which reserves
 nothing and says where reserving actually happens. The record, package by
 package, is in [`docs/PHASE4.md`](docs/PHASE4.md).
 
-**Not built yet:** the hardening round — configurable throttling, a participant
-password reset, erasure, the usability test with the pilot partner (phase 5).
-What is deferred and why is in [`todo.md`](todo.md), including the two checks no
-test suite can make: push notifications on four real devices, and a camera at a
-door.
+**Phase 5 is complete** (01.10.2026): the hardening round — the part a visitor
+notices least and an operator most. Somebody who forgets their password gets
+back in; somebody who wants to leave takes their data with them and goes, and
+what other people wrote stays and names nobody. The server stops refusing in
+English: a rejection travels as a code with values and is drawn in the language
+of the page. Every rate limit comes from the environment with today's numbers as
+defaults, and an instance says out loud at startup when one has been raised.
+Mail goes through a server that demands authentication and encryption — proven
+against one that refuses anything else — while deliverability stays what it is,
+the operator's DNS, with a checklist to match. Both clients were then measured
+against what they promised: the participant client against the thesis mockups at
+390 pixels, where three structural deviations were built back and six more are
+deliberate and written down; the organizer client against being usable at 768,
+where thirteen tables got a scroll frame of their own. A security review of
+twenty-six points is recorded with a decision on each, the operational logs carry
+no personal data, and the load figures stand with their setup and date. The
+plug-in contract took its last step and is **frozen at 1.3.0** for v1.0. The
+architecture got twelve [arc42 sections](docs/arc42/README.md) that repeat no
+rule written elsewhere — including the plug-in SDK guide, proven by building a
+sixth plug-in out of it alone and then deleting it. And CI grew the two jobs
+that catch what no test suite can see: the five containers brought up from an
+empty volume with a browser driven over them, and a mail server that refuses
+anonymous and unencrypted submission. The record, package by package, is in
+[`docs/PHASE5.md`](docs/PHASE5.md).
+
+**Not released yet, and that is a decision.**
+[`docs/RELEASE-v1.0.md`](docs/RELEASE-v1.0.md) (German) states what v1.0 would
+rest on, what stays open, and what a tag would deliberately **not** claim — the
+tag is a human step, not something a work package sets. What is open and why is
+in [`todo.md`](todo.md): two known gaps, twenty-one questions only the pilot
+partner can answer, six things that need a person or hardware rather than a work
+package — push notifications on four real devices, a camera at a door, and the
+usability test with the pilot partner, which is prepared and not held — six
+things looked at, understood and deliberately not built, and one browser test
+that flickers about once in three full runs, with a name and a narrowed-down
+cause.
 
 [`docs/INSTALL.md`](docs/INSTALL.md) installs an instance;
 `docs/BOOTSTRAP.md` sets up a development environment.
+[`docs/arc42/`](docs/arc42/README.md) (German) describes the architecture and is
+the place to start reading.
 `docs/Anforderungsanalyse_und_Umsetzungsplan.md` (German) holds the full
 requirements analysis and implementation plan.
 [`docs/rules/`](docs/rules/README.md) (German) collects the conventions and traps
@@ -101,7 +134,11 @@ docker compose --env-file .env -f infra/docker-compose.yml up -d --build
 
 Fill it with something to look at — two series, five events, a form with all four
 field types, forty registrations, a programme with a full session, an invitation
-that really went out:
+that really went out, and, since phase 5, the community half as well: ten
+participant accounts with profiles (seven findable, three deliberately not),
+conversations, a forum with a moderation queue still in it, programme proposals
+in all four states, three rooms of which one is too small for its session, and
+six people already through the door:
 
 ```bash
 node tools/demo-seed/seed.mjs            # --reset replaces an earlier run
@@ -128,7 +165,7 @@ Elements for plug-ins · Nx monorepo · Docker Compose + NGINX
 
 ## Architecture in one paragraph
 
-A strictly layered NestJS server (business layer over data-access layer — only the data-access layer touches the database) combined with a plug-in pattern on both server (dynamic modules with their own entities and migrations) and clients (framework-agnostic web components, themed via CSS custom properties). Two separate web clients: a mobile-first participant app (PWA) and a desktop-first organizer app. Core modules cover event management; community features like forums, program proposals, room planning and QR check-in ship as curated plug-ins that each organization can enable at runtime.
+A strictly layered NestJS server (business layer over data-access layer — only the data-access layer touches the database) combined with a plug-in pattern on both server (dynamic modules with their own entities and migrations) and clients (framework-agnostic web components, themed via CSS custom properties). Two separate web clients: a mobile-first participant app (PWA) and a desktop-first organizer app. Core modules cover event management; five curated plug-ins — forum, programme proposals, room planning, QR check-in and a personal programme plan — ship in the image and are switched on per instance at runtime, against a contract frozen at `PLUGIN_API_VERSION` 1.3.0 for v1.0.
 
 ## Contributing
 
