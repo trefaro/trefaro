@@ -9,11 +9,14 @@ Every entry below says **which phase makes it checkable** and **how to check it*
 Work the matching section at the end of each phase; an entry that turns out to
 still be premature moves down rather than being ticked.
 
-Two sections are not keyed to a phase. _Questions for the pilot partner_
+Three sections are not keyed to a phase. _Questions for the pilot partner_
 collects what no phase can decide because it needs an answer from Democracy
 International; those entries wait for the feedback round, not for a milestone.
 _On a device — waiting for Marius_ collects what no phase can **check**, because
-it needs a production build and hardware in somebody's hand.
+it needs a production build and hardware in somebody's hand. _After v1.0_
+collects what was understood and deliberately not built; it was added in AP 14
+of phase 5, because the phase lists ended and those entries are not finished by
+one.
 
 Entries link to the spike protocol they came from, so the reasoning stays
 attached to the task.
@@ -142,13 +145,76 @@ an instance were exposed today.
       asked for by `apps/server-e2e/src/api/rate-limits.spec.ts`, which is the
       suite whose subject they are. 690 + 317 + 258 green.
 
+- [ ] **The participant client's drawer animates without asking.**
+      `nav-drawer.ts` slides in with `animation: drawer-in 160ms ease-out`, and
+      there is no `prefers-reduced-motion` exception anywhere in that client.
+      160 ms of translation is mild, and the setting exists for people for whom
+      it is not. Noticed in AP 8 while deciding _against_ an animation in the
+      organizer client — there the exception would have been a second
+      `@media` query, which that client is not supposed to have (F223); in the
+      participant client, which has several, it costs nothing. Verify: with
+      "reduce motion" on in the system settings, the drawer appears without
+      travelling.
+      **Moved to _Known gaps_ in AP 14.** It is not deferred verification — the
+      exception is missing today, in a client that already has the media
+      queries to hold it, and it is missing for exactly the people who went and
+      set the preference. What kept it out of a package is that phase 5 had no
+      package left with that client in it, not that it is hard.
+
+- [ ] **There is no way to report a security hole.** Found by the security
+      review of AP 9 (point E3): the repository has a README and a licence and
+      no `SECURITY.md`, so somebody who finds a vulnerability has no channel
+      but a public issue. The file itself is twenty lines and most of its
+      content is already decided — supported versions (there is one, the
+      current `main`, until v1.0 is tagged), what counts as a vulnerability
+      here, and that a self-hosted instance's operator has to be told too. What
+      is **not** decided and cannot be decided in this repository is the one
+      thing the file exists for: the channel. Two options, both a few minutes
+      of work for Marius — switch on GitHub's private vulnerability reporting
+      for `trefaro/trefaro`, or name an address somebody reads. Pick one, and
+      the file follows.
+      **Moved to _Known gaps_ in AP 14, and the channel is decided but not
+      switched on.** AP 13 took the first of the two options this entry
+      offered: `CONTRIBUTING.md` names GitHub's private vulnerability
+      reporting, which needs no address in a public file. Checked on 01.10.2026
+      against the repository itself: GitHub's API answers
+      `{"enabled": false}` for it. The repository is
+      public; the file is not, because the whole of phase 5 is unpushed. So
+      nobody is reading a promise that is not kept **yet**, and the order is
+      the point: the setting goes on before the push that publishes the file.
+      One call switches it on — `gh api --method PUT` on the repository's
+      `private-vulnerability-reporting` path — and it is Marius' to make: it
+      changes a public repository. The twenty-line `SECURITY.md` follows the
+      setting, never the other way round: a file that names a channel is
+      worth exactly what the channel is worth.
+
+- [ ] **`tools/secure-mail/verify.sh` runs nowhere but on a laptop.** AP 3 of
+      phase 5 built the mail server that refuses anonymous and unencrypted
+      submission, and the script that proves this application gets through it
+      (E62). It was run locally and it passes — but nothing runs it again, and
+      a check nobody runs is a promise nobody keeps: the next person who adds
+      `rejectUnauthorized: false` to solve a certificate problem would be
+      caught by the unit test and not by this. The shape is obvious, because
+      AP 1 built it for the other script: a job beside `stack` in
+      `.github/workflows/ci.yml`, checkout, `npm ci`, `tools/secure-mail/verify.sh`,
+      maybe four minutes. It was **not** added in AP 3 for one reason: a CI job
+      cannot be verified without pushing, and "green in CI" means somebody read
+      the end of a run. Add it when the next push happens and read that run.
+      **Moved to _Known gaps_ in AP 14.** A check nobody runs is a promise
+      nobody keeps, and this one guards E62 — the rule that no line of code
+      switches certificate checking off. It stays unticked for the reason it
+      was written: the job can be added in a minute and cannot be called green
+      until somebody has pushed and read the run. That makes it part of the
+      release statement rather than of a phase.
+
 ---
 
 ## On a device — waiting for Marius
 
-Five things cannot be run from this repository **at all**, and no future phase
+Six things cannot be run from this repository **at all**, and no future phase
 changes that: four need a production build, HTTPS and hardware in somebody's
-hand, and the fifth needs people in a room. Everything else in this file waits
+hand, the fifth needs people in a room, and the sixth — added in AP 14 — needs
+a machine that is not a development laptop. Everything else in this file waits
 for a work package; these wait for a person. They are collected here because
 inside a phase list they read like deferred verification, and deferred
 verification is what eventually gets done by a suite.
@@ -229,6 +295,36 @@ verification is what eventually gets done by a suite.
       The answer to the closing question — _would you run your next event series
       on it, and what would have to be there first?_ — is the result. It goes
       into this file, by hand and with a reason, like everything else.
+
+- [ ] **The load test froze for forty-four seconds and nobody knows why.**
+      AP 10 measured the participant overview at 20 000 registrations with
+      twenty concurrent readers: half the answers in 73 ms, p95 at 106 ms — and
+      then, in three of four full runs, **23 of 1 146** requests stood still for
+      about forty-four seconds, all at the same moment, after which the run
+      carried on and the next scenario was flawless. Ruled out, each by looking:
+      no long-running statement in `pg_stat_activity`, no exhausted or leaked
+      connection (the pool was healthy before and after), no error and no 5xx in
+      the instance's own report, no memory growth, not the seed's debt (a
+      `VACUUM (ANALYZE)` after the bulk insert changes nothing), not the
+      driver's connection pool (it has its own per scenario now), and no
+      scheduled job at that time — the only two run every twelve hours. And the
+      same scenario run **on its own** is clean: 4 046 requests, worst case
+      115 ms. What is left is a freeze of the whole request path that resolves
+      itself, on a WSL2 development machine that was also building images. It
+      cannot be pinned on this application with what is in hand, and it cannot
+      be pinned on the host without evidence either. **The number that settles
+      it is a run on a real Linux server** — `tools/load-test/measure.sh` needs
+      nothing but Docker — and the first thing to look at there is the count
+      `load.mjs` now prints beside the answers: how many requests took longer
+      than a second. A server that is slow under load makes many of them slow;
+      a machine that hiccups makes one round of them slow.
+      **Moved to _On a device_ in AP 14.** It is the only entry of phase 5
+      whose answer needs hardware this repository does not have: everything
+      that could be ruled out by looking has been ruled out, and what is left
+      is the difference between a server and a development laptop that was
+      building images at the time. `tools/load-test/measure.sh` needs nothing
+      but Docker, so the run is cheap — it is the machine that is missing,
+      which is what this section collects.
 
 ---
 
@@ -534,6 +630,104 @@ answer, not an opinion.
       (F24) and the contact form needs no account. Whether an instance whose
       organization sends from its own tool needs a self-service link is the
       question, and it is theirs.
+
+- [ ] **The contrast the design project guards is 3:1, not 4.5:1.** The check
+      added in AP 7 catches text written in the colour it stands on — it was
+      built for a ratio of 1:1, and it is deliberately below what SC 1.4.3 asks
+      of body text, because several muted greys of this client sit between the
+      two (`--trefaro-color-…-strong` at 65 % over white is about 4.1:1).
+      Raising the threshold to 4.5 is a decision about the palette and not
+      about the test: it would ask for darker muted text on half a dozen
+      screens. Worth deciding once, with the pilot partner's eyes on a real
+      phone.
+      **Moved to _Questions for the pilot partner_ in AP 14**, which is where
+      the entry already pointed. The repository can say what the number is;
+      whether the grey is hard to read is said by somebody reading it on their
+      own phone, and the answer decides half a dozen screens' worth of palette.
+
+- [ ] **Decide whether the registration form and the media links are content
+      too.** E25 lists what is translated, and the labels an organizer writes on
+      the registration form (`registration_field_def.label`, `help_text`,
+      `options_json`) and the titles of media links are not on it. Both are text
+      an organization writes, both appear on a translated page, and both were
+      left out of AP 11 to keep it to what FR 3.12 names. The shape is settled
+      if it is wanted — a table per parent, exactly like the three that exist —
+      but the field labels have a wrinkle the others do not: an _answer_ is
+      stored under a field key (F35), so a translated label must not become a
+      second key. Verify with the pilot partner first: a form with three
+      questions in two languages may or may not be something anybody asks for.
+      **Moved to _Questions for the pilot partner_ in AP 14** — it says so
+      itself ("verify with the pilot partner first"), and standing in a phase
+      list it read like deferred work with a date on it.
+
+- [ ] **Confirm the login rate limit.** Twenty attempts per five minutes per
+      address, then a fifteen-minute block (`LOGIN_ATTEMPTS_PER_WINDOW` in
+      `auth.controller.ts`). Chosen so the whole test suite, which logs in from
+      one address, can survive it — the alternative was a limit that gets
+      relaxed for tests and therefore never tested. The block itself is only
+      verified by hand, via
+      `tools/spike-verification/verify-admin-access.mjs`, because exercising it
+      locks the route for fifteen minutes.
+      **Still a number to confirm, but no longer a number to rebuild for**
+      (AP 2 of phase 5): `LOGIN_ATTEMPTS_PER_WINDOW` is read from the
+      environment with twenty as the default, and the fifteen-minute block
+      deliberately stayed a constant — an operator may want a more forgiving
+      count for an office behind one address, but there is no instance for
+      which "keep trying immediately" is the right answer.
+      **Moved to _Questions for the pilot partner_ in AP 14.** Since AP 2 of
+      phase 5 the number is an `.env` line and a restart, so nothing in this
+      repository waits for it — but the person who can say whether twenty
+      attempts per five minutes are enough is the one whose office sits behind
+      one public address. That is the pilot partner, not a work package.
+
+- [ ] **Confirm the registration and confirmation rate limits.** **Sixty**
+      attempts per five minutes per client address, for the public registration
+      form (`REGISTRATIONS_PER_WINDOW`) and for the confirmation endpoint
+      (`CONFIRMATIONS_PER_WINDOW`) alike. Both started at thirty and were raised
+      during phase 1 — the registration form in AP 7, the confirmation in AP 9 —
+      because an office behind one public address, and the test suites, both hit
+      the tighter number. Deliberately without a block period, unlike the login:
+      this endpoint sends mail to an address the caller chooses, but a participant
+      who mistypes their own address a few times has to be able to fix it. The
+      confirmation endpoint is idempotent and changes nothing after the first
+      call, and against guessing an HMAC thirty and sixty are equally hopeless.
+      Not covered by an automatic test for the same reason as the login block —
+      the window is five minutes, and a suite that trips it cannot repeat.
+      **Confirmed at sixty by Marius on 28.08.2026** ("ok fürs erste"), so this is
+      no longer a question waiting for an answer — it is a number to re-examine
+      with the rest of the hardening, next to the second counter per recipient
+      address. **That counter exists since AP 2 of phase 5**, and both numbers
+      are configuration now — so re-examining one is an `.env` line and a
+      restart, not a release.
+      **Moved to _Questions for the pilot partner_ in AP 14**, with the login
+      limit above it and for the same reason: both are configuration now, and
+      the open half of the question — is sixty enough for your office, is
+      twenty — belongs to whoever runs an instance. Marius confirmed sixty on
+      28.08.2026 for the state of that day; what is worth asking again is
+      whether it survives a real series.
+
+- [ ] **A `select` profile question whose choices shrink leaves answers behind
+      that are no longer offered.** The same situation as a deleted question
+      (F34) and deliberately not refused — but nothing tells the organizer that
+      four people answered "Bonn" before "Bonn" was removed from the list. Still
+      open, and now only for the **organizer**: that is where the information is
+      missing, and the participant search of AP 5 turned out to be the wrong
+      place to put it. Its profile view shows an answer to a question that is
+      still asked whatever the option list now says — so a shrunk `select` is
+      visible there — but it deliberately does **not** show answers whose
+      question is gone under their bare key (F150): the organizer's panel is an
+      audit of a form, a participant is reading a person, and `local-group:
+Bonn` is diagnostics rather than a fact about anybody.
+      **Moved to _Checkable after phase 5_ in AP 13 of phase 3.** What is
+      missing is a sentence on the organizer's editor, and a sentence needs a
+      number to put in it — how many people answered with the option about to
+      disappear — which is a read nothing has today. Usability work with a
+      query behind it, so it belongs with the usability round rather than in a
+      closure package.
+      **Moved to _Questions for the pilot partner_ in AP 14**, which the entry
+      asked for in its last sentence: it is usability work with a query behind
+      it, and it belongs with the round that finds out whether anybody shrinks
+      an option list in practice.
 
 ---
 
@@ -1340,6 +1534,17 @@ entry, the answer is noted below rather than repeated.
 
 ## Checkable after phase 5 — hardening and release
 
+**Worked through in AP 14 on 01.10.2026, and this section is closed.** It held
+forty-four entries at the end: twenty-eight were done inside the phase, one was
+finished in AP 5 and AP 6 and had simply never been ticked, and fifteen moved
+on — five to _Questions for the pilot partner_, three to _Known gaps_, one to
+_On a device_, and six into the new section _After v1.0_. Every move carries
+its reason in the entry itself, which is the only form in which a move is worth
+anything: a list that empties by relocation is a list that lies.
+
+Nothing was struck. A struck entry takes its reasoning with it, and the next
+person starts the thinking from the beginning.
+
 - [x] **Two theme properties still exist only in a fallback.** AP 7 published
       the four the participant client was using without anybody setting them
       (F222) — but `--trefaro-color-surface-muted` and
@@ -1358,27 +1563,6 @@ entry, the answer is noted below rather than repeated.
       invitation list is accent-tinted, and `--trefaro-color-accent-soft` is
       exactly that and has been published all along. One promise fewer that
       nothing keeps.
-
-- [ ] **The participant client's drawer animates without asking.**
-      `nav-drawer.ts` slides in with `animation: drawer-in 160ms ease-out`, and
-      there is no `prefers-reduced-motion` exception anywhere in that client.
-      160 ms of translation is mild, and the setting exists for people for whom
-      it is not. Noticed in AP 8 while deciding _against_ an animation in the
-      organizer client — there the exception would have been a second
-      `@media` query, which that client is not supposed to have (F223); in the
-      participant client, which has several, it costs nothing. Verify: with
-      "reduce motion" on in the system settings, the drawer appears without
-      travelling.
-
-- [ ] **The contrast the design project guards is 3:1, not 4.5:1.** The check
-      added in AP 7 catches text written in the colour it stands on — it was
-      built for a ratio of 1:1, and it is deliberately below what SC 1.4.3 asks
-      of body text, because several muted greys of this client sit between the
-      two (`--trefaro-color-…-strong` at 65 % over white is about 4.1:1).
-      Raising the threshold to 4.5 is a decision about the palette and not
-      about the test: it would ask for darker muted text on half a dozen
-      screens. Worth deciding once, with the pilot partner's eyes on a real
-      phone.
 
 - [x] **A data export carries nothing a plug-in stores.** The archive of AP 6
       holds the core's tables in full, and the `README.txt` says so plainly —
@@ -1504,18 +1688,6 @@ entry, the answer is noted below rather than repeated.
       one — there is no current one. The mail for a repeated registration now
       points at the way back in, which it could not do before there was one.
 
-- [ ] **Decide whether the registration form and the media links are content
-      too.** E25 lists what is translated, and the labels an organizer writes on
-      the registration form (`registration_field_def.label`, `help_text`,
-      `options_json`) and the titles of media links are not on it. Both are text
-      an organization writes, both appear on a translated page, and both were
-      left out of AP 11 to keep it to what FR 3.12 names. The shape is settled
-      if it is wanted — a table per parent, exactly like the three that exist —
-      but the field labels have a wrinkle the others do not: an _answer_ is
-      stored under a field key (F35), so a translated label must not become a
-      second key. Verify with the pilot partner first: a form with three
-      questions in two languages may or may not be something anybody asks for.
-
 - [x] **The design page could now say when an app icon is unusable.** Since
       AP 12 the server can read an image's dimensions out of its own header
       (F106) — which is exactly what the manifest uses to decide whether an
@@ -1565,13 +1737,6 @@ entry, the answer is noted below rather than repeated.
       its values in both clients, and a contract suite that asserts the code.
       404, 401 and 403 deliberately carry none — a client knows those reasons
       itself, and their sentences stay in the log (F213).
-
-- [ ] **A shared link into the participant client does not carry its language.**
-      The reader's language lives in `localStorage` (AP 6), so a link somebody
-      sends shows the recipient's language rather than the sender's. That is
-      arguably right, and it is also not a decision anybody made. If it should
-      be shareable, the client route needs its own parameter — the API already
-      has one (`?locale=`, F94) — and the two must agree about which wins.
 
 - [x] **Re-measure the participant overview at a size no pilot event reaches.**
       AP 5 proved the acceptance criterion at 2 000 registrations per event, in
@@ -1679,39 +1844,6 @@ entry, the answer is noted below rather than repeated.
       container, and says to run them after an installation and after an update.
       Same reasoning and same conclusion about the name as `/spikes` above: what
       was missing was never a name, it was a place.
-- [ ] **Confirm the login rate limit.** Twenty attempts per five minutes per
-      address, then a fifteen-minute block (`LOGIN_ATTEMPTS_PER_WINDOW` in
-      `auth.controller.ts`). Chosen so the whole test suite, which logs in from
-      one address, can survive it — the alternative was a limit that gets
-      relaxed for tests and therefore never tested. The block itself is only
-      verified by hand, via
-      `tools/spike-verification/verify-admin-access.mjs`, because exercising it
-      locks the route for fifteen minutes.
-      **Still a number to confirm, but no longer a number to rebuild for**
-      (AP 2 of phase 5): `LOGIN_ATTEMPTS_PER_WINDOW` is read from the
-      environment with twenty as the default, and the fifteen-minute block
-      deliberately stayed a constant — an operator may want a more forgiving
-      count for an office behind one address, but there is no instance for
-      which "keep trying immediately" is the right answer.
-- [ ] **Confirm the registration and confirmation rate limits.** **Sixty**
-      attempts per five minutes per client address, for the public registration
-      form (`REGISTRATIONS_PER_WINDOW`) and for the confirmation endpoint
-      (`CONFIRMATIONS_PER_WINDOW`) alike. Both started at thirty and were raised
-      during phase 1 — the registration form in AP 7, the confirmation in AP 9 —
-      because an office behind one public address, and the test suites, both hit
-      the tighter number. Deliberately without a block period, unlike the login:
-      this endpoint sends mail to an address the caller chooses, but a participant
-      who mistypes their own address a few times has to be able to fix it. The
-      confirmation endpoint is idempotent and changes nothing after the first
-      call, and against guessing an HMAC thirty and sixty are equally hopeless.
-      Not covered by an automatic test for the same reason as the login block —
-      the window is five minutes, and a suite that trips it cannot repeat.
-      **Confirmed at sixty by Marius on 28.08.2026** ("ok fürs erste"), so this is
-      no longer a question waiting for an answer — it is a number to re-examine
-      with the rest of the hardening, next to the second counter per recipient
-      address. **That counter exists since AP 2 of phase 5**, and both numbers
-      are configuration now — so re-examining one is an `.env` line and a
-      restart, not a release.
 - [x] **Make the rate limits configurable, with the strict values as defaults.**
       Decided for phase 5 on 28.08.2026, after weighing the alternative: taking
       the limits out for now and putting them back once the application is stable.
@@ -1771,30 +1903,6 @@ entry, the answer is noted below rather than repeated.
       migration, and it belongs to the forum plug-in —
       `plugin_forum_thread.created_by` becomes nullable with `SET NULL`,
       because the core never names a plug-in's table.
-- [ ] **There is no way to report a security hole.** Found by the security
-      review of AP 9 (point E3): the repository has a README and a licence and
-      no `SECURITY.md`, so somebody who finds a vulnerability has no channel
-      but a public issue. The file itself is twenty lines and most of its
-      content is already decided — supported versions (there is one, the
-      current `main`, until v1.0 is tagged), what counts as a vulnerability
-      here, and that a self-hosted instance's operator has to be told too. What
-      is **not** decided and cannot be decided in this repository is the one
-      thing the file exists for: the channel. Two options, both a few minutes
-      of work for Marius — switch on GitHub's private vulnerability reporting
-      for `trefaro/trefaro`, or name an address somebody reads. Pick one, and
-      the file follows.
-- [ ] **The proxy's body limit and the application's are held together by a
-      comment.** Found by the security review of AP 9 (point B2):
-      `client_max_body_size 25m` in `infra/nginx/trefaro-locations.conf` is
-      deliberately above `MAX_SUBMISSION_BYTES` (20 MB), so that a body too
-      large is refused by the application with its own sentence rather than by
-      nginx with a page nobody wrote. Both numbers are right today; nothing
-      catches the day one moves. A mechanical check needs either a test that
-      reads an infrastructure file from inside the server project — which Nx's
-      cache would then wrongly consider fresh when only `infra/` changed — or a
-      25 MB upload against the real proxy in `apps/stack-e2e`. The second is
-      the honest one and costs a fixture with a file field; worth doing if the
-      pair ever has to move.
 - [x] **The health endpoint talks to the database itself.** Found by the
       security review of AP 9 (point E2): `core/health/health.controller.ts`
       injects the `DataSource` and runs `SELECT 1`. Not a rule violation — the
@@ -1827,73 +1935,6 @@ entry, the answer is noted below rather than repeated.
       load test would have measured the limiter. It is `GLOBAL_REQUESTS_PER_MINUTE`
       now, with the same default and the same loud line when raised (E60), and
       the run refuses to call itself a measurement if a single 429 came back.
-- [ ] **The load test froze for forty-four seconds and nobody knows why.**
-      AP 10 measured the participant overview at 20 000 registrations with
-      twenty concurrent readers: half the answers in 73 ms, p95 at 106 ms — and
-      then, in three of four full runs, **23 of 1 146** requests stood still for
-      about forty-four seconds, all at the same moment, after which the run
-      carried on and the next scenario was flawless. Ruled out, each by looking:
-      no long-running statement in `pg_stat_activity`, no exhausted or leaked
-      connection (the pool was healthy before and after), no error and no 5xx in
-      the instance's own report, no memory growth, not the seed's debt (a
-      `VACUUM (ANALYZE)` after the bulk insert changes nothing), not the
-      driver's connection pool (it has its own per scenario now), and no
-      scheduled job at that time — the only two run every twelve hours. And the
-      same scenario run **on its own** is clean: 4 046 requests, worst case
-      115 ms. What is left is a freeze of the whole request path that resolves
-      itself, on a WSL2 development machine that was also building images. It
-      cannot be pinned on this application with what is in hand, and it cannot
-      be pinned on the host without evidence either. **The number that settles
-      it is a run on a real Linux server** — `tools/load-test/measure.sh` needs
-      nothing but Docker — and the first thing to look at there is the count
-      `load.mjs` now prints beside the answers: how many requests took longer
-      than a second. A server that is slow under load makes many of them slow;
-      a machine that hiccups makes one round of them slow.
-
-- [ ] **The catalogue is the slowest public answer, and a 304 costs as much as
-      a 200.** Measured in AP 10: `GET /api/i18n/:locale` answers 293 times a
-      second where `/api/config` answers 1 542 times — a factor of five, and it
-      is the second request **every** client makes on startup. The reason is
-      visible in `CatalogueService.resolve`: 1 288 keys are assembled per
-      request out of the English file, the language's file and the overrides,
-      and then hashed. The ETag is there and works (E22 needs the revalidation,
-      so a long `max-age` is not the answer), but it saves the **wire** and not
-      the **work**: the tag only exists once the catalogue has been built, so a
-      304 costs the server what a 200 costs. For one organization's instance
-      293 a second is far past enough, which is why this is a note and not a
-      task. If it ever matters, the shape of the fix is an identity that can be
-      computed without building the payload — the shipped file's own identity
-      plus the newest `updated_at` among that language's overrides — and the
-      risk in it is that a wrong identity serves yesterday's words, which is
-      exactly the feature E22 exists for.
-
-- [ ] **A fault mark reaches nobody's screen.** AP 10 gives every 5xx an
-      eight-character mark, in the answer and in the log line, so a person can
-      read it out and an operator can find the one entry with the stack in it
-      (F232). What is missing is the first half in practice: the organizer
-      client renders a failed request at some thirty places, each with its own
-      markup around `problem()`, so there is no one piece to add a line to.
-      Somebody who hits a fault today has to open the developer tools to find
-      the mark. The prerequisite is a shared problem banner — a component the
-      thirty pages use instead of their own three lines — and that is a change
-      of its own shape, worth doing when a screen is being worked on anyway
-      rather than as a package of one-line edits to thirty files. Until then
-      `docs/INSTALL.md` §12.2 tells an operator where to look.
-- [ ] **Nothing in this repository assembles the module graph.** AP 10 found
-      two dependency-injection defects in one package, and neither was found by
-      a test: a default parameter value that Nest does not care about (it reads
-      the emitted type, finds `Function`, and refuses to build the container),
-      and a port that was bound but not exported. Both showed up as a container
-      that would not start, and both error messages named the _consumer_ rather
-      than the file at fault. Two guards now cover those two shapes
-      (`operations.module.spec.ts`, `data-access.module.spec.ts`) — the class
-      of defect is not covered. What would cover it is compiling `AppModule`
-      itself, and that needs either a database or an override for every
-      repository; the deep-import trap of `docs/rules/tooling-traps.md` is the
-      other half of why nobody has. Worth deciding once, with the cost of the
-      overrides in front of it.
-- [ ] **socket.io shared adapter** — only if more than one server container is
-      ever run. Not needed for one instance per organization.
 - [x] **Mail against the pilot partner's real SMTP server.** AP 4 proves the
       double opt-in against Mailpit, in unit tests, in the API contract suite and
       in three browsers — but Mailpit accepts everything. What it cannot show:
@@ -1954,7 +1995,7 @@ entry, the answer is noted below rather than repeated.
       at all when `information_schema` shows a path column the sweep does not
       know — otherwise the first module that stores a file has all of its files
       called forgotten, and somebody deletes them.
-- [ ] **Two participant-client specs race under eight workers.** In the full
+- [x] **Two participant-client specs race under eight workers.** In the full
       local run of 04.09.2026 (`nx run-many -t e2e --parallel=1`, Playwright's
       own default of eight workers) `content-translations.spec.ts` did not find
       the German heading it had seeded and the browser newsletter suite did not
@@ -1991,6 +2032,11 @@ entry, the answer is noted below rather than repeated.
       (F182) — filled it, and the navigation threw it away; the submit landed
       on the empty form of the series page. A `toHaveURL` on the series page
       before the locator; the rule is in `docs/rules/e2e-tests.md`.
+      **Both halves are closed, and AP 14 is only ticking the box.** The entry
+      says so itself two paragraphs up — the translations half in AP 5 of phase
+      5, the newsletter half in AP 6 — and nobody went back to the checkbox.
+      Counted here because that is what a closure package is for: an open box
+      on a finished thing is the same lie as a ticked box on an unfinished one.
 - [x] **The three e2e projects share one server's rate limits.** CI runs them
       with `--parallel=1` against a single instance, so every limit that counts
       per client address is a budget for the whole run: sixty public
@@ -2104,18 +2150,6 @@ entry, the answer is noted below rather than repeated.
       generated `.env` — and a `playwright.config.*` silently earns an `e2e`
       target from the Nx plugin, which would have swept this project into the
       existing `e2e` job.
-- [ ] **`tools/secure-mail/verify.sh` runs nowhere but on a laptop.** AP 3 of
-      phase 5 built the mail server that refuses anonymous and unencrypted
-      submission, and the script that proves this application gets through it
-      (E62). It was run locally and it passes — but nothing runs it again, and
-      a check nobody runs is a promise nobody keeps: the next person who adds
-      `rejectUnauthorized: false` to solve a certificate problem would be
-      caught by the unit test and not by this. The shape is obvious, because
-      AP 1 built it for the other script: a job beside `stack` in
-      `.github/workflows/ci.yml`, checkout, `npm ci`, `tools/secure-mail/verify.sh`,
-      maybe four minutes. It was **not** added in AP 3 for one reason: a CI job
-      cannot be verified without pushing, and "green in CI" means somebody read
-      the end of a run. Add it when the next push happens and read that run.
 - [x] **Usability test with Democracy International**: the thesis' seven tasks
       repeated, plus the use cases it never tested.
       **Prepared in AP 13 of phase 5 and moved to _On a device — waiting for
@@ -2166,24 +2200,114 @@ entry, the answer is noted below rather than repeated.
       used to be, and a one-to-one conversation whose **both** members have
       erased their accounts is removed, since nobody can open it any more.
 
-- [ ] **A `select` profile question whose choices shrink leaves answers behind
-      that are no longer offered.** The same situation as a deleted question
-      (F34) and deliberately not refused — but nothing tells the organizer that
-      four people answered "Bonn" before "Bonn" was removed from the list. Still
-      open, and now only for the **organizer**: that is where the information is
-      missing, and the participant search of AP 5 turned out to be the wrong
-      place to put it. Its profile view shows an answer to a question that is
-      still asked whatever the option list now says — so a shrunk `select` is
-      visible there — but it deliberately does **not** show answers whose
-      question is gone under their bare key (F150): the organizer's panel is an
-      audit of a form, a participant is reading a person, and `local-group:
-Bonn` is diagnostics rather than a fact about anybody.
-      **Moved to _Checkable after phase 5_ in AP 13 of phase 3.** What is
-      missing is a sentence on the organizer's editor, and a sentence needs a
-      number to put in it — how many people answered with the option about to
-      disappear — which is a read nothing has today. Usability work with a
-      query behind it, so it belongs with the usability round rather than in a
-      closure package.
+---
+
+## After v1.0 — looked at, understood, and deliberately not built
+
+Neither gaps nor deferred verification: work that was understood well enough to
+do and **not done**, because what would make it worth doing has not happened
+yet. Every entry here was weighed in a work package of phase 5 and left with a
+reason; none of them is waiting for a milestone, and none of them blocks the
+tag.
+
+They are written down rather than struck, because a struck entry takes its
+reasoning with it and the next person starts the thinking from the beginning.
+Collected in AP 14 of phase 5, when the phase lists ran out and these had
+nowhere left to stand.
+
+- [ ] **A shared link into the participant client does not carry its language.**
+      The reader's language lives in `localStorage` (AP 6), so a link somebody
+      sends shows the recipient's language rather than the sender's. That is
+      arguably right, and it is also not a decision anybody made. If it should
+      be shareable, the client route needs its own parameter — the API already
+      has one (`?locale=`, F94) — and the two must agree about which wins.
+      **Moved to _After v1.0_ in AP 14.** Nothing is wrong today: a link shows
+      the recipient their own language, which is the defensible answer and
+      arguably the right one. What is missing is the decision, and a decision
+      that costs a route parameter plus a precedence rule against `?locale=` is
+      a package rather than a correction.
+
+- [ ] **The proxy's body limit and the application's are held together by a
+      comment.** Found by the security review of AP 9 (point B2):
+      `client_max_body_size 25m` in `infra/nginx/trefaro-locations.conf` is
+      deliberately above `MAX_SUBMISSION_BYTES` (20 MB), so that a body too
+      large is refused by the application with its own sentence rather than by
+      nginx with a page nobody wrote. Both numbers are right today; nothing
+      catches the day one moves. A mechanical check needs either a test that
+      reads an infrastructure file from inside the server project — which Nx's
+      cache would then wrongly consider fresh when only `infra/` changed — or a
+      25 MB upload against the real proxy in `apps/stack-e2e`. The second is
+      the honest one and costs a fixture with a file field; worth doing if the
+      pair ever has to move.
+      **Moved to _After v1.0_ in AP 14.** Both numbers are right today and the
+      comment that holds them together is read by whoever moves one. The honest
+      check costs a 25 MB upload against the real proxy in `apps/stack-e2e`;
+      worth paying the day the pair has to move, and not before.
+
+- [ ] **The catalogue is the slowest public answer, and a 304 costs as much as
+      a 200.** Measured in AP 10: `GET /api/i18n/:locale` answers 293 times a
+      second where `/api/config` answers 1 542 times — a factor of five, and it
+      is the second request **every** client makes on startup. The reason is
+      visible in `CatalogueService.resolve`: 1 288 keys are assembled per
+      request out of the English file, the language's file and the overrides,
+      and then hashed. The ETag is there and works (E22 needs the revalidation,
+      so a long `max-age` is not the answer), but it saves the **wire** and not
+      the **work**: the tag only exists once the catalogue has been built, so a
+      304 costs the server what a 200 costs. For one organization's instance
+      293 a second is far past enough, which is why this is a note and not a
+      task. If it ever matters, the shape of the fix is an identity that can be
+      computed without building the payload — the shipped file's own identity
+      plus the newest `updated_at` among that language's overrides — and the
+      risk in it is that a wrong identity serves yesterday's words, which is
+      exactly the feature E22 exists for.
+      **Moved to _After v1.0_ in AP 14**, and the entry already called itself a
+      note rather than a task. 293 answers a second is far past enough for one
+      organization's instance, and the fix carries the one risk E22 exists to
+      prevent — an identity computed without building the payload can serve
+      yesterday's words.
+
+- [ ] **A fault mark reaches nobody's screen.** AP 10 gives every 5xx an
+      eight-character mark, in the answer and in the log line, so a person can
+      read it out and an operator can find the one entry with the stack in it
+      (F232). What is missing is the first half in practice: the organizer
+      client renders a failed request at some thirty places, each with its own
+      markup around `problem()`, so there is no one piece to add a line to.
+      Somebody who hits a fault today has to open the developer tools to find
+      the mark. The prerequisite is a shared problem banner — a component the
+      thirty pages use instead of their own three lines — and that is a change
+      of its own shape, worth doing when a screen is being worked on anyway
+      rather than as a package of one-line edits to thirty files. Until then
+      `docs/INSTALL.md` §12.2 tells an operator where to look.
+      **Moved to _After v1.0_ in AP 14.** The mark exists and is findable; what
+      is missing is a shared problem banner, and thirty one-line edits across
+      thirty screens is the shape of change that goes wrong quietly. It belongs
+      to the first package that works on those screens anyway.
+
+- [ ] **Nothing in this repository assembles the module graph.** AP 10 found
+      two dependency-injection defects in one package, and neither was found by
+      a test: a default parameter value that Nest does not care about (it reads
+      the emitted type, finds `Function`, and refuses to build the container),
+      and a port that was bound but not exported. Both showed up as a container
+      that would not start, and both error messages named the _consumer_ rather
+      than the file at fault. Two guards now cover those two shapes
+      (`operations.module.spec.ts`, `data-access.module.spec.ts`) — the class
+      of defect is not covered. What would cover it is compiling `AppModule`
+      itself, and that needs either a database or an override for every
+      repository; the deep-import trap of `docs/rules/tooling-traps.md` is the
+      other half of why nobody has. Worth deciding once, with the cost of the
+      overrides in front of it.
+      **Moved to _After v1.0_ in AP 14.** Two guards cover the two shapes that
+      actually bit; the class is open. Compiling `AppModule` needs a database
+      or an override per repository, and that cost has to be put on a table
+      next to what it buys — which is a decision, not a task.
+
+- [ ] **socket.io shared adapter** — only if more than one server container is
+      ever run. Not needed for one instance per organization.
+      **Moved to _After v1.0_ in AP 14**, unchanged in substance: one instance
+      per organization is an architectural decision of the thesis, not a stage,
+      so this entry has no trigger in v1.0 at all. It stays written down
+      because the day somebody runs two server containers, the missing adapter
+      is the first thing that breaks and the last thing anybody suspects.
 
 ---
 

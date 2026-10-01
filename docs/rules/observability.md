@@ -88,8 +88,9 @@ nach dem gefragt wird, und ein Zähler, der ihn überlebt, verdeckt ihn.
 
 Ein Lasttest gegen eine Instanz mit den ausgelieferten Grenzen misst die
 Drosselung: `GLOBAL_REQUESTS_PER_MINUTE` liegt bei **300**, also fünf pro
-Sekunde. Seit AP 10 ist auch diese sechste Grenze Konfiguration — die fünf
-anderen wurden es in AP 2 — und der Weg ist derselbe: **in eine `.env`, nie in
+Sekunde. Seit AP 10 ist auch diese Grenze Konfiguration — fünf wurden es in
+AP 2, die für Rücksetz-Links in AP 4, und **sieben** sind es zusammen
+(`RATE_LIMIT_DEFAULTS`) — und der Weg ist derselbe: **in eine `.env`, nie in
 eine Zeile Code** (E60). `tools/load-test/load.mjs` bricht mit Rückgabewert `3`
 ab, sobald auch nur eine 429 kommt, statt eine Zahl der Drosselung als Messwert
 auszugeben.

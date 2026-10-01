@@ -34,6 +34,7 @@ werden müssen:
 | Diagramme der Thesis                                      | `docs/thesis/`                                                                                         |
 | **Regeln, die man beim Bauen braucht**                    | **`docs/rules/`** (Index in `docs/rules/README.md`)                                                    |
 | Wie jemand mitmacht — und was vor v1.0 gilt               | **`CONTRIBUTING.md`** (englisch, weil nach außen adressiert)                                           |
+| Worauf v1.0 sich stützt und was offen bleibt              | **`docs/RELEASE-v1.0.md`** (AP 14 der Phase 5; der Tag selbst ist Marius' Schritt, E71)                |
 
 `docs/rules/` ist das Destillat: dreizehn Dateien, je eine pro Bereich —
 Schichten und Ports, Verträge der Endpunkte, Datenmodell, Mail, i18n,
@@ -63,8 +64,12 @@ Regel steht in `docs/rules/README.md`.
 - **Mit Marius auf Englisch kommunizieren** (so von ihm festgelegt am
   03.09.2026 — vorher war es Deutsch). Code, Bezeichner, Kommentare und
   Commit-Messages waren und bleiben **Englisch**; die Dokumentation dieses
-  Repositories bleibt **Deutsch**, denn sie gehört zur Thesis
-  (`docs/`, `todo.md` und dieses Dokument).
+  Repositories ist **Deutsch**, denn sie gehört zur Thesis (`docs/` und dieses
+  Dokument). **Vier Ausnahmen, in AP 14 der Phase 5 gemessen statt geglaubt:**
+  `README.md`, `docs/INSTALL.md` und `CONTRIBUTING.md` sind englisch, weil sie
+  nach außen adressiert sind — und `todo.md` sowie `docs/spikes/` sind es,
+  weil sie es immer waren. Beide sind Aufzeichnungen, und eine Aufzeichnung
+  wird nicht nachträglich übersetzt.
 - **Conventional Commits** (`feat:`, `fix:`, `docs:`, `chore:`, …).
 - Jedes Feature mit Unit-Tests; E2E mit Playwright.
 - Lizenz: **AGPL-3.0-or-later**. Keine Abhängigkeiten mit inkompatiblen Lizenzen.
@@ -203,32 +208,38 @@ P1/P2/P3-Tabellen im Plan-Dokument.
    Dinge, beide benannt: eine Zeile der Gerätematrix (eine Kamera am Einlass)
    und ein Flackern in der Veranstaltersuite, das seit AP 10 einen Testnamen
    hat.
-5. **Läuft seit dem 14.09.2026:** Härtung, Usability-Test mit Democracy
-   International (Pilotpartner), Doku, Release v1.0 → `docs/PHASE5.md` —
-   vierzehn Pakete, **M13–M16**, E60–E71, F203 ff., und jeder der
-   zweiunddreißig Einträge aus `todo.md` unter _Checkable after phase 5_ ist
-   einem Paket zugeordnet. **Freigegeben wird Paket für Paket** (AP 1 bis AP 13
-   sind erledigt, **M13 und M14 sind erreicht**; der Stand je Paket steht unter
-   _Fortschritt_). **v1.0 taggt Marius, nicht ein Paket** (E71).
+5. **✅ 01.10.2026, M16** Härtung, Gestaltung, Doku, Vorbereitung des
+   Usability-Tests, Release-Feststellung → `docs/PHASE5.md` — vierzehn Pakete,
+   je eines mit einem Abschnitt unter _Fortschritt_, dazu ein phasenweites _Was
+   anders lief_. **M13 bis M16 sind erreicht.** E60–E71 sind in AP 14 gegen die
+   Umsetzung geprüft (zwölf von zwölf halten, zwei davon mechanisch), der
+   Abschnitt _Checkable after phase 5_ in `todo.md` ist durchgearbeitet und
+   geschlossen, und **worauf v1.0 sich stützt, steht in
+   `docs/RELEASE-v1.0.md`**. Offen bleiben die Dinge, die einen Menschen oder
+   Hardware brauchen — darunter der Usability-Test selbst, der vorbereitet und
+   nicht gehalten ist. **v1.0 taggt Marius, nicht ein Paket** (E71); vor dem
+   Tag stehen drei Schritte in der Feststellung.
 
 **Der Stand in Zahlen:** Entscheidungen **E1–E71** vergeben (E46–E59 in Phase 4,
-in AP 10 gegen die Umsetzung geprüft; E60–E71 im Plan der Phase 5, ihre Prüfung
-gegen die Umsetzung steht in AP 14 aus); Nachträge **F1–F245** stehen vollständig
+in AP 10 gegen die Umsetzung geprüft; E60–E71 in Phase 5, in AP 14 gegen die
+Umsetzung geprüft); Nachträge **F1–F247** stehen vollständig
 im Referenzdokument (F62 und F129–F131 bleiben unvergeben; F203–F205 kamen in
 AP 2 der Phase 5 dazu, F206–F208 in AP 3, F209–F211 in AP 4, F212–F214 in
 AP 5, F215–F218 in AP 6, F219–F222 in AP 7, F223–F226 in AP 8, F227–F231 in
-AP 9, F232–F234 in AP 10, F235–F237 in AP 11, F238–F240 in AP 12, F241–F245 in AP 13); Katalog **1289**
+AP 9, F232–F234 in AP 10, F235–F237 in AP 11, F238–F240 in AP 12, F241–F245 in AP 13, F246 und F247 in AP 14); Katalog **1289**
 Schlüssel. Was in einem Paket tatsächlich passierte, steht im Phasenprotokoll,
 und was man beim Bauen daraus braucht, in `docs/rules/` — **hier nicht noch
 einmal.**
 
-**Wo die offenen Punkte liegen:** in `todo.md`, nach Phase gruppiert und nach
-jeder Phase durchgegangen. Zwei Abschnitte braucht man öfter als die anderen —
-_On a device — waiting for Marius_ (was einen Produktionsbuild und echte Geräte
-braucht, darunter die Gerätematrix aus Spike 3, von der F7 abhängt) und
-_Questions for the pilot partner_ (was in diesem Repository niemand entscheiden
-kann). Was zu einer späteren Phase gehört, steht in deren Abschnitt, nicht in
-der Liste oben.
+**Wo die offenen Punkte liegen:** in `todo.md`. Die Phasenabschnitte sind seit
+AP 14 der Phase 5 alle durchgearbeitet; offen ist, was keiner Phase gehört, und
+das sind seitdem **drei** Abschnitte — _On a device — waiting for Marius_ (was
+einen Produktionsbuild, echte Geräte oder einen echten Server braucht, darunter
+die Gerätematrix aus Spike 3, von der F7 abhängt), _Questions for the pilot
+partner_ (was in diesem Repository niemand entscheiden kann) und _After v1.0_
+(angesehen, verstanden und mit Begründung nicht gebaut). Dazu _Known gaps_ für
+das, was heute fehlen würde. **Eine neue Lücke kommt in den passenden dieser
+vier Abschnitte, nicht in eine Phasenliste** — es gibt keine nächste Phase mehr.
 
 ## Betriebskontext
 

@@ -1,10 +1,17 @@
 # Phase 5 — Härtung, Gestaltung und Release v1.0
 
-**Status: Plan vom 14.09.2026 — von Marius noch nicht freigegeben.** Alles über
-dem Abschnitt _Fortschritt_ ist der **Plan** und wird nicht rückwirkend
-korrigiert; was tatsächlich passiert — samt Abweichungen — kommt unten dazu, wie
-in [`PHASE1.md`](PHASE1.md), [`PHASE2.md`](PHASE2.md), [`PHASE3.md`](PHASE3.md)
-und [`PHASE4.md`](PHASE4.md).
+**Status: abgeschlossen am 01.10.2026 — Meilenstein M16 erreicht** (Plan
+14.09.2026; AP 1 bis AP 4 am 14.09.2026 — **M13** nach AP 3 —, AP 5 am
+15.09.2026, AP 6 am 18.09.2026 — **M14** —, AP 7 bis AP 9 am 21.09.2026 —
+**M15** nach AP 8 —, AP 10 bis AP 12 am 24.09.2026, AP 13 am 30.09.2026 mit
+einem Nachtrag am 01.10.2026, AP 14 am 01.10.2026). Vierzehn
+Pakete, **E60–E71** gegen die Umsetzung geprüft, und die Release-Feststellung
+steht in [`RELEASE-v1.0.md`](RELEASE-v1.0.md). **Der Tag selbst ist Marius'
+Schritt** (E71). Alles über dem Abschnitt _Fortschritt_ ist der **Plan** und
+wird nicht rückwirkend korrigiert; was tatsächlich passierte — samt
+Abweichungen — steht unten, wie in [`PHASE1.md`](PHASE1.md),
+[`PHASE2.md`](PHASE2.md), [`PHASE3.md`](PHASE3.md) und
+[`PHASE4.md`](PHASE4.md).
 
 Grundlage: Kapitel 6, Phase 5 in
 [`Anforderungsanalyse_und_Umsetzungsplan.md`](Anforderungsanalyse_und_Umsetzungsplan.md)
@@ -1541,7 +1548,7 @@ wurde — drei Läufe hintereinander rot, allein gefahren grün. Behoben wie in
 **diese** Seite bekommen hat (`page.waitForResponse` vor `goto`), und vergleicht
 nur noch das DOM dagegen. Danach: vier Läufe, der letzte grün mit 266.
 
-### AP 8 — Der Veranstalter-Client bis zur Tablet-Breite (E67) (erledigt, 21.09.2026)
+### AP 8 — Der Veranstalter-Client bis zur Tablet-Breite (E67) (erledigt, 21.09.2026) → **Meilenstein M15**
 
 Dasselbe Vorgehen wie in AP 7 und ein anderer Maßstab: für diesen Client hat
 die Thesis **keine Bögen gezeichnet**, also ist der Maßstab die Benutzbarkeit
@@ -2941,3 +2948,271 @@ kann, ist billiger als die sauberste Ableitung. Die Ableitung war sorgfältig, s
 war als Ableitung gekennzeichnet, und sie war trotzdem zu über der Hälfte falsch.
 **Fragen kostet weniger als ableiten** — und die Frage wäre schon im Paket die
 richtige gewesen, nicht erst danach.
+
+### AP 14 — Abschluss der Phase (E71) (erledigt, 01.10.2026) → **Meilenstein M16**
+
+Das Paket baut nichts. Es prüft, räumt auf und stellt fest — und wo es eine
+Abweichung findet, wird sie protokolliert und nicht nachgebaut, so wie es der
+Plan verlangt. Keine Zeile Code hat sich in diesem Paket geändert, keine
+Migration ist dazugekommen, kein Katalogschlüssel.
+
+Vier Arbeiten: **E60–E71 gegen die Umsetzung**, mechanisch, wo es mechanisch
+geht; **`todo.md` unter _Checkable after phase 5_** durchgearbeitet, jeder Umzug
+mit Grund; **F203 ff.** auf Vollständigkeit; und die **Release-Feststellung**,
+die in [`RELEASE-v1.0.md`](RELEASE-v1.0.md) steht, weil sie nicht einem Paket
+gehört, sondern dem, was Marius davor liest.
+
+#### Die zwölf Entscheidungen gegen die Umsetzung
+
+Jede Zeile nennt, **woran** geprüft wurde — damit die nächste Prüfung dieselbe
+ist und nicht eine ähnliche.
+
+| Nr.     | Geprüft woran                                                                                                                                                                                                                          | Befund                                                                                                                                                                                                                                                                                                                                                         |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **E60** | `core/config/rate-limits.ts`: sieben Werte in `RateLimitEnv`, `RATE_LIMIT_DEFAULTS` gegen die Zahlen, die vorher im Code standen; `rateLimitWarnings()`; `infra/docker-compose.yml` reicht alle sieben durch; `.env.example` nennt sie | **Hält.** 300 / 20 / 60 / 20 / 60 / 5 / 20 — jede Vorgabe ist die Zahl, gegen die die Suiten geschrieben wurden. Eine Anhebung ergibt eine `WARN`-Zeile je Wert, eine Senkung nicht: das ist die Richtung, die sicher bleibt                                                                                                                                   |
+| **E61** | `apps/server/.env.serve-e2e` (nur vom Ziel `server:serve-e2e` gelesen); `RATE_LIMIT_PROFILE` in `infra/docker-compose.yml`                                                                                                             | **Hält, und schärfer als gefordert.** E61 verlangt eine Datei, die der Produktions-Stack nicht kennt — die Compose-Datei reicht die Variable zusätzlich **gar nicht** durch, mit Kommentar. Und `MAILS_PER_RECIPIENT_PER_WINDOW` steht im Profil ausdrücklich auf der ausgelieferten Fünf                                                                      |
+| **E62** | Suche über das ganze Repository nach `rejectUnauthorized`, `NODE_TLS_REJECT_UNAUTHORIZED`, `ignoreHTTPSErrors`; `smtp-mailer.spec.ts`; `data-source.ts`; `main.ts`; `docker-compose.dev.yml` (`mailpit-secure`)                        | **Hält.** Keine Zeile schaltet die Prüfung ab. Der Mailer hat einen Unit-Test, der genau das behauptet; die Datenbankverbindung setzt `rejectUnauthorized: true`; `main.ts` meldet laut, wenn die Umgebung die Prüfung lockert. Die zwei Werkzeugskripte lesen die Variable aus der Umgebung — eine Lockerung in einer `.env`, genau die Form, die E62 erlaubt |
+| **E63** | `docs/INSTALL.md` (SPF, DKIM, DMARC, Absenderdomäne); der Eintrag in `todo.md`                                                                                                                                                         | **Hält.** Vier Punkte als Betreiber-Prüfliste, und die Zustellbarkeit steht nirgends als etwas, das dieses Repository geprüft hätte                                                                                                                                                                                                                            |
+| **E64** | `libs/shared-http/src/lib/api-error.ts`; `libs/shared-models/src/lib/problems/problem.ts`; Suche nach `explained` und `problem.detail` in beiden Clients                                                                               | **Hält.** `Problem = { key, params?, reason }`, `reason = { code, params }`. `detail` und `explained` sind weg — kein Treffer in einem Client                                                                                                                                                                                                                  |
+| **E65** | `business/privacy/privacy.service.ts` und ihr Port; die beiden Einträge in `todo.md`                                                                                                                                                   | **Hält.** `erase()` zählt in einer Zeile, was ging und was stehen blieb — Anmeldungen weg, Gespräche stehend, Newsletter-Einwilligungen weg, Dateien weg — und die Zeile nennt keine Adresse, weil die Adresse das Gelöschte ist                                                                                                                               |
+| **E66** | Jede Datei `*-page.ts` unter `apps/user-client/src/app/` gegen die Mockup-Tabelle aus AP 7 (`comm -23` über beide sortierte Listen)                                                                                                    | **Hält, mechanisch.** Zwanzig Seiten, einundzwanzig Zeilen (die eine mehr ist das Kontaktformular der Event-Seite), **Differenz leer**. Seit AP 7 ist keine Seite dazugekommen, die keine Zeile hätte                                                                                                                                                          |
+| **E67** | `apps/user-client-e2e/playwright.config.mts` (`phone`, 390 × 844) und `apps/admin-client-e2e/playwright.config.mts` (`tablet`, 768 × 1024); die drei Desktop-Projekte bei der Vorgabe 1280                                             | **Hält.** Drei Breiten, und die, für die entworfen wird, ist je Client die, bei der ein eigenes Projekt misst                                                                                                                                                                                                                                                  |
+| **E68** | Dateien mit `@design` bzw. `@layout`; die Kopfkommentare beider Dateien; die Zahl der übersprungenen Tests im Lauf                                                                                                                     | **Hält.** Genau **zwei** markierte Dateien, je eine je Client. Beide sagen im Kopf, dass sie niemanden registrieren, und der Lauf zeigt es von außen: 65 bzw. 84 übersprungene Tests sind die Projekte, die den Filter nicht treffen                                                                                                                           |
+| **E69** | `business/plugin-api/plugin-api-version.ts`; `PluginProgramItem.timezone`                                                                                                                                                              | **Hält.** `PLUGIN_API_VERSION = '1.3.0'`, die Zone am Port, und die Datei sagt selbst, dass danach geschlossen ist                                                                                                                                                                                                                                             |
+| **E70** | Alle Sätze ab 60 Zeichen aus `docs/arc42/*.md` gegen alle Sätze aus `docs/rules/*.md`, dem Referenzdokument, `INSTALL.md` und `CLAUDE.md` (Code-Spannen und Links vorher entfernt)                                                     | **Hält, mechanisch: null identische Sätze.** Und jeder Abschnitt verweist oder ist neu — die zwei ohne Verweis auf ein Regeldokument sind die Laufzeitsicht (fünf Abläufe, die es nirgends gab) und das Glossar (eine Übersetzungstabelle Deutsch → Code)                                                                                                      |
+| **E71** | `git tag`                                                                                                                                                                                                                              | **Hält.** Leer. Dieses Paket stellt fest und taggt nicht                                                                                                                                                                                                                                                                                                       |
+
+Zwölf von zwölf. Das ist kein besonders gutes Zeichen und auch kein schlechtes:
+E60–E71 sind in den Paketen entstanden, die sie umsetzen, und eine Entscheidung,
+die beim Bauen geschrieben wird, hält beim Prüfen meistens. Wertvoll an der
+Prüfung sind die zwei Zeilen, die **mechanisch** sind — E66 und E70 —, denn sie
+sind die einzigen, die auch in einem Jahr noch dasselbe prüfen.
+
+#### `todo.md` unter _Checkable after phase 5_ — durchgearbeitet
+
+Der Abschnitt hatte am Ende **vierundvierzig** Einträge; der Plan nennt oben
+zweiunddreißig, und die Differenz ist nicht gewachsene Arbeit, sondern gefundene:
+zwölf Einträge sind **in** der Phase dazugekommen, die meisten aus AP 9 und
+AP 10, und das sind die Pakete, die ausdrücklich gesucht haben.
+
+- **Achtundzwanzig** waren in der Phase erledigt und abgehakt.
+- **Einer** war erledigt und nicht abgehakt — die zwei rennenden Spezifikationen
+  der Teilnehmersuite, deren eine Hälfte AP 5 und deren andere AP 6 geschlossen
+  hat. Beide Schließungen stehen im Eintrag, das Kästchen stand offen. Genau
+  dafür gibt es ein Abschlusspaket.
+- **Fünfzehn** sind umgezogen, jeder mit seinem Grund im Eintrag selbst: fünf zu
+  _Questions for the pilot partner_, drei zu _Known gaps_, einer zu _On a
+  device_ und sechs in einen neuen Abschnitt, **_After v1.0 — looked at,
+  understood, and deliberately not built_**.
+- **Gestrichen wurde keiner.** Ein gestrichener Eintrag nimmt seine Begründung
+  mit, und der nächste Mensch fängt das Nachdenken von vorn an.
+
+Der neue Abschnitt ist die eigentliche Änderung an der Datei. Bis hierher war
+jeder Eintrag entweder einer Phase zugeordnet, einem Menschen (`On a device`)
+oder dem Pilotpartner — und mit der letzten Phase ging die erste Möglichkeit
+aus. Was dort jetzt steht, ist weder Lücke noch vertagte Prüfung, sondern
+**angesehen, verstanden und bewusst nicht gebaut**: die Sprache in einem
+geteilten Link, die zwei Körpergrenzen von Proxy und Anwendung, der Katalog als
+langsamste öffentliche Antwort, die Fehlerkennung ohne gemeinsames Banner, der
+Modulgraph ohne Zusammenbau und der socket.io-Adapter, der erst ab dem zweiten
+Server-Container existiert.
+
+Zwei Umzüge sind mehr als Buchhaltung:
+
+- **Der Kanal für Sicherheitsmeldungen ist entschieden und nicht eingeschaltet.**
+  AP 13 hat in `CONTRIBUTING.md` GitHubs private vulnerability reporting
+  benannt — die Option, die keine Adresse in einer öffentlichen Datei braucht.
+  Am 01.10.2026 gegen das Repository selbst geprüft: die Einstellung ist
+  **aus**. Das Repository ist öffentlich, die Datei ist es nicht, weil die ganze
+  Phase 5 ungepusht ist — es liest also noch niemand eine Zusage, die nicht
+  gilt. Aber die Reihenfolge ist der Punkt: **die Einstellung geht an, bevor der
+  Push die Datei veröffentlicht.** Steht in der Release-Feststellung, weil es
+  Marius' Schritt ist und keines Pakets.
+- **Der 44-Sekunden-Stillstand des Lasttests zieht zu _On a device_.** Es ist
+  der einzige Eintrag der Phase, dessen Antwort Hardware braucht, die dieses
+  Repository nicht hat: alles, was sich durch Hinsehen ausschließen ließ, ist
+  ausgeschlossen, und übrig bleibt der Unterschied zwischen einem Server und
+  einem Entwicklungslaptop, der nebenher Images gebaut hat.
+
+#### F203 ff. und die Zählung
+
+Mechanisch gezählt: **F1–F245 vollständig**, keine Dublette, und genau die vier
+dokumentierten Lücken (F62, F129–F131). F203–F245 sind dreiundvierzig Nachträge
+in dreizehn Paketen. Anhangspunkt 11 trägt den Abschluss des Vertrags bei 1.3.0,
+wie der Plan es vorgesehen hat.
+
+AP 14 legt **zwei** dazu, beide über Fragen, die vorher niemand gestellt hatte,
+weil sie erst am Ende entstehen: **F246** — wer eine Version feststellt, was in
+die Feststellung gehört und was ein Tag ausdrücklich nicht behauptet — und
+**F247** — wohin ein offener Punkt kommt, wenn es keine nächste Phase mehr gibt.
+Dazu **Anhangspunkt 35**: Kapitel 6 nennt „Release v1.0" als Ergebnis dieser
+Phase und sagt nichts darüber, wer sie ausruft. Das Referenzdokument steht damit
+bei **1.62**, und F1–F247 sind vergeben.
+
+#### Was anders lief
+
+- **Eine Zusage stand in einer Datei, deren Kanal nicht existiert.** Siehe oben.
+  Gefunden, weil die Prüfung nicht beim Text aufgehört hat: `CONTRIBUTING.md`
+  sagt „Security → Report a vulnerability", und die Frage, ob dieser Menüpunkt
+  da ist, beantwortet das Repository und nicht die Datei. **Das ist die Klasse
+  von Fehler, die ein Abschlusspaket finden muss** — eine Dokumentation, die
+  stimmt, solange niemand sie benutzt.
+- **Meilenstein M15 war seit dem 21.09.2026 erreicht und stand nirgends.** Die
+  Meilensteintabelle setzt ihn hinter AP 8, AP 8 ist an jenem Tag fertig
+  geworden — und weder seine Überschrift im Fortschritt noch `CLAUDE.md` sagten
+  es. M13, M14 und M16 tragen ihren Vermerk, M15 hat ihn jetzt auch. Derselbe
+  Fehlertyp wie das Kästchen darunter, und derselbe Grund: wer ein Paket
+  abschließt, schaut auf das Paket und nicht auf die Tabelle daneben.
+- **Ein Kästchen war seit zwei Wochen fällig.** Der Eintrag der zwei rennenden
+  Spezifikationen erzählt seine eigene Schließung in zwei Absätzen und blieb
+  offen. Ein offenes Kästchen an etwas Fertigem ist dieselbe Unwahrheit wie ein
+  Haken an etwas Unfertigem — nur die bequemere.
+- **`docs/rules/decisions.md` trug drei veraltete Stände, und das ist die
+  gefährlichste Datei dafür.** Sie heißt „bestätigte Entscheidungen" und
+  existiert, damit niemand etwas erneut aufrollt — also wird sie gelesen und
+  geglaubt. Darin stand: „die **fünf** Fragen an den Pilotpartner" (es sind
+  einundzwanzig, und sie waren seit Phase 3 mehr), „`CONTRIBUTING.md` wird
+  geschrieben, wenn alle Phasen durch sind" (seit AP 13 geschrieben), und
+  „jede der **fünf** Zahlen kommt aus der Umgebung" — es sind **sieben**, denn
+  AP 4 hat die Grenze für Rücksetz-Links dazugelegt und niemand hat
+  weitergezählt; `docs/rules/observability.md` trug denselben Zählfehler als
+  „sechste Grenze". Beide Dateien nennen jetzt die maßgebliche Liste statt
+  einer Zahl: `RATE_LIMIT_DEFAULTS`. **Eine bestätigte Entscheidung mit
+  veraltetem Stand wird erneut diskutiert** — das ist genau der Schaden, den
+  die Datei verhindern soll.
+- **Die Sprachregel dieses Repositories war an zwei Stellen falsch.**
+  `CLAUDE.md` sagt, die Dokumentation sei deutsch, und nennt dabei `todo.md`
+  ausdrücklich mit — `todo.md` ist durchgehend **englisch**, und zwar seit der
+  ersten Zeile. Ebenso die vier Protokolle unter `docs/spikes/`, die aus Phase 0
+  stammen und älter sind als die Regel. Gemessen statt geglaubt: ein Zähler über
+  Funktionswörter beider Sprachen, über jede Markdown-Datei des Repositories.
+  Die Regel ist jetzt die, die gilt — und die zwei Ausnahmen haben denselben
+  Grund wie ein Phasenprotokoll: **ein Protokoll wird nicht nachträglich
+  übersetzt**, es ist eine Aufzeichnung.
+- **Die Prüfung der zwölf Entscheidungen war zweimal mechanisch und zehnmal
+  gelesen**, und das ist die ehrliche Zahl. E66 (jede Seite hat eine Zeile) und
+  E70 (kein Satz steht zweimal) ließen sich ausrechnen; die anderen zehn sind
+  belegt durch die Stelle, an der sie stehen, und ein Mensch, der sie gelesen
+  hat. Wer sie in einem Jahr erneut prüft, prüft bei zehn von zwölf dasselbe nur
+  ungefähr. Das ist kein Mangel dieses Pakets, sondern die Eigenschaft von
+  Entscheidungen, die über Haltung und nicht über Werte reden — und der Grund,
+  warum die zwei mechanischen die wertvollsten sind.
+
+#### Der Stand nach diesem Paket
+
+`nx run-many -t lint test build --skip-nx-cache` grün über **19 Projekte**
+(1 m 27 s). Unit-Tests unverändert, weil keine Zeile Code sich geändert hat:
+**1461** im Server, **117** in `shared-models`, **17** in `shared-plugin-kit`,
+**244** im Veranstalter-Client und **282** im Nutzer-Client. Katalog **1289**
+Schlüssel.
+
+Browsersuiten mit `--skip-nx-cache` und `--parallel=1`, gegen eine frisch
+hochgefahrene Entwicklungsdatenbank: Veranstaltersuite **330** bei 84
+übersprungenen, Teilnehmersuite **267** bei 65 übersprungenen, EXIT=0 nach
+4 m 17 s. Die übersprungenen Tests sind die beiden Gestaltungsprojekte und ihr
+Filter, also E68 von außen gesehen.
+
+Vertragssuite **44** Suiten und **730** Tests, EXIT=0.
+`tools/shipped-stack/verify.sh` noch einmal gefahren, weil eine
+Release-Feststellung sich nicht auf eine Messung von vor einer Woche stützen
+soll: „the shipped stack is good", **13** Browsertests, **90 s**, keine
+Container übrig, EXIT=0.
+
+`todo.md`: _Checkable after phase 5_ geschlossen, **neunundzwanzig** Einträge
+und keiner mehr offen. Die Datei hat einen Abschnitt mehr und zwei korrigierte
+Einleitungen.
+
+---
+
+## Was anders lief — über die ganze Phase
+
+Je Paket steht es oben; das hier sind die fünf Dinge, die man erst sieht, wenn
+man vierzehn Pakete nebeneinanderlegt.
+
+**Was nur in der Konfiguration lebt, sieht keine Suite — viermal, in vier
+Paketen.** AP 1 ist genau deshalb das erste Paket gewesen, und es hat sich auf
+dem ersten Lauf bezahlt gemacht: der Server startete nicht, weil ein erzeugtes
+`.env` zwei Mailwerte nicht setzte, und vier fehlende Werte sind in Produktion
+keine Warnung, sondern eine Absturzschleife. AP 3 fand, dass der **ausgelieferte**
+Stack gar keine Mail verschicken konnte — `SMTP_PORT=587` neben
+`SMTP_SECURE=true`, eine Kombination, die nur in einer Compose-Datei existierte
+und die deshalb keine Suite je gesehen hat. AP 10 fand zwei
+Verdrahtungsfehler, die beide als Container auftraten, der nicht startet, und
+deren Fehlermeldungen den _Verbraucher_ nannten statt die schuldige Datei. Und
+AP 13 bekam vom strengen Mailserver ein `502 5.5.1 Command not implemented`,
+weil Mailpit kein STARTTLS spricht. Vier Funde, keiner davon durch einen Test
+findbar, drei davon durch den Container-Auftrag aus AP 1 **wiederholbar**. Die
+Lehre der Phase 4 — „wer ‚grün' sagt, hat den Stack hochgefahren" — ist in
+dieser Phase nicht bestätigt worden, sondern bezahlt.
+
+**Eine Messung misst, was sie misst, und nicht, was man wissen wollte.** Dreimal
+in drei Paketen, und jedes Mal war die Zahl richtig und die Frage falsch. AP 7
+fragte „scrollt eine Seite seitwärts?" und bekam schon vor jeder Änderung
+überall Nein — unbenutzbar war die **Quetschung**, die man erst auf dem
+Bildschirmfoto sieht. Dieselbe Messung fand die Profilseite dreimal, weil drei
+Routen hinter dem Anonym-Guard auf sie umleiten, und meldete Überschneidungen
+mit einer festen unteren Leiste, unter der Inhalt definitionsgemäß
+durchscrollt. AP 10 lief ohne `--parallel=1` und bewies damit nichts, ohne es zu
+sagen. Der gemeinsame Nenner ist nicht Schlamperei, sondern Reihenfolge: **die
+Frage wird vor der Messung geprüft, nicht nach ihr** — sonst hat man eine Zahl
+und hält sie für einen Befund.
+
+**Die Lockerung stand jedes Mal in einer `.env`, und kein einziges Mal in einer
+Zeile Code.** E60, E61 und E62 sind drei Formulierungen derselben Regel, und die
+Phase hat sie fünfmal angewendet: die sechs Drosselgrenzen (AP 2), die sechste
+davon für den Lasttest (AP 10), die Pause zwischen zwei Einladungen (AP 3), das
+Zertifikat des strengen Mailservers über `NODE_EXTRA_CA_CERTS` statt über
+`rejectUnauthorized: false` (AP 3) — und zuletzt, in einem Paket, das gar keine
+Software baute, die Demo-Instanz mit `SMTP_REQUIRE_TLS=false` und
+`LOGIN_ATTEMPTS_PER_WINDOW=200` in einer `.env.stack`, die `.gitignore` fernhält
+(AP 13). Das Testprofil hebt vier Zahlen an und **eine ausdrücklich nicht**,
+damit jeder volle Lauf eine echte Grenze anfasst. Die Suche über das ganze
+Repository findet am Ende der Phase keine Zeile, die eine Zertifikatsprüfung
+abschaltet.
+
+**Sieben Mal hat die Phase Nein gesagt und den Grund danebengeschrieben.** Die
+zweite Hälfte von E55 (F236), der Lese-Port für den Datenexport (F237), ein
+Testprojekt für `docs/arc42/` (F240), Textlinks unter 24 Pixeln (F226), ein
+Plug-in im kuratierten Satz vor v1.0 (F242), Pull Requests vor dem Tag (F241) —
+und, in die andere Richtung, die zwei Werkzeuge aus Phase 0, die **nicht**
+weggeworfen, sondern zu Betreiberwerkzeugen erklärt wurden (F244). Sieben Neins
+in vierzehn Paketen, jedes an der Stelle, an der jemand später danach sucht. Das
+ist derselbe Befund wie am Ende der Phase 4, und er ist der Grund, warum
+`todo.md` auch nach dieser Phase nichts verloren hat: **ein begründetes Nein ist
+eine Entscheidung, ein unbegründetes eine Auslassung**, und nur das erste
+überlebt die Person, die es getroffen hat.
+
+**Und das Teuerste, was die Phase gelernt hat, ist keine Regel über Software.**
+AP 13 hat die sieben Aufgaben des Usability-Tests aus dem Use-Case-Diagramm, den
+Mockups und einem überlieferten Zitat **rekonstruiert**, sauber als
+Rekonstruktion gekennzeichnet — und Marius hat die Thesis mit einem Dateikopieren
+danebengelegt, weil `.gitignore` seit jeher einen Platz dafür hatte. Die
+Rekonstruktion war zu über der Hälfte falsch, und schlimmer: die echte Quelle
+trug zwei Dinge, die keine Ableitung je erreicht hätte — welche Aufgabe
+durchgefallen war und dass eine niedrige Bewertung ein Werkzeugartefakt war,
+dessen Verschwinden eine Auswertung als Fortschritt gefeiert hätte. **Außerhalb
+des Repositories ist nicht außerhalb der Reichweite.** Steht als F245 im
+Referenzdokument und als Nachtrag an AP 13; hier steht es, weil es die einzige
+Lehre dieser Phase ist, die nichts mit dem Produkt zu tun hat.
+
+### Die Phase in Zahlen
+
+| Maß                              | Ende Phase 4 | Ende Phase 5 |
+| -------------------------------- | ------------ | ------------ |
+| Projekte                         | 18           | **19**       |
+| Server-Unit-Tests                | 1267         | **1461**     |
+| API-Vertragstests                | 687          | **730**      |
+| Browsertests Veranstalter        | 317          | **330**      |
+| Browsertests Teilnehmende        | 258          | **267**      |
+| Regeldateien unter `docs/rules/` | 12           | **13**       |
+| Katalogschlüssel                 | 1080         | **1289**     |
+| `PLUGIN_API_VERSION`             | 1.2.0        | **1.3.0**    |
+
+Dazu, gegen den letzten Commit der Phase 4 gerechnet: **433 Dateien** geändert,
+**135** davon neu, +30 265 / −2 448 Zeilen. Entscheidungen **E60–E71**,
+Nachträge **F203–F245**, Meilensteine **M13 bis M16**. Neu entstanden sind
+`docs/arc42/` (zwölf Abschnitte), `docs/SECURITY-REVIEW.md`,
+`docs/usability-test/` (fünf Dateien), `CONTRIBUTING.md`,
+`docs/rules/observability.md`, `apps/stack-e2e`, `tools/load-test/`,
+`tools/secure-mail/`, `tools/shipped-stack/` und
+`tools/demo-seed/community.mjs`.

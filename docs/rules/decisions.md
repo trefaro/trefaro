@@ -1,7 +1,11 @@
 # Bestätigte Zuschnitt-Entscheidungen
 
 Acht Entscheidungen sind getroffen und **bestätigt**; der jetzige Zustand _ist_
-die Entscheidung, also nichts davon „auf Verdacht" umsetzen.
+die Entscheidung, also nichts davon „auf Verdacht" umsetzen. Zwei davon tragen
+seit AP 14 der Phase 5 ihren Abschluss — die Zahl der Pilotpartner-Fragen und
+`CONTRIBUTING.md` —, und das ist der Grund, warum diese Datei zu einem
+Phasenabschluss gehört: eine bestätigte Entscheidung, deren Stand veraltet ist,
+wird erneut diskutiert.
 
 Jede davon wurde schon einmal diskutiert; ein erneutes Aufrollen kostet
 Zeit und endet beim gleichen Ergebnis.
@@ -20,12 +24,24 @@ Zeit und endet beim gleichen Ergebnis.
   das, was eine Instanz ausliefert (E61). Dazu kam der **fünfte Zähler je
   Empfängeradresse** (`MAILS_PER_RECIPIENT_PER_WINDOW`, Vorgabe 5) — die
   anderen vier zählen den Aufrufer, und der sucht sich seine Adresse aus.
-- **Die fünf Fragen an den Pilotpartner** (Democracy International) bleiben
-  offen, gesammelt in `todo.md` unter _Questions for the pilot partner_. Sie
-  werden erst an einem weiter entwickelten Stand gestellt (28.08.2026); keine
+  **Insgesamt sind es sieben**, gezählt in AP 14 der Phase 5: dazu die Grenze
+  für Rücksetz-Links (AP 4) und die globale (AP 10, `GLOBAL_REQUESTS_PER_MINUTE`,
+  Vorgabe 300). Die maßgebliche Liste ist `RATE_LIMIT_DEFAULTS` in
+  `apps/server/src/app/core/config/rate-limits.ts` — wer eine Zahl sucht, zählt
+  dort und nicht hier.
+- **Die Fragen an den Pilotpartner** (Democracy International) bleiben offen,
+  gesammelt in `todo.md` unter _Questions for the pilot partner_. Sie werden
+  erst an einem weiter entwickelten Stand gestellt (28.08.2026); keine
   blockiert. Blockiert doch etwas, klärt Marius den einzelnen Punkt vorher.
-- **`CONTRIBUTING.md` wird geschrieben, wenn alle Phasen durch sind** — gegen die
-  fertige v1.0, nicht vorher. Erinnerung steht in `todo.md` unter Phase 5.
+  **Es sind einundzwanzig**, seit AP 14 der Phase 5 die Phasenlisten
+  durchgearbeitet hat — fünf aus dieser Phase sind dazugekommen, weil ihre
+  Antwort niemand in diesem Repository geben kann. Die Zahl stand hier bei fünf
+  und war seit Phase 3 falsch.
+- **`CONTRIBUTING.md` wird gegen die fertige v1.0 geschrieben, nicht vorher** —
+  **erledigt in AP 13 der Phase 5.** Vier Dinge, die vorher nie entschieden
+  waren, stehen jetzt darin: keine Pull Requests vor dem Tag, DCO statt CLA, ein
+  namentlich genannter Maintainer, und dass der kuratierte Plug-in-Satz vor v1.0
+  geschlossen bleibt (F241, F242).
 - **Schriftarten sind ein mitgelieferter Katalog, kein Upload** (E18) — als
   Startpunkt bestätigt; der Upload ist zurückgestellt, nicht verworfen
   (`todo.md`).
