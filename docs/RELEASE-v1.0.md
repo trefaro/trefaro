@@ -133,11 +133,13 @@ die billig zu ändern ist.
 2. **Die Lade des Nutzer-Clients fragt nicht nach `prefers-reduced-motion`.**
    160 ms, in einem Client, der die Medienabfragen dafür schon hat.
 3. **Kein Kanal für Sicherheitsmeldungen** — siehe _Vor dem Tag_.
-4. **`tools/secure-mail/verify.sh` läuft nirgends automatisch.** Das Skript
-   beweist, dass diese Anwendung durch einen Mailserver kommt, der Anmeldung
-   und Verschlüsselung erzwingt (E62). Es ist gelaufen und es besteht — aber
-   ein Auftrag dafür fehlt, und ein Auftrag kann nicht grün heißen, bevor
-   jemand einen Lauf gelesen hat.
+4. **`tools/secure-mail/verify.sh` hat seit dem 01.10.2026 einen Auftrag, und
+   der ist noch nicht auf einem Runner gelaufen.** Das Skript beweist, dass
+   diese Anwendung durch einen Mailserver kommt, der Anmeldung und
+   Verschlüsselung erzwingt (E62). Der Auftrag heißt `secure-mail` und steht
+   zwischen `e2e` und `images`; kalt auf einem Laptop ist er grün. **Grün heißt
+   er erst, wenn jemand den Abschluss eines CI-Laufs gelesen hat** — das ist
+   derselbe Satz, den diese Phase über die CI gelernt hat.
 
 ### 2.4 Ein flackernder Test, mit Namen
 
@@ -178,8 +180,12 @@ beliebig.
    Phase 5 ist unveröffentlicht — Härtung, Gestaltung, arc42, der
    Security-Review, `CONTRIBUTING.md`, das Testbündel. Der erste Push ist
    zugleich der erste CI-Lauf über all das, und **wer „grün" über die CI sagt,
-   hat den Abschluss des Laufs gelesen**. Bei der Gelegenheit gehört der
-   fehlende Auftrag für `tools/secure-mail/verify.sh` dazu (2.3).
+   hat den Abschluss des Laufs gelesen**. Zwei der fünf Aufträge laufen dabei
+   zum ersten Mal auf einem Runner: `stack` (seit AP 1, vier Tage nach dem
+   letzten Push entstanden) und `secure-mail` (seit dem 01.10.2026). Wenn
+   etwas rot wird, dann am ehesten dort — und dann ist es ein Befund und kein
+   Rauschen, denn beide Aufträge gibt es genau für die Fehlerklasse, die keine
+   Suite dieses Repositories sieht.
 3. **Dann erst taggen.** E71: v1.0 wird von einem Menschen getaggt. Dieses
    Paket hat keinen gesetzt — `git tag` ist leer.
 

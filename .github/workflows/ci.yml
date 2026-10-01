@@ -1,11 +1,13 @@
 # Trefaro CI
 #
-# Four jobs, in increasing cost and decreasing frequency of failure:
+# Five jobs, in increasing cost and decreasing frequency of failure:
 #
-#   quality  — format, lint, unit tests and builds for the affected projects
-#   e2e      — both clients in a real browser against a real server and database
-#   images   — the five-container stack's images
-#   stack    — those images actually started together, and a browser on them
+#   quality      — format, lint, unit tests and builds for the affected projects
+#   e2e          — both clients in a real browser against a real server and database
+#   secure-mail  — this application through a mail server that refuses anonymous
+#                  and unencrypted submission
+#   images       — the five-container stack's images
+#   stack        — those images actually started together, and a browser on them
 #
 # The image job exists because phase 0 found two defects that no unit test could
 # have caught: a database driver missing from the server image's dependency list,
@@ -22,6 +24,19 @@
 # This job is the one that brings the five containers up from an empty volume,
 # sets the instance up the way an operator does, and drives a real browser
 # against the result.
+#
+# The secure-mail job exists for the same class of reason, in the one place
+# where every suite in this repository is blind: they all talk to the open
+# Mailpit of the development stack, which accepts anything. That is a fine
+# stand-in for "did a message with a working link leave the server" and a
+# useless one for "can this server authenticate and encrypt" — and the second
+# question is the one an organization's own mail server asks on the first day.
+# What the job guards is E62: the certificate is *named* through
+# `NODE_EXTRA_CA_CERTS`, never trusted blindly, and no line of this source
+# switches the check off. The next person who reaches for
+# `rejectUnauthorized: false` to make a certificate problem go away is caught
+# by a unit test; the person who changes the *deployment* instead is caught
+# here and nowhere else.
 
 name: CI
 
@@ -149,6 +164,31 @@ jobs:
           # Nx redirects Playwright's output here; see the e2e target's `outputs`.
           path: dist/.playwright
           retention-days: 7
+
+  secure-mail:
+    runs-on: ubuntu-latest
+    # Generates a certificate, starts a strict Mailpit, builds the server once
+    # and sends one confirmation mail through it. Short next to `stack`, and
+    # kept separate from `e2e` on purpose: that job's whole point is a mail
+    # server that accepts everything, and a second one beside it would be two
+    # answers to the same question in one place.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+
+      # Certificate and password are generated here and checked in nowhere: a
+      # self-signed key is still a key, and a repository that carries one
+      # teaches the habit this job exists to argue against (E62).
+      - run: tools/secure-mail/verify.sh
+
+      - if: failure()
+        name: What the strict mail server logged
+        run: docker compose -f infra/docker-compose.dev.yml --profile secure-mail logs mailpit-secure
 
   images:
     runs-on: ubuntu-latest

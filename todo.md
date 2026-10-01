@@ -200,6 +200,10 @@ an instance were exposed today.
       maybe four minutes. It was **not** added in AP 3 for one reason: a CI job
       cannot be verified without pushing, and "green in CI" means somebody read
       the end of a run. Add it when the next push happens and read that run.
+      **The job exists since 01.10.2026** — `secure-mail`, between `e2e` and
+      `images`, run cold on a laptop before it was pushed. The box stays open
+      until somebody has read it green on a runner, because that is the whole
+      sentence this entry is about.
       **Moved to _Known gaps_ in AP 14.** A check nobody runs is a promise
       nobody keeps, and this one guards E62 — the rule that no line of code
       switches certificate checking off. It stays unticked for the reason it
