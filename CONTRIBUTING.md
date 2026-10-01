@@ -52,12 +52,10 @@ authentication, uploads, plug-in isolation, the reverse proxy — use GitHub's
 "Report a vulnerability"). It reaches the maintainer without publishing
 anything.
 
-Please include what you did, what happened, and what you expected; a working
-exploit is not needed and is not wanted in the report.
-
-This matters more here than the size of the project suggests. Trefaro is built
-for organizations whose participant lists are sensitive — that is the reason
-there is no multi-tenancy, no analytics and no third-party CDN in it.
+[`SECURITY.md`](SECURITY.md) has the rest: what belongs in a report, which
+versions are supported, what counts as a vulnerability here and what is the
+operator's job instead, and what an organization running an instance has to do
+when a hole is fixed.
 
 ## After v1.0
 

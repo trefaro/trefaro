@@ -21,20 +21,21 @@ Dieses Dokument ist die **Kurzfassung** — nur, was in jeder Sitzung gilt. Die
 Detailregeln stehen bewusst woanders, damit sie nicht bei jedem Start mitgelesen
 werden müssen:
 
-| Frage                                                     | Nachschlagen in                                                                                        |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| **Architektur — wie das Ganze geschnitten ist und warum** | **`docs/arc42/`** (zwölf Abschnitte, Index in `docs/arc42/README.md`; darin der Plug-in-SDK-Leitfaden) |
-| Anforderungen, Use Cases, Prioritäten, DB-Schema, F1–F208 | **`docs/Anforderungsanalyse_und_Umsetzungsplan.md`** (maßgeblich)                                      |
-| Was in einer Phase passierte, E1–E45, _Was anders lief_   | `docs/PHASE1.md`, `docs/PHASE2.md`, `docs/PHASE3.md`, `docs/BOOTSTRAP.md`, `docs/spikes/`              |
-| Phase 4: Pakete, E46–E59, F186–F202, Stand je Paket       | **`docs/PHASE4.md`** (Plan oben, _Fortschritt_ unten)                                                  |
-| Phase 5: Pakete, E60–E71, F203 ff., Stand je Paket        | **`docs/PHASE5.md`** (Plan oben, _Fortschritt_ unten)                                                  |
-| Installation, TLS, Betrieb                                | `docs/INSTALL.md`                                                                                      |
-| Was das Sicherheitsreview ansah und entschied             | **`docs/SECURITY-REVIEW.md`** (Befund und Entscheidung je Punkt, AP 9 der Phase 5)                     |
-| Offene Punkte, bekannte Lücken, Pilotpartner-Fragen       | `todo.md` (nach Phase gruppiert, nach jeder Phase durchgehen)                                          |
-| Diagramme der Thesis                                      | `docs/thesis/`                                                                                         |
-| **Regeln, die man beim Bauen braucht**                    | **`docs/rules/`** (Index in `docs/rules/README.md`)                                                    |
-| Wie jemand mitmacht — und was vor v1.0 gilt               | **`CONTRIBUTING.md`** (englisch, weil nach außen adressiert)                                           |
-| Worauf v1.0 sich stützt und was offen bleibt              | **`docs/RELEASE-v1.0.md`** (AP 14 der Phase 5; der Tag selbst ist Marius' Schritt, E71)                |
+| Frage                                                         | Nachschlagen in                                                                                        |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **Architektur — wie das Ganze geschnitten ist und warum**     | **`docs/arc42/`** (zwölf Abschnitte, Index in `docs/arc42/README.md`; darin der Plug-in-SDK-Leitfaden) |
+| Anforderungen, Use Cases, Prioritäten, DB-Schema, F1–F208     | **`docs/Anforderungsanalyse_und_Umsetzungsplan.md`** (maßgeblich)                                      |
+| Was in einer Phase passierte, E1–E45, _Was anders lief_       | `docs/PHASE1.md`, `docs/PHASE2.md`, `docs/PHASE3.md`, `docs/BOOTSTRAP.md`, `docs/spikes/`              |
+| Phase 4: Pakete, E46–E59, F186–F202, Stand je Paket           | **`docs/PHASE4.md`** (Plan oben, _Fortschritt_ unten)                                                  |
+| Phase 5: Pakete, E60–E71, F203 ff., Stand je Paket            | **`docs/PHASE5.md`** (Plan oben, _Fortschritt_ unten)                                                  |
+| Installation, TLS, Betrieb                                    | `docs/INSTALL.md`                                                                                      |
+| Was das Sicherheitsreview ansah und entschied                 | **`docs/SECURITY-REVIEW.md`** (Befund und Entscheidung je Punkt, AP 9 der Phase 5)                     |
+| Offene Punkte, bekannte Lücken, Pilotpartner-Fragen           | `todo.md` (nach Phase gruppiert, nach jeder Phase durchgehen)                                          |
+| Diagramme der Thesis                                          | `docs/thesis/`                                                                                         |
+| **Regeln, die man beim Bauen braucht**                        | **`docs/rules/`** (Index in `docs/rules/README.md`)                                                    |
+| Wie jemand mitmacht — und was vor v1.0 gilt                   | **`CONTRIBUTING.md`** (englisch, weil nach außen adressiert)                                           |
+| Worauf v1.0 sich stützt und was offen bleibt                  | **`docs/RELEASE-v1.0.md`** (AP 14 der Phase 5; der Tag selbst ist Marius' Schritt, E71)                |
+| Wohin ein Sicherheitsfund geht — und was dem Betreiber gehört | **`SECURITY.md`** (englisch; GitHubs private vulnerability reporting, seit 01.10.2026 eingeschaltet)   |
 
 `docs/rules/` ist das Destillat: dreizehn Dateien, je eine pro Bereich —
 Schichten und Ports, Verträge der Endpunkte, Datenmodell, Mail, i18n,

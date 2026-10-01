@@ -161,7 +161,7 @@ an instance were exposed today.
       set the preference. What kept it out of a package is that phase 5 had no
       package left with that client in it, not that it is hard.
 
-- [ ] **There is no way to report a security hole.** Found by the security
+- [x] **There is no way to report a security hole.** Found by the security
       review of AP 9 (point E3): the repository has a README and a licence and
       no `SECURITY.md`, so somebody who finds a vulnerability has no channel
       but a public issue. The file itself is twenty lines and most of its
@@ -190,6 +190,17 @@ an instance were exposed today.
       `main`, until v1.0 is tagged), what counts as a vulnerability here, and
       that the operator of a self-hosted instance has to be told too. Twenty
       lines, and they follow the channel rather than announcing it.
+      **Written on 01.10.2026, after the channel was open.** `SECURITY.md` says
+      where a report goes and what belongs in it, that `main` is the only
+      supported version until v1.0 is tagged, what counts as a vulnerability
+      here — and, in the other direction, what is the **operator's** job
+      instead (a missing certificate, an open relay, a published database
+      port), with the note that a report about one of those usually means the
+      installation guide is not clear enough, which _is_ this project's
+      problem. It also says the thing a self-hosted application has to say:
+      a fix here reaches nobody until an operator pulls an image, so an
+      advisory names what an operator must do beyond updating.
+      `CONTRIBUTING.md` now points at it instead of carrying a second copy.
 
 - [x] **`tools/secure-mail/verify.sh` runs nowhere but on a laptop.** AP 3 of
       phase 5 built the mail server that refuses anonymous and unencrypted

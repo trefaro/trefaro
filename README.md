@@ -140,6 +140,8 @@ all.
 
 Found something that could expose the data of an instance? Not in an issue —
 use GitHub's private vulnerability reporting on this repository.
+[`SECURITY.md`](SECURITY.md) has the details, including what is the operator's
+job rather than this project's.
 
 ## License
 

@@ -83,6 +83,8 @@ zehn Skripte, die eine Instanz fragen statt eine Annahme zu wiederholen.
   einem Test, der ihn wieder rot machen würde.
 - [`../CONTRIBUTING.md`](../CONTRIBUTING.md) — wie jemand mitmacht und warum
   vor v1.0 kein Code hereinkommt.
+- [`../SECURITY.md`](../SECURITY.md) — wohin ein Fund geht, was hier als Lücke
+  zählt und was stattdessen dem Betreiber gehört.
 - [`usability-test/`](usability-test/) — übergabefähig, aber **nicht
   durchgeführt** (siehe 2.1).
 
@@ -122,7 +124,7 @@ Sitzungen gleichzeitig belegbar bleiben, ob die Kontrastschwelle von 3:1 auf
 passen. **Keine davon ist eine Lücke** — jede ist eine getroffene Entscheidung,
 die billig zu ändern ist.
 
-### 2.3 Bekannte Lücken — drei
+### 2.3 Bekannte Lücken — zwei
 
 1. **Drei 401 auf der öffentlichsten Seite.** Ein anonymer Besucher der
    Event-Seite erzeugt drei abgewiesene Plug-in-Anfragen in seiner Konsole.
@@ -132,12 +134,6 @@ die billig zu ändern ist.
    Fehler.
 2. **Die Lade des Nutzer-Clients fragt nicht nach `prefers-reduced-motion`.**
    160 ms, in einem Client, der die Medienabfragen dafür schon hat.
-3. **Es fehlt eine `SECURITY.md`.** Der Kanal ist seit dem 01.10.2026 offen
-   (siehe _Vor dem Tag_), und `CONTRIBUTING.md` nennt ihn — aber die Datei, die
-   GitHub auf der Sicherheitsseite eines Repositories anzeigt, gibt es nicht.
-   Zwanzig Zeilen, deren Inhalt entschieden ist: eine unterstützte Version (das
-   aktuelle `main`, bis v1.0 getaggt ist), was hier als Lücke zählt, und dass
-   der Betreiber einer selbst gehosteten Instanz ebenfalls erfahren muss.
 
 ### 2.4 Ein flackernder Test, mit Namen
 
@@ -168,9 +164,12 @@ belegt werden muss.
    `CONTRIBUTING.md` sagt einem Finder, er solle GitHubs private vulnerability
    reporting benutzen; am Morgen des 01.10.2026 war die Einstellung **aus**.
    Eingeschaltet und nachgefragt (`{"enabled": true}`), danach erst gepusht.
-   Damit war die Zusage in keiner Sekunde öffentlich und unerfüllt. **Offen
-   bleibt die zwanzigzeilige `SECURITY.md`** — sie ist das, was GitHub auf der
-   Sicherheitsseite anzeigt, und sie folgt dem Kanal, nie umgekehrt.
+   Damit war die Zusage in keiner Sekunde öffentlich und unerfüllt. **Und die
+   Datei dazu steht seit demselben Tag**: `SECURITY.md` — wohin ein Bericht
+   geht, welche Version unterstützt wird (`main`, bis v1.0 getaggt ist), was
+   hier als Lücke zählt und was stattdessen dem Betreiber gehört, und was eine
+   selbst gehostete Anwendung sagen muss: eine Behebung hier erreicht niemanden,
+   bis ein Betreiber ein Image zieht. Sie kam **nach** dem Kanal, nie davor.
 2. **✅ Gepusht und der Lauf gelesen.** `c6512b9..dcf2284`, **achtzehn
    Commits** — die ganze Phase 5 auf einmal: Härtung, Gestaltung, arc42, der
    Security-Review, `CONTRIBUTING.md`, das Testbündel und der neue

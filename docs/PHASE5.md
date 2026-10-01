@@ -3156,10 +3156,21 @@ Ausgabe, weil ein grüner Auftrag, der seine Arbeit überspringt, auch grün ist
   auf den unangemeldeten, die Mail durch die dritte Verbindung — und **keine
   `Smtp`-Warnung** beim Start. Die Stille ist das Ergebnis.
 
-Damit ist der Eintrag unter _Known gaps_ abgehakt, und offen bleibt dort an
-dieser Stelle nur noch die zwanzigzeilige `SECURITY.md`, die dem Kanal folgt und
-ihn nicht ankündigt. **Der Tag ist der einzige Schritt, der noch aussteht**
-(E71).
+**Und dann die Datei, in dieser Reihenfolge und nicht in der bequemen.**
+`SECURITY.md` steht seit demselben Tag: wohin ein Bericht geht und was
+hineingehört, dass `main` die einzige unterstützte Version ist, solange v1.0
+nicht getaggt ist, was hier als Lücke zählt — und, in die andere Richtung, was
+stattdessen **dem Betreiber** gehört (ein fehlendes Zertifikat, ein offenes
+Relay, ein veröffentlichter Datenbankport), mit dem Zusatz, dass ein Bericht
+darüber meist heißt, die Installationsanleitung sei nicht deutlich genug, und
+_das_ ist wieder dieses Projekt. Dazu der Satz, den eine selbst gehostete
+Anwendung schuldet: eine Behebung hier erreicht niemanden, bis ein Betreiber ein
+Image zieht — also sagt eine Veröffentlichung, was ein Betreiber darüber hinaus
+tun muss. `CONTRIBUTING.md` verweist seitdem darauf, statt eine zweite Kopie zu
+tragen, die auseinanderläuft (E70 gilt nicht nur für arc42).
+
+Damit sind beide Einträge unter _Known gaps_ abgehakt, die zu diesem Punkt
+gehörten. **Der Tag ist der einzige Schritt, der noch aussteht** (E71).
 
 ---
 
