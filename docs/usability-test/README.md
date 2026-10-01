@@ -16,6 +16,12 @@ eine Phase an. Was hier liegt, ist deshalb übergabefähig und nicht erledigt.
 | [03-instanz.md](03-instanz.md)                     | Die Instanz: hochfahren, füllen, Zugänge, was an ist und was bewusst nicht |
 | [04-auswertung.md](04-auswertung.md)               | Was nach der letzten Sitzung passiert, und wohin ein Befund geht           |
 
+**Woher die sieben Aufgaben kommen:** wörtlich aus **Anhang H** der Thesis, die
+Bewertungen von 2024 aus **Anhang I**, die Auswertung dazu aus **Kapitel 6**. Die
+Thesis selbst liegt nicht in diesem Repository (Entscheidung vom 26.08.2026) —
+die PDF darf lokal unter `docs/thesis/` liegen, wo `.gitignore` sie fernhält.
+Alles, was dieses Bündel daraus braucht, steht hier; nachschlagen muss niemand.
+
 ## Die Frage, die der Test beantworten soll
 
 Nicht „ist die Anwendung gut". Drei Fragen, in dieser Reihenfolge:

@@ -218,13 +218,14 @@ verification is what eventually gets done by a suite.
       observation sheet, how to set the instance up, and how to evaluate it. The
       demo instance now carries the community half as well, so the participant
       search, the chat and the five plug-ins have something to find.
-      **One thing to check before the first session:** the thesis is
-      deliberately not in this repository (26.08.2026), so only task 4 is
-      recorded verbatim and the other six are reconstructed from the use-case
-      diagram, the mockups and the one documented correction. Whether they match
-      the wording of 2024 decides whether the 1–4 scale is comparable with 2024,
-      which is the whole reason for repeating them — five minutes with chapter 6
-      settles it (F245).
+      **Nothing left to check before the first session.** The thesis was put
+      on the machine on 01.10.2026 (gitignored, as `docs/thesis/*.pdf` always
+      was), so the seven tasks are now verbatim from appendix H, the 2024
+      ratings per expert are in the evaluation from appendix I, and two things
+      came out of chapter 6 that no reconstruction would have found: task 3's
+      lower score was a mockup artefact rather than a design problem, and
+      **task 4 was the only one that failed** (2.33) — the row that decides
+      whether the one correction of 2024 was enough (F245).
       The answer to the closing question — _would you run your next event series
       on it, and what would have to be there first?_ — is the result. It goes
       into this file, by hand and with a reason, like everything else.

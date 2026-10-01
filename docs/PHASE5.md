@@ -2880,3 +2880,64 @@ _On a device — waiting for Marius_ gezogen, und ein neuer steht unter _Known
 gaps_. `CONTRIBUTING.md` hat eine Zeile in der Wissenstabelle von `CLAUDE.md`
 bekommen und eine in den Konventionen, weil „vor v1.0 keine Pull Requests" eine
 Regel ist, die in jeder Sitzung gilt.
+
+#### Nachtrag, 01.10.2026 — die Thesis lag plötzlich daneben
+
+Das Paket war abgeschlossen, als Marius fragte, ob er die Thesis nicht einfach
+hinlegen könne. Konnte er: `.gitignore` führt `docs/thesis/*.pdf`, seit es den
+Ordner gibt — die Entscheidung vom 26.08.2026 hält die PDF aus dem
+**Repository** heraus, nicht von der Platte. Eine Datei später war die Lücke
+geschlossen, um die das Skript noch am Vortag gebeten hatte.
+
+**Die Rekonstruktion war falsch, und nicht nur im Wortlaut.** Die Thesis testete
+**vier** Aufgaben aus Veranstaltersicht und drei aus Teilnehmendensicht; abgeleitet
+hatte ich drei und vier. „Kontaktieren Sie den Veranstalter" ist **Aufgabe 7** und
+nicht Aufgabe 4 — die Zeile im Referenzdokument, auf die ich mich gestützt hatte,
+beschreibt die _Situation_ der vierten Aufgabe und nicht ihren Text. Von den
+sieben hätte die Ableitung ungefähr drei getroffen.
+
+Jetzt stehen alle sieben **wörtlich aus Anhang H** im Skript, jede zweimal: die
+Formulierung von 2024 für das Protokoll und dieselbe Aufgabe an dieser Instanz,
+weil die Mockups ein „Global Forum 2024" zeigten und die Demo-Instanz andere
+Hauptwörter hat. Die Handlung ist identisch, und nur darauf kommt es an. Die
+Bewertungen je Fachperson aus **Anhang I** stehen in der Auswertungstabelle, mit
+den Mittelwerten daneben. Zwei Aufgaben, die in Teil A keinen Platz mehr hatten,
+sind nach Teil B gezogen (das Einladen Ehemaliger und die Anmeldung zu einem
+einzelnen Programmpunkt) — die Rotation ist entsprechend neu.
+
+**Drei Dinge hat Kapitel 6 geliefert, die keine Ableitung je gefunden hätte:**
+
+- **Aufgabe 4 ist mit 2,33 die einzige durchgefallene** (3 · 2 · 2), und das
+  Feedback aller drei sagt dasselbe: sie haben in der Teilnehmerübersicht
+  gesucht, obwohl die gesuchte Person als Interessentin unter den Nachrichten
+  stand. Daraus kam die Korrektur, die dieses Repository seit Phase 1 kennt.
+  **Damit hat der Test eine Zeile, an der er sich entscheidet:** bleibt A4 unter
+  4, hat die eine Änderung aus 2024 nicht gereicht. Das steht jetzt so in der
+  Aufgabe und in der Auswertung.
+- **Die 3 bei Aufgabe 3 war ein Werkzeugartefakt**, kein Entwurfsproblem: _„Das
+  Event habe ich angelegt, es ist aber nirgendwo sichtbar"_ — Mockups speichern
+  nicht. Eine 4 ist dort also der Wegfall eines Artefakts und **kein**
+  Fortschritt. Ohne die Thesis hätte die Auswertung genau diesen falschen Erfolg
+  gefeiert.
+- **Kapitel 6 endet mit dem Auftrag für diesen Test**: vor einer tatsächlichen
+  Umsetzung sollten „in einem weiteren Usability-Test die noch nicht evaluierten
+  bzw. in den Mockups noch nicht berücksichtigten Use Cases bewertet werden".
+  Teil B war die richtige Idee aus dem falschen Grund — jetzt steht der Satz
+  darüber, der ihn begründet.
+
+Übernommen wurde ausschließlich das: Aufgabentexte, Bewertungen, die Auswertung
+dazu. **Das Interviewmaterial über eine reale Organisation bleibt draußen**, auch
+nebenbei.
+
+Geändert: `docs/usability-test/` (Teil A ganz neu, Teil B um zwei Aufgaben und
+eine Rotation, Bogen und Auswertung um die Zahlen von 2024), **F245** neu
+geschrieben, die Belegstelle in Kapitel 2 des Referenzdokuments geschärft
+(Version **1.61**), eine Zeile in `docs/thesis/README.md`, und der Hinweis in
+`todo.md`, dass vor der ersten Sitzung noch etwas zu prüfen sei, ist weg — es
+ist geprüft.
+
+**Was hängen bleibt:** eine Quelle, die ein Mensch in zwei Minuten danebenlegen
+kann, ist billiger als die sauberste Ableitung. Die Ableitung war sorgfältig, sie
+war als Ableitung gekennzeichnet, und sie war trotzdem zu über der Hälfte falsch.
+**Fragen kostet weniger als ableiten** — und die Frage wäre schon im Paket die
+richtige gewesen, nicht erst danach.

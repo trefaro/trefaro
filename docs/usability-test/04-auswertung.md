@@ -11,23 +11,47 @@ Erinnerung, die sie ergänzt, hält etwa eine Woche.
 ### 1. Die Zahlen nebeneinanderlegen
 
 Eine Tabelle, sieben Zeilen, so viele Spalten wie Sitzungen — nur für **Teil A**,
-weil nur er vergleichbar ist:
+weil nur er vergleichbar ist. Die Spalte von 2024 steht hier schon, aus Anhang I
+der Thesis:
 
-| Aufgabe | 2024 (Mockups, 3 Fachleute) | P1  | P2  | P3  | P4  | Schnitt |
-| ------- | --------------------------- | --- | --- | --- | --- | ------- |
-| A1 …    | 4                           |     |     |     |     |         |
+| Aufgabe                                 | 2024 (E1 · E2 · E3) | Ø 2024   | P1  | P2  | P3  | P4  | Ø heute |
+| --------------------------------------- | ------------------- | -------- | --- | --- | --- | --- | ------- |
+| A1 — wann hat sich jemand angemeldet    | 4 · 4 · 4           | **4,00** |     |     |     |     |         |
+| A2 — wo bearbeitet man ein Event        | 4 · 4 · 3           | 3,67     |     |     |     |     |         |
+| A3 — ein neues Event anlegen            | 4 · 3 · 4           | 3,67     |     |     |     |     |         |
+| A4 — E-Mail einer interessierten Person | 3 · 2 · 2           | **2,33** |     |     |     |     |         |
+| A5 — sich registrieren                  | 4 · 4 · 4           | **4,00** |     |     |     |     |         |
+| A6 — eine Uhrzeit im Programm           | 4 · 4 · 4           | **4,00** |     |     |     |     |         |
+| A7 — den Veranstalter kontaktieren      | 4 · 4 · 4           | **4,00** |     |     |     |     |         |
+| **Gesamt**                              |                     | **3,67** |     |     |     |     |         |
 
-Die Spalte von 2024 steht in **Kapitel 6 der Thesis**. Sie ist der ganze Grund,
-warum diese sieben Aufgaben wiederholt wurden.
+**Interessant ist nicht der Schnitt, sondern die Differenz** — und zwei Zeilen
+sind vorab verdächtig, in entgegengesetzte Richtungen:
 
-**Interessant ist nicht der Schnitt, sondern die Differenz.** Eine Aufgabe, die
-2024 mit 4 bewertet wurde und heute mit 2, ist ein Befund über die Umsetzung —
-der Entwurf war ja schon abgenommen. Umgekehrt ist eine Aufgabe, die heute besser
-läuft als am Bogen, kein Erfolg, den man feiern muss: ein klickbarer Bogen ist
-langsamer als Software.
+- **A4 ist die Zeile, auf die es ankommt.** 2,33 war 2024 der einzige Ausreißer
+  nach unten, und daraus kam die einzige Korrektur, die die Thesis an ihrem
+  eigenen Entwurf gefordert hat: die E-Mail-Adresse gehört auch bei angemeldeten
+  Teilnehmenden in die Tabelle. Sie ist umgesetzt. **Bleibt A4 unter 4, hat diese
+  eine Änderung nicht gereicht** — und das ist der wichtigste Einzelsatz, den
+  diese Auswertung schreiben kann. Dabei die Irrwege mitlesen: wenn wieder zuerst
+  in der Teilnehmerübersicht gesucht wird, ist die Erwartung stabil, und die
+  Frage lautet nur noch, wie schnell von dort der Weg zu den Nachrichten führt.
+- **A3 ist eine Falle.** Die 3 von 2024 kam vom Werkzeug und nicht vom Entwurf
+  — _„Das Event habe ich angelegt, es ist aber nirgendwo sichtbar"_, weil Mockups
+  nichts speichern. Diese Instanz speichert. Eine 4 ist hier also der Wegfall
+  eines Artefakts und **kein** Fortschritt; sie wird so notiert und nicht
+  mitgefeiert.
+
+Eine Aufgabe, die 2024 mit 4 bewertet wurde und heute mit 2, ist dagegen ein
+echter Befund über die Umsetzung — der Entwurf war an dieser Stelle ja schon
+abgenommen. Und umgekehrt gilt für A1, A5, A6 und A7, dass 4 die Messlatte ist
+und nicht das Ziel: **weniger ist dort eine Verschlechterung gegenüber dem
+Bogen.**
 
 Dazu drei Zahlen über alle Sitzungen: **wie viele Aufgaben ohne Hilfe gelöst
-wurden, wie viele mit, wie viele nicht.**
+wurden, wie viele mit, wie viele nicht.** Die gab es 2024 nicht — am Mockup
+wurde nur bewertet, nicht beobachtet —, und sie sind deshalb keine
+Vergleichszahl, sondern die neue.
 
 ### 2. Die Irrwege zusammenlegen
 

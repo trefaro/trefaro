@@ -12,161 +12,210 @@ niemand soll beim Eintippen einer URL zuschauen müssen.
 
 ## Teil A — die sieben Aufgaben der Thesis
 
-Die Thesis hat 2024 interaktive Mockups mit drei Fachleuten getestet, in sieben
-Aufgaben, bewertet auf einer Skala von 1 bis 4. Das Ergebnis war überwiegend
-4/4, und die einzige gefundene Korrektur war: **die E-Mail-Adresse muss in der
-Teilnehmerübersicht sichtbar sein.** Sie ist umgesetzt — und Aufgabe A6 ist
-dieselbe Aufgabe, an der sie gefunden wurde.
+**Wörtlich aus Anhang H der Thesis.** Drei Fachleute von Democracy International
+haben sie 2024 an interaktiven Mockups gelöst und nach jeder Aufgabe auf einer
+Skala von 1 bis 4 bewertet: _1 = umständlich / nicht intuitiv, 4 = einfach /
+intuitiv_. Die Skala hat **keine Mitte** — vier Stufen statt fünf, damit niemand
+neutral antworten kann. Das bleibt so, sonst sind die Zahlen nicht vergleichbar.
 
-> **Bevor der Test läuft, einmal gegen Kapitel 6 der Thesis prüfen.** Die Thesis
-> selbst liegt bewusst nicht in diesem Repository (Entscheidung vom 26.08.2026 —
-> Diagramme und Mockups reichen als Referenz für die Umsetzung). Wörtlich
-> festgehalten ist hier nur **Aufgabe 4**: „Interessent ohne Teilnehmerstatus
-> kontaktiert Veranstalter". Die übrigen sechs sind aus dem
-> **Use-Case-Diagramm**, den **vier Mockup-Bögen** und der einen dokumentierten
-> Korrektur rekonstruiert. Sie treffen die Anwendungsfälle; ob sie den Wortlaut
-> von 2024 treffen, kann nur die Thesis sagen — und genau davon hängt ab, ob die
-> Zahlen mit 2024 vergleichbar sind. Zwei Kandidaten wurden erwogen und nicht
-> genommen: **„Anwendung konfigurieren"** (Farben, Logo, Schrift — steht jetzt
-> als B8 in Teil B) und **„Profil erstellen"** (2024 gab es noch keinen
-> Teilnehmer-Login — steht als B1). Wenn Kapitel 6 einen davon führt, wird er
-> getauscht und die Nummerierung mitgezogen.
+Vier Aufgaben sind aus Veranstaltersicht (1–4), drei aus Teilnehmendensicht
+(5–7), und sie werden in dieser Reihenfolge gefahren — so lief es 2024.
 
-### A1 · Was ist das hier, und wann ist das nächste Mal?
+Die Mockups zeigten eine erfundene Organisation mit dem „Global Forum 2024" in
+der Reihe „Global Forum on Modern Direct Democracy". Die Demo-Instanz hat andere
+Namen. Jede Aufgabe steht deshalb zweimal: **die Formulierung von 2024** für das
+Protokoll, und **dieselbe Aufgabe an dieser Instanz**, die vorgelesen wird. Die
+Handlung ist identisch; nur die Hauptwörter sind andere.
+
+### Die Ausgangslage von 2024
+
+| Aufgabe | Bewertung 2024 (E1 · E2 · E3) |
+| ------- | ----------------------------- |
+| 1       | 4 · 4 · 4                     |
+| 2       | 4 · 4 · 3                     |
+| 3       | 4 · 3 · 4                     |
+| **4**   | **3 · 2 · 2**                 |
+| 5       | 4 · 4 · 4                     |
+| 6       | 4 · 4 · 4                     |
+| 7       | 4 · 4 · 4                     |
+
+**Aufgabe 4 ist die einzige, die durchgefallen ist**, und aus ihr kam die einzige
+Korrektur, die die Thesis an ihrem eigenen Entwurf gefordert hat. Mehr dazu bei
+der Aufgabe selbst — sie ist der wichtigste Einzelbefund dieses Tests.
+
+### A1 · Wann hat sich jemand angemeldet?
+
+**2024** — _„Finden Sie heraus, wann sich die Person ‚Lutz van Doe' für das
+Global Forum 2024 angemeldet hat."_
+
+**Rolle** Veranstalter\*in · **Gerät** Laptop · **Start** die Übersicht der
+Veranstaltungsreihen
+
+> „Finden Sie heraus, wann sich die Person ‚Annika Sørensen' für den ‚Bürgerrat
+> Klima — Sitzung 3' angemeldet hat."
+
+**Gelöst, wenn** das Datum genannt wird.
+
+**Worauf zu achten ist:** Diese Aufgabe zielte 2024 auf die
+**Teilnehmerübersicht** — die höchstbewertete Anforderung der ganzen Umfrage
+(3,86 von 4) — und bekam von allen drei Fachleuten die volle Punktzahl. Sie ist
+damit die Messlatte: **weniger als 4 ist hier eine Verschlechterung gegenüber
+dem Entwurf.** Wird der Weg Reihe → Event → Teilnehmende gegangen oder woanders
+gesucht? Wird die Suche benutzt oder gescrollt? Fällt auf, dass es vier Zustände
+gibt (bestätigt, offen, storniert)?
+
+### A2 · Wo bearbeitet man die Angaben eines Events?
+
+**2024** — _„Finden Sie die Seite, auf der Sie die Angaben für das Event ‚Global
+Forum 2024' bearbeiten können."_
+
+**Rolle** Veranstalter\*in · **Gerät** Laptop · **Start** wo A1 geendet hat
+
+> „Finden Sie die Seite, auf der Sie die Angaben für den ‚Bürgerrat Klima —
+> Sitzung 3' bearbeiten können."
+
+**Gelöst, wenn** das Bearbeitungsformular offen ist.
+
+**Worauf zu achten ist:** 2024 mit 4, 4 und 3 bewertet. Wird zwischen der
+**Event-Übersicht** (Kennzahlen, Listen) und dem **Formular** unterschieden, oder
+wird beides als dasselbe erwartet? Wie wirken die Mehrsprachen-Felder auf jemanden,
+der nur schnell ein Datum ändern will?
+
+### A3 · Ein neues Event in einer Reihe anlegen
+
+**2024** — _„Erstellen Sie für die Veranstaltungsreihe ‚Global Forum on Modern
+Direct Democracy' ein neues Event für das Jahr 2026."_
+
+**Rolle** Veranstalter\*in · **Gerät** Laptop · **Start** die Übersicht der
+Veranstaltungsreihen
+
+> „Erstellen Sie für die Veranstaltungsreihe ‚Bürgerräte für Europa' ein neues
+> Event für das Jahr 2027."
+
+**Gelöst, wenn** das Event gespeichert ist.
+
+**Worauf zu achten ist:** Hier steckt eine **Falle in der Vergleichbarkeit.** Die
+3 von 2024 kam nicht vom Entwurf, sondern vom Werkzeug: _„Das Event habe ich
+angelegt, es ist aber nirgendwo sichtbar"_ — Mockups speichern nichts. Diese
+Instanz speichert. Eine 4 hier ist deshalb **kein** Fortschritt im Design,
+sondern der Wegfall eines Artefakts, und sie darf in der Auswertung nicht als
+einer gefeiert werden. Was dagegen wirklich interessiert: wird verstanden, dass
+ein neues Event ein **Entwurf** ist und erst veröffentlicht werden muss?
+
+### A4 · Die E-Mail-Adresse einer interessierten Person finden
+
+**2024** — _„Finden Sie die E-Mail Adresse vom Interessenten Wong Tau heraus."_
+
+**Rolle** Veranstalter\*in · **Gerät** Laptop · **Start** die Übersicht der
+Veranstaltungsreihen
+
+> „Finden Sie die E-Mail-Adresse der Interessentin Mira Hoffmann heraus."
+
+**Gelöst, wenn** die Adresse genannt wird (`mira.hoffmann@example.org`).
+
+_Für das Testteam, nicht zum Vorlesen:_ sie steht unter **Nachrichten**, und zwar erst **im Gespräch** — die Liste zeigt den Namen, sobald es einen gibt. Der Weg ist also Nachrichten → Mira Hoffmann → Gespräch öffnen. In der Teilnehmerübersicht steht sie nicht und kann dort nicht stehen: sie hat sich nie angemeldet.
+
+**Die Aufgabe, um die es geht.** 2024 mit 3, 2 und 2 bewertet — die einzige unter
+4, und das Feedback aller drei Fachleute sagte dasselbe:
+
+> _„Intuitiver wäre es auf Teilnehmende – Details zu gehen."_
+> _„E-Mail-Adresse unter ‚Nachrichten' gefunden – nicht sehr intuitiv. Ich hätte
+> es eher bei Teilnehmenden vermutet."_
+> _„Habe ich nur über der Mailfunktion gefunden."_
+
+Die gesuchte Person war **nicht angemeldet** — sie hatte nur den Veranstalter
+kontaktiert, was ohne Registrierung möglich sein muss. Sie stand deshalb
+richtigerweise in den Nachrichten und nicht in der Teilnehmerübersicht. **Alle
+drei haben trotzdem dort gesucht.** Die Thesis zieht daraus zwei Schlüsse: die
+Aufgabenstellung war womöglich nicht präzise genug — und unabhängig davon muss
+die E-Mail-Adresse **auch bei angemeldeten Teilnehmenden in der Tabelle stehen**.
+Das ist die eine Korrektur, die umgesetzt wurde.
+
+**Worauf zu achten ist:** Wird wieder zuerst in der Teilnehmerübersicht gesucht?
+Wenn ja, ist das **kein** Fehler mehr, sondern die Bestätigung, dass die Erwartung
+stabil ist — die Frage ist dann, wie schnell von dort aus der Weg zu den
+Nachrichten gefunden wird. Und: **bleibt diese Aufgabe unter 4, hat die eine
+Änderung aus 2024 nicht gereicht.** Das ist die schärfste Einzelfrage des ganzen
+Tests, und sie gehört so in die Auswertung.
+
+### A5 · Sich für ein Event registrieren
+
+**2024** — _„Registrieren Sie sich für das Global Forum 2024."_
 
 **Rolle** Teilnehmende Person · **Gerät** Telefon · **Start** die Startseite der
-Instanz
+Instanz, in einem **privaten Fenster**
 
-> „Du hast von Bekannten gehört, dass es hier eine Reihe von Bürgerräten gibt.
-> Finde heraus, worum es geht und wann die nächste Veranstaltung ist."
+> „Registrieren Sie sich für den ‚Bürgerrat Klima — Sitzung 3'."
 
-**Gelöst, wenn** die Person auf der Event-Seite von „Bürgerrat Klima — Sitzung
-3" steht und Datum und Ort benennen kann.
+**Gelöst, wenn** das Formular abgeschickt **und** der Link in der
+Bestätigungsmail geöffnet ist.
 
-**Worauf zu achten ist:** Wird die Reihe oder direkt das Event angesteuert?
-Wird die Kachelreihe auf der Event-Seite als Inhaltsverzeichnis gelesen oder
-übersehen? Fällt auf, dass eine der drei Reihen (Jugendforum 2027) öffentlich
-nicht zu sehen ist — und stört das?
+**Worauf zu achten ist:** 2024 dreimal 4 — am Bogen. Hier kommt zum ersten Mal
+etwas dazu, das ein Mockup nicht hat: **der Double-Opt-In.** Rechnet die Person
+damit, dass nach dem Absenden noch etwas kommt? Das ist der Schritt, an dem in
+der Praxis Anmeldungen verloren gehen, und er ist am Bogen nie getestet worden.
+Außerdem: der Weg von der Startseite über die Reihe zum Event, der 2024 auch
+dazugehörte.
 
-### A2 · Anmelden
+### A6 · Eine Uhrzeit aus dem Programm lesen
 
-**Rolle** Teilnehmende Person · **Gerät** Telefon · **Start** wo A1 geendet hat
+**2024** — _„Finden Sie heraus, um wie viel Uhr die zweiten Sessions beginnen?"_
 
-> „Melde dich für diese Veranstaltung an. Du kommst vor Ort und isst vegetarisch."
+**Rolle** Teilnehmende Person · **Gerät** Telefon · **Start** wo A5 geendet hat
 
-**Gelöst, wenn** das Formular abgeschickt ist **und** die Person die
-Bestätigungsmail im Briefkasten geöffnet und den Link angeklickt hat.
+> „Finden Sie heraus, um wie viel Uhr die parallelen Arbeitsgruppen beginnen."
 
-**Worauf zu achten ist:** Wird der Anmeldeknopf gefunden (er steht nicht ganz
-oben)? Wie werden Pflichtfelder wahrgenommen? Was passiert beim Feld
-„Visa-Dokument" — wird es als optional erkannt? **Und vor allem: rechnet die
-Person damit, dass nach dem Absenden noch etwas kommt?** Double-Opt-In ist der
-Schritt, an dem Anmeldungen in der Praxis verloren gehen.
+**Gelöst, wenn** 14:00 genannt wird.
 
-### A3 · Den eigenen Tag planen
+**Worauf zu achten ist:** 2024 dreimal 4. Wird das Programm auf der Event-Seite
+gefunden? Wird erkannt, dass **zwei** Punkte zur selben Zeit laufen — und wird
+das als Auswahl verstanden oder als Fehler? Wird bemerkt, dass eine der beiden
+mit „4 von 4 Plätzen belegt" voll ist?
 
-**Rolle** Teilnehmende Person · **Gerät** Telefon · **Start** die
-Bestätigungsseite aus A2
+### A7 · Den Veranstalter kontaktieren
 
-> „Am ersten Tag laufen zwei Arbeitsgruppen parallel. Sichere dir einen Platz in
-> der, die dich interessiert."
+**2024** — _„Kontaktieren Sie den Veranstalter."_
 
-**Gelöst, wenn** die Person für eine der beiden Arbeitsgruppen angemeldet ist —
-oder erkannt hat, dass „Arbeitsgruppe B" voll ist und deshalb A gewählt hat.
+**Rolle** Teilnehmende Person · **Gerät** Telefon · **Start** die Event-Seite
 
-**Worauf zu achten ist:** Wird der Weg über den persönlichen Link aus der Mail
-gefunden, oder wird er auf der öffentlichen Seite gesucht? Ist „4 von 4 Plätzen
-belegt" als _voll_ lesbar? Wird der Unterschied zwischen „für die Veranstaltung
-angemeldet" und „für diesen Programmpunkt angemeldet" verstanden?
-
-### A4 · Ohne Anmeldung eine Frage stellen
-
-**Rolle** Interessierte Person **ohne** Anmeldung · **Gerät** Telefon ·
-**Start** die Event-Seite, in einem **privaten Fenster**
-
-_Die einzige Aufgabe, deren Wortlaut aus der Thesis belegt ist: „Interessent
-ohne Teilnehmerstatus kontaktiert Veranstalter"._
-
-> „Du überlegst noch, ob du kommst, und willst vorher wissen, ob der Ort
-> barrierefrei ist. Frag nach — ohne dich anzumelden."
+> „Kontaktieren Sie den Veranstalter."
 
 **Gelöst, wenn** die Nachricht abgeschickt ist.
 
-**Worauf zu achten ist:** Wird das Kontaktformular gefunden, oder wird erst eine
-Anmeldung versucht? Ist klar, dass die Antwort per E-Mail kommt und nicht auf der
-Seite erscheint? Sucht jemand nach einer Telefonnummer?
-
-### A5 · Ein Event anlegen und sein Programm planen
-
-**Rolle** Veranstalter\*in · **Gerät** Laptop · **Start** die Übersicht der
-Veranstaltungsreihen im Veranstalter-Client
-
-> „Es kommt eine vierte Sitzung dazu, am 12. März 2027. Leg sie an und trag zwei
-> Programmpunkte ein — eine Begrüßung und eine Arbeitsgruppe mit begrenzter
-> Platzzahl."
-
-**Gelöst, wenn** Event und beide Programmpunkte gespeichert sind und die
-Arbeitsgruppe eine Kapazität hat.
-
-**Worauf zu achten ist:** Wird der Unterschied zwischen _Entwurf_ und
-_veröffentlicht_ verstanden? Wird die Mehrsprachigkeit der Felder als Aufwand
-empfunden oder als Angebot? Wo wird das Programm gesucht — auf dem Event oder in
-einer eigenen Ansicht?
-
-### A6 · Wer hat sich angemeldet, und eine Person erreichen
-
-**Rolle** Veranstalter\*in · **Gerät** Laptop · **Start** das Dashboard von
-„Bürgerrat Klima — Sitzung 3"
-
-_Dies ist die Aufgabe, an der 2024 die einzige Korrektur gefunden wurde._
-
-> „Eine Person hat angerufen und gefragt, ob ihre Anmeldung angekommen ist. Sie
-> heißt Moretti. Finde sie, sag mir ihren Status — und schreib ihr eine Mail."
-
-**Gelöst, wenn** die Zeile gefunden ist, der Status genannt wird (_pending_) und
-die E-Mail-Adresse **aus der Tabelle heraus** benutzt wird.
-
-**Worauf zu achten ist:** **Wird die E-Mail-Adresse in der Tabelle gesehen, oder
-wird sie im Detail gesucht?** Das ist die Nachprüfung der Korrektur von 2024, und
-sie ist der wichtigste einzelne Befund dieses Teils. Außerdem: werden die vier
-Zustände (bestätigt, offen, storniert) auseinandergehalten?
-
-### A7 · Die Ehemaligen einladen
-
-**Rolle** Veranstalter\*in · **Gerät** Laptop · **Start** die Reihenansicht von
-„Bürgerräte für Europa"
-
-> „Die Leute von der Auftaktkonferenz sollen von der neuen Sitzung erfahren. Lade
-> sie ein."
-
-**Gelöst, wenn** die Einladung abgeschickt ist und die Person im Briefkasten
-sieht, dass sie herausgegangen ist.
-
-**Worauf zu achten ist:** Wird gefunden, dass die Empfänger aus einer früheren
-Veranstaltung kommen? Ist erkennbar, dass eine Einladung **langsam** verschickt
-wird und eine Weile läuft? Wird bemerkt, dass eine Person (Bergström) bereits
-widersprochen hat und deshalb nicht mehr angeschrieben wird?
+**Worauf zu achten ist:** 2024 dreimal 4, mit dem einzigen fröhlichen Kommentar
+des ganzen Anhangs: _„Fast zu einfach :D Ich hatte es im Menü erwartet."_ Genau
+das ist hier die Frage — das Kontaktformular sitzt am Fuß der Event-Seite und
+**nicht** im Menü. Wird es dort gesucht? Ist klar, dass die Antwort per E-Mail
+kommt und nicht auf der Seite erscheint? Und wird bemerkt, dass dafür keine
+Anmeldung nötig ist, was die Thesis ausdrücklich verlangt?
 
 ## Teil B — was die Thesis nie getestet hat
 
-Konten, Profile, Teilnehmersuche, Chat und fünf Plug-ins sind nach 2024
-entstanden. Sie sind aus derselben Anforderungsanalyse abgeleitet, aber
-**abgeleitet ist nicht geprüft** — hier wird zum ersten Mal jemand darauf
-losgelassen, der sie nicht gebaut hat.
+Dieser Teil ist der eigentliche Auftrag. Kapitel 6 der Thesis endet mit dem
+Satz, dass vor einer tatsächlichen Umsetzung **„in einem weiteren Usability-Test
+die noch nicht evaluierten bzw. in den Mockups noch nicht berücksichtigten Use
+Cases bewertet werden"** sollten. Das ist dieser Test, und das hier sind diese
+Use Cases.
+
+Konten, Profile, Teilnehmersuche, Chat und die fünf Plug-ins sind nach 2024
+entstanden; sie sind aus derselben Anforderungsanalyse abgeleitet, aber
+**abgeleitet ist nicht geprüft**. Dazu zwei Dinge aus dem Eventmanagement selbst,
+die die sieben Aufgaben nie berührt haben: das Einladen Ehemaliger und die
+Anmeldung zu einem einzelnen Programmpunkt.
 
 **Vier je Sitzung**, nach dieser Rotation, damit über vier Sitzungen jede Aufgabe
-zweimal drankommt:
+mindestens einmal und die wichtigsten zweimal drankommen:
 
 | Sitzung | Aufgaben             |
 | ------- | -------------------- |
-| 1       | B1, B2, B5, B9       |
-| 2       | B3, B4, B6, B10      |
+| 1       | B1, B2, B5, B11      |
+| 2       | B3, B4, B6, B12      |
 | 3       | B1, B7, B8, B2       |
-| 4       | B5, B6, B9, B3       |
+| 4       | B5, B9, B10, B12     |
 | 5 / 6   | frei, nach Interesse |
 
-Wer Veranstaltungen organisiert, bekommt eher B5–B9; wer teilnimmt, eher B1–B4
-und B10.
+Wer Veranstaltungen organisiert, bekommt eher B5–B9 und B11; wer teilnimmt, eher
+B1–B4, B10 und B12.
 
 ### B1 · Ein Konto machen und entscheiden, wer dich findet
 
@@ -321,6 +370,40 @@ in der Suche nachsehen und die Reaktion notieren.
 > Diese Aufgabe verbraucht ein Konto. Danach entweder ein neues anlegen (B1) oder
 > die Instanz vor der nächsten Sitzung zurücksetzen —
 > [03-instanz.md](03-instanz.md).
+
+### B11 · Die Ehemaligen einladen
+
+**Rolle** Veranstalter\*in · **Gerät** Laptop · **Start** die Reihenansicht von
+„Bürgerräte für Europa"
+
+> „Die Leute von der Auftaktkonferenz sollen von der neuen Sitzung erfahren.
+> Laden Sie sie ein."
+
+**Gelöst, wenn** die Einladung abgeschickt ist und im Briefkasten zu sehen ist,
+dass sie herausgegangen ist.
+
+**Worauf zu achten ist:** Wird gefunden, dass die Empfänger aus einer früheren
+Veranstaltung kommen? Ist erkennbar, dass eine Einladung **langsam** verschickt
+wird und eine Weile läuft, statt sofort fertig zu sein? Wird bemerkt, dass eine
+Person (Bergström) bereits widersprochen hat und deshalb nicht mehr angeschrieben
+wird — und wird das als richtig empfunden oder als fehlende Zeile?
+
+### B12 · Sich einen Platz in einer Arbeitsgruppe sichern
+
+**Rolle** Teilnehmende Person · **Gerät** Telefon · **Start** die
+Bestätigungsseite aus A5, oder die Mail mit dem persönlichen Link
+
+> „Am ersten Tag laufen zwei Arbeitsgruppen parallel. Sichern Sie sich einen
+> Platz in der, die Sie interessiert."
+
+**Gelöst, wenn** die Person für eine der beiden angemeldet ist — oder erkannt
+hat, dass „Arbeitsgruppe B" voll ist, und deshalb A gewählt hat.
+
+**Worauf zu achten ist:** Wird der Weg über den **persönlichen Link aus der Mail**
+gefunden, oder wird er auf der öffentlichen Seite gesucht? Wird der Unterschied
+zwischen „für die Veranstaltung angemeldet" und „für diesen Programmpunkt
+angemeldet" verstanden? Ist „4 von 4 Plätzen belegt" als _voll_ lesbar, bevor
+jemand darauf klickt?
 
 ## Teil C — der Abschluss
 

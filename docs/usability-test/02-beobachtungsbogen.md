@@ -40,6 +40,11 @@ fasst.
 | B\_   | ohne Hilfe ☐ · mit Hilfe ☐ · nein ☐ | \_\_:\_\_ | \_\_\_         |     |
 | B\_   | ohne Hilfe ☐ · mit Hilfe ☐ · nein ☐ | \_\_:\_\_ | \_\_\_         |     |
 
+**Die Vergleichszahl steht daneben, nicht im Kopf:** A1 = 4·4·4, A2 = 4·4·3,
+A3 = 4·3·4, **A4 = 3·2·2**, A5 = 4·4·4, A6 = 4·4·4, A7 = 4·4·4. Sie wird der
+teilnehmenden Person **nicht** gezeigt und nicht genannt — sie gehört in die
+Auswertung, nicht in die Sitzung.
+
 ### Was die drei Spalten bedeuten
 
 - **Gelöst.** _Ohne Hilfe_ heißt: das Testteam hat kein einziges Wort zur
@@ -48,9 +53,12 @@ fasst.
 - **Dauer.** Vom Ende des Vorlesens bis zum Erreichen des Ziels. Nach drei
   Minuten Feststecken wird abgebrochen und _nein_ angekreuzt.
 - **1–4** ist die Skala der Thesis, vergeben von der **teilnehmenden Person**,
-  direkt nach der Aufgabe, auf die Frage: _„Wie gut ging das — 1 gar nicht, 4
-  völlig problemlos?"_ Nicht diskutieren, nicht nachfragen, notieren. Nur so
-  sind die Zahlen mit 2024 vergleichbar.
+  direkt nach der Aufgabe, mit genau den Ankern von 2024: _„Wie intuitiv
+  empfanden Sie die Verwendung der Anwendung für diese Aufgabe — 1 umständlich /
+  nicht intuitiv, 4 einfach / intuitiv?"_ Nicht diskutieren, nicht nachfragen,
+  notieren. Die Skala hat **bewusst keine Mitte**: vier Stufen statt fünf, damit
+  eine Tendenz entsteht statt einer neutralen Antwort. Wer sie auf fünf
+  erweitert, hat die Vergleichbarkeit mit 2024 weggeworfen.
 
 ### Block je Aufgabe
 
